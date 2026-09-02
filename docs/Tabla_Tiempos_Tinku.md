@@ -1,0 +1,30 @@
+# Tabla Central de Tiempos — Tinku
+
+> Única fuente de verdad para todo plazo usado en cualquier Spec. Ningún documento debe repetir estos números — debe referenciar esta tabla.
+
+| Plazo | Valor | Dónde aplica | Módulo |
+|---|---|---|---|
+| Creación de sala + botón de unirse | T-5 min | Antes del horario agendado | M3, M4 |
+| Ventana mínima para reservar | T-15 min | No se permite reservar más cerca del horario | M4 |
+| Timeout de no-show | T+10 min | Automático y manual, ambos casos | M3, M4 |
+| Tolerancia de gracia al fin de la sesión | +5 min | Corte automático si nadie finalizó manualmente | M3 |
+| Buffer rotativo de evidencia (kill-switch) | 30 seg | Local, no persistente salvo disparo | M3 |
+| Timeout de reserva sin pagar | 15 min | `pendiente_pago` vence y libera el slot | M4 |
+| Cancelación sin penalidad | 24 hs antes | — | M4 |
+| Recordatorio de sesión (T-24h) | 24 hs antes | No se dispara si la reserva se hizo con menos margen | M4 |
+| Liberación de escrow | 24 hs post-sesión | Desde `sesion.finalizada` | M5 |
+| Sombra de matching post mala calificación | 24 hs | BR-MATCH-01, calificación de 1-2 estrellas | M2 |
+| Recordatorio único de calificación pendiente | 24 hs | Solo una vez, sin insistir | M7 |
+| Espera tras agotar intentos de OCR | 24 hs | Antes de un nuevo ciclo de 3 fotos | M1 |
+| Espera tras agotar intentos de Credencial | 24 hs, duplicándose | 24 → 48 → 96... | M1 |
+| Plazo de descargo (Denuncia estándar) | 48 hs | No aplica al track de kill-switch (ver 12hs abajo) | M9 |
+| Plazo de revisión de Credencial por intento | 48 hs | — | M1 |
+| Ventana de edición de calificación pública | 48 hs | Luego es definitiva | M7 |
+| Revisión del Admin de una Alerta de kill-switch | 12 hs | Track separado — no espera un descargo previo | M9 |
+| SLA máximo de resolución de una Denuncia estándar | 5 días hábiles | Si se excede, escala con prioridad alta | M9 |
+| Duración mínima para generar resumen | 10 min efectivos | — | M6 |
+| Latencia objetivo del resumen | ≤10 min post-sesión | — | M6 |
+| Edad mínima del menor | 6 años | Alineado a inicio de primario | M1 |
+| Edad mínima de todos los adultos | 18 años | Verificado por OCR | M1 |
+| Umbral mínimo de calificaciones públicas | 5 | Antes se muestra "Tutor nuevo" | M7 |
+| Reintentos de liberación de pago | 3, backoff 5min/15min/1h | Luego, intervención manual del Admin | M5 |

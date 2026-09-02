@@ -1,0 +1,22 @@
+# backend (Java)
+backend/target/
+*.class
+
+# frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# matching-service (Python)
+matching-service/__pycache__/
+matching-service/*.pyc
+matching-service/venv/
+
+# general
+.idea/
+*.iml
+.vscode/
+.env
+.env.local
+application-local.yml
+.DS_Store

@@ -1,0 +1,24 @@
+# Desarrollo local de Tinku — solo Postgres por ahora (Fase 0).
+# Los schemas se crean/versionan via Flyway al levantar el backend (ver V1__crear_schemas.sql).
+# Credenciales por defecto compatibles con backend/src/main/resources/application.yml.
+# Nunca usar estos valores en ningun ambiente que no sea local.
+services:
+  db:
+    image: postgres:16
+    container_name: tinku-postgres
+    environment:
+      POSTGRES_DB: tinku
+      POSTGRES_USER: tinku_dev
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - tinku_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tinku_dev -d tinku"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  tinku_pgdata:

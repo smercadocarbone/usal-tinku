@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+
+# Agregar una vez resuelto ADR-M2-01 (Plan_M2_Motor_Matching.md):
+# sentence-transformers==...
+# faiss-cpu==...
+# psycopg2-binary==...  (si el indice termina viviendo en pgvector en vez de en memoria)

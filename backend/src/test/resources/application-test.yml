@@ -1,0 +1,10 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+tinku:
+  jwt:
+    secret: test-secret-nunca-usar-en-produccion

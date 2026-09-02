@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: tinku-backend
+
+  datasource:
+    # Un solo motor PostgreSQL, schemas separados por modulo (Constitucion, Articulo VIII).
+    # Reemplazar por variables de entorno reales antes de cualquier despliegue.
+    url: jdbc:postgresql://localhost:5432/tinku
+    username: ${DB_USER:tinku_dev}
+    password: ${DB_PASSWORD:changeme}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # el esquema real lo maneja Flyway, nunca auto-generado en runtime
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: identidad # override por @Table(schema=...) en cada modulo
+
+  flyway:
+    enabled: true
+    schemas: identidad,matching,aula,reservas,pagos,resumen,reputacion,seguridad,admin
+    locations: classpath:db/migration
+
+  quartz:
+    job-store-type: jdbc # persistido en Postgres, no en memoria (Articulo IV/X)
+    jdbc:
+      initialize-schema: never # las tablas QRTZ_* se crean via Flyway, no auto
+    properties:
+      org:
+        quartz:
+          jobStore:
+            isClustered: false # revisar si el equipo crece a mas de un desarrollador/instancia
+
+server:
+  port: 8080
+
+# Configuracion de integraciones externas - ver Registro de Decisiones Tecnicas
+# de la Constitucion. Todas via variable de entorno, ninguna hardcodeada.
+tinku:
+  jwt:
+    secret: ${JWT_SECRET:CAMBIAR_EN_TODOS_LOS_AMBIENTES}
+    expiration-minutes: 60
+  livekit:
+    api-key: ${LIVEKIT_API_KEY:}
+    api-secret: ${LIVEKIT_API_SECRET:}
+  mercadopago:
+    access-token: ${MP_ACCESS_TOKEN:}
+    marketplace-fee-percent: 15 # BR-PAG-01
+  matching-service:
+    base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}

@@ -1,0 +1,40 @@
+package com.tinku.identidad.web;
+
+import com.tinku.identidad.service.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Map;
+
+/**
+ * Traduce las excepciones de dominio de M1 a respuestas HTTP con mensajes
+ * seguros para mostrar al usuario final — ninguna de estas expone detalle
+ * interno (ej. FR-ID-018: nunca decir de quién es el DNI duplicado).
+ */
+@RestControllerAdvice(basePackages = "com.tinku.identidad")
+public class IdentidadExceptionHandler {
+
+    @ExceptionHandler(DniYaRegistradoException.class)
+    public ResponseEntity<Map<String, String>> handleDniDuplicado(DniYaRegistradoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentoNoCoincideException.class)
+    public ResponseEntity<Map<String, String>> handleNoCoincide(DocumentoNoCoincideException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EdadInsuficienteException.class)
+    public ResponseEntity<Map<String, String>> handleEdadInsuficiente(EdadInsuficienteException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentoIlegibleException.class)
+    public ResponseEntity<Map<String, String>> handleIlegible(DocumentoIlegibleException ex) {
+        // TODO (T-M1-07): acá debe incrementarse el contador de intentos
+        // del ciclo de backoff antes de responder — todavía no implementado.
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+}
