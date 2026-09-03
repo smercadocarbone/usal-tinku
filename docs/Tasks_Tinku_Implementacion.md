@@ -13,8 +13,8 @@
 - [x] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02). (JwtUtil + JwtAuthenticationFilter + UsuarioDetailsService + AuthService + POST /api/usuarios/login, bcrypt; verificado con JwtAuthTest y SecurityHttpTest contra Postgres 16 vía Testcontainers.)
 - [ ] T-000-06: Cuenta de desarrollador de LiveKit Cloud + credenciales de sandbox.
 - [ ] T-000-07: Cuenta de MercadoPago Developers + usuarios de prueba operando en modo productivo controlado (ADR-M5-01 — **no** el sandbox clásico, por el problema conocido de webhooks).
-- [ ] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él.
-- [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests) — no bloqueante para arrancar, pero antes de tener 3+ módulos implementados.
+- [x] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él. (`main.py` con `/health` + `/match`; `MatchingServiceClient` (RestClient) + `MatchingServiceHealthCheck` (debug de arranque en `dev`, no rompe el backend si el servicio está caído); `MatchingServiceClientTest` con stub HTTP local, CI-safe sin depender de venv de Python; verificado de punta a punta con `uvicorn` real. Las versiones de `requirements.txt` se actualizaron a las mínimas que soportan Python 3.14 — las fijadas originalmente (fastapi 0.115.0 / pydantic 2.9.2) no tienen wheels para 3.14 y pydantic-core no compila desde fuente.)
+- [x] T-000-09: Configurar pipeline de CI mínimo (build + tests) — `.github/workflows/ci-backend.yml` corre `mvn -B verify` (build + tests) sobre `backend/**` en push/PR a `main`/`develop`; los tests levantan Postgres solos vía Testcontainers, sin depender de una base local.
 
 ## SPIKE PRIORITARIO — arranca en paralelo desde el día 1 (Artículo XI, ADR-M3-01)
 
