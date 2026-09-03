@@ -2,6 +2,15 @@ spring:
   application:
     name: tinku-backend
 
+  # Perfil por defecto para el arranque local: `dev`. Sin esto, `./mvnw
+  # spring-boot:run` no levanta porque StubOcrService (OCR falso para
+  # dev/test) esta gated a los perfiles dev/test y no habria ningun OcrService.
+  # Para otro ambiente se sobreescribe con SPRING_PROFILES_ACTIVE (ver
+  # backend/README.md). El perfil `dev` usa la BDs local (localhost + creds
+  # de docker-compose.yml) y el JWT secret de desarrollo — NUNCA ese set en prod.
+  profiles:
+    active: dev
+
   datasource:
     # Un solo motor PostgreSQL, schemas separados por modulo (Constitucion, Articulo VIII).
     # Reemplazar por variables de entorno reales antes de cualquier despliegue.
@@ -24,6 +33,7 @@ spring:
 
   quartz:
     job-store-type: jdbc # persistido en Postgres, no en memoria (Articulo IV/X)
+    scheduler-name: TinkuScheduler # fijo: las filas QRTZ_* quedan scoped por este nombre de scheduler
     jdbc:
       initialize-schema: never # las tablas QRTZ_* se crean via Flyway, no auto
     properties:
@@ -31,6 +41,7 @@ spring:
         quartz:
           jobStore:
             isClustered: false # revisar si el equipo crece a mas de un desarrollador/instancia
+            tablePrefix: QRTZ_ # tablas en schema `public` (ver V3__quartz_tables.sql y backend/README.md)
 
 server:
   port: 8080

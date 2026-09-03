@@ -27,11 +27,14 @@ public class StubOcrService implements OcrService {
         }
         // Datos fabricados fijos — reemplazar por parseo real de un payload
         // de prueba si los tests necesitan variar el resultado.
+        // Nota: nombre/apellido usan ESPACIO (no guion bajo) para que la
+        // comparacion tolerante de UsuarioService (mayusculas/acentos, no
+        // caracter exacto) los tome como equivalentes a "Nombre Stub".
         return new ResultadoOcr(
                 true,
                 "00000000",
-                "NOMBRE_STUB",
-                "APELLIDO_STUB",
+                "NOMBRE STUB",
+                "APELLIDO STUB",
                 LocalDate.of(2000, 1, 1)
         );
     }

@@ -12,5 +12,5 @@
   - T-000-02: PostgreSQL + 9 schemas por módulo vía Flyway (`V1__crear_schemas.sql`).
   - Docker Compose para Postgres local (`docker-compose.yml` en la raíz del repo).
   - Verificado: app compila y se conecta a Postgres; `\dn` muestra los 9 schemas.
-- [ ] **Chunk 000-B** — T-000-03 a T-000-05 (Quartz persistido, eventos en memoria, Security+JWT).
+- [x] **Chunk 000-B** — T-000-03 a T-000-05 (Quartz persistido, eventos en memoria, Security+JWT).
 - [ ] **Chunk 000-C** — T-000-06 a T-000-09 (cuentas LiveKit/MP, matching-service, CI).

@@ -8,8 +8,8 @@
 
 - [x] T-000-01: Inicializar proyecto Spring Boot (Java), estructura de paquetes por módulo (`identidad`, `matching`, `aula`, `reservas`, `pagos`, `resumen`, `reputacion`, `admin`, `seguridad`) — bounded contexts del Artículo VIII de la Constitución.
 - [x] T-000-02: Configurar PostgreSQL con schemas separados por módulo (`identidad.*`, `pagos.*`, etc., Artículo VIII).
-- [ ] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima.
-- [ ] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real.
+- [x] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima. (Migración Flyway `V3__quartz_tables.sql`, tablas QRTZ_* en schema `public`; config JDBC en `application.yml`; verificado con `QuartzPersistenciaTest` — programar→shutdown→reiniciar y confirmar que el job+trigger persisten y vuelven a ejecutarse — contra PostgreSQL 16 real vía Testcontainers, y con `spring-boot:run` contra la base local.)
+- [x] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real. (`EjemploEvent` + `EjemploListener` con `@EventListener`; verificado con `DomainEventExampleTest` usando `@SpyBean` — ejemplifican el patrón `sesion.*`/`denuncia.*` de la sección 4 del AGENTS.md.)
 - [ ] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02).
 - [ ] T-000-06: Cuenta de desarrollador de LiveKit Cloud + credenciales de sandbox.
 - [ ] T-000-07: Cuenta de MercadoPago Developers + usuarios de prueba operando en modo productivo controlado (ADR-M5-01 — **no** el sandbox clásico, por el problema conocido de webhooks).
