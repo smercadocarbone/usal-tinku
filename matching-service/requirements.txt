@@ -1,6 +1,9 @@
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-pydantic==2.9.2
+# Versiones minimas que soportan Python 3.14 (las fijadas originalmente,
+# fastapi 0.115.0 / pydantic 2.9.2 de fines 2024, no tienen wheels para 3.14
+# y pydantic-core falla al compilarse desde fuente). T-000-08.
+fastapi>=0.141.0
+uvicorn[standard]>=0.52.0
+pydantic>=2.13.0
 
 # Agregar una vez resuelto ADR-M2-01 (Plan_M2_Motor_Matching.md):
 # sentence-transformers==...

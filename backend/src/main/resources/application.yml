@@ -50,7 +50,7 @@ server:
 # de la Constitucion. Todas via variable de entorno, ninguna hardcodeada.
 tinku:
   jwt:
-    secret: ${JWT_SECRET:CAMBIAR_EN_TODOS_LOS_AMBIENTES}
+    secret: ${JWT_SECRET:CAMBIAR_EN_TODOS_LOS_AMBIENTES_AL_AGREGAR_UN_SECRET_REAL}
     expiration-minutes: 60
   livekit:
     api-key: ${LIVEKIT_API_KEY:}

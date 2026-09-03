@@ -11,6 +11,7 @@ frontend/out/
 matching-service/__pycache__/
 matching-service/*.pyc
 matching-service/venv/
+matching-service/.venv/
 
 # general
 .idea/
