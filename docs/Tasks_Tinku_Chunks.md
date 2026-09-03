@@ -10,11 +10,11 @@
 
 - [x] **Chunk 000-A** — Scaffold + schemas (T-000-01, T-000-02)
 - [x] **Chunk 000-B** — Quartz persistido + eventos in-memory (T-000-03, T-000-04) — _alcance ampliado en ejecución real: incluyó verificación de V2\_\_m1_identidad.sql contra el Plan de M1 (no formaba parte de las tareas originales, surgió de la auditoría pre-000-B) y la decisión de perfil por defecto para que la app levante (idem). Mergeado a main en 4eab0b9._
-- [x] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05) _— mergeado: JwtUtil/JwtAuthenticationFilter/UsuarioDetailsService/AuthService + POST /api/usuarios/login, bcrypt; el dev JWT secret por defecto se alargó a ≥32 bytes para HS256._
-- [ ] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _mayormente manual, requiere agente humano: hay que crear las cuentas cloud y cargar credenciales reales en el ambiente (las variables `LIVEKIT_*` / `MP_*` ya existen placeholder en application.yml). No se puede cerrar sin acción externa._
-- [x] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08) — `MatchingServiceClient` + `MatchingServiceHealthCheck` (dev) + `MatchingServiceClientTest` (stub HTTP, CI-safe); verificado punta a punta contra `uvicorn` real. `requirements.txt` actualizado a versiones compatibles con Python 3.14.
-- [x] **Chunk 000-F** — CI mínimo (T-000-09) — `.github/workflows/ci-backend.yml` (`mvn -B verify`, build+tests, Testcontainers levanta Postgres solo). Ya estaba scaffolded en el commit inicial; se marcó como completado.
-- [x] **Chunk 000-H** — Reconciliación de deuda técnica pre-existente — se commitcó fuera de orden el chunk 000-C (seguridad JWT/login, commit 055ade9) cuyo código vivía solo en el working directory a pesar de estar marcado como "mergeado a main" en las docs; también el ADR-M1-01 (StubOcrService provisional). El ítem "ADR-000-01 (schema de Quartz)" se completó fuera de orden durante el merge de 000-B (commit 4eab0b9).
+- [ ] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05)
+- [ ] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _mayormente manual, no requiere agente_
+- [ ] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08)
+- [ ] **Chunk 000-F** — CI mínimo (T-000-09) — _no bloqueante; hacerlo antes de cerrar el 3er módulo (M4), no antes de arrancar_
+- [ ] **Chunk 000-H** — Reconciliación de deuda técnica pre-existente (fuera de Tasks_Tinku_Implementacion.md original) — _ítem "ADR-000-01 (schema de Quartz)" ya completado fuera de orden durante el merge de 000-B, commit 4eab0b9. No pedirlo de nuevo en el prompt de este chunk._
 
 ## SPIKE — en paralelo desde el día 1, otra sesión/branch
 
@@ -35,7 +35,8 @@ _(requisito de todo lo demás — nada de M2 en adelante arranca sin esto cerrad
 - [ ] **Chunk M1-C** — Registro adulto + menor + backoff de OCR (T-M1-05, T-M1-06, T-M1-07)
 - [ ] **Chunk M1-D** — Capacidades combinables + registro Tutor (T-M1-08, T-M1-09)
 - [ ] **Chunk M1-E** — Credenciales + autorizaciones + baja de menor (T-M1-10, T-M1-11, T-M1-12)
-- [ ] **Chunk M1-F** — Tests de integración de todas las Historias de Usuario (T-M1-13)
+- [ ] **Chunk M1-F** — CAP: carga, revisión, vencimiento (T-M1-14, T-M1-15, T-M1-16, T-M1-17) — _agregado, enmienda Constitución v2.1. BR-CAP-02 no se lanza a producción sin validación legal externa (ver nota en Spec_M1)._
+- [ ] **Chunk M1-G** — Tests de integración de todas las Historias de Usuario, incluido CAP (T-M1-13)
 
 ## M2 — Motor de Matching Semántico
 

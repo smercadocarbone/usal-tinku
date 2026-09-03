@@ -6,15 +6,15 @@
 
 ## FASE 0 — Setup General (una sola vez, antes de cualquier módulo)
 
-- [x] T-000-01: Inicializar proyecto Spring Boot (Java), estructura de paquetes por módulo (`identidad`, `matching`, `aula`, `reservas`, `pagos`, `resumen`, `reputacion`, `admin`, `seguridad`) — bounded contexts del Artículo VIII de la Constitución.
-- [x] T-000-02: Configurar PostgreSQL con schemas separados por módulo (`identidad.*`, `pagos.*`, etc., Artículo VIII).
-- [x] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima. (Migración Flyway `V3__quartz_tables.sql`, tablas QRTZ_* en schema `public`; config JDBC en `application.yml`; verificado con `QuartzPersistenciaTest` — programar→shutdown→reiniciar y confirmar que el job+trigger persisten y vuelven a ejecutarse — contra PostgreSQL 16 real vía Testcontainers, y con `spring-boot:run` contra la base local.)
-- [x] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real. (`EjemploEvent` + `EjemploListener` con `@EventListener`; verificado con `DomainEventExampleTest` usando `@SpyBean` — ejemplifican el patrón `sesion.*`/`denuncia.*` de la sección 4 del AGENTS.md.)
-- [x] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02). (JwtUtil + JwtAuthenticationFilter + UsuarioDetailsService + AuthService + POST /api/usuarios/login, bcrypt; verificado con JwtAuthTest y SecurityHttpTest contra Postgres 16 vía Testcontainers.)
+- [ ] T-000-01: Inicializar proyecto Spring Boot (Java), estructura de paquetes por módulo (`identidad`, `matching`, `aula`, `reservas`, `pagos`, `resumen`, `reputacion`, `admin`, `seguridad`) — bounded contexts del Artículo VIII de la Constitución.
+- [ ] T-000-02: Configurar PostgreSQL con schemas separados por módulo (`identidad.*`, `pagos.*`, etc., Artículo VIII).
+- [ ] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima.
+- [ ] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real.
+- [ ] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02).
 - [ ] T-000-06: Cuenta de desarrollador de LiveKit Cloud + credenciales de sandbox.
 - [ ] T-000-07: Cuenta de MercadoPago Developers + usuarios de prueba operando en modo productivo controlado (ADR-M5-01 — **no** el sandbox clásico, por el problema conocido de webhooks).
-- [x] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él. (`main.py` con `/health` + `/match`; `MatchingServiceClient` (RestClient) + `MatchingServiceHealthCheck` (debug de arranque en `dev`, no rompe el backend si el servicio está caído); `MatchingServiceClientTest` con stub HTTP local, CI-safe sin depender de venv de Python; verificado de punta a punta con `uvicorn` real. Las versiones de `requirements.txt` se actualizaron a las mínimas que soportan Python 3.14 — las fijadas originalmente (fastapi 0.115.0 / pydantic 2.9.2) no tienen wheels para 3.14 y pydantic-core no compila desde fuente.)
-- [x] T-000-09: Configurar pipeline de CI mínimo (build + tests) — `.github/workflows/ci-backend.yml` corre `mvn -B verify` (build + tests) sobre `backend/**` en push/PR a `main`/`develop`; los tests levantan Postgres solos vía Testcontainers, sin depender de una base local.
+- [ ] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él.
+- [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests) — no bloqueante para arrancar, pero antes de tener 3+ módulos implementados.
 
 ## SPIKE PRIORITARIO — arranca en paralelo desde el día 1 (Artículo XI, ADR-M3-01)
 
@@ -39,7 +39,11 @@
 - [ ] T-M1-10: Endpoint `POST /api/tutores/credenciales` + job de backoff escalonado (24h→48h→96h, FR-ID-012).
 - [ ] T-M1-11: Endpoints de `autorizaciones_tutor` (crear, marcar `no_confiable`) — FR-ID-009.
 - [ ] T-M1-12: Endpoint `DELETE /api/usuarios/menores/{id}` con verificación de reservas futuras (FR-ID-014).
-- [ ] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.).
+- [ ] T-M1-14 _(agregado, enmienda Constitución v2.1)_: Migración: tabla `certificados_antecedentes_penales`.
+- [ ] T-M1-15: Endpoint `POST /api/tutores/antecedentes-penales` — carga del CAP, mismo backoff que credenciales (FR-ID-021).
+- [ ] T-M1-16: Endpoints de revisión del CAP para M8 (`GET`/`PATCH /api/admin/moderacion/antecedentes-penales`) — aprobar, rechazar (BR-CAP-01), marcar `en_revision_legal` (BR-CAP-02) (FR-ID-022/023/024).
+- [ ] T-M1-17: Job Quartz de vencimiento del CAP a los 12 meses — marca `vencido` y suspende `activo_para_matching` del Tutor (FR-ID-025).
+- [ ] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.), incluyendo: CAP aprobado sin antecedentes, CAP rechazado por BR-CAP-01, CAP a `en_revision_legal` por BR-CAP-02, vencimiento a los 12 meses suspende matching.
 
 ## M2 — Motor de Matching Semántico
 
@@ -83,15 +87,15 @@
 
 ## M3 — Aula Virtual
 
-*(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto — pero T-M3-01 a T-M3-05 no dependen del resultado del spike y pueden avanzar en paralelo.)*
+_(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto — pero T-M3-01 a T-M3-05 no dependen del resultado del spike y pueden avanzar en paralelo.)_
 
 - [ ] T-M3-01: Migración: `sesiones_aprendizaje`, `alertas_seguridad`.
 - [ ] T-M3-02: Integración con LiveKit: creación de sala + generación de tokens.
 - [ ] T-M3-03: Job de creación diferida de sala a T-5min (a partir del horario ya confirmado en M4).
 - [ ] T-M3-04: Job de no-show a T+10min, con cancelación explícita si ambos se unen antes.
 - [ ] T-M3-05: Endpoint `POST /api/sesiones/{id}/finalizar` + job de corte automático a T-fin+5min.
-- [ ] T-M3-06 *(depende del spike)*: Integrar el clasificador on-device en el cliente, según el resultado de ADR-M3-01.
-- [ ] T-M3-07 *(depende del spike)*: Endpoint `POST /api/sesiones/{id}/killswitch` — el backend decide la rama (menor/adultos) con datos propios de M1, nunca confiando en un flag del cliente.
+- [ ] T-M3-06 _(depende del spike)_: Integrar el clasificador on-device en el cliente, según el resultado de ADR-M3-01.
+- [ ] T-M3-07 _(depende del spike)_: Endpoint `POST /api/sesiones/{id}/killswitch` — el backend decide la rama (menor/adultos) con datos propios de M1, nunca confiando en un flag del cliente.
 - [ ] T-M3-08: Endpoint de subida de evidencia (clip de 30s) — solo alcanzable tras un killswitch ya registrado.
 - [ ] T-M3-09: Endpoint de confirmación de la rama "adultos" (sí/no del otro participante).
 - [ ] T-M3-10: Emisión de todos los eventos de sesión hacia M5 (`sesion.finalizada`, `sesion.interrumpida`, `sesion.no_show_*`, `sesion.killswitch_*`).
