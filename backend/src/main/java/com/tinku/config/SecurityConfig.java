@@ -1,13 +1,16 @@
 package com.tinku.config;
 
+import com.tinku.config.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Autenticacion propia via JWT (Constitucion: sin delegar a un proveedor
@@ -28,6 +31,12 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -36,14 +45,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // API stateless con JWT, sin sesiones de servidor
+            .csrf(AbstractHttpConfigurer::disable) // API stateless con JWT, sin sesiones de servidor
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/api/usuarios/registro", "/api/usuarios/login").permitAll()
+                // Rutas publicas: registro y login. /actuator/health (no hay
+                // dependencia de actuator en el pom) se agrega cuando exista.
+                .requestMatchers("/api/usuarios/registro", "/api/usuarios/login").permitAll()
                 .anyRequest().authenticated()
             );
-            // TODO (T-M1-05 en adelante): agregar el filtro JWT real antes de
-            // implementar cualquier endpoint que no sea de registro/login.
 
         return http.build();
     }
