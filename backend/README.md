@@ -49,10 +49,9 @@ la app sin más flags. El perfil `dev`:
 - usa el `StubOcrService` (OCR falso) y el JWT secret de desarrollo de
   `application.yml`.
 
-> **IMPORTANTE:** imposible levantar sin perfil. El `OcrService` real
-> (ADR-M1-01) no existe todavía; el único bean concreto (`StubOcrService`)
-> está gated a los perfiles `dev`/`test`. Sin `dev`, Spring no encuentra
-> ningún `OcrService` y el arranque falla.
+> **IMPORTANTE:** imposible levantar sin perfil. El `StubOcrService` está gated
+> a `dev`/`test` y el `TesseractOcrService` (ADR-M1-01) a los demás perfiles.
+> Sin perfil, Spring no encuentra ningún `OcrService` y el arranque falla.
 
 ```bash
 # 0. Asegurarse de usar JDK 21 (ver arriba)
@@ -77,7 +76,33 @@ SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
 |---|---|---|
 | `dev` (default local) | desarrollo local contra la BD de docker-compose | `StubOcrService` |
 | `test` | tests de integración (generalmente vía Testcontainers) | `StubOcrService` |
-| (otro, ej. `prod`) | despliegue real — requiere la implementación OCR real (ADR-M1-01) y secrets por entorno | ninguno por ahora |
+| (otro, ej. `prod`) | despliegue real | `TesseractOcrService` (requiere Tesseract instalado, ver abajo) |
+
+> El perfil `dev` usa el `StubOcrService` (OCR falso) para poder correr el flujo
+> de registro sin depender del binario nativo. El `TesseractOcrService` real
+> (ADR-M1-01) se activa únicamente fuera de `dev`/`test`. Sin perfil activo no
+> hay ningún `OcrService` y la app no levanta: `spring.profiles.active=dev` es
+> el default en `application.yml`.
+
+## OCR — Tesseract (ADR-M1-01)
+
+El OCR de identidad usa **Tesseract vía Tess4J**, in-process (la imagen del DNI
+nunca sale del servidor — Artículo V). Requiere el binario nativo de Tesseract
+instalado en el entorno y el data de idioma español:
+
+- **Mac:** `brew install tesseract tesseract-lang`
+- **Linux / Docker:** `apt-get install -y tesseract-ocr tesseract-ocr-spa`
+  (en el `Dockerfile` de despliegue; ver `docs/adr/ADR-M1-01.md`)
+
+El data de idioma español debe estar accesible para Tesseract vía
+`TESSDATA_PREFIX` (carpeta que contiene `spa.traineddata`) o la property
+`tinku.ocr.tessdata`. Si no está, el `TesseractOcrService` devuelve
+"documento ilegible" (reintentos + backoff FR-ID-011), nunca rompe el request.
+
+```bash
+# Ejemplo (Mac) tras instalar el paquete:
+export TESSDATA_PREFIX="$(brew --prefix tesseract)/share/tessdata"
+```
 
 ## Quartz (JobStore JDBC persistido)
 
@@ -98,6 +123,6 @@ memoria: deben sobrevivir a un reinicio o redeploy del proceso.
 
 ## Variables de entorno requeridas (ver application.yml)
 
-`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`.
+`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`, y para OCR: `TESSDATA_PREFIX` (carpeta con `spa.traineddata`).
 
 **Nunca commitear valores reales de estas variables.**

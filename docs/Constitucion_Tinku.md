@@ -83,6 +83,7 @@ Esta Constitución se modifica exclusivamente mediante una enmienda explícita, 
 | LLM (resumen y transcripción)     | GPT-4o vs. Gemini 2.0 Flash                                                                                                                                                                 | Pendiente — ADR                                                                             |
 | Frontend                          | Next.js + React (justificado por SEO en páginas públicas de Tutores)                                                                                                                        | Decidido, con alternativa más liviana (Vite + React) documentada si el SEO deja de importar |
 | Scheduler de jobs                 | Persistido en base de datos (ej. Quartz sobre Spring Boot)                                                                                                                                  | Decidido                                                                                    |
+| OCR de documento (registro/adulto/menor/tutor) | Tesseract vía Tess4J, in-process (parsing DNI propio + preprocesamiento deskew/contraste) | Decidido (ADR-M1-01, 2026-09-04) — requiere binario nativo tesseract en el entorno |
 
 ---
 
