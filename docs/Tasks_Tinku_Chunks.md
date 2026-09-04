@@ -30,7 +30,7 @@
 
 _(requisito de todo lo demás — nada de M2 en adelante arranca sin esto cerrado)_
 
-- [ ] **Chunk M1-A** — Migraciones (T-M1-01, T-M1-02)
+- [x] **Chunk M1-A** — Migraciones (T-M1-01, T-M1-02) — _cerrado como verificación: la migración `V2__m1_identidad.sql` se encontró pre-existente (commit `0616a05`) y ya había sido auditada contra el Plan de M1 durante Chunk 000-B sin requerir migración correctiva (ver nota en la línea de 000-B). No se creó en esta sesión. Incluye `usuarios` (CHECK `chk_adulto_tiene_capacidad`), `credenciales_academicas` (`ciclo_espera_hasta` nullable, sin backoff), `autorizaciones_tutor` (índice único) y `consentimientos_menor`; sin `certificados_antecedentes_penales` (Chunk M1-F). No se editó V2 (AGENTS.md §7). Verificado con `./mvnw verify` (16 tests OK, BUILD SUCCESS), `ddl-auto:validate` y `\d` de las 4 tablas._
 - [ ] **Chunk M1-B** — ADR-M1-01 (proveedor OCR) + integración (T-M1-03, T-M1-04)
 - [ ] **Chunk M1-C** — Registro adulto + menor + backoff de OCR (T-M1-05, T-M1-06, T-M1-07)
 - [ ] **Chunk M1-D** — Capacidades combinables + registro Tutor (T-M1-08, T-M1-09)
