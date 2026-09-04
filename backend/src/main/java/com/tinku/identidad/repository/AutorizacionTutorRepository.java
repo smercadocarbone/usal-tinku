@@ -19,8 +19,15 @@ public interface AutorizacionTutorRepository extends JpaRepository<AutorizacionT
      * FR-MATCH-004: la lista de Tutores autorizados a buscar al menor, excluyendo
      * los marcados {@code no_confiable} (FR-ID-009) — usada por MatchingContextoService.
      */
+    @Query("""
+            select a.tutor.id from AutorizacionTutor a
+             where a.adultoResponsable.id = :adultoResponsableId
+               and a.menor.id = :menorId
+               and a.noConfiable = false
+            """)
     List<UUID> findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(
-            UUID adultoResponsableId, UUID menorId);
+            @Param("adultoResponsableId") UUID adultoResponsableId,
+            @Param("menorId") UUID menorId);
 
     boolean existsByAdultoResponsableIdAndTutorId(UUID adultoResponsableId, UUID tutorId);
 
