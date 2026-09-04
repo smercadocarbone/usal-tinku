@@ -66,7 +66,19 @@ public class MatchingContextoService {
      */
     @Transactional
     public List<UUID> tutoresCandidatos(Usuario buscador) {
-        ContextoAutorizacion contexto = resolverContexto(buscador);
+        return tutoresCandidatos(resolverContexto(buscador));
+    }
+
+    /**
+     * Pasos 3 y 4 del Plan: el conjunto acotado de candidatos que se envía al
+     * servicio Python. Es la lista de autorización intersectada con los activos
+     * (un Tutor puede haberse suspendido DESPUÉS de ser autorizado), o el
+     * universo de tutores activos cuando no hay restricción (incluye el caso
+     * FR-MATCH-005 de menor sin autorizados). Sobrecarga para el orquestador,
+     * que ya resolvió el contexto antes del cálculo semántico.
+     */
+    @Transactional
+    public List<UUID> tutoresCandidatos(ContextoAutorizacion contexto) {
         if (contexto.esMenor() && contexto.conRestriccion()) {
             return usuarioRepo.idsActivosParaMatching(contexto.tutoresAutorizados());
         }
