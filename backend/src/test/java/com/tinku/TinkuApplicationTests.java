@@ -26,7 +26,8 @@ class TinkuApplicationTests {
 
     @Container
     static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres:16"))
+            new PostgreSQLContainer<>(
+            DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
