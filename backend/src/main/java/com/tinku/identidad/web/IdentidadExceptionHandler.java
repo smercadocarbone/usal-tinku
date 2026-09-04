@@ -71,6 +71,42 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(CredencialEnBackoffException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialBackoff(CredencialEnBackoffException ex) {
+        // 429: ciclo de credencial agotado, espera escalada 24→48→96… (FR-ID-012).
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Map.of("error", ex.getMessage(),
+                        "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
+    }
+
+    @ExceptionHandler(YaExisteCredencialPendienteException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialPendiente(YaExisteCredencialPendienteException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CredencialNoEncontradaException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialNoEncontrada(CredencialNoEncontradaException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MenorNoPerteneceException.class)
+    public ResponseEntity<Map<String, String>> handleMenorNoPertenece(MenorNoPerteneceException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TutorNoAutorizadoException.class)
+    public ResponseEntity<Map<String, String>> handleTutorNoAutorizado(TutorNoAutorizadoException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReservasFuturasPendientesException.class)
+    public ResponseEntity<Map<String, String>> handleReservasFuturas(ReservasFuturasPendientesException ex) {
+        // FR-ID-014: 409 — pedir confirmación explícita con la cantidad.
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage(),
+                        "reservas_futuras", String.valueOf(ex.getCantidadReservas())));
+    }
+
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Credenciales inválidas"));

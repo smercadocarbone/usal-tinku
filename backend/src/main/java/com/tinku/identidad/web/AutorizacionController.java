@@ -1,0 +1,64 @@
+package com.tinku.identidad.web;
+
+import com.tinku.identidad.dto.AutorizarTutorRequest;
+import com.tinku.identidad.dto.MarcarNoConfiableRequest;
+import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.identidad.service.AutorizacionService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+/**
+ * Autorizaciones de Tutor (FR-ID-009, T-M1-11), endpoints autenticados: solo
+ * la capacidad "Adulto Responsable" puede autorizar o marcar un Tutor como no
+ * confiable (Artículo II).
+ */
+@RestController
+@RequestMapping("/api/autorizaciones")
+public class AutorizacionController {
+
+    private final AutorizacionService autorizacionService;
+    private final UsuarioRepository usuarioRepository;
+
+    public AutorizacionController(AutorizacionService autorizacionService,
+                                  UsuarioRepository usuarioRepository) {
+        this.autorizacionService = autorizacionService;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> autorizarTutor(
+            @Valid @RequestBody AutorizarTutorRequest request,
+            Authentication authentication
+    ) {
+        Usuario adulto = usuarioActual(authentication);
+        var autorizacion = autorizacionService.autorizarTutor(
+                adulto, request.menorId(), request.tutorId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("id", autorizacion.getId(), "no_confiable", autorizacion.isNoConfiable()));
+    }
+
+    @PatchMapping("/no-confiable")
+    public ResponseEntity<Void> marcarNoConfiable(
+            @Valid @RequestBody MarcarNoConfiableRequest request,
+            Authentication authentication
+    ) {
+        Usuario adulto = usuarioActual(authentication);
+        autorizacionService.marcarNoConfiable(adulto, request.tutorId(), request.noConfiable());
+        return ResponseEntity.noContent().build();
+    }
+
+    private Usuario usuarioActual(Authentication authentication) {
+        return usuarioRepository.findByDni(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
+    }
+}

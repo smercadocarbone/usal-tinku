@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Ver Plan_M1_Identidad_Perfiles.md, sección 3 (tabla de endpoints).
@@ -63,6 +64,18 @@ public class UsuarioController {
     ) {
         Usuario usuario = usuarioService.actualizarCapacidades(usuarioActual(authentication), request);
         return ResponseEntity.ok(UsuarioResponse.from(usuario));
+    }
+
+    @DeleteMapping("/menores/{id}")
+    public ResponseEntity<Void> darDeBajaMenor(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "false") boolean confirmar,
+            Authentication authentication
+    ) {
+        // FR-ID-014: solo el Adulto Responsable del menor puede darlo de baja;
+        // si tiene reservas futuras se exige confirmación explícita.
+        usuarioService.darDeBajaMenor(usuarioActual(authentication), id, confirmar);
+        return ResponseEntity.noContent().build();
     }
 
     private Usuario usuarioActual(Authentication authentication) {

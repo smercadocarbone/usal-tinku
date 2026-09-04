@@ -1,54 +1,73 @@
-# NOTAS_VERIFICACION — branch `chunk/m1-d`
+# NOTAS_VERIFICACION — branch `chunk/m1-e`
 
-Chunk M1-D: **T-M1-08** (capacidades combinables) + **T-M1-09** (registro Tutor).
-Este branch NACE de `chunk/m1-c` (depende de su `OcrBackoffService` FR-ID-011 y
-de la migración V4). NO fue mergeado a main y NO marca ningún chunk/tarea como
-cerrado.
+Chunk M1-E: **T-M1-10** (credenciales + backoff escalonado FR-ID-012),
+**T-M1-11** (autorizaciones Tutor FR-ID-009), **T-M1-12** (baja de menor FR-ID-014).
+Este branch NACE de `chunk/m1-d`. NO fue mergeado a main y NO marca ningún
+chunk/tarea como cerrado.
 
 ## Qué quedó implementado
 
-- **T-M1-08 — `PATCH /api/usuarios/me/capacidades`** (autenticado):
-  - `ActualizarCapacidadesRequest` (`capacidadEstudiante`, `capacidadAdultoResponsable`).
-  - `UsuarioService.actualizarCapacidades(...)`: FR-ID-015 (activación inmediata,
-    sin re-OCR), FR-ID-016 (no desactivar Adulto Responsable con menores a cargo
-    → 409), FR-ID-001 (nunca quedar sin capacidades → 422), y Artículo II (un
-    menor no puede ser Adulto Responsable → 422).
-  - `NoPuedeDesactivarAdultoResponsableException` + handler (409).
-  - Helper `usuarioActual(Authentication)` en `UsuarioController`.
-- **T-M1-09 — `POST /api/tutores/registro`** (público, autorregistro FR-ID-007):
-  - `RegistroTutorRequest`.
-  - `TutorController` nuevo.
-  - `UsuarioService.registrarTutor(...)`: mismo OCR que adulto, edad ≥ 18 sin
-    excepciones (FR-ID-007), unicidad de DNI, backoff FR-ID-011.
-  - `SecurityConfig`: `/api/tutores/registro` agregado a `permitAll` (el alta de
-    menor NO es público).
+### T-M1-10 — Credenciales académicas
+- `POST /api/tutores/credenciales` (autenticado, solo Tutor): multipart
+  (`datos` + `archivo`). `CredencialService.cargarCredencial`:
+  - Solo perfil Tutor.
+  - Backoff escalado FR-ID-012 (`CredencialBackoffService`, tabla V5
+    `intentos_credencial`, cooldown PASIVO 24hs * 2^n → 24→48→96…).
+  - Una sola PENDIENTE a la vez.
+  - FR-ID-008: hasta 3 intentos por ciclo (`numero_intento`).
+- Transiciones de Admin (M8) expuestas como servicio: `marcarAprobada` /
+  `marcarRechazada`. Al rechazar el 3er intento dispara el backoff.
+- `Almacenamiento` (port) + `StubAlmacenamiento`: no hay storage real aún,
+  devuelve URL derivada (ADR de storage pendiente).
+
+### T-M1-11 — Autorizaciones de Tutor (FR-ID-009)
+- `POST /api/autorizaciones` — autorizar un Tutor para un menor a cargo.
+- `PATCH /api/autorizaciones/no-confiable` — marcar no confiable (privado,
+  a nivel de cuenta del AR; no alerta a Admin ni toca reputación pública).
+- Solo la capacidad "Adulto Responsable" (Artículo II: un menor no autoriza).
+
+### T-M1-12 — Baja de menor (FR-ID-014)
+- `DELETE /api/usuarios/menores/{id}?confirmar=` — solo su Adulto Responsable.
+- Verificación de reservas futuras vía port `VerificadorReservasFuturas` +
+  `StubVerificadorReservasFuturas` (devuelve 0 — M4 aún no existe). Si hubiera
+  reservas y no viene `confirmar=true` → 409 con el conteo.
+- Elimina el menor + autorizaciones + consentimientos.
 
 ## Unit tests corridos en esta sesión (verdes, sin Docker/Tesseract)
 
-- `UsuarioServiceTutorCapacidadesUnitTest` (10): alta Tutor exitosa, Tutor menor
-  (rechazo), documento ilegible (consume backoff), nombre no coincide, DNI
-  duplicado, activación inmediata sin re-OCR, quedar sin capacidades, desactivar
-  AR con menores, desactivar AR sin menores, menor→AR (rechazo).
-- Regresión: `UsuarioServiceRegistroUnitTest` (9), `OcrBackoffServiceTest` (6),
-  `DniParserTest` (7), `PreprocesadorImagenTest` (6). Total 38 verdes.
-- TODOS unitarios con mocks; ninguno levanta Spring ni requiere Docker.
+- `CredencialBackoffServiceTest` (5): 24→48→96hs, en espera lanza, fuera no
+  lanza, sin registro no lanza.
+- `CredencialServiceTest` (8): carga OK, no-Tutor rechaza, pendiente existente,
+  en backoff, reintento incremente a intento 2, aprobar, rechazo 3er intento →
+  backoff, rechazo 1er intento no.
+- `AutorizacionServiceTest` (7): autorizar OK/idempotente/mentor no a cargo/
+  sin capacidad/menor autorizando; no confiable OK/sin autorización previa.
+- `UsuarioServiceDarDeBajaTest` (4): baja sin reservas, menor no a cargo,
+  sin confirmación con reservas, con confirmación.
+- Regresión: M1-C (28) + M1-D (10). Total 62 verdes.
 
 ## Qué falta correr/confirmar en un entorno con Docker + Tesseract
 
-1. Migraciones Flyway aplican (V2, V3, V4) y `ddl-auto:validate` pasa.
-2. `@SpringBootTest` Testcontainers (no corrieron): confirmar que el contexto
-   completo autowirea los controllers nuevos (`TutorController`) y el
-   `UsuarioController` ampliado.
-3. Seguridad: verificar por HTTP real que `/api/usuarios/menores` y
-   `/api/usuarios/me/capacidades` REQUIEREN token (401 sin token) y que
-   `/api/tutores/registro` es `permitAll`.
-4. E2E de alta de Tutor con DNI real (Tesseract): rama de edad y coincidencia.
-5. Capacidades: no hay test de integración de US-1bis todavía (va en M1-G,
-   T-M1-13).
+1. Migraciones Flyway: aplicar V5 y validar `ddl-auto:validate`.
+2. Testcontainers `@SpringBootTest` (no corrieron): contexto completo con los
+   controllers/beans nuevos (`CredencialService`, `AutorizacionService`,
+   `CredencialBackoffService`, ports/stubs).
+3. HTTP real: rutas autenticadas requieren token (`/api/tutores/credenciales`,
+   `/api/autorizaciones/*`, `DELETE /menores/{id}`); `/api/tutores/registro`
+   sigue pública.
+4. E2E US-4: flujo carga → Admin aprueba/rechaza (M8) → reintento → backoff
+   escalado real contra BD.
+5. E2E US-5: marcar no confiable → el Tutor desaparece del matching (M2).
+6. E2E baja de menor: el puente real a M4 (reservas futuras) hoy es stub → la
+   verificación de FR-ID-014 queda pendiente hasta que M4 implemente el port.
+7. Storage de credenciales: `StubAlmacenamiento` no persiste — pendiente ADR de
+   storage antes de producción.
 
-## Nota de seguridad (Artículo II)
+## Notas de diseño / decisiones (sin ADR nuevo)
 
-Se añadió una salvaguarda en `actualizarCapacidades` para que un perfil MENOR no
-pueda activar `capacidadAdultoResponsable`. La restricción a nivel de permisos
-del menor (no pagar/autorizar Tutores/denunciar) se cierra en los módulos que
-consumen esas acciones (M4/M9).
+- El "no confiable" (FR-ID-009) se modeló a nivel de CUENTA del AR: se aplica
+  sobre todas sus autorizaciones de ese Tutor (bulk update por
+  adulto_responsable_id + tutor_id), no por menor, para que sea consistente con
+  el comportamiento "deja de aparecer en los resultados de esa cuenta".
+- Rechazo/aprobación de credencial viven en M1 como servicios; M8 (panel Admin)
+  los invoca. El conteo de intentos y el backoff quedan acá, no en M8.

@@ -10,15 +10,21 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
+import com.tinku.identidad.port.VerificadorReservasFuturas;
+import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.ConsentimientoMenorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.UUID;
+
+import com.tinku.identidad.port.StubVerificadorReservasFuturas;
 
 /**
  * Servicio de alta de Usuario adulto. Implementa el flujo de
@@ -41,17 +47,34 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final OcrBackoffService ocrBackoffService;
     private final ConsentimientoMenorRepository consentimientoRepo;
+    private final AutorizacionTutorRepository autorizacionRepo;
+    private final VerificadorReservasFuturas verificadorReservas;
 
+    @Autowired
     public UsuarioService(UsuarioRepository usuarioRepository,
                           OcrService ocrService,
                           PasswordEncoder passwordEncoder,
                           OcrBackoffService ocrBackoffService,
-                          ConsentimientoMenorRepository consentimientoRepo) {
+                          ConsentimientoMenorRepository consentimientoRepo,
+                          AutorizacionTutorRepository autorizacionRepo,
+                          VerificadorReservasFuturas verificadorReservas) {
         this.usuarioRepository = usuarioRepository;
         this.ocrService = ocrService;
         this.passwordEncoder = passwordEncoder;
         this.ocrBackoffService = ocrBackoffService;
         this.consentimientoRepo = consentimientoRepo;
+        this.autorizacionRepo = autorizacionRepo;
+        this.verificadorReservas = verificadorReservas;
+    }
+
+    /** Constructor de test de chunks M1-C/D (sin autorizaciones ni reservas). */
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          OcrService ocrService,
+                          PasswordEncoder passwordEncoder,
+                          OcrBackoffService ocrBackoffService,
+                          ConsentimientoMenorRepository consentimientoRepo) {
+        this(usuarioRepository, ocrService, passwordEncoder, ocrBackoffService,
+                consentimientoRepo, null, new StubVerificadorReservasFuturas());
     }
 
     @Transactional
@@ -267,6 +290,36 @@ public class UsuarioService {
         usuario.setCapacidadEstudiante(estudiante);
         usuario.setCapacidadAdultoResponsable(adultoResp);
         return usuarioRepository.save(usuario);
+    }
+
+    /**
+     * Baja definitiva de un perfil de MENOR, solo por su Adulto Responsable
+     * (FR-ID-014, T-M1-12). Si el menor tiene reservas futuras, exige
+     * confirmación explícita (si la tiene, se procede igualmente). Se elimina
+     * el menor y sus datos dependientes (autorizaciones y consentimientos).
+     */
+    @Transactional
+    public void darDeBajaMenor(Usuario adultoResponsable, UUID menorId, boolean confirmarBaja) {
+        Usuario menor = usuarioRepository.findById(menorId)
+                .orElseThrow(MenorNoPerteneceException::new);
+
+        // FR-ID-020: solo opera sobre menores a su cargo.
+        if (menor.getTipo() != TipoUsuario.MENOR
+                || menor.getAdultoResponsable() == null
+                || !menor.getAdultoResponsable().getId().equals(adultoResponsable.getId())) {
+            throw new MenorNoPerteneceException();
+        }
+
+        // FR-ID-014: no se puede dar de baja un menor con reservas futuras sin
+        // confirmación explícita (el puente a M4; stub por ahora devuelve 0).
+        long reservasFuturas = verificadorReservas.contarReservasFuturas(menorId);
+        if (reservasFuturas > 0 && !confirmarBaja) {
+            throw new ReservasFuturasPendientesException(reservasFuturas);
+        }
+
+        autorizacionRepo.deleteByMenorId(menorId);
+        consentimientoRepo.deleteByMenorId(menorId);
+        usuarioRepository.delete(menor);
     }
     private boolean coincideAproximado(String declarado, String extraido) {
         if (declarado == null || extraido == null) return false;
