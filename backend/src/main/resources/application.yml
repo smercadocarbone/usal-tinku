@@ -58,5 +58,10 @@ tinku:
   mercadopago:
     access-token: ${MP_ACCESS_TOKEN:}
     marketplace-fee-percent: 15 # BR-PAG-01
+  ocr:
+    # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta
+    # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
+    tessdata: ${TESSDATA_PREFIX:}
+    idioma: ${OCR_IDIOMA:spa}
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
