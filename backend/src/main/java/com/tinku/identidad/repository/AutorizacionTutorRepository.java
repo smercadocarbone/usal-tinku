@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +14,13 @@ public interface AutorizacionTutorRepository extends JpaRepository<AutorizacionT
 
     Optional<AutorizacionTutor> findByAdultoResponsableIdAndMenorIdAndTutorId(
             UUID adultoResponsableId, UUID menorId, UUID tutorId);
+
+    /**
+     * FR-MATCH-004: la lista de Tutores autorizados a buscar al menor, excluyendo
+     * los marcados {@code no_confiable} (FR-ID-009) — usada por MatchingContextoService.
+     */
+    List<UUID> findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(
+            UUID adultoResponsableId, UUID menorId);
 
     boolean existsByAdultoResponsableIdAndTutorId(UUID adultoResponsableId, UUID tutorId);
 
