@@ -34,8 +34,26 @@ public class IdentidadExceptionHandler {
 
     @ExceptionHandler(DocumentoIlegibleException.class)
     public ResponseEntity<Map<String, String>> handleIlegible(DocumentoIlegibleException ex) {
-        // TODO (T-M1-07): acá debe incrementarse el contador de intentos
-        // del ciclo de backoff antes de responder — todavía no implementado.
+        // El contador de intentos del ciclo de backoff (FR-ID-011) ya se
+        // incrementó en UsuarioService/OcrBackoffService antes de lanzar.
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentoEnBackoffException.class)
+    public ResponseEntity<Map<String, String>> handleBackoff(DocumentoEnBackoffException ex) {
+        // 429: el cliente agotó los 3 intentos del ciclo y está en espera (FR-ID-011).
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Map.of("error", ex.getMessage(),
+                        "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
+    }
+
+    @ExceptionHandler(ConsentimientoNoOtorgadoException.class)
+    public ResponseEntity<Map<String, String>> handleConsentimiento(ConsentimientoNoOtorgadoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LimiteMenoresAlcanzadoException.class)
+    public ResponseEntity<Map<String, String>> handleLimiteMenores(LimiteMenoresAlcanzadoException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 

@@ -1,11 +1,14 @@
 package com.tinku.identidad.service;
 
 import com.tinku.identidad.dto.RegistroAdultoRequest;
+import com.tinku.identidad.dto.RegistroMenorRequest;
+import com.tinku.identidad.model.ConsentimientoMenor;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
+import com.tinku.identidad.repository.ConsentimientoMenorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,26 +30,41 @@ import java.time.Period;
 public class UsuarioService {
 
     private static final int EDAD_MINIMA_ADULTO = 18;
+    private static final int EDAD_MINIMA_MENOR = 6;
+    private static final int MAX_MENORES_POR_ADULTO = 5; // FR-ID-013
+    private static final String VERSION_CONSENTIMIENTO_DEFAULT = "v1";
 
     private final UsuarioRepository usuarioRepository;
     private final OcrService ocrService;
     private final PasswordEncoder passwordEncoder;
+    private final OcrBackoffService ocrBackoffService;
+    private final ConsentimientoMenorRepository consentimientoRepo;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, OcrService ocrService, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          OcrService ocrService,
+                          PasswordEncoder passwordEncoder,
+                          OcrBackoffService ocrBackoffService,
+                          ConsentimientoMenorRepository consentimientoRepo) {
         this.usuarioRepository = usuarioRepository;
         this.ocrService = ocrService;
         this.passwordEncoder = passwordEncoder;
+        this.ocrBackoffService = ocrBackoffService;
+        this.consentimientoRepo = consentimientoRepo;
     }
 
     @Transactional
     public Usuario registrarAdulto(RegistroAdultoRequest request, byte[] fotoDni) {
+        // Paso 0: respetar el backoff de OCR (FR-ID-011) del DNI declarado.
+        ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
+
         // Paso 2: OCR sobre la foto.
         ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
 
-        // Fallo de LECTURA (no de validación) — consume el contador de reintentos.
-        // La política de backoff (3 intentos + 24hs) se implementa en el
-        // controlador/scheduler, no acá: este método solo señaliza el caso.
+        // Fallo de LECTURA (no de validación) — consume el contador de reintentos
+        // (FR-ID-011) y señaliza el caso. La política de 3 intentos + 24hs la
+        // maneja OcrBackoffService, no acá.
         if (!ocr.documentoLegible()) {
+            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado());
             throw new DocumentoIlegibleException();
         }
 
@@ -92,10 +110,79 @@ public class UsuarioService {
     }
 
     /**
-     * Comparación tolerante: mayúsculas/minúsculas y acentos no cuentan
-     * como "no coincide" — el OCR y el usuario pueden tipear "José" vs
-     * "JOSE" y siguen siendo la misma persona.
+     * Alta de un perfil de MENOR a cargo, por el Adulto Responsable
+     * autenticado. El menor NUNCA se autorregistra (FR-ID-020) — esta
+     * operación exige sesión del adulto (Artículo II). Mismo OCR que un
+     * adulto (FR-ID-019), edad ≥ 6 (FR-ID-017), consentimiento explícito
+     * separado del T&C (BR-CONSENT-01) y límite de 5 menores (FR-ID-013) —
+     * todos en la misma transacción.
      */
+    @Transactional
+    public Usuario registrarMenor(RegistroMenorRequest request, byte[] fotoDni, Usuario adultoResponsable) {
+        ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
+
+        // BR-CONSENT-01: consentimiento explícito y separado, obligatorio.
+        if (!Boolean.TRUE.equals(request.consentimientoExplicito())) {
+            throw new ConsentimientoNoOtorgadoException();
+        }
+
+        // FR-ID-013: máximo 5 perfiles de menor a cargo.
+        long menoresACargo = usuarioRepository
+                .countByAdultoResponsableIdAndTipo(adultoResponsable.getId(), TipoUsuario.MENOR);
+        if (menoresACargo >= MAX_MENORES_POR_ADULTO) {
+            throw new LimiteMenoresAlcanzadoException();
+        }
+
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
+        if (!ocr.documentoLegible()) {
+            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado());
+            throw new DocumentoIlegibleException();
+        }
+
+        // Mismas validaciones que un adulto (FR-ID-019): coincidencia
+        // nombre/apellido/DNI y unicidad del DNI en el sistema.
+        if (!coincideAproximado(request.nombreDeclarado(), ocr.nombreExtraido())
+                || !coincideAproximado(request.apellidoDeclarado(), ocr.apellidoExtraido())) {
+            throw new DocumentoNoCoincideException();
+        }
+
+        if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
+            throw new DniYaRegistradoException();
+        }
+
+        // FR-ID-017: edad del menor calculada sobre la fecha EXTRAÍDA del
+        // documento (nunca la declarada). Rango 6..17.
+        int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
+        if (edad < EDAD_MINIMA_MENOR || edad >= EDAD_MINIMA_ADULTO) {
+            throw new EdadInsuficienteException(
+                    "El perfil de menor debe tener entre 6 y 17 años.");
+        }
+
+        Usuario menor = new Usuario();
+        menor.setDni(ocr.dniExtraido());
+        menor.setNombre(ocr.nombreExtraido());
+        menor.setApellido(ocr.apellidoExtraido());
+        menor.setFechaNacimiento(ocr.fechaNacimientoExtraida());
+        menor.setTipo(TipoUsuario.MENOR);
+        menor.setCapacidadEstudiante(true);
+        menor.setCapacidadAdultoResponsable(false);
+        menor.setAdultoResponsable(adultoResponsable); // FR-ID-020
+        menor.setPasswordHash(passwordEncoder.encode(request.password()));
+        menor.setEstadoCuenta(EstadoCuenta.ACTIVA);
+        menor = usuarioRepository.save(menor);
+
+        // BR-CONSENT-01: persiste el consentimiento en la misma transacción.
+        ConsentimientoMenor consentimiento = new ConsentimientoMenor();
+        consentimiento.setMenor(menor);
+        consentimiento.setAdultoResponsable(adultoResponsable);
+        consentimiento.setVersionTexto(
+                request.versionTextoConsentimiento() == null
+                        ? VERSION_CONSENTIMIENTO_DEFAULT
+                        : request.versionTextoConsentimiento());
+        consentimientoRepo.save(consentimiento);
+
+        return menor;
+    }
     private boolean coincideAproximado(String declarado, String extraido) {
         if (declarado == null || extraido == null) return false;
         return normalizar(declarado).equals(normalizar(extraido));

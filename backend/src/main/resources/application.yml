@@ -63,5 +63,6 @@ tinku:
     # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
     tessdata: ${TESSDATA_PREFIX:}
     idioma: ${OCR_IDIOMA:spa}
+    backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
