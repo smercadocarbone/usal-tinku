@@ -1,75 +1,63 @@
-# NOTAS_VERIFICACION — branch `chunk/m1-f`
+# NOTAS_VERIFICACION — branch `chunk/m1-g`
 
-Chunk M1-F: **T-M1-14** (migración CAP), **T-M1-15** (carga CAP FR-ID-021),
-**T-M1-16** (revisión CAP para M8, BR-CAP-01/02), **T-M1-17** (job Quartz de
-vencimiento FR-ID-025). Este branch NACE de `chunk/m1-e`. NO fue mergeado a
-main y NO marca ningún chunk/tarea como cerrado.
+Chunk M1-G: **T-M1-13** — tests de integración de TODAS las Historias de
+Usuario del Spec de M1, de punta a punta sobre el stack real (HTTP + Spring
+Security + JPA + Flyway + PostgreSQL **via Testcontainers**, Docker corriendo).
+Este branch NACE de `chunk/m1-f`. NO fue mergeado a main y NO marca ningún
+chunk/tarea como cerrado en `Tasks_Tinku_Chunks.md`/`Tasks_Tinku_Implementacion.md`.
 
-## Qué quedó implementado
+## Qué se verificó (y quedó VERDE)
 
-### T-M1-14 — Migración V6
-- Tabla `certificados_antecedentes_penales` (schema identidad): estado enum
-  (PENDIENTE/APROBADO/RECHAZADO/EN_REVISION_LEGAL/VENCIDO), `tiene_antecedentes`,
-  `categoria_antecedente` (trazabilidad, no automatiza), `numero_intento` 1..3,
-  `ciclo_espera_hasta`.
-- Columna `usuarios.activo_para_matching` (columna NUEVA, no se edita V2 —
-  AGENTS.md §7). Mismo flag que M2/M9 usan para suspender Tutores del matching;
-  M2 lo lee para excluirlos.
+`mvnw test` completo: **100 tests, 0 failures, 0 errors** (BUILD SUCCESS).
+Incluye los 11 tests de integración nuevos de `IdentidadFlujosIntegracionTest`
+más la suite previa (`TinkuApplicationTests`, `QuartzPersistenciaTest`,
+`SecurityHttpTest`, `JwtAuthTest`, `DomainEventExampleTest`, `UsuarioServiceTest`
+y todos los unit tests de M1-C/D/E/F).
 
-### T-M1-15 — Carga del CAP
-- `POST /api/tutores/antecedentes-penales` (autenticado, solo Tutor): multipart
-  (`datos` + `archivo`). `CertificadoService.cargarCap`.
-  - Backoff compartido con credenciales (FR-ID-021 reutiliza FR-ID-012):
-    `CredencialBackoffService` (misma escalada 24→48→96).
-  - Una sola PENDIENTE a la vez. `vence_at = fecha_emision + 12 meses`.
-- Reutiliza `Almacenamiento` (stub) para la URL del archivo.
+Cobertura de punta a punta (T-M1-13), por Historia de Usuario:
 
-### T-M1-16 — Revisión para M8
-- `GET /api/admin/moderacion/antecedentes-penales` (cola) y
-  `PATCH .../{id}` mit `RevisarCapRequest{accion, categoriaAntecedente}`.
-  - APROBAR → habilita `activo_para_matching` (FR-ID-025).
-  - RECHAZAR → BR-CAP-01 (FR-ID-023); si era el 3er intento → backoff.
-  - EN_REVISION_LEGAL → BR-CAP-02 (FR-ID-024); NUNCA se auto-resuelve.
+| US  | Test de integración | Assert clave |
+|-----|--------------------|--------------|
+| US-1 | adulto se registra + loguea | 201, tipo ADULTO, estado ACTIVA, capacidades |
+| US-1 | rechazo por DNI duplicado (contra el DNI EXTRAÍDO, no el declarado) | 409 |
+| US-1 | rechazo por edad < 18 (fecha extraída del documento) | 403 |
+| US-2 | tutor se registra | 201, tipo TUTOR |
+| US-3 | menor se registra por SU Adulto Responsable autenticado | 201, tipo MENOR, AR linkeado, no-adulto-responsable |
+| US-4 | credencial: carga → 3 rechazos → backoff escalado → carga responde 429 | intentos 1/2/3, luego 429 |
+| US-5 | Adulto Responsable autoriza un Tutor para su menor | 201 |
+| US-6 | CAP aprobado habilita `activo_para_matching` | FR-ID-025 |
+| US-6 | CAP rechazado por BR-CAP-01 (3er intento) dispara backoff | 429 + matching inactivo |
+| US-6 | CAP `en_revision_legal` (BR-CAP-02) NO se auto-resuelve | estado persistente + matching inactivo |
+| US-6 | CAP vencido a los 12 meses suspende matching, NO la cuenta | estado VENCIDO + matching inactivo + cuenta ACTIVA |
 
-### T-M1-17 — Vencimiento a los 12 meses
-- `CapVencimientoJob` (Quartz, `@DisallowConcurrentExecution`) + JobDetail/Trigger
-  diario (03:00) en `QuartzConfig` (durable/recoverable).
-  - `CertificadoService.marcarVencidos()`: marca `VENCIDO` y suspende
-    `activo_para_matching` (FR-ID-025). Saca del matching, no de la cuenta.
+## Hallazgo de M1-G: bug latente de Quartz (corregido con config, no toca Flyway)
 
-## Unit tests corridos en esta sesión (verdes, sin Docker/Tesseract)
+Al correr por primera vez contra un Postgres real, el contexto no levantaba:
+`Bad value for type long : \xaced...` al almacenar el JobDetail del job de M1-F
+(`capVencimiento`). Causa raíz:
 
-- `CertificadoServiceTest` (10): carga OK (+vence_at 12m), no-Tutor, pendiente
-  existente, en backoff, reintento→intento 2, aprobar→habilita matching,
-  rechazar BR-CAP-01 (3er intento→backoff), en_revision_legal BR-CAP-02 (no
-  auto-resuelve), vencidos suspenden matching, idempotencia.
-- `CapVencimientoJobTest` (1): el job delega en `marcarVencidos()`.
-- Regresión: C (28) + D (10) + E (24). Total 73 verdes.
+- `spring.quartz.job-store-type=jdbc` estaba configurado en `application.yml`,
+  pero **no** se seteaba `org.quartz.jobStore.driverDelegateClass`.
+- El default de Spring Boot (`StdJDBCDelegate`) lee `QRTZ_JOB_DETAILS.JOB_DATA`
+  via `getBlob()` esperando un **large object (OID)**, pero las tablas QRTZ_* de
+  `V3__quartz_tables.sql` usan **BYTEA** (script oficial de Quartz para Postgres).
+- Hasta M1-F no había ningún JobDetail que persistir en runtime, por eso el bug
+  estaba latente; el `capVencimiento` (primer job de la app) lo expuso.
+- **Fix (config, AGENTS.md §7 intacto — NO se editó V3):** se agregó
+  `driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate` en
+  `application.yml`. Confirmado por `QuartzPersistenciaTest` (verde) y por el
+  arranque real del contexto con el job registrado.
 
-## Qué falta correr/confirmar en un entorno con Docker + Tesseract
+## Alcance y límites de lo verificado acá
 
-1. Flyway: aplicar V6 y `ddl-auto:validate` (nueva columna + tabla).
-2. Testcontainers `@SpringBootTest`: el contexto arranca con el
-   `CapVencimientoJob` registrado en Quartz con JobStore JDBC (expresión cron,
-   `JobDetail`/`Trigger`).
-3. HTTP real: `/api/tutores/antecedentes-penales` requiere token; revisión
-   admin con rol.
-4. E2E US-6: carga → Admin aprueba → tutor en matching; rechazo por BR-CAP-01;
-   `en_revision_legal`; y vencimiento real a los 12 meses suspendiendo matching.
-
-## Decisiones de scope (ADRs NO)
-
-- **Rol ADMIN de M8:** los endpoints `/api/admin/...` quedan solo
-  `authenticated()`. M8 debe cerrarlos con rol ADMIN (tabla `admins`, separada
-  de `usuarios`, sin compartir JWT — ver `SecurityConfig`). La identidad del
-  revisor se deduce del principal (UUID si aplica); si no, `admin_revisor_id`
-  queda null hasta que M8 provea la identidad real (NFR-SEC-04).
-- **`activo_para_matching` en `usuarios`:** decisión M1-F para que el job de
-  vencimiento tenga un flag persistido que apagar (FR-ID-025) sin crear tablas
-  de M2. M2 leerá este flag (mismo que planea reutilizar para M9) para excluir
-  Tutores suspendidos. Si en M2 se prefiere migrar a `perfiles_tutor_matching`,
-  se documenta en esa decisión — no se crea flag duplicado.
-- **Backoff compartido por tutor** entre credencial y CAP (plan 2.4: "reutilizar
-  el job, no duplicar la lógica"): ambos usan `CredencialBackoffService` clave
-  tutorId. Queda registrado que agotar el ciclo de uno afecta también al otro
-  (patrón intencional de "reusar", no un bug).
+- **OCR real (Tesseract) aún NO verificado end-to-end.** Los tests de
+  integración mockean `OcrService` a nivel de puerto para poder controlar DNI y
+  fecha de nacimiento extraídos (necesario para menores/edad/duplicado). El
+  binario nativo de Tesseract no está garantizado en este entorno; su E2E queda
+  pendiente de un entorno con `tesseract`/`tesseract-ocr-spa` instalado
+  (ADR-M1-01). El pipeline aislado sigue cubierto por `DniParserTest` +
+  `PreprocesadorImagenTest`.
+- `StubAlmacenamiento` no persiste archivos (ADR de storage pendiente); los tests
+  de credencial/CAP usan la URL `stub:/...` — suficiente para el flujo lógico.
+- los endpoints `/api/admin/**` quedan `authenticated()` (no rol ADMIN); M8 los
+  cierra con rol ADMIN (ver NOTAS de M1-F).

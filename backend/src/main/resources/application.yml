@@ -42,6 +42,12 @@ spring:
           jobStore:
             isClustered: false # revisar si el equipo crece a mas de un desarrollador/instancia
             tablePrefix: QRTZ_ # tablas en schema `public` (ver V3__quartz_tables.sql y backend/README.md)
+            # Obligatorio para PostgreSQL: el default (StdJDBCDelegate) lee
+            # JOB_DATA via getBlob() esperando un large object (OID), pero las
+            # tablas QRTZ_* de V3 usan BYTEA -> "Bad value for type long".
+            # Sin esto, cualquier JobDetail persistido (ej. capVencimiento, M1-F)
+            # falla al almacenarse/recuperarse.
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 server:
   port: 8080
