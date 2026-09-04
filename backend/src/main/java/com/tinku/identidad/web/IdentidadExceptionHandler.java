@@ -57,6 +57,20 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(NoPuedeDesactivarAdultoResponsableException.class)
+    public ResponseEntity<Map<String, String>> handleNoDesactivarResponsable(NoPuedeDesactivarAdultoResponsableException ex) {
+        // FR-ID-016: 409 conflict — no puede dejar de ser Adulto Responsable
+        // con menores a cargo.
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleArgumentoInvalido(IllegalArgumentException ex) {
+        // Violaciones de FR-ID-001/015/artículo II en capacidades (p.ej. quedar
+        // sin capacidades o un menor intentando ser Adulto Responsable).
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Credenciales inválidas"));

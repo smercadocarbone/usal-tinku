@@ -1,5 +1,6 @@
 package com.tinku.identidad.web;
 
+import com.tinku.identidad.dto.ActualizarCapacidadesRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
 import com.tinku.identidad.dto.UsuarioResponse;
@@ -17,8 +18,8 @@ import java.io.IOException;
 
 /**
  * Ver Plan_M1_Identidad_Perfiles.md, sección 3 (tabla de endpoints).
- * FR-ID-015/016 (capacidades) todavía no implementados — ver
- * Tasks_Tinku_Implementacion.md, T-M1-08 (Chunk M1-D).
+ * Capacidades combinables (T-M1-08) y alta de menor (T-M1-06) implementados;
+ * el alta de Tutor vive en {@code TutorController} (T-M1-09).
  */
 @RestController
 @RequestMapping("/api/usuarios")
@@ -49,11 +50,23 @@ public class UsuarioController {
     ) throws IOException {
         // El menor no se registra solo: lo hace su Adulto Responsable
         // autenticado (FR-ID-020, Artículo II). El principal es User(dni).
-        String dniAdulto = authentication.getName();
-        Usuario adulto = usuarioRepository.findByDni(dniAdulto)
-                .orElseThrow(() -> new IllegalStateException("Adulto responsable no encontrado"));
+        Usuario adulto = usuarioActual(authentication);
 
         Usuario menor = usuarioService.registrarMenor(request, fotoDni.getBytes(), adulto);
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(menor));
+    }
+
+    @PatchMapping("/me/capacidades")
+    public ResponseEntity<UsuarioResponse> actualizarCapacidades(
+            @Valid @RequestBody ActualizarCapacidadesRequest request,
+            Authentication authentication
+    ) {
+        Usuario usuario = usuarioService.actualizarCapacidades(usuarioActual(authentication), request);
+        return ResponseEntity.ok(UsuarioResponse.from(usuario));
+    }
+
+    private Usuario usuarioActual(Authentication authentication) {
+        return usuarioRepository.findByDni(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

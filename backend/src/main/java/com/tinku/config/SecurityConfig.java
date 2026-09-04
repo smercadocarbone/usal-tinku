@@ -49,9 +49,12 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Rutas publicas: registro y login. /actuator/health (no hay
-                // dependencia de actuator en el pom) se agrega cuando exista.
-                .requestMatchers("/api/usuarios/registro", "/api/usuarios/login").permitAll()
+                // Rutas publicas: registro de adulto, registro de tutor
+                // (autorregistro con DNI, FR-ID-007) y login. El alta de
+                // menor NO es pública: la hace el Adulto Responsable
+                // autenticado (FR-ID-020, Artículo II).
+                .requestMatchers("/api/usuarios/registro", "/api/usuarios/login",
+                        "/api/tutores/registro").permitAll()
                 .anyRequest().authenticated()
             );
 

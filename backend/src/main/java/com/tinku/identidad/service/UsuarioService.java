@@ -1,7 +1,9 @@
 package com.tinku.identidad.service;
 
+import com.tinku.identidad.dto.ActualizarCapacidadesRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
+import com.tinku.identidad.dto.RegistroTutorRequest;
 import com.tinku.identidad.model.ConsentimientoMenor;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
@@ -182,6 +184,89 @@ public class UsuarioService {
         consentimientoRepo.save(consentimiento);
 
         return menor;
+    }
+
+    /**
+     * Alta de Tutor (FR-ID-007): el MISMO flujo de OCR que un adulto de
+     * US-1 — edad ≥ 18, coincidencia nombre/apellido/DNI y unicidad de DNI —
+     * sin excepciones para menores. La capacidad se administra por separado
+     * (credenciales + CAP en chunks M1-E/M1-F); acá solo se crea el perfil.
+     */
+    @Transactional
+    public Usuario registrarTutor(RegistroTutorRequest request, byte[] fotoDni) {
+        ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado()); // FR-ID-011
+
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
+        if (!ocr.documentoLegible()) {
+            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado()); // FR-ID-011
+            throw new DocumentoIlegibleException();
+        }
+
+        if (!coincideAproximado(request.nombreDeclarado(), ocr.nombreExtraido())
+                || !coincideAproximado(request.apellidoDeclarado(), ocr.apellidoExtraido())) {
+            throw new DocumentoNoCoincideException();
+        }
+
+        int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
+        if (edad < EDAD_MINIMA_ADULTO) {
+            // FR-ID-007: bloqueo de registro de Tutor menor, sin excepciones.
+            throw new EdadInsuficienteException("Tenés que ser mayor de 18 años para registrarte como Tutor.");
+        }
+
+        if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
+            throw new DniYaRegistradoException();
+        }
+
+        Usuario tutor = new Usuario();
+        tutor.setDni(ocr.dniExtraido());
+        tutor.setNombre(ocr.nombreExtraido());
+        tutor.setApellido(ocr.apellidoExtraido());
+        tutor.setFechaNacimiento(ocr.fechaNacimientoExtraida());
+        tutor.setTipo(TipoUsuario.TUTOR);
+        tutor.setCapacidadEstudiante(false);
+        tutor.setCapacidadAdultoResponsable(false);
+        tutor.setPasswordHash(passwordEncoder.encode(request.password()));
+        tutor.setEstadoCuenta(EstadoCuenta.ACTIVA);
+
+        return usuarioRepository.save(tutor);
+    }
+
+    /**
+     * Activar/desactivar capacidades del usuario autenticado (FR-ID-015/016).
+     *  - Activación de una capacidad complementaria: inmediata, SIN nueva
+     *    verificación OCR (FR-ID-015).
+     *  - No se puede desactivar "Adulto Responsable" con menores a cargo
+     *    (FR-ID-016).
+     *  - Al menos una capacidad debe seguir activa (FR-ID-001).
+     */
+    @Transactional
+    public Usuario actualizarCapacidades(Usuario usuario, ActualizarCapacidadesRequest request) {
+        boolean estudiante = request.capacidadEstudiante();
+        boolean adultoResp = request.capacidadAdultoResponsable();
+
+        // FR-ID-001: nunca quedar sin capacidades.
+        if (!estudiante && !adultoResp) {
+            throw new IllegalArgumentException("Debe mantener al menos una capacidad activa.");
+        }
+
+        // Artículo II: un menor nunca puede ser Adulto Responsable (no paga,
+        // no autoriza Tutores) — solo tiene capacidad estudiante.
+        if (usuario.getTipo() == TipoUsuario.MENOR && adultoResp) {
+            throw new IllegalArgumentException("Un perfil de menor no puede ser Adulto Responsable.");
+        }
+
+        // FR-ID-016: no desactivar Adulto Responsable con menores a cargo.
+        if (usuario.isCapacidadAdultoResponsable() && !adultoResp) {
+            long menoresACargo = usuarioRepository
+                    .countByAdultoResponsableIdAndTipo(usuario.getId(), TipoUsuario.MENOR);
+            if (menoresACargo > 0) {
+                throw new NoPuedeDesactivarAdultoResponsableException();
+            }
+        }
+
+        usuario.setCapacidadEstudiante(estudiante);
+        usuario.setCapacidadAdultoResponsable(adultoResp);
+        return usuarioRepository.save(usuario);
     }
     private boolean coincideAproximado(String declarado, String extraido) {
         if (declarado == null || extraido == null) return false;
