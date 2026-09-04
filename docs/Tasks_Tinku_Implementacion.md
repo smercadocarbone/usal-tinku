@@ -27,8 +27,8 @@
 
 ## M1 — Gestión de Identidad y Perfiles
 
-- [ ] T-M1-01: Migración: tabla `usuarios` con constraint `UNIQUE` en `dni`.
-- [ ] T-M1-02: Migración: tablas `credenciales_academicas`, `autorizaciones_tutor`, `consentimientos_menor`.
+- [x] T-M1-01: Migración: tabla `usuarios` con constraint `UNIQUE` en `dni`. — _pre-existente, no creada en esta sesión: `V2__m1_identidad.sql` (commit `0616a05`) ya contenía esta migración y fue verificada contra el Plan de M1 durante Chunk 000-B sin requerir migración correctiva. Incluye `UNIQUE` en `dni` y el CHECK `chk_adulto_tiene_capacidad` (adulto con ≥1 capacidad, elegido como CHECK de BD, no validación de app). Reconfirmado por regresión (`./mvnw verify`, 16 tests OK) y por `\d identidad.usuarios`. No se editó V2 (AGENTS.md §7, ya aplicada)._
+- [x] T-M1-02: Migración: tablas `credenciales_academicas`, `autorizaciones_tutor`, `consentimientos_menor`. — _pre-existente (íbid, en `V2__m1_identidad.sql`, auditada en Chunk 000-B). Incluye el índice único `uq_autorizacion` en los 3 campos de `autorizaciones_tutor` y `credenciales_academicas.ciclo_espera_hasta` nullable sin backoff. Sin `certificados_antecedentes_penales` (Chunk M1-F). Reconfirmado por `\d` de las 3 tablas. No se editó V2._
 - [ ] T-M1-03: Resolver ADR-M1-01 (proveedor de OCR) antes de continuar con T-M1-04.
 - [ ] T-M1-04: Integración con el proveedor de OCR elegido — función que recibe una imagen y devuelve nombre/apellido/fecha de nacimiento extraídos.
 - [ ] T-M1-05: Endpoint `POST /api/usuarios/registro` — valida coincidencia nombre/apellido/DNI + unicidad de DNI + edad ≥18 (FR-ID-001).
