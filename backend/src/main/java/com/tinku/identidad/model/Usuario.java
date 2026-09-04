@@ -68,6 +68,15 @@ public class Usuario {
     @Column(name = "estado_cuenta", nullable = false, length = 20)
     private EstadoCuenta estadoCuenta = EstadoCuenta.ACTIVA;
 
+    /**
+     * Habilitación para matching (FR-ID-025): lo aprueba la Credencial/CAP y
+     * lo suspende el vencimiento del CAP o una sanción de M9. Mismo flag que
+     * M2/M9 usan — este es su origen en `usuarios`, M2 lo lee para excluir
+     * Tutores suspendidos del matching.
+     */
+    @Column(name = "activo_para_matching", nullable = false)
+    private boolean activoParaMatching = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

@@ -1,73 +1,75 @@
-# NOTAS_VERIFICACION — branch `chunk/m1-e`
+# NOTAS_VERIFICACION — branch `chunk/m1-f`
 
-Chunk M1-E: **T-M1-10** (credenciales + backoff escalonado FR-ID-012),
-**T-M1-11** (autorizaciones Tutor FR-ID-009), **T-M1-12** (baja de menor FR-ID-014).
-Este branch NACE de `chunk/m1-d`. NO fue mergeado a main y NO marca ningún
-chunk/tarea como cerrado.
+Chunk M1-F: **T-M1-14** (migración CAP), **T-M1-15** (carga CAP FR-ID-021),
+**T-M1-16** (revisión CAP para M8, BR-CAP-01/02), **T-M1-17** (job Quartz de
+vencimiento FR-ID-025). Este branch NACE de `chunk/m1-e`. NO fue mergeado a
+main y NO marca ningún chunk/tarea como cerrado.
 
 ## Qué quedó implementado
 
-### T-M1-10 — Credenciales académicas
-- `POST /api/tutores/credenciales` (autenticado, solo Tutor): multipart
-  (`datos` + `archivo`). `CredencialService.cargarCredencial`:
-  - Solo perfil Tutor.
-  - Backoff escalado FR-ID-012 (`CredencialBackoffService`, tabla V5
-    `intentos_credencial`, cooldown PASIVO 24hs * 2^n → 24→48→96…).
-  - Una sola PENDIENTE a la vez.
-  - FR-ID-008: hasta 3 intentos por ciclo (`numero_intento`).
-- Transiciones de Admin (M8) expuestas como servicio: `marcarAprobada` /
-  `marcarRechazada`. Al rechazar el 3er intento dispara el backoff.
-- `Almacenamiento` (port) + `StubAlmacenamiento`: no hay storage real aún,
-  devuelve URL derivada (ADR de storage pendiente).
+### T-M1-14 — Migración V6
+- Tabla `certificados_antecedentes_penales` (schema identidad): estado enum
+  (PENDIENTE/APROBADO/RECHAZADO/EN_REVISION_LEGAL/VENCIDO), `tiene_antecedentes`,
+  `categoria_antecedente` (trazabilidad, no automatiza), `numero_intento` 1..3,
+  `ciclo_espera_hasta`.
+- Columna `usuarios.activo_para_matching` (columna NUEVA, no se edita V2 —
+  AGENTS.md §7). Mismo flag que M2/M9 usan para suspender Tutores del matching;
+  M2 lo lee para excluirlos.
 
-### T-M1-11 — Autorizaciones de Tutor (FR-ID-009)
-- `POST /api/autorizaciones` — autorizar un Tutor para un menor a cargo.
-- `PATCH /api/autorizaciones/no-confiable` — marcar no confiable (privado,
-  a nivel de cuenta del AR; no alerta a Admin ni toca reputación pública).
-- Solo la capacidad "Adulto Responsable" (Artículo II: un menor no autoriza).
+### T-M1-15 — Carga del CAP
+- `POST /api/tutores/antecedentes-penales` (autenticado, solo Tutor): multipart
+  (`datos` + `archivo`). `CertificadoService.cargarCap`.
+  - Backoff compartido con credenciales (FR-ID-021 reutiliza FR-ID-012):
+    `CredencialBackoffService` (misma escalada 24→48→96).
+  - Una sola PENDIENTE a la vez. `vence_at = fecha_emision + 12 meses`.
+- Reutiliza `Almacenamiento` (stub) para la URL del archivo.
 
-### T-M1-12 — Baja de menor (FR-ID-014)
-- `DELETE /api/usuarios/menores/{id}?confirmar=` — solo su Adulto Responsable.
-- Verificación de reservas futuras vía port `VerificadorReservasFuturas` +
-  `StubVerificadorReservasFuturas` (devuelve 0 — M4 aún no existe). Si hubiera
-  reservas y no viene `confirmar=true` → 409 con el conteo.
-- Elimina el menor + autorizaciones + consentimientos.
+### T-M1-16 — Revisión para M8
+- `GET /api/admin/moderacion/antecedentes-penales` (cola) y
+  `PATCH .../{id}` mit `RevisarCapRequest{accion, categoriaAntecedente}`.
+  - APROBAR → habilita `activo_para_matching` (FR-ID-025).
+  - RECHAZAR → BR-CAP-01 (FR-ID-023); si era el 3er intento → backoff.
+  - EN_REVISION_LEGAL → BR-CAP-02 (FR-ID-024); NUNCA se auto-resuelve.
+
+### T-M1-17 — Vencimiento a los 12 meses
+- `CapVencimientoJob` (Quartz, `@DisallowConcurrentExecution`) + JobDetail/Trigger
+  diario (03:00) en `QuartzConfig` (durable/recoverable).
+  - `CertificadoService.marcarVencidos()`: marca `VENCIDO` y suspende
+    `activo_para_matching` (FR-ID-025). Saca del matching, no de la cuenta.
 
 ## Unit tests corridos en esta sesión (verdes, sin Docker/Tesseract)
 
-- `CredencialBackoffServiceTest` (5): 24→48→96hs, en espera lanza, fuera no
-  lanza, sin registro no lanza.
-- `CredencialServiceTest` (8): carga OK, no-Tutor rechaza, pendiente existente,
-  en backoff, reintento incremente a intento 2, aprobar, rechazo 3er intento →
-  backoff, rechazo 1er intento no.
-- `AutorizacionServiceTest` (7): autorizar OK/idempotente/mentor no a cargo/
-  sin capacidad/menor autorizando; no confiable OK/sin autorización previa.
-- `UsuarioServiceDarDeBajaTest` (4): baja sin reservas, menor no a cargo,
-  sin confirmación con reservas, con confirmación.
-- Regresión: M1-C (28) + M1-D (10). Total 62 verdes.
+- `CertificadoServiceTest` (10): carga OK (+vence_at 12m), no-Tutor, pendiente
+  existente, en backoff, reintento→intento 2, aprobar→habilita matching,
+  rechazar BR-CAP-01 (3er intento→backoff), en_revision_legal BR-CAP-02 (no
+  auto-resuelve), vencidos suspenden matching, idempotencia.
+- `CapVencimientoJobTest` (1): el job delega en `marcarVencidos()`.
+- Regresión: C (28) + D (10) + E (24). Total 73 verdes.
 
 ## Qué falta correr/confirmar en un entorno con Docker + Tesseract
 
-1. Migraciones Flyway: aplicar V5 y validar `ddl-auto:validate`.
-2. Testcontainers `@SpringBootTest` (no corrieron): contexto completo con los
-   controllers/beans nuevos (`CredencialService`, `AutorizacionService`,
-   `CredencialBackoffService`, ports/stubs).
-3. HTTP real: rutas autenticadas requieren token (`/api/tutores/credenciales`,
-   `/api/autorizaciones/*`, `DELETE /menores/{id}`); `/api/tutores/registro`
-   sigue pública.
-4. E2E US-4: flujo carga → Admin aprueba/rechaza (M8) → reintento → backoff
-   escalado real contra BD.
-5. E2E US-5: marcar no confiable → el Tutor desaparece del matching (M2).
-6. E2E baja de menor: el puente real a M4 (reservas futuras) hoy es stub → la
-   verificación de FR-ID-014 queda pendiente hasta que M4 implemente el port.
-7. Storage de credenciales: `StubAlmacenamiento` no persiste — pendiente ADR de
-   storage antes de producción.
+1. Flyway: aplicar V6 y `ddl-auto:validate` (nueva columna + tabla).
+2. Testcontainers `@SpringBootTest`: el contexto arranca con el
+   `CapVencimientoJob` registrado en Quartz con JobStore JDBC (expresión cron,
+   `JobDetail`/`Trigger`).
+3. HTTP real: `/api/tutores/antecedentes-penales` requiere token; revisión
+   admin con rol.
+4. E2E US-6: carga → Admin aprueba → tutor en matching; rechazo por BR-CAP-01;
+   `en_revision_legal`; y vencimiento real a los 12 meses suspendiendo matching.
 
-## Notas de diseño / decisiones (sin ADR nuevo)
+## Decisiones de scope (ADRs NO)
 
-- El "no confiable" (FR-ID-009) se modeló a nivel de CUENTA del AR: se aplica
-  sobre todas sus autorizaciones de ese Tutor (bulk update por
-  adulto_responsable_id + tutor_id), no por menor, para que sea consistente con
-  el comportamiento "deja de aparecer en los resultados de esa cuenta".
-- Rechazo/aprobación de credencial viven en M1 como servicios; M8 (panel Admin)
-  los invoca. El conteo de intentos y el backoff quedan acá, no en M8.
+- **Rol ADMIN de M8:** los endpoints `/api/admin/...` quedan solo
+  `authenticated()`. M8 debe cerrarlos con rol ADMIN (tabla `admins`, separada
+  de `usuarios`, sin compartir JWT — ver `SecurityConfig`). La identidad del
+  revisor se deduce del principal (UUID si aplica); si no, `admin_revisor_id`
+  queda null hasta que M8 provea la identidad real (NFR-SEC-04).
+- **`activo_para_matching` en `usuarios`:** decisión M1-F para que el job de
+  vencimiento tenga un flag persistido que apagar (FR-ID-025) sin crear tablas
+  de M2. M2 leerá este flag (mismo que planea reutilizar para M9) para excluir
+  Tutores suspendidos. Si en M2 se prefiere migrar a `perfiles_tutor_matching`,
+  se documenta en esa decisión — no se crea flag duplicado.
+- **Backoff compartido por tutor** entre credencial y CAP (plan 2.4: "reutilizar
+  el job, no duplicar la lógica"): ambos usan `CredencialBackoffService` clave
+  tutorId. Queda registrado que agotar el ciclo de uno afecta también al otro
+  (patrón intencional de "reusar", no un bug).

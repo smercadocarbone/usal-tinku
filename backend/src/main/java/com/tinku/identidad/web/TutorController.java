@@ -1,13 +1,17 @@
 package com.tinku.identidad.web;
 
+import com.tinku.identidad.dto.CapResponse;
+import com.tinku.identidad.dto.CargarCapRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.dto.RegistroTutorRequest;
 import com.tinku.identidad.dto.UsuarioResponse;
+import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.identidad.service.CertificadoService;
 import com.tinku.identidad.service.CredencialService;
 import com.tinku.identidad.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -32,15 +36,18 @@ public class TutorController {
 
     private final UsuarioService usuarioService;
     private final CredencialService credencialService;
+    private final CertificadoService certificadoService;
     private final UsuarioRepository usuarioRepository;
     private final Almacenamiento almacenamiento;
 
     public TutorController(UsuarioService usuarioService,
                            CredencialService credencialService,
+                           CertificadoService certificadoService,
                            UsuarioRepository usuarioRepository,
                            Almacenamiento almacenamiento) {
         this.usuarioService = usuarioService;
         this.credencialService = credencialService;
+        this.certificadoService = certificadoService;
         this.usuarioRepository = usuarioRepository;
         this.almacenamiento = almacenamiento;
     }
@@ -71,5 +78,24 @@ public class TutorController {
     private CredencialResponse toResponse(CredencialAcademica c) {
         return new CredencialResponse(c.getId(), c.getTipoDocumento(), c.getEstado(),
                 c.getNumeroIntento(), c.getCreatedAt());
+    }
+
+    @PostMapping(value = "/antecedentes-penales", consumes = "multipart/form-data")
+    public ResponseEntity<CapResponse> cargarCap(
+            @Valid @RequestPart("datos") CargarCapRequest request,
+            @RequestPart("archivo") MultipartFile archivo,
+            Authentication authentication
+    ) throws IOException {
+        Usuario tutor = usuarioRepository.findByDni(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Tutor autenticado no encontrado"));
+        String archivoUrl = almacenamiento.guardar(archivo.getBytes(), archivo.getOriginalFilename());
+        CertificadoAntecedentesPenales cap =
+                certificadoService.cargarCap(tutor, archivoUrl, request.fechaEmision());
+        return ResponseEntity.status(HttpStatus.CREATED).body(toCapResponse(cap));
+    }
+
+    private CapResponse toCapResponse(CertificadoAntecedentesPenales c) {
+        return new CapResponse(c.getId(), c.getEstado(), c.isTieneAntecedentes(),
+                c.getVenceAt(), c.getNumeroIntento());
     }
 }
