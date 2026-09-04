@@ -8,11 +8,13 @@ chunk/tarea como cerrado en `Tasks_Tinku_Chunks.md`/`Tasks_Tinku_Implementacion.
 
 ## Qué se verificó (y quedó VERDE)
 
-`mvnw test` completo: **100 tests, 0 failures, 0 errors** (BUILD SUCCESS).
-Incluye los 11 tests de integración nuevos de `IdentidadFlujosIntegracionTest`
-más la suite previa (`TinkuApplicationTests`, `QuartzPersistenciaTest`,
-`SecurityHttpTest`, `JwtAuthTest`, `DomainEventExampleTest`, `UsuarioServiceTest`
-y todos los unit tests de M1-C/D/E/F).
+`mvnw test` completo: **102 tests, 0 failures, 0 errors, 0 skipped**
+(BUILD SUCCESS). Incluye los 11 tests de integración de
+`IdentidadFlujosIntegracionTest`, los 2 tests de OCR real
+(`TesseractOcrServiceRealTest`, ver sección siguiente) y toda la suite previa
+(`TinkuApplicationTests`, `QuartzPersistenciaTest`, `SecurityHttpTest`,
+`JwtAuthTest`, `DomainEventExampleTest`, `UsuarioServiceTest` y todos los unit
+tests de M1-C/D/E/F).
 
 Cobertura de punta a punta (T-M1-13), por Historia de Usuario:
 
@@ -48,15 +50,38 @@ Al correr por primera vez contra un Postgres real, el contexto no levantaba:
   `application.yml`. Confirmado por `QuartzPersistenciaTest` (verde) y por el
   arranque real del contexto con el job registrado.
 
+## OCR real (Tesseract) VERIFICADO end-to-end — `TesseractOcrServiceRealTest`
+
+Se instaló el binario nativo (`brew install tesseract tesseract-lang`, tesseract
+5.5.3, `spa.traineddata` en `/opt/homebrew/share/tessdata`) y se agregó
+`TesseractOcrServiceRealTest` (2 tests, 0 skipped en esta sesión):
+
+- Construye el `TesseractOcrService` de VERDAD (Tess4J sobre `libtesseract`,
+  idioma `spa`) — fuera del contexto Spring, igual que los tests aislados de
+  `DniParser`/`PreprocesadorImagen` (ADR-M1-01).
+- Genera en runtime una imagen sintética de DNI estilo **libreta pre-2009**
+  (campos rotulados: `DNI: 12.345.678`, `APELLIDO:`, `NOMBRES:`,
+  `FECHA DE NACIMIENTO:`) con Java2D y verifica la extracción completa del
+  pipeline: preproceso (grises+contraste+deskew) → Tesseract → líneas → parser.
+- **Detalle de entorno:** Tess4J carga `libtesseract` via JNA; Homebrew lo
+  instala en `/opt/homebrew/lib`, fuera de la ruta por defecto de JNA. El test
+  resuelve `jna.library.path` (Homebrew arm/intel, Linux) y, si no encuentra
+  binario o `spa.traineddata`, se **skipea** con `Assumptions` — nunca finge que
+  el OCR funciona.
+
+Resultado de la verificación manual previa: la imagen sintética se lee de
+principio a fin con `tesseract` CLI (`REPUBLICA ARGENTINA` … `FECHA DE
+NACIMIENTO: 15/04/1980`). El test E2E extrae DNI 12345678 / GARCIA / JUAN
+CARLOS / 1980-04-15.
+
 ## Alcance y límites de lo verificado acá
 
-- **OCR real (Tesseract) aún NO verificado end-to-end.** Los tests de
-  integración mockean `OcrService` a nivel de puerto para poder controlar DNI y
-  fecha de nacimiento extraídos (necesario para menores/edad/duplicado). El
-  binario nativo de Tesseract no está garantizado en este entorno; su E2E queda
-  pendiente de un entorno con `tesseract`/`tesseract-ocr-spa` instalado
-  (ADR-M1-01). El pipeline aislado sigue cubierto por `DniParserTest` +
-  `PreprocesadorImagenTest`.
+- Los tests de integración (`IdentidadFlujosIntegracionTest`) mockean
+  `OcrService` a nivel de puerto para poder controlar DNI y fecha de nacimiento
+  extraídos (necesario para menores/edad/duplicado). El E2E real del OCR queda
+  cubierto por `TesseractOcrServiceRealTest`, que requiere el binario nativo en
+  el entorno de ejecución (skip honesto si no está). El pipeline aislado sigue
+  cubierto por `DniParserTest` + `PreprocesadorImagenTest`.
 - `StubAlmacenamiento` no persiste archivos (ADR de storage pendiente); los tests
   de credencial/CAP usan la URL `stub:/...` — suficiente para el flujo lógico.
 - los endpoints `/api/admin/**` quedan `authenticated()` (no rol ADMIN); M8 los
