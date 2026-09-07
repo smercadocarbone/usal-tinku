@@ -76,7 +76,7 @@ _(requiere M4 cerrado; los listeners de sesión se completan cuando M3 exista)_
 
 _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que SPIKE-C esté cerrado)_
 
-- [ ] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
+- [x] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
 - [ ] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05)
 - [ ] **Chunk M3-C** _(bloqueado por SPIKE-C)_ — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
 - [ ] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09)
