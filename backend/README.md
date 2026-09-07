@@ -123,6 +123,10 @@ memoria: deben sobrevivir a un reinicio o redeploy del proceso.
 
 ## Variables de entorno requeridas (ver application.yml)
 
-`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`, y para OCR: `TESSDATA_PREFIX` (carpeta con `spa.traineddata`).
+Copiar `.env.example` a `.env` en la raiz del repo y completar valores:
 
-**Nunca commitear valores reales de estas variables.**
+`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_TOKEN_TTL_SEGUNDOS`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`, y para OCR: `TESSDATA_PREFIX` (carpeta con `spa.traineddata`).
+
+`LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` son las credenciales de T-000-06 (LiveKit Cloud). Con ellas vacías el backend arranca igual; `LiveKitService` falla con mensaje claro recién cuando se intenta usar (M3).
+
+**Nunca commitear valores reales de estas variables** (`.gitignore` ya excluye `.env`).
