@@ -3,11 +3,13 @@ package com.tinku.matching;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.net.http.HttpClient;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,8 +29,18 @@ public class MatchingServiceClient {
     private final RestClient restClient;
 
     public MatchingServiceClient(@Value("${tinku.matching-service.base-url}") String baseUrl) {
+        // HTTP/1.1 forzado a nivel cliente: el HTTP/2 clear-text del JDK manda un
+        // upgrade request ("Connection: Upgrade, HTTP2-Settings") que uvicorn
+        // rechaza y responde 422 con body vacio — el /match real fallaba con
+        // "El motor de búsqueda no está disponible" aun con el servicio arriba.
+        // uvicorn no negocia h2 por defecto (requiere TLS), asi que HTTP/1.1 es
+        // el contrato correcto para el proceso Python (verificado en el E2E real).
+        HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
                 .build();
     }
 
