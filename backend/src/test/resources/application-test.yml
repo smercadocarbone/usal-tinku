@@ -8,3 +8,7 @@ spring:
 tinku:
   jwt:
     secret: test-secret-nunca-usar-en-produccion
+  reservas:
+    # Stub del puerto TarifaProveedor (M5 no implementado). Valor en centavos/pesos
+    # para poder ejercitar la creacion de Reservas en los tests de integracion.
+    tarifa-stub: 15000

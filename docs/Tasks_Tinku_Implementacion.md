@@ -61,9 +61,9 @@
 ## M4 — Sistema de Reservas y Agenda
 
 - [x] T-M4-01: Migración: `franjas_disponibilidad`, `solicitudes_sesion`, `reservas` — incluir la `EXCLUDE constraint` sobre superposición de horario (tutor y beneficiario) desde el primer momento, no agregarla después. _(Verificado en dev: V9__m4_reservas.sql; dos INSERT mismos beneficiario+horario → el 2do viola la EXCLUDE. Agrega tambien la FK pendiente de V8: `aula.sesiones_aprendizaje.reserva_id → reservas.reservas.id`. ADR-M4-01 resuelto: franja semanal recurrente (`dia_semana`) o puntual (`fecha_especifica`), CHECK exige exactamente uno.)_
-- [ ] T-M4-02: Endpoint de publicación de franjas de disponibilidad del Tutor.
-- [ ] T-M4-03: Endpoint `POST /api/solicitudes` (menor) + job de expiración a 48hs (FR-RES-022).
-- [ ] T-M4-04: Endpoint `POST /api/solicitudes/{id}/aprobar` (Adulto Responsable) → crea Reserva.
+- [x] T-M4-02: Endpoint de publicación de franjas de disponibilidad del Tutor. _(Listo en `chunk/m4-b`: `POST /api/tutores/franjas` — franja semanal (`diaSemana` 0=domingo..6=sábado) o puntual (`fechaEspecifica`), validación en app (FR-RES-012) + `chk_franja_modo` en BD; FranjaServiceTest 4/4 + cubierto en ReservasFlujosIntegracionTest. Precio/tarifa del Tutor = M5 → puerto `TarifaProveedor` + Stub con `tinku.reservas.tarifa-stub` — patrón ReputacionSignalProvider.)_
+- [x] T-M4-03: Endpoint `POST /api/solicitudes` (menor) + job de expiración a 48hs (FR-RES-022). _(Listo en `chunk/m4-b`: `POST /api/solicitudes`, `GET /api/solicitudes/pendientes` (Adulto Responsable, FR-RES-...), expiración programada en Quartz a created_at+48hs (Tabla_Tiempos) + barrido `expirarVencidas()`; verificado con `frRes022_solicitudVencida_seExpiraSinConsecuencias`.)_
+- [x] T-M4-04: Endpoint `POST /api/solicitudes/{id}/aprobar` (Adulto Responsable) → crea Reserva. _(Listo en `chunk/m4-b`: valida franja + ventana mínima 15min (FR-RES-013) + autorización del tutor (FR-RES-021) + superposición (FR-RES-007, 409 por EXCLUDE), crea Reserva `pendiente_pago` con precio congelado del stub; solicitud → `convertida`. E2E: `ReservasFlujosIntegracionTest` 8/8.)_
 - [ ] T-M4-05: Endpoint `POST /api/reservas` (directa, Estudiante adulto o Adulto Responsable) — valida franja publicada y ventana mínima de 15min (FR-RES-013).
 - [ ] T-M4-06: Job de timeout de `pendiente_pago` a 15min (FR-RES-020), con cancelación explícita del job al confirmarse el pago.
 - [ ] T-M4-07: Endpoint de reprogramación — valida ventana de 24hs, conserva precio original, no genera transacción nueva (FR-RES-015).

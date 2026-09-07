@@ -76,5 +76,11 @@ tinku:
     backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
   credencial:
     backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
+  reservas:
+    # Tarifa por sesion del Tutor. Fuente real: M5 (Spec M5 US-6, FR-PAG-006) —
+    # todavia no implementado. Hasta entonces el puerto TarifaProveedor usa este
+    # valor para desarrollo/pruebas; si queda vacio, crear una Reserva falla con
+    # mensaje claro (mismo enfoque que livekit sin credenciales, T-000-06).
+    tarifa-stub: ${RESERVAS_TARIFA_STUB:}
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
