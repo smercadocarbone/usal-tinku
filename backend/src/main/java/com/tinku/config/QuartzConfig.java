@@ -1,6 +1,10 @@
 package com.tinku.config;
 
+import com.tinku.identidad.jobs.CapVencimientoJob;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
+import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 
 /**
  * Quartz con JobStore persistido en PostgreSQL (Constitucion, Articulo IV/X).
@@ -23,4 +27,30 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class QuartzConfig {
+
+    /**
+     * T-M1-17 / FR-ID-025: vencimiento diario del CAP. Corre a las 03:00 local
+     * y es durable/recoverable para sobrevivir reinicios (JobStore JDBC).
+     */
+    @Bean
+    public JobDetailFactoryBean capVencimientoJobDetail() {
+        JobDetailFactoryBean job = new JobDetailFactoryBean();
+        job.setJobClass(CapVencimientoJob.class);
+        job.setName("capVencimiento");
+        job.setGroup("m1-identidad");
+        job.setDurability(true);
+        job.setRequestsRecovery(true);
+        return job;
+    }
+
+    @Bean
+    public CronTriggerFactoryBean capVencimientoTrigger(
+            org.quartz.JobDetail capVencimientoJobDetail) {
+        CronTriggerFactoryBean trigger = new CronTriggerFactoryBean();
+        trigger.setJobDetail(capVencimientoJobDetail);
+        trigger.setName("capVencimientoTrigger");
+        trigger.setGroup("m1-identidad");
+        trigger.setCronExpression("0 0 3 * * ?"); // diario 03:00
+        return trigger;
+    }
 }

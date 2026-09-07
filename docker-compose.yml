@@ -4,7 +4,7 @@
 # Nunca usar estos valores en ningun ambiente que no sea local.
 services:
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: tinku-postgres
     environment:
       POSTGRES_DB: tinku

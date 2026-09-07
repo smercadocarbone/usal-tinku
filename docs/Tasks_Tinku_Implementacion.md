@@ -31,32 +31,32 @@
 - [x] T-M1-02: Migración: tablas `credenciales_academicas`, `autorizaciones_tutor`, `consentimientos_menor`. — _pre-existente (íbid, en `V2__m1_identidad.sql`, auditada en Chunk 000-B). Incluye el índice único `uq_autorizacion` en los 3 campos de `autorizaciones_tutor` y `credenciales_academicas.ciclo_espera_hasta` nullable sin backoff. Sin `certificados_antecedentes_penales` (Chunk M1-F). Reconfirmado por `\d` de las 3 tablas. No se editó V2._
 - [x] T-M1-03: Resolver ADR-M1-01 (proveedor de OCR) antes de continuar con T-M1-04. — _ADR-M1-01 reescrito hacia **Tesseract vía Tess4J** (in-process, spa), descartando Cloud Vision (cuenta de facturación + imagen fuera del server, viola Art. V). Fila del registro de decisiones de la Constitución actualizada. Requiere binario nativo `tesseract` (documentado en README), no instalado en este entorno — es un requisito de entorno, no un bloqueante de este chunk._
 - [x] T-M1-04: Integración con el proveedor de OCR elegido — función que recibe una imagen y devuelve nombre/apellido/fecha de nacimiento extraídos. — _`TesseractOcrService` (perfil prod) = pipeline preprocesado (deskew+contraste) → Tess4J getWords → `DniParser`. Componentes aislados con tests unitarios: `DniParserTest` (7) + `PreprocesadorImagenTest` (6) verdes. E2E contra binario nativo pendiente de entorno con Tesseract._
-- [ ] T-M1-05: Endpoint `POST /api/usuarios/registro` — valida coincidencia nombre/apellido/DNI + unicidad de DNI + edad ≥18 (FR-ID-001).
-- [ ] T-M1-06: Endpoint `POST /api/usuarios/menores` — mismo flujo de OCR + edad ≥6 + consentimiento obligatorio en la misma transacción (FR-ID-017, BR-CONSENT-01).
-- [ ] T-M1-07: Job de backoff de OCR: 3 intentos por ciclo, 24hs de espera (FR-ID-011).
-- [ ] T-M1-08: Endpoint `PATCH /api/usuarios/me/capacidades` — activar/desactivar Estudiante/Adulto Responsable, con bloqueo si tiene menores a cargo (FR-ID-015/016).
-- [ ] T-M1-09: Endpoint `POST /api/tutores/registro` — mismo flujo de OCR que adulto (FR-ID-007).
-- [ ] T-M1-10: Endpoint `POST /api/tutores/credenciales` + job de backoff escalonado (24h→48h→96h, FR-ID-012).
-- [ ] T-M1-11: Endpoints de `autorizaciones_tutor` (crear, marcar `no_confiable`) — FR-ID-009.
-- [ ] T-M1-12: Endpoint `DELETE /api/usuarios/menores/{id}` con verificación de reservas futuras (FR-ID-014).
-- [ ] T-M1-14 _(agregado, enmienda Constitución v2.1)_: Migración: tabla `certificados_antecedentes_penales`.
-- [ ] T-M1-15: Endpoint `POST /api/tutores/antecedentes-penales` — carga del CAP, mismo backoff que credenciales (FR-ID-021).
-- [ ] T-M1-16: Endpoints de revisión del CAP para M8 (`GET`/`PATCH /api/admin/moderacion/antecedentes-penales`) — aprobar, rechazar (BR-CAP-01), marcar `en_revision_legal` (BR-CAP-02) (FR-ID-022/023/024).
-- [ ] T-M1-17: Job Quartz de vencimiento del CAP a los 12 meses — marca `vencido` y suspende `activo_para_matching` del Tutor (FR-ID-025).
-- [ ] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.), incluyendo: CAP aprobado sin antecedentes, CAP rechazado por BR-CAP-01, CAP a `en_revision_legal` por BR-CAP-02, vencimiento a los 12 meses suspende matching.
+- [x] T-M1-05: Endpoint `POST /api/usuarios/registro` — valida coincidencia nombre/apellido/DNI + unicidad de DNI + edad ≥18 (FR-ID-001). — _verificado: 201 OK / 409 duplicado / 422 no coincide / 403 edad, test manual + integración._
+- [x] T-M1-06: Endpoint `POST /api/usuarios/menores` — mismo flujo de OCR + edad ≥6 + consentimiento obligatorio en la misma transacción (FR-ID-017, BR-CONSENT-01).
+- [x] T-M1-07: Job de backoff de OCR: 3 intentos por ciclo, 24hs de espera (FR-ID-011).
+- [x] T-M1-08: Endpoint `PATCH /api/usuarios/me/capacidades` — activar/desactivar Estudiante/Adulto Responsable, con bloqueo si tiene menores a cargo (FR-ID-015/016).
+- [x] T-M1-09: Endpoint `POST /api/tutores/registro` — mismo flujo de OCR que adulto (FR-ID-007).
+- [x] T-M1-10: Endpoint `POST /api/tutores/credenciales` + job de backoff escalonado (24h→48h→96h, FR-ID-012).
+- [x] T-M1-11: Endpoints de `autorizaciones_tutor` (crear, marcar `no_confiable`) — FR-ID-009.
+- [x] T-M1-12: Endpoint `DELETE /api/usuarios/menores/{id}` con verificación de reservas futuras (FR-ID-014).
+- [x] T-M1-14 _(agregado, enmienda Constitución v2.1)_: Migración: tabla `certificados_antecedentes_penales`.
+- [x] T-M1-15: Endpoint `POST /api/tutores/antecedentes-penales` — carga del CAP, mismo backoff que credenciales (FR-ID-021).
+- [x] T-M1-16: Endpoints de revisión del CAP para M8 (`GET`/`PATCH /api/admin/moderacion/antecedentes-penales`) — aprobar, rechazar (BR-CAP-01), marcar `en_revision_legal` (BR-CAP-02) (FR-ID-022/023/024).
+- [x] T-M1-17: Job Quartz de vencimiento del CAP a los 12 meses — marca `vencido` y suspende `activo_para_matching` del Tutor (FR-ID-025).
+- [x] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.), incluyendo: CAP aprobado sin antecedentes, CAP rechazado por BR-CAP-01, CAP a `en_revision_legal` por BR-CAP-02, vencimiento a los 12 meses suspende matching. — _verificado: 111 tests verdes, OCR real Tesseract 5.5.3 end-to-end._
 
 ## M2 — Motor de Matching Semántico
 
-- [ ] T-M2-01: Migración: tabla `materias_niveles` (catálogo cerrado), cargar niveles educativos oficiales de Argentina.
-- [ ] T-M2-02: Migración: `perfiles_tutor_matching`, `busquedas_guardadas`.
-- [ ] T-M2-03: Resolver ADR-M2-01 (dónde vive el índice — `pgvector` vs. en memoria del proceso Python) antes de T-M2-04.
-- [ ] T-M2-04: Endpoint interno `/match` en el servicio Python — recibe texto + lista acotada de tutor_ids, devuelve ranking por similitud.
-- [ ] T-M2-05: Lógica en Java: resolver contexto de autorización (lista del menor, o universo completo) **antes** de llamar al servicio Python (FR-MATCH-004).
-- [ ] T-M2-06: Lógica en Java: excluir Tutores con Alerta de Seguridad activa (consulta a M9) antes del cálculo semántico (FR-MATCH-007).
-- [ ] T-M2-07: Lógica en Java: reordenamiento final por señales implícitas (consulta a M7) y sombra de BR-MATCH-01 (consulta a M7).
-- [ ] T-M2-08: Endpoint `POST /api/busquedas` que orquesta todo lo anterior y marca `no_autorizado: true` en resultados fuera de la lista del menor (FR-MATCH-005).
-- [ ] T-M2-09: Endpoints de búsquedas guardadas (crear, listar, re-ejecutar).
-- [ ] T-M2-10: Tests: búsqueda de un menor sin autorizados devuelve resultados marcados; búsqueda excluye correctamente a un Tutor suspendido.
+- [x] T-M2-01: Migración: tabla `materias_niveles` (catálogo cerrado), cargar niveles educativos oficiales de Argentina.
+- [x] T-M2-02: Migración: `perfiles_tutor_matching`, `busquedas_guardadas`.
+- [x] T-M2-03: Resolver ADR-M2-01 (dónde vive el índice — `pgvector` vs. en memoria del proceso Python) antes de T-M2-04. — _resuelto hacia pgvector, documento ADR-M2-01._
+- [x] T-M2-04: Endpoint interno `/match` en el servicio Python — recibe texto + lista acotada de tutor_ids, devuelve ranking por similitud.
+- [x] T-M2-05: Lógica en Java: resolver contexto de autorización (lista del menor, o universo completo) **antes** de llamar al servicio Python (FR-MATCH-004).
+- [x] T-M2-06: Lógica en Java: excluir Tutores con Alerta de Seguridad activa (consulta a M9) antes del cálculo semántico (FR-MATCH-007).
+- [x] T-M2-07: Lógica en Java: reordenamiento final por señales implícitas (consulta a M7) y sombra de BR-MATCH-01 (consulta a M7).
+- [x] T-M2-08: Endpoint `POST /api/busquedas` que orquesta todo lo anterior y marca `no_autorizado: true` en resultados fuera de la lista del menor (FR-MATCH-005).
+- [x] T-M2-09: Endpoints de búsquedas guardadas (crear, listar, re-ejecutar).
+- [x] T-M2-10: Tests: búsqueda de un menor sin autorizados devuelve resultados marcados; búsqueda excluye correctamente a un Tutor suspendido.
 
 ## M4 — Sistema de Reservas y Agenda
 

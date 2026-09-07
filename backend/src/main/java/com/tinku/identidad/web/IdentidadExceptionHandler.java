@@ -34,9 +34,82 @@ public class IdentidadExceptionHandler {
 
     @ExceptionHandler(DocumentoIlegibleException.class)
     public ResponseEntity<Map<String, String>> handleIlegible(DocumentoIlegibleException ex) {
-        // TODO (T-M1-07): acá debe incrementarse el contador de intentos
-        // del ciclo de backoff antes de responder — todavía no implementado.
+        // El contador de intentos del ciclo de backoff (FR-ID-011) ya se
+        // incrementó en UsuarioService/OcrBackoffService antes de lanzar.
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentoEnBackoffException.class)
+    public ResponseEntity<Map<String, String>> handleBackoff(DocumentoEnBackoffException ex) {
+        // 429: el cliente agotó los 3 intentos del ciclo y está en espera (FR-ID-011).
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Map.of("error", ex.getMessage(),
+                        "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
+    }
+
+    @ExceptionHandler(ConsentimientoNoOtorgadoException.class)
+    public ResponseEntity<Map<String, String>> handleConsentimiento(ConsentimientoNoOtorgadoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LimiteMenoresAlcanzadoException.class)
+    public ResponseEntity<Map<String, String>> handleLimiteMenores(LimiteMenoresAlcanzadoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(NoPuedeDesactivarAdultoResponsableException.class)
+    public ResponseEntity<Map<String, String>> handleNoDesactivarResponsable(NoPuedeDesactivarAdultoResponsableException ex) {
+        // FR-ID-016: 409 conflict — no puede dejar de ser Adulto Responsable
+        // con menores a cargo.
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleArgumentoInvalido(IllegalArgumentException ex) {
+        // Violaciones de FR-ID-001/015/artículo II en capacidades (p.ej. quedar
+        // sin capacidades o un menor intentando ser Adulto Responsable).
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CredencialEnBackoffException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialBackoff(CredencialEnBackoffException ex) {
+        // 429: ciclo de credencial agotado, espera escalada 24→48→96… (FR-ID-012).
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Map.of("error", ex.getMessage(),
+                        "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
+    }
+
+    @ExceptionHandler(YaExisteCredencialPendienteException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialPendiente(YaExisteCredencialPendienteException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CredencialNoEncontradaException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialNoEncontrada(CredencialNoEncontradaException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MenorNoPerteneceException.class)
+    public ResponseEntity<Map<String, String>> handleMenorNoPertenece(MenorNoPerteneceException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CapNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> handleCapNoEncontrado(CapNoEncontradoException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TutorNoAutorizadoException.class)
+    public ResponseEntity<Map<String, String>> handleTutorNoAutorizado(TutorNoAutorizadoException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReservasFuturasPendientesException.class)
+    public ResponseEntity<Map<String, String>> handleReservasFuturas(ReservasFuturasPendientesException ex) {
+        // FR-ID-014: 409 — pedir confirmación explícita con la cantidad.
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage(),
+                        "reservas_futuras", String.valueOf(ex.getCantidadReservas())));
     }
 
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)

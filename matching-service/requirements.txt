@@ -5,7 +5,13 @@ fastapi>=0.141.0
 uvicorn[standard]>=0.52.0
 pydantic>=2.13.0
 
-# Agregar una vez resuelto ADR-M2-01 (Plan_M2_Motor_Matching.md):
-# sentence-transformers==...
-# faiss-cpu==...
-# psycopg2-binary==...  (si el indice termina viviendo en pgvector en vez de en memoria)
+# ADR-M2-01 resuelto (pgvector): sentence-transformers para compute los
+# embeddings (384 dims, modelo multilingual) + psycopg3 para consultar la
+# columna `embedding` de matching.perfiles_tutor_matching (T-M2-04).
+sentence-transformers>=4.0.0
+psycopg[binary]>=3.2.0
+pgvector>=0.4.0
+
+# Dev/test
+pytest>=8.0.0
+httpx2>=0.1.0  # TestClient de starlette 1.6

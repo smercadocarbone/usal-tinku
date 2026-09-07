@@ -42,6 +42,12 @@ spring:
           jobStore:
             isClustered: false # revisar si el equipo crece a mas de un desarrollador/instancia
             tablePrefix: QRTZ_ # tablas en schema `public` (ver V3__quartz_tables.sql y backend/README.md)
+            # Obligatorio para PostgreSQL: el default (StdJDBCDelegate) lee
+            # JOB_DATA via getBlob() esperando un large object (OID), pero las
+            # tablas QRTZ_* de V3 usan BYTEA -> "Bad value for type long".
+            # Sin esto, cualquier JobDetail persistido (ej. capVencimiento, M1-F)
+            # falla al almacenarse/recuperarse.
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 server:
   port: 8080
@@ -63,5 +69,8 @@ tinku:
     # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
     tessdata: ${TESSDATA_PREFIX:}
     idioma: ${OCR_IDIOMA:spa}
+    backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
+  credencial:
+    backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
