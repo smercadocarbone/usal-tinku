@@ -54,7 +54,7 @@ _(requiere M1 cerrado)_
 
 _(requiere M1 y M2 cerrados)_
 
-- [ ] **Chunk M4-A** — Migración con `EXCLUDE constraint` de superposición desde el inicio (T-M4-01)
+- [x] **Chunk M4-A** — Migración con `EXCLUDE constraint` de superposición desde el inicio (T-M4-01)
 - [ ] **Chunk M4-B** — Franjas + Solicitud de Sesión + aprobación (T-M4-02, T-M4-03, T-M4-04)
 - [ ] **Chunk M4-C** — Reserva directa + timeout de `pendiente_pago` (T-M4-05, T-M4-06)
 - [ ] **Chunk M4-D** — Reprogramación + cancelación con asimetría (T-M4-07, T-M4-08)

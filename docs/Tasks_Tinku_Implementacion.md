@@ -60,7 +60,7 @@
 
 ## M4 — Sistema de Reservas y Agenda
 
-- [ ] T-M4-01: Migración: `franjas_disponibilidad`, `solicitudes_sesion`, `reservas` — incluir la `EXCLUDE constraint` sobre superposición de horario (tutor y beneficiario) desde el primer momento, no agregarla después.
+- [x] T-M4-01: Migración: `franjas_disponibilidad`, `solicitudes_sesion`, `reservas` — incluir la `EXCLUDE constraint` sobre superposición de horario (tutor y beneficiario) desde el primer momento, no agregarla después. _(Verificado en dev: V9__m4_reservas.sql; dos INSERT mismos beneficiario+horario → el 2do viola la EXCLUDE. Agrega tambien la FK pendiente de V8: `aula.sesiones_aprendizaje.reserva_id → reservas.reservas.id`. ADR-M4-01 resuelto: franja semanal recurrente (`dia_semana`) o puntual (`fecha_especifica`), CHECK exige exactamente uno.)_
 - [ ] T-M4-02: Endpoint de publicación de franjas de disponibilidad del Tutor.
 - [ ] T-M4-03: Endpoint `POST /api/solicitudes` (menor) + job de expiración a 48hs (FR-RES-022).
 - [ ] T-M4-04: Endpoint `POST /api/solicitudes/{id}/aprobar` (Adulto Responsable) → crea Reserva.
