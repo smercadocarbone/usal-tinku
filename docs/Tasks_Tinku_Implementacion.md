@@ -89,8 +89,8 @@
 
 _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto — pero T-M3-01 a T-M3-05 no dependen del resultado del spike y pueden avanzar en paralelo.)_
 
-- [ ] T-M3-01: Migración: `sesiones_aprendizaje`, `alertas_seguridad`.
-- [ ] T-M3-02: Integración con LiveKit: creación de sala + generación de tokens.
+- [x] T-M3-01: Migración: `sesiones_aprendizaje`, `alertas_seguridad`. — _V8 aplicada en dev. `reserva_id` sin FK (reservas.reservas aún no existe): la FK se agrega en la migración de M4._
+- [x] T-M3-02: Integración con LiveKit: creación de sala + generación de tokens. — _`LiveKitService` (REST Twirp + JWT HS256 con jjwt, HTTP/1.1 forzado), test de contrato 4/4. Pendiente: E2E contra cuenta real (T-000-06, credenciales en variables LIVEKIT_URL/API_KEY/API_SECRET). TTL del token: parámetro técnico `livekit.token-ttl-segundos` (default 1h) — revisar antes de M3-03._
 - [ ] T-M3-03: Job de creación diferida de sala a T-5min (a partir del horario ya confirmado en M4).
 - [ ] T-M3-04: Job de no-show a T+10min, con cancelación explícita si ambos se unen antes.
 - [ ] T-M3-05: Endpoint `POST /api/sesiones/{id}/finalizar` + job de corte automático a T-fin+5min.

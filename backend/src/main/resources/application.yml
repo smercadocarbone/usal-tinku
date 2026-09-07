@@ -59,8 +59,12 @@ tinku:
     secret: ${JWT_SECRET:CAMBIAR_EN_TODOS_LOS_AMBIENTES_AL_AGREGAR_UN_SECRET_REAL}
     expiration-minutes: 60
   livekit:
+    base-url: ${LIVEKIT_URL:} # ej. wss://xxx.livekit.cloud — REST de sala bajo /twirp
     api-key: ${LIVEKIT_API_KEY:}
     api-secret: ${LIVEKIT_API_SECRET:}
+    # TTL del token de acceso. Parametro tecnico de integracion (no un plazo de
+    # negocio de Tabla_Tiempos): duracion de validez del JWT para unirse a la sala.
+    token-ttl-segundos: ${LIVEKIT_TOKEN_TTL_SEGUNDOS:3600}
   mercadopago:
     access-token: ${MP_ACCESS_TOKEN:}
     marketplace-fee-percent: 15 # BR-PAG-01
