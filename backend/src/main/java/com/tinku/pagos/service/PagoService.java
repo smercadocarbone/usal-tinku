@@ -8,11 +8,9 @@ import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.UUID;
 
 /**
@@ -31,14 +29,14 @@ public class PagoService {
 
     private final ReservaRepository reservaRepo;
     private final MercadoPagoClient mercadopago;
-    private final int comisionPercent;
+    private final ComisionPlataforma comision;
 
     public PagoService(ReservaRepository reservaRepo,
                        MercadoPagoClient mercadopago,
-                       @Value("${tinku.mercadopago.marketplace-fee-percent:15}") int comisionPercent) {
+                       ComisionPlataforma comision) {
         this.reservaRepo = reservaRepo;
         this.mercadopago = mercadopago;
-        this.comisionPercent = comisionPercent;
+        this.comision = comision;
     }
 
     public PreferenciaPago generarPreferencia(Usuario usuario, UUID reservaId) {
@@ -54,15 +52,9 @@ public class PagoService {
             throw new SoloPagadorPreferenciaException();
         }
         // FR-PAG-013: el monto es el precio congelado al crear la Reserva (M4).
-        BigDecimal comision = comisionPlataforma(reserva.getPrecio());
+        // BR-PAG-01: comisión compartida con EscrowService vía ComisionPlataforma.
+        BigDecimal comision = this.comision.calcular(reserva.getPrecio());
         return mercadopago.crearPreferencia(new PreferenciaRequest(
                 reserva.getId(), reserva.getPrecio(), comision, DESCRIPCION_ITEM));
-    }
-
-    /** BR-PAG-01: comisión de la plataforma = 15% del monto bruto (redondeo a
-     * centavos, siempre sobre el precio congelado). */
-    private BigDecimal comisionPlataforma(BigDecimal montoBruto) {
-        return montoBruto.multiply(BigDecimal.valueOf(comisionPercent).movePointLeft(2))
-                .setScale(2, RoundingMode.HALF_UP);
     }
 }

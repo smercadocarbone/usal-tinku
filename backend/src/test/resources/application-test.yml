@@ -14,6 +14,10 @@ tinku:
     # usar en produccion.
     api-key: test-livekit-api-key
     api-secret: 0123456789012345678901234567890123456789
+  mercadopago:
+    # M5-B: el webhook de pagos requiere el secret de firma (fail-closed si no).
+    # Solo de prueba — jamás usar en produccion.
+    webhook-secret: test-mercadopago-webhook-secret
   reservas:
     # Stub del puerto TarifaProveedor (M5 no implementado). Valor en centavos/pesos
     # para poder ejercitar la creacion de Reservas en los tests de integracion.

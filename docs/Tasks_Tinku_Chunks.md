@@ -66,7 +66,7 @@ _(requiere M1 y M2 cerrados)_
 _(requiere M4 cerrado; los listeners de sesión se completan cuando M3 exista)_
 
 - [x] **Chunk M5-A** — Migraciones + integración MercadoPago con split (T-M5-01, T-M5-02)
-- [ ] **Chunk M5-B** — Webhook con validación de firma + listeners de eventos (T-M5-03, T-M5-04) — _los listeners de eventos de M3 quedan como stub hasta Chunk M3-E_
+- [x] **Chunk M5-B** — Webhook con validación de firma + listeners de eventos (T-M5-03, T-M5-04) — _cerrado en `chunk/m5-b`: webhook MP real (firma HMAC X-Signature + anti-replay, reconcilia contra `/v1/payments/{id}` y confirma la Reserva) reemplaza al `confirmar-pago-simulado` de M3-B; listeners 1:1 con la tabla del Plan §2 (ver NOTA en T-M5-04). Pendiente fuera de scope: `denuncia.resuelta` (M5-C/D, payload) y `reserva.cancelada` tardía (M5-D). Suite 198 tests, 0 fallos; merge FF a `main` sin pr — todos los chunks anteriores del legacy se mergearon a `main` igual_
 - [ ] **Chunk M5-C** — Job de liberación automática + reintentos con backoff (T-M5-05, T-M5-06)
 - [ ] **Chunk M5-D** — Función única de reembolso total + flujo manual de reembolso parcial (T-M5-07, T-M5-08)
 - [ ] **Chunk M5-E** — Precio de referencia regional (T-M5-09)
@@ -80,7 +80,7 @@ _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que S
 - [x] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05) — _cerrado: SesionService + 3 jobs de Quartz + endpoint finalizar + eventos `sesion.no_show_*/finalizada`; suite completa 157 tests OK._
 - [ ] **Chunk M3-C** — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
 - [ ] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09)
-- [ ] **Chunk M3-E** — Emisión de todos los eventos hacia M5 → _desbloquea Chunk M5-B (listeners reales)_
+- [ ] **Chunk M3-E** — Emisión de todos los eventos hacia M5 → _publica las clases ya definidas por M5 en `com.tinku.pagos.evento` (M5-B las consume y las probó con un publisher directo de test)_
 - [ ] **Chunk M3-F** — Test: manipulación de cliente no puede forzar la rama "adultos" con un menor presente (T-M3-11)
 
 ## M9 — Denuncias, Seguridad y Moderación
@@ -139,8 +139,8 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 | ------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
 | M2-C (reputación/suspensión)          | M7-D, M9 (implícito vía M2-C ya usa consulta a M9) | M7 y M9 aún no existen cuando se hace M2             |
 | M4-E (sanción/calificación pendiente) | M9-D, M7-C                                         | Idem                                                 |
-| M5-B (listeners de eventos de sesión) | M3-E                                               | M3 emite los eventos que M5-B consume                |
-| M5-B (webhook MP real + confirmación) | M5-B                                               | Stub `POST /api/test/reservas/{id}/confirmar-pago-simulado` implementado en M3-B (dev/test); el webhook real con validación de firma lo reemplaza |
+| M5-B (listeners de eventos de sesión) | M3-E, M9-D                                        | M3-E/M9-D publican las clases definidas por M5 en `chunk/m5-b` (`sesion.*`, `denuncia.registrada`); `denuncia.resuelta` M5-side queda diferida a M5-C/D (payload mínimo de M9-D no alcanza — ver NOTA en T-M5-04) |
+| M5-B (webhook MP real + confirmación) | M5-B ✅                                           | El webhook real con validación de firma reemplazó a `confirmar-pago-simulado` (stub M3-B dev/test) |
 | M3-C                                  | ~~SPIKE-C~~ → Resuelto (ADR-M3-01, 2026-09-08) | El clasificador real depende del resultado del spike |
 
 _Cualquier stub que quede sin reemplazar al llegar a Chunk FIN-A debe tratarse como bloqueante — no cerrar el flujo feliz E2E con un mock permanente disfrazado de stub temporal._

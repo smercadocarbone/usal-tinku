@@ -18,10 +18,28 @@ public interface MercadoPagoClient {
      */
     PreferenciaPago crearPreferencia(PreferenciaRequest request);
 
+    /**
+     * Consulta un pago (GET /v1/payments/{id}). Lo usa el webhook de M5-B
+     * (T-M5-03) para reconciliar la notificación: verifica el estado real y el
+     * monto contra la Reserva (fail-closed) en vez de confiar en el payload del
+     * webhook — la pieza clave para que "el que llama es quien dice ser" no
+     * alcance a fabricar una confirmación.
+     */
+    PagoMercadoPago getPago(String mpPaymentId);
+
     record PreferenciaRequest(UUID reservaId, BigDecimal montoBruto,
                               BigDecimal comisionPlataforma, String descripcion) {
     }
 
     record PreferenciaPago(String preferenceId, String initPoint) {
+    }
+
+    record PagoMercadoPago(String mpPaymentId, String status, String externalReference,
+                           BigDecimal monto) {
+
+        /** Estado {@code approved} de la API de MP. */
+        public boolean aprobado() {
+            return "approved".equals(status);
+        }
     }
 }

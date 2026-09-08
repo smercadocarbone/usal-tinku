@@ -2,6 +2,7 @@ package com.tinku.pagos.port;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaRequest;
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
@@ -172,6 +173,106 @@ class MercadoPagoClientHttpTest {
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
             assertThatThrownBy(() -> cliente.crearPreferencia(pedido()))
+                    .isInstanceOf(MercadoPagoNoDisponibleException.class);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    // ------------------------------------------------ getPago (T-M5-03 webhook)
+
+    private HttpServer serverPagos(String context, String status, String body) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext(context, exchange -> responder(exchange, status, body));
+        server.start();
+        return server;
+    }
+
+    @Test
+    void getPago_parseaPagoAprobado() throws Exception {
+        String respuesta = """
+                {"id":2000000000,"status":"approved","status_detail":"accredited",
+                 "external_reference":"%s","transaction_amount":150.00,"currency_id":"ARS"}
+                """.formatted(reservaId);
+        HttpServer server = serverPagos("/v1/payments/pago-123", "200", respuesta);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            PagoMercadoPago pago = cliente.getPago("pago-123");
+
+            assertThat(pago.mpPaymentId()).isEqualTo("pago-123");
+            assertThat(pago.aprobado()).isTrue();
+            assertThat(pago.externalReference()).isEqualTo(reservaId.toString());
+            assertThat(pago.monto()).isEqualByComparingTo(new BigDecimal("150.00"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void getPago_pagoPendiente_noCuentaComoAprobado() throws Exception {
+        String respuesta = """
+                {"id":2000000001,"status":"pending","status_detail":"pending_waiting_transfer",
+                 "external_reference":"%s","transaction_amount":150.00}
+                """.formatted(reservaId);
+        HttpServer server = serverPagos("/v1/payments/pago-456", "200", respuesta);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            PagoMercadoPago pago = cliente.getPago("pago-456");
+
+            assertThat(pago.aprobado()).isFalse();
+            assertThat(pago.externalReference()).isEqualTo(reservaId.toString());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void getPago_sinAccessToken_noLlamaAlProvider_yFallaConMensajeClaro() throws Exception {
+        AtomicInteger hits = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/payments/pago-789", exchange -> {
+            hits.incrementAndGet();
+            responder(exchange, "200", "{}");
+        });
+        server.start();
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
+
+            assertThatThrownBy(() -> cliente.getPago("pago-789"))
+                    .isInstanceOf(MercadoPagoNoConfiguradoException.class);
+            assertThat(hits.get()).isZero();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void getPago_errorDelProvider_seTraduceANoDisponible() throws Exception {
+        HttpServer server = serverPagos("/v1/payments/pago-500", "500", "{\"error\":\"boom\"}");
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            assertThatThrownBy(() -> cliente.getPago("pago-500"))
+                    .isInstanceOf(MercadoPagoNoDisponibleException.class);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void getPago_respuestaSinStatus_noFabricaPago() throws Exception {
+        HttpServer server = serverPagos("/v1/payments/pago-empty", "200", "{}");
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            assertThatThrownBy(() -> cliente.getPago("pago-empty"))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);

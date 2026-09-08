@@ -70,6 +70,10 @@ tinku:
     access-token: ${MP_ACCESS_TOKEN:}
     # Webhook de M5-B; si queda vacío la preferencia no declara notification_url.
     notification-url: ${MP_NOTIFICATION_URL:}
+    # Clave de firma de las notificaciones (M5-B, T-M5-03): sin ella el webhook
+    # rechaza TODO (fail-closed, patrón LiveKit) — una notificación sin verificar
+    # jamás confirma un pago ni crea un escrow.
+    webhook-secret: ${MP_WEBHOOK_SECRET:}
     marketplace-fee-percent: 15 # BR-PAG-01
   ocr:
     # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta

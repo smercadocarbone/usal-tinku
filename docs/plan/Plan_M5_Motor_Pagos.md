@@ -42,6 +42,8 @@
 | `denuncia.registrada` | `reserva_id` | `estado → pausado_denuncia`, se cancela el job de liberación si existía. |
 | `denuncia.resuelta` | `reserva_id`, `resolucion` | Reanuda liberación (si infundada) o ejecuta la instrucción de M9 (si fundada). |
 
+> **Estado de esta tabla (Chunk M5-B, 2026-09-08):** implementados y probados 1:1 (EscrowListenersIntegracionTest 10/10) los 8 eventos de M3 + `denuncia.registrada`. **`denuncia.resuelta` queda diferido a M5-C/D**: el evento mínimo que define M9-D (`denuncia_id + usuario_sancionado_id`, ver clase `DenunciaResueltaEvent` en M4) no alcanza para reanudar el escrow — necesita `reserva_id` y `resolucion`. Al armar M9-D, revisar el payload contra esta fila (o que M9 la publique vía consulta a M5 con la `reserva_id`, que M5 ya conoce desde `denuncia.registrada`).
+
 ## 3. Flujos Técnicos Clave
 
 ### 3.1 Cobro en escrow (US-1)
@@ -86,4 +88,4 @@ FR-PAG-001 a FR-PAG-013 cubiertos. El punto más sensible de todo el módulo es 
 
 ---
 
-**Estado: Borrador de Plan técnico.** ~~Pendiente: ADR-M5-01 antes de escribir tests de integración.~~ Chunk M5-A implementado (T-M5-01, T-M5-02) con tests que NO pegan contra el provider real (stub HTTP local + cliente mockeado); ADR-M5-01 sigue pendiente antes de escribir tests de integración que toquen MercadoPago real.
+**Estado: Borrador de Plan técnico.** ~~Pendiente: ADR-M5-01 antes de escribir tests de integración.~~ Chunk M5-A implementado (T-M5-01, T-M5-02) con tests que NO pegan contra el provider real (stub HTTP local + cliente mockeado); ADR-M5-01 sigue pendiente antes de escribir tests de integración que toquen MercadoPago real. **Chunk M5-B implementado (T-M5-03, T-M5-04):** webhook con firma HMAC (X-Signature + anti-replay) que reconcilia contra `GET /api/payments/{id}` y confirma la Reserva (reemplaza `confirmar-pago-simulado`); escrow con los 8 listeners de `sesion.*` + `denuncia.registrada` (ver NOTA de §2). Pendientes de M5-B, fuera de scope: `denuncia.resuelta` M5-side y `reserva.cancelada` tardía (asimetría FR-RES-008) → M5-D.

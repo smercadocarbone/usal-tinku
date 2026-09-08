@@ -39,6 +39,7 @@ import java.util.UUID;
 public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     private static final String PATH_PREFERENCIAS = "/checkout/preferences";
+    private static final String PATH_PAGOS = "/v1/payments/";
 
     private final RestClient restClient;
     private final String accessToken;
@@ -86,6 +87,31 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         return new PreferenciaPago(respuesta.id(), respuesta.initPoint());
     }
 
+    @Override
+    public PagoMercadoPago getPago(String mpPaymentId) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new MercadoPagoNoConfiguradoException();
+        }
+        MpPagoRespuesta respuesta;
+        try {
+            respuesta = restClient.get()
+                    .uri(PATH_PAGOS + mpPaymentId)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        throw new MercadoPagoNoDisponibleException();
+                    })
+                    .body(MpPagoRespuesta.class);
+        } catch (RestClientException ex) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+        if (respuesta == null || respuesta.status() == null) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+        return new PagoMercadoPago(mpPaymentId, respuesta.status(),
+                respuesta.externalReference(), respuesta.transactionAmount());
+    }
+
     /** Traduccion de la preferencia de dominio al JSON de /checkout/preferences
      * (snake_case: contrato del provider, no tocar). */
     private MpPreferenciaRequest cuerpo(PreferenciaRequest request) {
@@ -116,5 +142,11 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     private record MpPreferenciaRespuesta(
             String id,
             @JsonProperty("init_point") String initPoint) {
+    }
+
+    private record MpPagoRespuesta(
+            String status,
+            @JsonProperty("external_reference") String externalReference,
+            @JsonProperty("transaction_amount") BigDecimal transactionAmount) {
     }
 }

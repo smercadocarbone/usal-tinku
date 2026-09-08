@@ -2,6 +2,7 @@ package com.tinku.pagos.web;
 
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
 import com.tinku.pagos.service.MercadoPagoNoDisponibleException;
+import com.tinku.pagos.service.PagoInconsistenteException;
 import com.tinku.pagos.service.PreferenciaNoDisponibleException;
 import com.tinku.pagos.service.SoloPagadorPreferenciaException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
@@ -36,6 +37,14 @@ public class PagoExceptionHandler {
     @ExceptionHandler({MercadoPagoNoConfiguradoException.class, MercadoPagoNoDisponibleException.class})
     public ResponseEntity<Map<String, String>> handleMercadoPago(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(PagoInconsistenteException.class)
+    public ResponseEntity<Map<String, String>> handlePagoInconsistente(RuntimeException ex) {
+        // Fail-closed del webhook: el pago no cierra contra la Reserva. 500 para
+        // que MercadoPago reintente y el caso quede visible, nunca confirmado.
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", ex.getMessage()));
     }
 
