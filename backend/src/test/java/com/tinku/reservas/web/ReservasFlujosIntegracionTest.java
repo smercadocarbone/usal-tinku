@@ -11,8 +11,12 @@ import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.matching.MatchingServiceClient;
 import com.tinku.matching.ReputacionSignalProvider;
+import com.tinku.aula.SesionService;
+import com.tinku.aula.model.SesionAprendizaje;
+import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
+import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.repository.ReservaRepository;
@@ -93,6 +97,7 @@ class ReservasFlujosIntegracionTest {
     @Autowired SolicitudService solicitudService;
     @Autowired ReservaService reservaService;
     @Autowired Scheduler scheduler;
+    @Autowired SesionAprendizajeRepository sesionRepo;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @MockBean OcrService ocrService;
@@ -725,5 +730,246 @@ class ReservasFlujosIntegracionTest {
         // El job ya no está programado: confirmar canceló el timeout (T-M4-06).
         assertThat(scheduler.checkExists(
                 reservaService.triggerTimeoutPago(reservaId))).isFalse();
+    }
+
+    // ------------------------------------------------ Chunk M4-D (T-M4-07 / T-M4-08)
+
+    private void confirmarPago(String token, UUID reservaId) throws Exception {
+        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("confirmada"));
+    }
+
+    private void reprogramar(String token, UUID reservaId, Instant nuevoHorario) throws Exception {
+        mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "nuevoHorario", nuevoHorario.toString()))))
+                .andExpect(status().isOk());
+    }
+
+    private void publicarFranja(String tokenTutor, LocalDate fecha, LocalTime inicio, LocalTime fin) throws Exception {
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", fecha.toString(),
+                                "horaInicio", inicio.toString(),
+                                "horaFin", fin.toString()))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void frRes015_reprogramarConfirmada_conservaPrecio_actualizaHorarioYReAgendaJobs() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), reservaId);
+
+        // La Reserva confirmada ya tiene su Sesión en M3 con los jobs al horario viejo.
+        SesionAprendizaje sesion = sesionRepo.findByReservaId(reservaId).orElseThrow();
+        assertThat(scheduler.checkExists(SesionService.triggerSala(sesion.getId()))).isTrue();
+
+        // Franja nueva para +4 días y reprogramación a 15:30 de ese día.
+        LocalDate nuevaFecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(4);
+        publicarFranjaPuntual(e.tokenTutor(), nuevaFecha);
+        Instant nuevoHorario = dentroDeFranja(nuevaFecha);
+        long reservasAntes = reservaRepo.count();
+
+        reprogramar(e.tokenEstudiante(), reservaId, nuevoHorario);
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getHorario()).isEqualTo(nuevoHorario);
+        assertThat(r.getPrecio()).isEqualByComparingTo("15000"); // precio original intacto
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(reservaRepo.count()).isEqualTo(reservasAntes); // misma fila: sin transacción ni reserva nueva
+
+        // M3 re-agendó la Sesión al nuevo horario: el trigger de sala cambió.
+        assertThat(scheduler.checkExists(SesionService.triggerSala(sesion.getId()))).isTrue();
+        Instant startSala = scheduler.getTrigger(SesionService.triggerSala(sesion.getId()))
+                .getStartTime().toInstant();
+        assertThat(startSala).isEqualTo(nuevoHorario.minus(java.time.Duration.ofMinutes(5)));
+    }
+
+    @Test
+    void frRes016_reprogramarConMenosDe24hs_seTrataComoCancelacionTardia() throws Exception {
+        String dni = dniUnico();
+        String dniTutor = dniUnico();
+        String token = registrarAdultoYToken(dni, "Lucas", "Diaz", true, false);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+
+        // Franja HOY que cubre `pronto` (≈2hs → <24hs de anticipación), respetando
+        // FR-RES-024 (30-180 min) sin depender de la hora del día.
+        Instant pronto = Instant.now().plus(2, java.time.temporal.ChronoUnit.HOURS);
+        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
+        LocalTime inicio = punto.toLocalTime().minusHours(1);
+        LocalTime fin = punto.toLocalTime().plusHours(2);
+        if (inicio.isAfter(punto.toLocalTime())) inicio = LocalTime.MIDNIGHT;
+        if (fin.isBefore(inicio)) fin = LocalTime.of(23, 59, 59);
+        publicarFranja(tokenTutor, punto.toLocalDate(), inicio, fin);
+
+        UUID reservaId = crearReservaDirecta(token, tutorId, null, pronto);
+        confirmarPago(token, reservaId);
+
+        // El intento de reprogramación con <24hs se trata como cancelación tardía.
+        mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "nuevoHorario", dentroDeFranja(
+                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2)).toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("cancelada"));
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(r.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.VOLUNTARIA);
+    }
+
+    @Test
+    void cancelar_confirmada_porPagador_cancelaYDesagendaLaSesionEnM3() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), reservaId);
+        SesionAprendizaje sesion = sesionRepo.findByReservaId(reservaId).orElseThrow();
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("cancelada"))
+                .andExpect(jsonPath("$.motivoCancelacion").value("voluntaria"));
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        // M3 desagendó los jobs de la Sesión derivada (listener reserva.cancelada).
+        assertThat(scheduler.checkExists(SesionService.triggerSala(sesion.getId()))).isFalse();
+        assertThat(scheduler.checkExists(SesionService.triggerNoShow(sesion.getId()))).isFalse();
+        assertThat(scheduler.checkExists(SesionService.triggerCorte(sesion.getId()))).isFalse();
+    }
+
+    @Test
+    void cancelar_confirmada_porElTutor_quedaPermitida() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), reservaId);
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("cancelada"));
+    }
+
+    @Test
+    void cancelar_pendientePago_cancelaSinEventoYLiberaHorario() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("cancelada"));
+
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CANCELADA);
+        // El timeout de pago queda desprogramado y el horario se libera.
+        assertThat(scheduler.checkExists(reservaService.triggerTimeoutPago(reservaId))).isFalse();
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void cancelar_reservaDeOtro_queda403() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        String otroDni = dniUnico();
+        String tokenOtro = registrarAdultoYToken(otroDni, "Pepe", "Garcia", true, false);
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + tokenOtro))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cancelar_reservaYaCancelada_queda422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void articuloII_menorNuncaReprogramaNiCancela_queda403() throws Exception {
+        Escenario e = escenarioBase();
+        UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
+        confirmarPago(e.tokenAr(), reservaId);
+
+        mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenMenor())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "nuevoHorario", dentroDeFranja(
+                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(4)).toString()))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenMenor()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reprogramar_reservaPendiente_queda422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "nuevoHorario", dentroDeFranja(
+                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(4)).toString()))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void frRes007_reprogramar_aHorarioOcupadoDelMismoTutor_queda409() throws Exception {
+        // Dos estudiantes distintos reservan al mismo Tutor en horarios distintos...
+        String dniA = dniUnico();
+        String dniB = dniUnico();
+        String dniTutor = dniUnico();
+        String tokenA = registrarAdultoYToken(dniA, "Ana", "Lopez", true, false);
+        String tokenB = registrarAdultoYToken(dniB, "Maria", "Fernandez", true, false);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+
+        UUID reservaA = crearReservaDirecta(tokenA, tutorId, null, dentroDeFranja(fecha));
+        confirmarPago(tokenA, reservaA);
+
+        // ...B queda en +3 días 15:30 (no hago confirm: es la misma franja puntual).
+        LocalDate fechaB = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(3);
+        publicarFranjaPuntual(tokenTutor, fechaB);
+        UUID reservaB = crearReservaDirecta(tokenB, tutorId, null, dentroDeFranja(fechaB));
+        confirmarPago(tokenB, reservaB);
+
+        // Reprogramar B al horario de A → EXCLUDE (tutor, horario) → 409 (FR-RES-007).
+        mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaB)
+                        .header("Authorization", "Bearer " + tokenB)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "nuevoHorario", dentroDeFranja(fecha).toString()))))
+                .andExpect(status().isConflict());
     }
 }

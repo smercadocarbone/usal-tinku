@@ -19,6 +19,7 @@ import com.tinku.reservas.service.ReservaNoEncontradaException;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
+import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
@@ -116,6 +117,63 @@ public class SesionService {
         programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
                 reserva.getHorario().plus(duracionFranja).plus(TOLERANCIA_FIN_AUTOMATICO));
         return sesion;
+    }
+
+    /**
+     * Re-agenda los 3 jobs de la Sesión al NUEVO horario de su Reserva
+     * ({@code reserva.reprogramada}, T-M4-07 → M3). Si la Reserva se reprogramó
+     * pero todavía no tenía Sesión (no debería pasar: nace al confirmar), no hace
+     * nada. Desagenda los triggers viejos y los vuelve a agendar, recalculando la
+     * duración de la franja que cubre el nuevo horario.
+     */
+    @Transactional
+    public void reprogramarSesionProgramada(UUID reservaId) {
+        sesionRepo.findByReservaId(reservaId).ifPresent(sesion -> {
+            Reserva reserva = reservaRepo.findById(reservaId).orElse(null);
+            if (reserva == null) {
+                return;
+            }
+            Duration duracionFranja = franjaService.duracionFranjaQueCubre(
+                    reserva.getTutor().getId(), reserva.getHorario())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No se encontró la franja del NUEVO horario de la Reserva "
+                                    + reservaId + ": no se pueden re-agendar los jobs (T-M4-07)."));
+            desagendar(sesion.getId());
+            programarSiFalta(sesion.getId(), CrearSalaJob.class,
+                    reserva.getHorario().minus(ANTICIPACION_CREACION_SALA));
+            programarSiFalta(sesion.getId(), NoShowJob.class,
+                    reserva.getHorario().plus(TIMEOUT_NO_SHOW));
+            programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
+                    reserva.getHorario().plus(duracionFranja).plus(TOLERANCIA_FIN_AUTOMATICO));
+        });
+    }
+
+    /**
+     * Desagenda los 3 jobs de la Sesión ({@code reserva.cancelada}, T-M4-08 → M3).
+     * Limpieza: los jobs ya serían no-op por el guard de estado, pero no dejamos
+     * disparos muertos.
+     */
+    @Transactional
+    public void cancelarSesionProgramada(UUID reservaId) {
+        sesionRepo.findByReservaId(reservaId).ifPresent(sesion -> desagendar(sesion.getId()));
+    }
+
+    private void desagendar(UUID sesionId) {
+        try {
+            scheduler.unscheduleJob(triggerSala(sesionId));
+            scheduler.unscheduleJob(triggerNoShow(sesionId));
+            scheduler.unscheduleJob(triggerCorte(sesionId));
+            // Los jobs son storeDurably (programarSiFalta): hay que borrarlos
+            // explícitamente o el re-agendar chocaría con el mismo identity.
+            scheduler.deleteJob(new JobKey(prefijoDe(CrearSalaJob.class) + "-job-" + sesionId, GRUPO_JOB));
+            scheduler.deleteJob(new JobKey(prefijoDe(NoShowJob.class) + "-job-" + sesionId, GRUPO_JOB));
+            scheduler.deleteJob(new JobKey(prefijoDe(CorteAutomaticoJob.class) + "-job-" + sesionId, GRUPO_JOB));
+        } catch (SchedulerException e) {
+            // Fail-closed: la cancelación/reprogramación no puede colarse si no
+            // logramos limpiar los jobs viejos.
+            throw new IllegalStateException(
+                    "No se pudieron desagendar los jobs de la sesión " + sesionId, e);
+        }
     }
 
     /** Crea la sala en LiveKit (T-5, {@link CrearSalaJob}). Idempotente y fail-safe:

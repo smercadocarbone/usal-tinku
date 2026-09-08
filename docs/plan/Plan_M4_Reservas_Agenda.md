@@ -62,10 +62,12 @@
 1. Valida que falten ≥24hs del horario **actual** de la Reserva.
 2. Valida que el nuevo horario caiga en una franja publicada disponible.
 3. Actualiza `horario` en la misma fila — **no crea una Reserva nueva, no toca el campo `precio`, no genera ninguna llamada a MercadoPago.**
-4. Reprograma los jobs de Quartz asociados (recordatorios T-24h/T-5, creación de sala en M3) al nuevo horario.
+4. Emite `reserva.reprogramada` (en memoria) para que M3 re-agende los jobs de la Sesión derivada (sala T-5, no-show T+10, corte) al nuevo horario — sin esto, el no-show dispararía sobre una Reserva válida.
+5. Si faltan <24hs se trata como cancelación tardía por quien pagó (FR-RES-016): la Reserva queda `cancelada` y se emite `reserva.cancelada` (misma maquinaria que §2.5).
 
 ### 2.5 Cancelación y no-show (US-6, US-7)
 - La asimetría (quién cancela/falta determina el reembolso) se resuelve **en M5**, no acá — este módulo solo cambia el `estado` de la Reserva y emite el evento correspondiente (`sesion.no_show_estudiante`, etc., recibidos desde M3) o lo emite directamente si la cancelación ocurre antes de que exista una Sesión en M3 (cancelación manual, no vía no-show).
+- Cancelación manual ({@code POST /api/reservas/{id}/cancelar}): sobre `pendiente_pago` no hay nada que cobrar/reembolsar y se cancela sin evento (FR-RES-017); sobre `confirmada` se emite `reserva.cancelada` con quién canceló (la decide M5: reembolso o liberación del escrow, FR-RES-008) y M3 desagenda la Sesión derivada (los jobs ya eran no-op por guard de estado; es limpieza).
 
 ## 3. API (contratos de alto nivel)
 

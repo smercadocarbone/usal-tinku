@@ -23,6 +23,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | `sesion.killswitch_adultos` | M3 | Reembolso completo al Estudiante, incluso si el Estudiante fue el detectado — ver decisión explícita en FR-PAG-012. |
 | `denuncia.registrada` (con escrow activo) | M9 | Pausa la liberación de fondos hasta resolución. |
 | `denuncia.resuelta` | M9 | Reanuda la liberación o ejecuta el reembolso/sanción que corresponda. |
+| `reserva.cancelada` _(agregado en T-M4-08)_ | M4 | Cancelación manual de una Reserva confirmada. El payload (reservaId + quien cancela) y el horario permiten a M5 decidir la asimetría de FR-RES-008: ≥24hs o <24hs con cancelación por el Tutor → reembolso al pagador; <24hs con cancelación por quien pagó → liberación del escrow al Tutor. No aplica a `pendiente_pago` (FR-RES-017, no hay nada que mover). |
 
 ## 3. Historias de Usuario y Criterios de Aceptación
 

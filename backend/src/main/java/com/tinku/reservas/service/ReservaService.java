@@ -4,7 +4,9 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.evento.ReservaConfirmadaEvent;
+import com.tinku.reservas.evento.ReservaReprogramadaEvent;
 import com.tinku.reservas.jobs.ReservaTimeoutPagoJob;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
@@ -52,6 +54,9 @@ public class ReservaService {
 
     /** FR-RES-020 — timeout de pendiente_pago a 15 min (Tabla_Tiempos_Tinku.md). */
     private static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
+
+    /** FR-RES-004/015/016 — reprogramación y cancelación sin penalidad hasta 24hs antes. */
+    private static final Duration VENTANA_CANCELACION = Duration.ofHours(24);
 
     /** Mismo grupo que el job de expiración de Solicitudes (todos los jobs de M4). */
     public static final String GRUPO_JOB = "m4-reservas";
@@ -165,6 +170,71 @@ public class ReservaService {
         return reserva;
     }
 
+    /**
+     * Reprogramación de una Reserva confirmada (T-M4-07, US-5, FR-RES-015/016).
+     * Con ≥24hs al horario actual: se actualiza {@code horario} en la MISMA fila,
+     * sin tocar el precio original (FR-PAG-013) y sin transacción nueva; emite
+     * {@code reserva.reprogramada} para que M3 re-agende la Sesión derivada.
+     * Con <24hs se trata como cancelación tardía por quien pagó (FR-RES-016):
+     * la Reserva queda cancelada y se emite {@code reserva.cancelada}.
+     */
+    @Transactional
+    public Reserva reprogramar(Usuario usuario, UUID reservaId, Instant nuevoHorario) {
+        Reserva reserva = reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            throw new ReservaNoReprogramableException();
+        }
+        if (!esPagador(reserva, usuario)) {
+            throw new SoloPagadorReservaException();
+        }
+        if (Instant.now().plus(VENTANA_CANCELACION).isAfter(reserva.getHorario())) {
+            // FR-RES-016: menos de 24hs → cancelación tardía (asimetría de US-7).
+            return cancelarInterna(reserva, usuario);
+        }
+        validarNuevoHorario(reserva, nuevoHorario);
+        reserva.setHorario(nuevoHorario);
+        reservaRepo.save(reserva);
+        events.publishEvent(new ReservaReprogramadaEvent(this, reserva.getId()));
+        return reserva;
+    }
+
+    /**
+     * Cancelación manual (T-M4-08, US-6/US-7, FR-RES-004/008/017). La puede
+     * disparar quien pagó o el Tutor. Si la Reserva está {@code pendiente_pago},
+     * no hay nada que cobrar/reembolsar (FR-RES-017): se cancela sin evento y se
+     * desprograma el timeout. Si está {@code confirmada}, se emite {@code
+     * reserva.cancelada} con quién canceló — la asimetría del escrow la decide M5
+     * (Plan M4 §2.5) y M3 desagenda la Sesión derivada.
+     */
+    @Transactional
+    public Reserva cancelar(Usuario usuario, UUID reservaId) {
+        Reserva reserva = reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO
+                && reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            throw new ReservaNoCancelableException();
+        }
+        if (!esPagador(reserva, usuario) && !esTutor(reserva, usuario)) {
+            throw new NoPuedeCancelarReservaException();
+        }
+        return cancelarInterna(reserva, usuario);
+    }
+
+    private Reserva cancelarInterna(Reserva reserva, Usuario cancelante) {
+        boolean estabaConfirmada = reserva.getEstado() == EstadoReserva.CONFIRMADA;
+        reserva.setEstado(EstadoReserva.CANCELADA);
+        reserva.setMotivoCancelacion(MotivoCancelacion.VOLUNTARIA);
+        reservaRepo.save(reserva);
+        cancelarTimeoutPago(reserva.getId());
+        if (estabaConfirmada) {
+            // Manual con escrow: M5 decide reembolso/liberación; M3 limpia su Sesión.
+            events.publishEvent(new ReservaCanceladaEvent(
+                    this, reserva.getId(), cancelante.getId()));
+        }
+        return reserva;
+    }
+
     /** Reglas comunes a toda creación de Reserva y al timeout (FR-RES-020). Si la
      * Reserva ya dejó de estar {@code pendiente_pago}, no hace nada (idempotente). */
     @Transactional
@@ -264,5 +334,26 @@ public class ReservaService {
         if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadEstudiante()) {
             throw new CapacidadDePagoRequeridaException();
         }
+    }
+
+    private void validarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
+        if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
+            throw new VentanaMinimaException(
+                    "Faltan menos de 15 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
+        }
+        if (!franjaService.estaDentroDeFranjaActiva(reserva.getTutor().getId(), nuevoHorario)) {
+            throw new HorarioFueraDeFranjaException(
+                    "El nuevo horario no cae en una franja publicada y activa (FR-RES-012).");
+        }
+    }
+
+    private boolean esPagador(Reserva reserva, Usuario usuario) {
+        return reserva.getPagador() != null
+                && reserva.getPagador().getId().equals(usuario.getId());
+    }
+
+    private boolean esTutor(Reserva reserva, Usuario usuario) {
+        return reserva.getTutor() != null
+                && reserva.getTutor().getId().equals(usuario.getId());
     }
 }

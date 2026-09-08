@@ -4,9 +4,13 @@ import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
+import com.tinku.reservas.service.NoPuedeCancelarReservaException;
+import com.tinku.reservas.service.ReservaNoCancelableException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
+import com.tinku.reservas.service.ReservaNoReprogramableException;
 import com.tinku.reservas.service.SoloAdultoResponsableException;
 import com.tinku.reservas.service.SoloMenorException;
+import com.tinku.reservas.service.SoloPagadorReservaException;
 import com.tinku.reservas.service.SoloTutorException;
 import com.tinku.reservas.service.SolicitudDuplicadaException;
 import com.tinku.reservas.service.SolicitudMenorNoPerteneceException;
@@ -36,13 +40,15 @@ public class ReservasExceptionHandler {
     @ExceptionHandler({SoloAdultoResponsableException.class, SoloMenorException.class,
             SoloTutorException.class, SolicitudMenorNoPerteneceException.class,
             TutorNoAutorizadoParaMenorException.class, CapacidadDePagoRequeridaException.class,
-            BeneficiarioNoPerteneceException.class})
+            BeneficiarioNoPerteneceException.class, SoloPagadorReservaException.class,
+            NoPuedeCancelarReservaException.class})
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class,
-            DuracionFranjaInvalidaException.class})
+            DuracionFranjaInvalidaException.class, ReservaNoReprogramableException.class,
+            ReservaNoCancelableException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));

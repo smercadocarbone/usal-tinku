@@ -57,7 +57,7 @@ _(requiere M1 y M2 cerrados)_
 - [x] **Chunk M4-A** — Migración con `EXCLUDE constraint` de superposición desde el inicio (T-M4-01)
 - [x] **Chunk M4-B** — Franjas + Solicitud de Sesión + aprobación (T-M4-02, T-M4-03, T-M4-04) _(suite 128 tests, 0 fallos; merge a `main` pendiente)_
 - [x] **Chunk M4-C** — Reserva directa + timeout de `pendiente_pago` (T-M4-05, T-M4-06) _(suite 166 tests, 0 fallos; merge a `main` pendiente)_
-- [ ] **Chunk M4-D** — Reprogramación + cancelación con asimetría (T-M4-07, T-M4-08)
+- [x] **Chunk M4-D** — Reprogramación + cancelación con asimetría (T-M4-07, T-M4-08) _(suite 176 tests, 0 fallos; merge a `main` pendiente; incluye listeners M3 `reserva.cancelada`/`reserva.reprogramada` que desagendan / re-agendan la Sesión derivada)_
 - [ ] **Chunk M4-E** — Listeners desde M9 (sanción) y M7 (calificación pendiente) — stubs si esos módulos no existen aún (T-M4-09, T-M4-10)
 - [ ] **Chunk M4-F** — Test de condición de carrera en reservas simultáneas (T-M4-11)
 
