@@ -74,8 +74,8 @@
 
 ## M5 — Motor de Pagos
 
-- [ ] T-M5-01: Migración: `transacciones`, `precios_referencia_regional`.
-- [ ] T-M5-02: Integración con MercadoPago: generación de preferencia de pago con split (`marketplace_fee` = 15%).
+- [x] T-M5-01: Migración: `transacciones`, `precios_referencia_regional`. — _`V11__m5_pagos.sql` (schema `pagos`). PK de `precios_referencia_regional` = (provincia, version): la nota "nunca se sobreescribe la fila" del Plan exige acumular versiones (documentado en la migración). El filas de `transacciones` las crea el webhook de M5-B._
+- [x] T-M5-02: Integración con MercadoPago: generación de preferencia de pago con split (`marketplace_fee` = 15%). — _`POST /api/pagos/preferencia` lazy (Plan M5 §4): el guard de pagador es del backend (Artículo II), `external_reference` = reserva_id como clave de reconciliación del webhook. Puerto `MercadoPagoClient` + `MercadoPagoClientHttp` (sin `MP_ACCESS_TOKEN` → 503 con mensaje claro, T-000-06). BR-PAG-01: comisión = 15% del precio congelado (`marketplace-fee-percent`). Tests: PagosFlujosIntegracionTest (8) + MercadoPagoClientHttpTest (5) — no pegan contra el provider real (ADR-M5-01 sigue pendiente para eso)._
 - [ ] T-M5-03: Endpoint `POST /api/webhooks/mercadopago` — **validar firma del webhook antes de procesar cualquier payload.**
 - [ ] T-M5-04: Listeners de los eventos de la tabla de eventos entrantes del Plan (`sesion.finalizada`, `sesion.interrumpida`, `sesion.no_show_*`, `sesion.killswitch_*`, `denuncia.*`) — uno por evento, cada uno probado por separado.
 - [ ] T-M5-05: Job de liberación automática a `liberar_at`, con chequeo de `estado != pausado_denuncia`.

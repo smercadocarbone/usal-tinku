@@ -65,7 +65,7 @@ _(requiere M1 y M2 cerrados)_
 
 _(requiere M4 cerrado; los listeners de sesión se completan cuando M3 exista)_
 
-- [ ] **Chunk M5-A** — Migraciones + integración MercadoPago con split (T-M5-01, T-M5-02)
+- [x] **Chunk M5-A** — Migraciones + integración MercadoPago con split (T-M5-01, T-M5-02)
 - [ ] **Chunk M5-B** — Webhook con validación de firma + listeners de eventos (T-M5-03, T-M5-04) — _los listeners de eventos de M3 quedan como stub hasta Chunk M3-E_
 - [ ] **Chunk M5-C** — Job de liberación automática + reintentos con backoff (T-M5-05, T-M5-06)
 - [ ] **Chunk M5-D** — Función única de reembolso total + flujo manual de reembolso parcial (T-M5-07, T-M5-08)

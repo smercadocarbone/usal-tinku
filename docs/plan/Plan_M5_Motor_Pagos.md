@@ -46,6 +46,7 @@
 
 ### 3.1 Cobro en escrow (US-1)
 1. Al crear la Reserva (M4), el backend genera una preferencia de pago en MercadoPago (Checkout Pro, modalidad Marketplace/split) con `marketplace_fee = 15%`.
+   - **Decisión de implementación (Chunk M5-A):** la generación de la preferencia es **lazy via `POST /api/pagos/preferencia`** (Plan §4), no en el momento de la creación — así M4 no queda acoplado a una salida HTTP hacia MP en cada creación (y crear una Reserva sigue funcionando sin credenciales de MP: T-000-06). El guard de pagador lo resuelve el backend. La preferencia NO se persiste: el match con la Reserva va por `external_reference = reserva_id`, que es la clave que usará el webhook de M5-B.
 2. El Estudiante/Adulto completa el pago en la interfaz de MercadoPago.
 3. MercadoPago notifica por **webhook** — el backend nunca debe depender de que el cliente vuelva a la app para confirmar el pago (el usuario puede cerrar la pestaña).
 4. Al recibir el webhook de pago aprobado, se crea la fila en `transacciones` con `estado = retenido_escrow`, y la Reserva pasa de `pendiente_pago` a `confirmada`.
@@ -85,4 +86,4 @@ FR-PAG-001 a FR-PAG-013 cubiertos. El punto más sensible de todo el módulo es 
 
 ---
 
-**Estado: Borrador de Plan técnico.** Pendiente: ADR-M5-01 antes de escribir tests de integración.
+**Estado: Borrador de Plan técnico.** ~~Pendiente: ADR-M5-01 antes de escribir tests de integración.~~ Chunk M5-A implementado (T-M5-01, T-M5-02) con tests que NO pegan contra el provider real (stub HTTP local + cliente mockeado); ADR-M5-01 sigue pendiente antes de escribir tests de integración que toquen MercadoPago real.

@@ -66,7 +66,10 @@ tinku:
     # negocio de Tabla_Tiempos): duracion de validez del JWT para unirse a la sala.
     token-ttl-segundos: ${LIVEKIT_TOKEN_TTL_SEGUNDOS:3600}
   mercadopago:
+    base-url: ${MP_BASE_URL:https://api.mercadopago.com}
     access-token: ${MP_ACCESS_TOKEN:}
+    # Webhook de M5-B; si queda vacío la preferencia no declara notification_url.
+    notification-url: ${MP_NOTIFICATION_URL:}
     marketplace-fee-percent: 15 # BR-PAG-01
   ocr:
     # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta
