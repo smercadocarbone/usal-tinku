@@ -50,9 +50,13 @@ help: ## Lista de comandos disponibles
 # -----------------------------------------------------------------------------
 .PHONY: setup
 setup: ## Copia .env.example -> .env y prepara dependencias una sola vez
+	@if [ ! -d "$(JAVA_HOME)" ]; then \
+		echo "JAVA_HOME=$(JAVA_HOME) no existe. Instalá TempleJDK/temurin-21 o pasá 'make JAVA_HOME=/ruta/al/jdk'."; exit 2; \
+	fi
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Creado .env (revisalo y completá los valores)."; fi
 	@docker compose up -d db --wait 2>/dev/null || docker compose up -d db
-	@cd $(BACKEND_DIR) && ./mvnw -q -DskipTests compile
+	@set -a; [ -f .env ] && . ./.env || true; set +a; \
+	cd $(BACKEND_DIR) && JAVA_HOME="$(JAVA_HOME)" ./mvnw -q -DskipTests compile
 	@pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt
 	@cd $(FRONTEND_DIR) && if [ ! -d node_modules ]; then npm install; fi
 	@echo "Setup listo."
