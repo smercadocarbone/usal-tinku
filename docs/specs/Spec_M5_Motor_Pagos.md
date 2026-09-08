@@ -102,6 +102,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | FR-PAG-011 | Sanción definitiva a un Tutor: se libera el pago de sesiones ya realizadas, se retiene y reembolsa lo de sesiones futuras. |
 | FR-PAG-012 | El reembolso por kill-switch es total incluso si el Estudiante fue el infractor detectado en la rama de ambos adultos. |
 | FR-PAG-013 | La reprogramación con ≥24hs conserva el precio original de la Reserva, no el precio vigente de la franja al momento de reprogramar. |
+| FR-PAG-014 _(agregado)_ | El precio configurado por el Tutor es un valor por hora. El monto final de cada Reserva = precio_hora × (duración_franja_minutos / 60), redondeado a 2 decimales. Aplica tanto al precio de referencia regional (US-6) como al precio final que ve el Estudiante (Artículo III). |
 
 ## 5. Casos Borde — Resueltos, 1 Diferido a Propósito
 

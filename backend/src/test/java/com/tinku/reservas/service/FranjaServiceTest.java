@@ -1,7 +1,10 @@
 package com.tinku.reservas.service;
 
+import com.tinku.identidad.model.TipoUsuario;
+import com.tinku.identidad.model.Usuario;
 import com.tinku.reservas.model.FranjaDisponibilidad;
 import com.tinku.reservas.repository.FranjaDisponibilidadRepository;
+import com.tinku.reservas.web.PublicarFranjaRequest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -11,7 +14,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -26,6 +33,70 @@ class FranjaServiceTest {
     private final FranjaService servicio = new FranjaService(franjaRepo);
 
     private final UUID tutorId = UUID.randomUUID();
+
+    /** Solo importa el tipo del usuario (FR-RES-012). */
+    private Usuario tutor() {
+        Usuario u = new Usuario();
+        u.setTipo(TipoUsuario.TUTOR);
+        return u;
+    }
+
+    private PublicarFranjaRequest franjaPuntualParaPublicar(LocalTime inicio, LocalTime fin) {
+        return new PublicarFranjaRequest(null, LocalDate.now(), inicio, fin);
+    }
+
+    @Test
+    void publicar_franjaDeDuracionValida_guardaLaFranjaActiva() {
+        when(franjaRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FranjaDisponibilidad guardada = servicio.publicar(tutor(),
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(12, 0)));
+
+        assertThat(guardada.getHoraInicio()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(guardada.getHoraFin()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(guardada.isActiva()).isTrue();
+        verify(franjaRepo).save(any());
+    }
+
+    @Test
+    void frRes024_franjaDeMenosDe30Minutos_quedaRechazada() {
+        assertThatThrownBy(() -> servicio.publicar(tutor(),
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(9, 15))))
+                .isInstanceOf(DuracionFranjaInvalidaException.class);
+        verify(franjaRepo, never()).save(any());
+    }
+
+    @Test
+    void frRes024_franjaDeMasDe180Minutos_quedaRechazada() {
+        assertThatThrownBy(() -> servicio.publicar(tutor(),
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(13, 0))))
+                .isInstanceOf(DuracionFranjaInvalidaException.class);
+        verify(franjaRepo, never()).save(any());
+    }
+
+    @Test
+    void frRes024_extremosIncluidos_30MinY180MinSePublican() {
+        when(franjaRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FranjaDisponibilidad min = servicio.publicar(tutor(),
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(9, 30)));
+        FranjaDisponibilidad max = servicio.publicar(tutor(),
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(12, 0)));
+
+        assertThat(min.getHoraFin()).isEqualTo(LocalTime.of(9, 30));
+        assertThat(max.getHoraFin()).isEqualTo(LocalTime.of(12, 0));
+    }
+
+    @Test
+    void publicar_conPerfilDistintoDeTutor_quedaProhibido() {
+        Usuario adulto = new Usuario();
+        adulto.setTipo(TipoUsuario.ADULTO);
+
+        assertThatThrownBy(() -> servicio.publicar(adulto,
+                franjaPuntualParaPublicar(LocalTime.of(9, 0), LocalTime.of(10, 0))))
+                .isInstanceOf(SoloTutorException.class);
+        verify(franjaRepo, never()).save(any());
+    }
 
     private FranjaDisponibilidad franjaSemanal(short diaSemana, LocalTime inicio, LocalTime fin) {
         FranjaDisponibilidad f = new FranjaDisponibilidad();

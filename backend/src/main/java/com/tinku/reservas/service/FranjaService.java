@@ -9,9 +9,11 @@ import com.tinku.reservas.web.PublicarFranjaRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -21,6 +23,10 @@ import java.util.UUID;
  */
 @Service
 public class FranjaService {
+
+    /** FR-RES-024 — franjas de 30 a 180 minutos (Tabla_Tiempos_Tinku.md). */
+    private static final Duration DURACION_MINIMA = Duration.ofMinutes(30);
+    private static final Duration DURACION_MAXIMA = Duration.ofMinutes(180);
 
     private final FranjaDisponibilidadRepository franjaRepo;
 
@@ -37,6 +43,11 @@ public class FranjaService {
         if (!request.horaFin().isAfter(request.horaInicio())) {
             throw new HorarioFueraDeFranjaException("horaFin debe ser posterior a horaInicio.");
         }
+        long minutos = Duration.between(request.horaInicio(), request.horaFin()).toMinutes();
+        if (minutos < DURACION_MINIMA.toMinutes() || minutos > DURACION_MAXIMA.toMinutes()) {
+            throw new DuracionFranjaInvalidaException(
+                    "La duración de la franja debe ser de 30 a 180 minutos (FR-RES-024).");
+        }
 
         FranjaDisponibilidad franja = new FranjaDisponibilidad();
         franja.setTutor(tutor);
@@ -50,10 +61,29 @@ public class FranjaService {
 
     /** FR-RES-012: true si dentro de una franja activa del tutor que cubre ese día/hora. */
     public boolean estaDentroDeFranjaActiva(UUID tutorId, Instant horario) {
+        return franjaQueCubre(tutorId, horario).isPresent();
+    }
+
+    /**
+     * Devuelve la franja activa que cubre {@code horario}, si existe. La
+     * reutilizan ReservaService/SolicitudService (decisión booleana) y M3
+     * (T-M3-03/05: la duración de la franja define el fin agendado).
+     */
+    public Optional<FranjaDisponibilidad> franjaQueCubre(UUID tutorId, Instant horario) {
         LocalDateTime punto = horario.atZone(ReservasZonaHoraria.ZONA).toLocalDateTime();
         int diaSemana = punto.getDayOfWeek().getValue(); // ISO: 1=lu..7=do
         return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
-                .anyMatch(f -> cubre(f, diaSemana, punto));
+                .filter(f -> cubre(f, diaSemana, punto))
+                .findFirst();
+    }
+
+    /**
+     * Duración planificada de la franja que cubre {@code horario} — el job de
+     * corte automático (T-M3-05) se programa en {@code horario + duración + 5min}.
+     */
+    public Optional<Duration> duracionFranjaQueCubre(UUID tutorId, Instant horario) {
+        return franjaQueCubre(tutorId, horario)
+                .map(f -> Duration.between(f.getHoraInicio(), f.getHoraFin()));
     }
 
     private boolean cubre(FranjaDisponibilidad f, int diaSemana, LocalDateTime punto) {

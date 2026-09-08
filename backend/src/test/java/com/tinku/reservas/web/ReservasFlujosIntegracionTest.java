@@ -336,23 +336,32 @@ class ReservasFlujosIntegracionTest {
         UUID tutorId = usuarioPorDni(dniTutor).getId();
         UUID menorId = registrarMenor(dniMenor, tokenAr);
 
-        // Franja puntual de TODO el día de hoy: cubre cualquier horario de hoy.
-        LocalDate hoy = LocalDate.now(ReservasZonaHoraria.ZONA);
+        // Franja PUNTUAL que cubre "ahora+5min" respetando FR-RES-024 (30-180
+        // min), sin depender de la hora del día: arranco 1h antes del horario y
+        // termino 2h después; si el intervalo cruzara la medianoche lo recorto
+        // al borde del día (la duración resultante sigue dentro de 30-180 min).
+        Instant pronto = Instant.now().plusSeconds(5 * 60);
+        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
+        LocalDate hoy = punto.toLocalDate();
+        LocalTime hora = punto.toLocalTime();
+        LocalTime inicioFranja = hora.minusHours(1);
+        LocalTime finFranja = hora.plusHours(2);
+        if (inicioFranja.isAfter(hora)) {
+            inicioFranja = LocalTime.MIDNIGHT; // inicio cayó en el día anterior
+        } else if (finFranja.isBefore(inicioFranja)) {
+            finFranja = LocalTime.of(23, 59, 59); // fin cruzó la medianoche
+        }
         mockMvc.perform(post("/api/tutores/franjas")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "fechaEspecifica", hoy.toString(),
-                                "horaInicio", "00:00:00",
-                                "horaFin", "23:59:59"))))
+                                "horaInicio", inicioFranja.toString(),
+                                "horaFin", finFranja.toString()))))
                 .andExpect(status().isCreated());
         autorizar(tutorId, menorId, tokenAr);
         String tokenMenor = login(dniMenor);
 
-        // Horario en 5 minutos: dentro de la franja, pero fuera de la ventana
-        // mínima de 15 min (FR-RES-013). Si el horario cayera pasada la
-        // medianoche el test no aplica — correr lejos de las 23:55.
-        Instant pronto = Instant.now().plusSeconds(5 * 60);
         UUID solicitudId = crearSolicitud(tokenMenor, tutorId, pronto);
 
         mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
@@ -435,5 +444,72 @@ class ReservasFlujosIntegracionTest {
                         .header("Authorization", "Bearer " + tokenAr2))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("ya está reservado")));
+    }
+
+    @Test
+    void frRes024_franjaFueraDe30A180Minutos_quedaRechazadaCon422() throws Exception {
+        String dniAr = dniUnico();
+        String dniTutor = dniUnico();
+        String dniMenor = dniUnico();
+        String tokenAr = registrarAdultoYToken(dniAr, "Ana", "Lopez", true, true);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        registrarMenor(dniMenor, tokenAr);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+
+        // 5 horas (300 min) supera el tope de 180 min (FR-RES-024) → 422.
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", fecha.toString(),
+                                "horaInicio", "09:00",
+                                "horaFin", "14:00"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("30 a 180")));
+
+        // 15 min está por debajo del mínimo → 422.
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", fecha.toString(),
+                                "horaInicio", "15:00",
+                                "horaFin", "15:15"))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void stubConfirmacion_marcaConfirmada_deFormaIdempotente() throws Exception {
+        Escenario e = escenarioBase();
+
+        UUID solicitudId = crearSolicitud(e.tokenMenor(), e.tutorId(), e.horario());
+        MvcResult aprobada = mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("pendiente_pago"))
+                .andReturn();
+        UUID reservaId = UUID.fromString(objectMapper.readTree(
+                aprobada.getResponse().getContentAsString()).get("id").asText());
+
+        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("confirmada"));
+
+        // Los webhooks de MP se reintentan: repetir la confirmación no es un error.
+        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("confirmada"));
+    }
+
+    @Test
+    void stubConfirmacion_reservaInexistente_queda404() throws Exception {
+        Escenario e = escenarioBase();
+
+        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", UUID.randomUUID())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isNotFound());
     }
 }

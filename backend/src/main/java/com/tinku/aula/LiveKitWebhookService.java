@@ -1,0 +1,83 @@
+package com.tinku.aula;
+
+import com.tinku.aula.model.SesionAprendizaje;
+import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.identidad.model.Usuario;
+import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.repository.ReservaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+
+/**
+ * Registro de joins de participantes del webhook de LiveKit (T-M3-02). Quién
+ * es "tutor" y quién "estudiante" NO viaja en el payload del webhook: se
+ * resuelve contra la Reserva de la sesión → el beneficiario entra como
+ * estudiante, el tutor como tutor (identidad = id o dni del usuario).
+ *
+ * El job de no-show T+10 (T-M3-04) consulta {@code estudiante_joined_at} /
+ * {@code tutor_joined_at} para decidir el evento «sin join» — por eso estos
+ * timestamps se graban aquí y nunca en memoria.
+ */
+@Service
+public class LiveKitWebhookService {
+
+    private final SesionAprendizajeRepository sesionRepo;
+    private final ReservaRepository reservaRepo;
+    private final SesionService sesionService;
+
+    public LiveKitWebhookService(SesionAprendizajeRepository sesionRepo,
+                                 ReservaRepository reservaRepo,
+                                 SesionService sesionService) {
+        this.sesionRepo = sesionRepo;
+        this.reservaRepo = reservaRepo;
+        this.sesionService = sesionService;
+    }
+
+    @Transactional
+    public void registrarJoin(String livekitRoomId, String identity) {
+        if (livekitRoomId == null || identity == null || identity.isBlank()) {
+            return;
+        }
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        if (sesion == null) {
+            return; // sala no registrada todavía (o de otro entorno): no es nuestro join
+        }
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId()).orElse(null);
+        if (reserva == null) {
+            return;
+        }
+        boolean nuevoJoin = false;
+        if (mismaPersona(reserva.getTutor(), identity)) {
+            if (sesion.getTutorJoinedAt() == null) {
+                sesion.setTutorJoinedAt(Instant.now());
+                nuevoJoin = true;
+            }
+        } else if (mismaPersona(reserva.getBeneficiario(), identity)) {
+            if (sesion.getEstudianteJoinedAt() == null) {
+                sesion.setEstudianteJoinedAt(Instant.now());
+                nuevoJoin = true;
+            }
+        }
+        if (!nuevoJoin) {
+            return; // reconexión del mismo participante: no cambia el estado
+        }
+        // Primer join real: la sesión arranca (US-2) — inicio_real alimenta el
+        // cálculo de duración efectiva al finalizar (US-5/M6).
+        if (SesionAprendizaje.ESTADO_NO_INICIADA.equals(sesion.getEstado())) {
+            sesion.setEstado(SesionAprendizaje.ESTADO_EN_CURSO);
+            sesion.setInicioReal(Instant.now());
+        }
+        sesionRepo.save(sesion);
+        if (sesion.getTutorJoinedAt() != null && sesion.getEstudianteJoinedAt() != null) {
+            // Plan M3 §3.2 punto 4: el no-show ya no tiene sentido — se cancela
+            // el job T+10, NO se deja correr y descartar su resultado.
+            sesionService.cancelarNoShow(sesion.getId());
+        }
+    }
+
+    private boolean mismaPersona(Usuario usuario, String identity) {
+        return usuario.getId().toString().equals(identity) || usuario.getDni().equals(identity);
+    }
+}

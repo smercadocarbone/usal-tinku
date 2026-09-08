@@ -1,6 +1,8 @@
 package com.tinku.reservas.web;
 
+import com.tinku.reservas.service.DuracionFranjaInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
+import com.tinku.reservas.service.ReservaNoEncontradaException;
 import com.tinku.reservas.service.SoloAdultoResponsableException;
 import com.tinku.reservas.service.SoloMenorException;
 import com.tinku.reservas.service.SoloTutorException;
@@ -35,13 +37,14 @@ public class ReservasExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class})
+    @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class,
+            DuracionFranjaInvalidaException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(SolicitudNoPendienteException.class)
+    @ExceptionHandler({SolicitudNoPendienteException.class, ReservaNoEncontradaException.class})
     public ResponseEntity<Map<String, String>> handleNoEncontrada(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }

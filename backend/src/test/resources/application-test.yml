@@ -8,6 +8,12 @@ spring:
 tinku:
   jwt:
     secret: test-secret-nunca-usar-en-produccion
+  livekit:
+    # M3-B: el webhook de joins requiere claves configuradas (fail-closed si no).
+    # api-secret >= 32 bytes (HS256, exige hmacShaKeyFor). Solo de prueba — jamás
+    # usar en produccion.
+    api-key: test-livekit-api-key
+    api-secret: 0123456789012345678901234567890123456789
   reservas:
     # Stub del puerto TarifaProveedor (M5 no implementado). Valor en centavos/pesos
     # para poder ejercitar la creacion de Reservas en los tests de integracion.

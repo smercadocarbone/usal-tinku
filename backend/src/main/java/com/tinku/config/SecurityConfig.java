@@ -55,6 +55,10 @@ public class SecurityConfig {
                 // autenticado (FR-ID-020, Artículo II).
                 .requestMatchers("/api/usuarios/registro", "/api/usuarios/login",
                         "/api/tutores/registro").permitAll()
+                // Webhook de LiveKit: la autenticación ES su firma HS256 sobre
+                // el body (T-M3-02), no el JWT de Tinku — mismo patrón que el
+                // webhook de MercadoPago (M5-B). Sin firma válida → 401.
+                .requestMatchers("/api/webhooks/livekit").permitAll()
                 .anyRequest().authenticated()
             );
 

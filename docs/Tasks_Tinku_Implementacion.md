@@ -91,9 +91,9 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 - [x] T-M3-01: Migración: `sesiones_aprendizaje`, `alertas_seguridad`. — _V8 aplicada en dev. `reserva_id` sin FK (reservas.reservas aún no existe): la FK se agrega en la migración de M4._
 - [x] T-M3-02: Integración con LiveKit: creación de sala + generación de tokens. — _`LiveKitService` (REST Twirp + JWT HS256 con jjwt, HTTP/1.1 forzado), test de contrato 4/4. Pendiente: E2E contra cuenta real (T-000-06, credenciales en variables LIVEKIT_URL/API_KEY/API_SECRET). TTL del token: parámetro técnico `livekit.token-ttl-segundos` (default 1h) — revisar antes de M3-03._
-- [ ] T-M3-03: Job de creación diferida de sala a T-5min (a partir del horario ya confirmado en M4).
-- [ ] T-M3-04: Job de no-show a T+10min, con cancelación explícita si ambos se unen antes.
-- [ ] T-M3-05: Endpoint `POST /api/sesiones/{id}/finalizar` + job de corte automático a T-fin+5min.
+- [x] T-M3-03: Job de creación diferida de sala a T-5min (a partir del horario ya confirmado en M4). — _`SesionService.programarSesion` crea la Sesión y agenda los 3 jobs (sala/no-show/corte) al confirmarse la Reserva, vía el evento interno in-memory `ReservaConfirmadaEvent` (M4→M3, NO figura en ningún Spec — AGENTS §4; publicado por `ReservaService.confirmarPagoSimulado`, reemplazado por el webhook real de M5-B). E2E contra LiveKit real queda pendiente de T-000-06._
+- [x] T-M3-04: Job de no-show a T+10min, con cancelación explícita si ambos se unen antes. — _`ejecutarNoShow` decide por `joined_at` (webhook, V10) y emite `sesion.no_show_estudiante/tutor/doble`; el segundo join cancela el trigger (Plan M3 §3.2 punto 4)._
+- [x] T-M3-05: Endpoint `POST /api/sesiones/{id}/finalizar` + job de corte automático a T-fin+5min. — _`finalizar` (autoriza tutor/beneficiario/pagador, 403 a terceros) + `CorteAutomaticoJob` a `fin_agendado + 5min` (fin_agendado = horario + duración de la franja); ambos idempotentes y emiten `sesion.finalizada` una sola vez. Tests de integración M3-B: 12/12._
 - [ ] T-M3-06 _(depende del spike)_: Integrar el clasificador on-device en el cliente, según el resultado de ADR-M3-01.
 - [ ] T-M3-07 _(depende del spike)_: Endpoint `POST /api/sesiones/{id}/killswitch` — el backend decide la rama (menor/adultos) con datos propios de M1, nunca confiando en un flag del cliente.
 - [ ] T-M3-08: Endpoint de subida de evidencia (clip de 30s) — solo alcanzable tras un killswitch ya registrado.

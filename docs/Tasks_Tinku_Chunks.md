@@ -77,7 +77,7 @@ _(requiere M4 cerrado; los listeners de sesión se completan cuando M3 exista)_
 _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que SPIKE-C esté cerrado)_
 
 - [x] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
-- [ ] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05)
+- [x] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05) — _cerrado: SesionService + 3 jobs de Quartz + endpoint finalizar + eventos `sesion.no_show_*/finalizada`; suite completa 157 tests OK._
 - [ ] **Chunk M3-C** _(bloqueado por SPIKE-C)_ — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
 - [ ] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09)
 - [ ] **Chunk M3-E** — Emisión de todos los eventos hacia M5 → _desbloquea Chunk M5-B (listeners reales)_
@@ -140,6 +140,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 | M2-C (reputación/suspensión)          | M7-D, M9 (implícito vía M2-C ya usa consulta a M9) | M7 y M9 aún no existen cuando se hace M2             |
 | M4-E (sanción/calificación pendiente) | M9-D, M7-C                                         | Idem                                                 |
 | M5-B (listeners de eventos de sesión) | M3-E                                               | M3 emite los eventos que M5-B consume                |
+| M5-B (webhook MP real + confirmación) | M5-B                                               | Stub `POST /api/test/reservas/{id}/confirmar-pago-simulado` implementado en M3-B (dev/test); el webhook real con validación de firma lo reemplaza |
 | M3-C                                  | SPIKE-C                                            | El clasificador real depende del resultado del spike |
 
 _Cualquier stub que quede sin reemplazar al llegar a Chunk FIN-A debe tratarse como bloqueante — no cerrar el flujo feliz E2E con un mock permanente disfrazado de stub temporal._

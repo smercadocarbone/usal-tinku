@@ -2,6 +2,7 @@ package com.tinku.reservas.service;
 
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.reservas.evento.ReservaConfirmadaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.Reserva;
@@ -9,6 +10,7 @@ import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.port.TarifaProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,15 +33,18 @@ public class ReservaService {
     private final ReservaRepository reservaRepo;
     private final FranjaService franjaService;
     private final TarifaProveedor tarifaProveedor;
+    private final ApplicationEventPublisher events;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           ReservaRepository reservaRepo,
                           FranjaService franjaService,
-                          TarifaProveedor tarifaProveedor) {
+                          TarifaProveedor tarifaProveedor,
+                          ApplicationEventPublisher events) {
         this.solicitudRepo = solicitudRepo;
         this.reservaRepo = reservaRepo;
         this.franjaService = franjaService;
         this.tarifaProveedor = tarifaProveedor;
+        this.events = events;
     }
 
     /**
@@ -86,6 +91,26 @@ public class ReservaService {
         solicitud.setEstado(EstadoSolicitud.CONVERTIDA);
         solicitudRepo.save(solicitud);
         return guardada;
+    }
+
+    /**
+     * STUB TEMPORAL — reemplazar cuando M5 implemente el webhook real de
+     * MercadoPago (Chunk M5-B). Simula la confirmación del pago: transición
+     * pendiente_pago → confirmada. Idempotente (los webhooks de MP se
+     * reintentan, así que confirmar algo ya confirmado no es un error). Al
+     * confirmar, emite {@link ReservaConfirmadaEvent} para que M3 cree y agende
+     * la Sesión de Aprendizaje (T-M3-03/04/05).
+     */
+    @Transactional
+    public Reserva confirmarPagoSimulado(UUID reservaId) {
+        Reserva reserva = reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (reserva.getEstado() == EstadoReserva.PENDIENTE_PAGO) {
+            reserva.setEstado(EstadoReserva.CONFIRMADA);
+            reservaRepo.save(reserva);
+            events.publishEvent(new ReservaConfirmadaEvent(this, reserva.getId()));
+        }
+        return reserva;
     }
 
     private void exigirCapacidadAdultoResponsable(Usuario usuario) {
