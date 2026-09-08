@@ -11,14 +11,18 @@ import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.matching.MatchingServiceClient;
 import com.tinku.matching.ReputacionSignalProvider;
+import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
+import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
+import com.tinku.reservas.service.ReservaService;
 import com.tinku.reservas.service.ReservasZonaHoraria;
 import com.tinku.reservas.service.SolicitudService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -87,6 +91,8 @@ class ReservasFlujosIntegracionTest {
     @Autowired SolicitudSesionRepository solicitudRepo;
     @Autowired ReservaRepository reservaRepo;
     @Autowired SolicitudService solicitudService;
+    @Autowired ReservaService reservaService;
+    @Autowired Scheduler scheduler;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @MockBean OcrService ocrService;
@@ -227,7 +233,7 @@ class ReservasFlujosIntegracionTest {
     }
 
     /** Escenario base reutilizado: tutor con franja puntual 15:00-16:00 en `fecha`. */
-    private record Escenario(String tokenAr, String tokenMenor, String tokenTutor, UUID menorId,
+    private record Escenario(String dniAr, String tokenAr, String tokenMenor, String tokenTutor, UUID menorId,
                              UUID tutorId, LocalDate fecha, Instant horario) {
     }
 
@@ -244,7 +250,7 @@ class ReservasFlujosIntegracionTest {
         publicarFranjaPuntual(tokenTutor, fecha);
         autorizar(tutorId, menorId, tokenAr);
         String tokenMenor = login(dniMenor);
-        return new Escenario(tokenAr, tokenMenor, tokenTutor, menorId, tutorId, fecha, dentroDeFranja(fecha));
+        return new Escenario(dniAr, tokenAr, tokenMenor, tokenTutor, menorId, tutorId, fecha, dentroDeFranja(fecha));
     }
 
     // ------------------------------------------------ tests
@@ -511,5 +517,213 @@ class ReservasFlujosIntegracionTest {
         mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", UUID.randomUUID())
                         .header("Authorization", "Bearer " + e.tokenAr()))
                 .andExpect(status().isNotFound());
+    }
+
+    // ------------------------------------------------ Chunk M4-C (T-M4-05 / T-M4-06)
+
+    /** Estudiante adulto (capacidad estudiante, sin capacidad AR) reservando para sí. */
+    private record EscenarioAdulto(String tokenEstudiante, UUID estudianteId, String tokenTutor,
+                                   UUID tutorId, LocalDate fecha, Instant horario) {
+    }
+
+    private EscenarioAdulto escenarioAdulto() throws Exception {
+        String dniEst = dniUnico();
+        String dniTutor = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID estudianteId = usuarioPorDni(dniEst).getId();
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        return new EscenarioAdulto(tokenEst, estudianteId, tokenTutor, tutorId, fecha, dentroDeFranja(fecha));
+    }
+
+    private UUID crearReservaDirecta(String token, UUID tutorId, UUID beneficiarioId, Instant horario) throws Exception {
+        MvcResult res = mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "beneficiarioId", beneficiarioId == null ? "" : beneficiarioId.toString(),
+                                "horario", horario.toString()))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+    }
+
+    @Test
+    void frRes001_estudianteAdulto_reservaParaSiMismo() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        MvcResult res = mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("pendiente_pago"))
+                .andExpect(jsonPath("$.beneficiarioId").value(e.estudianteId().toString()))
+                .andReturn();
+
+        UUID reservaId = UUID.fromString(
+                objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        assertThat(reservaRepo.findById(reservaId)).isPresent();
+    }
+
+    @Test
+    void frRes003_arReservaPorSuMenor_conTutorAutorizado() throws Exception {
+        Escenario e = escenarioBase(); // AR + menor + tutor autorizado + franja
+
+        UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.PENDIENTE_PAGO);
+        assertThat(r.getBeneficiario().getId()).isEqualTo(e.menorId());
+        // El pagador es el AR del menor (mismo que creó el escenario).
+        assertThat(r.getPagador().getId()).isEqualTo(usuarioPorDni(e.dniAr()).getId());
+    }
+
+    @Test
+    void frRes021_arReservaParaMenor_conTutorNoAutorizado_queda403() throws Exception {
+        String dniAr = dniUnico();
+        String dniTutor = dniUnico();
+        String dniMenor = dniUnico();
+        String tokenAr = registrarAdultoYToken(dniAr, "Ana", "Lopez", true, true);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        UUID menorId = registrarMenor(dniMenor, tokenAr);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        // NO se autoriza al tutor para el menor.
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + tokenAr)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "beneficiarioId", menorId.toString(),
+                                "horario", dentroDeFranja(fecha).toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void articuloII_menorNuncaPuedeCrearReservaDirecta_queda403() throws Exception {
+        Escenario e = escenarioBase(); // tokenMenor disponible
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenMenor())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void frRes013_directaFueraDeVentana15Min_queda422() throws Exception {
+        String dniEst = dniUnico();
+        String dniTutor = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+
+        Instant pronto = Instant.now().plusSeconds(5 * 60);
+        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
+        LocalDate hoy = punto.toLocalDate();
+        LocalTime hora = punto.toLocalTime();
+        LocalTime inicioFranja = hora.minusHours(1);
+        LocalTime finFranja = hora.plusHours(2);
+        if (inicioFranja.isAfter(hora)) {
+            inicioFranja = LocalTime.MIDNIGHT;
+        } else if (finFranja.isBefore(inicioFranja)) {
+            finFranja = LocalTime.of(23, 59, 59);
+        }
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", hoy.toString(),
+                                "horaInicio", inicioFranja.toString(),
+                                "horaFin", finFranja.toString()))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "horario", pronto.toString()))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void frRes012_directaFueraDeFranja_queda422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        Instant fuera = dentroDeFranja(e.fecha().plusDays(1));
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", fuera.toString()))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void directa_tutorInexistente_queda404() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", UUID.randomUUID().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void frRes020_timeoutDePago_cancelaYLiberaElHorario() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.PENDIENTE_PAGO);
+
+        // Simulo el paso del tiempo por SQL (como frRes022) y hago correr el barrido.
+        assertThat(jdbcTemplate.update(
+                "UPDATE reservas.reservas SET created_at = now() - interval '16 minutes' WHERE id = ?",
+                reservaId)).isEqualTo(1);
+
+        assertThat(reservaService.expirarPendientesDePago()).isGreaterThanOrEqualTo(1);
+        Reserva expirada = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(expirada.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+
+        // La EXCLUDE ignora canceladas → el mismo horario queda libre (2ª reserva gana).
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void frRes020_confirmarPago_cancelaElTimeout() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("confirmada"));
+
+        // El job ya no está programado: confirmar canceló el timeout (T-M4-06).
+        assertThat(scheduler.checkExists(
+                reservaService.triggerTimeoutPago(reservaId))).isFalse();
     }
 }

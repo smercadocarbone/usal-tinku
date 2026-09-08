@@ -1,5 +1,7 @@
 package com.tinku.reservas.web;
 
+import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
+import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
@@ -11,6 +13,7 @@ import com.tinku.reservas.service.SolicitudMenorNoPerteneceException;
 import com.tinku.reservas.service.SolicitudNoPendienteException;
 import com.tinku.reservas.service.TarifaNoConfiguradaException;
 import com.tinku.reservas.service.TutorNoAutorizadoParaMenorException;
+import com.tinku.reservas.service.TutorNoEncontradoException;
 import com.tinku.reservas.service.VentanaMinimaException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -32,7 +35,8 @@ public class ReservasExceptionHandler {
 
     @ExceptionHandler({SoloAdultoResponsableException.class, SoloMenorException.class,
             SoloTutorException.class, SolicitudMenorNoPerteneceException.class,
-            TutorNoAutorizadoParaMenorException.class})
+            TutorNoAutorizadoParaMenorException.class, CapacidadDePagoRequeridaException.class,
+            BeneficiarioNoPerteneceException.class})
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
@@ -44,7 +48,8 @@ public class ReservasExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler({SolicitudNoPendienteException.class, ReservaNoEncontradaException.class})
+    @ExceptionHandler({SolicitudNoPendienteException.class, ReservaNoEncontradaException.class,
+            TutorNoEncontradoException.class})
     public ResponseEntity<Map<String, String>> handleNoEncontrada(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }

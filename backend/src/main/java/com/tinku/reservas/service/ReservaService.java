@@ -2,49 +2,85 @@ package com.tinku.reservas.service;
 
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.repository.AutorizacionTutorRepository;
+import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.reservas.evento.ReservaConfirmadaEvent;
+import com.tinku.reservas.jobs.ReservaTimeoutPagoJob;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
+import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.port.TarifaProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
+import com.tinku.reservas.web.NuevaReservaDirectaRequest;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.SimpleScheduleBuilder;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
+import org.quartz.TriggerKey;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Creación de Reserva por aprobación de una Solicitud del menor (US-3/US-4,
- * T-M4-04). La Reserva la crea SOLO quien paga/n el menor: Estudiante adulto o
- * Adulto Responsable por un menor a su cargo (Artículo II). El Tutor no acepta
- * manualmente — la validación de franja activa ES la aceptación implícita.
+ * Creación de Reservas. Dos vías (Spec M4, US-3/US-4):
+ * <ul>
+ *   <li>por aprobación de una Solicitud del menor (US-3/US-4, T-M4-04);</li>
+ *   <li>directa, sin Solicitud intermedia (FR-RES-001, T-M4-05) — Estudiante
+ *       adulto para sí mismo o Adulto Responsable por un menor a su cargo.</li>
+ * </ul>
+ * En ambas la Reserva la crea SOLO quien puede pagar (Artículo II) y queda en
+ * {@code pendiente_pago} con un timeout de 15 min (FR-RES-020, T-M4-06) que se
+ * cancela explícitamente al confirmarse el pago.
  */
 @Service
 public class ReservaService {
 
     /** FR-RES-013 — no se reserva a menos de 15 min del inicio (Tabla_Tiempos_Tinku.md). */
-    private static final java.time.Duration VENTANA_MINIMA = java.time.Duration.ofMinutes(15);
+    private static final Duration VENTANA_MINIMA = Duration.ofMinutes(15);
+
+    /** FR-RES-020 — timeout de pendiente_pago a 15 min (Tabla_Tiempos_Tinku.md). */
+    private static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
+
+    /** Mismo grupo que el job de expiración de Solicitudes (todos los jobs de M4). */
+    public static final String GRUPO_JOB = "m4-reservas";
 
     private final SolicitudSesionRepository solicitudRepo;
+    private final UsuarioRepository usuarioRepo;
+    private final AutorizacionTutorRepository autorizacionRepo;
     private final ReservaRepository reservaRepo;
     private final FranjaService franjaService;
     private final TarifaProveedor tarifaProveedor;
     private final ApplicationEventPublisher events;
+    private final Scheduler scheduler;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
+                          UsuarioRepository usuarioRepo,
+                          AutorizacionTutorRepository autorizacionRepo,
                           ReservaRepository reservaRepo,
                           FranjaService franjaService,
                           TarifaProveedor tarifaProveedor,
-                          ApplicationEventPublisher events) {
+                          ApplicationEventPublisher events,
+                          Scheduler scheduler) {
         this.solicitudRepo = solicitudRepo;
+        this.usuarioRepo = usuarioRepo;
+        this.autorizacionRepo = autorizacionRepo;
         this.reservaRepo = reservaRepo;
         this.franjaService = franjaService;
         this.tarifaProveedor = tarifaProveedor;
         this.events = events;
+        this.scheduler = scheduler;
     }
 
     /**
@@ -67,39 +103,54 @@ public class ReservaService {
             throw new SolicitudMenorNoPerteneceException();
         }
 
-        Instant horario = solicitud.getHorarioPropuesto();
-        if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
-            throw new VentanaMinimaException(
-                    "Faltan menos de 15 minutos para el horario — no se puede reservar (FR-RES-013).");
-        }
-        if (!franjaService.estaDentroDeFranjaActiva(solicitud.getTutor().getId(), horario)) {
-            throw new HorarioFueraDeFranjaException(
-                    "La franja ya no está activa o ya no cubre el horario (FR-RES-012).");
-        }
-
-        // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
-        Reserva reserva = new Reserva();
-        reserva.setPagador(adultoResponsable);
-        reserva.setBeneficiario(menor);
-        reserva.setTutor(solicitud.getTutor());
-        reserva.setSolicitudOrigen(solicitud);
-        reserva.setHorario(horario);
-        reserva.setPrecio(tarifaProveedor.tarifaPorSesion(solicitud.getTutor().getId()));
-        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
-        Reserva guardada = reservaRepo.save(reserva);
+        Reserva reserva = crearReserva(adultoResponsable, menor, solicitud.getTutor(),
+                solicitud.getHorarioPropuesto());
 
         solicitud.setEstado(EstadoSolicitud.CONVERTIDA);
         solicitudRepo.save(solicitud);
-        return guardada;
+        return reserva;
+    }
+
+    /**
+     * Reserva directa sin Solicitud intermedia (FR-RES-001, T-M4-05). Si no se
+     * manda {@code beneficiarioId} es un Estudiante adulto reservando para sí
+     * mismo; si se manda, el pagador tiene que ser el Adulto Responsable de ese
+     * menor y el Tutor debe estar autorizado para él (FR-RES-021, mismo criterio
+     * que la Solicitud). La rama la decide el servicio con datos propios de M1 —
+     * nunca por un flag del request.
+     */
+    @Transactional
+    public Reserva crearDirecta(Usuario pagador, NuevaReservaDirectaRequest request) {
+        Usuario tutor = usuarioRepo.findById(request.tutorId())
+                .orElseThrow(TutorNoEncontradoException::new);
+
+        if (request.beneficiarioId() == null) {
+            exigirCapacidadEstudiante(pagador);
+            return crearReserva(pagador, pagador, tutor, request.horario());
+        }
+
+        exigirCapacidadAdultoResponsable(pagador);
+        Usuario beneficiario = usuarioRepo.findById(request.beneficiarioId())
+                .orElseThrow(BeneficiarioNoPerteneceException::new);
+        if (beneficiario.getTipo() != TipoUsuario.MENOR
+                || beneficiario.getAdultoResponsable() == null
+                || !beneficiario.getAdultoResponsable().getId().equals(pagador.getId())) {
+            throw new BeneficiarioNoPerteneceException();
+        }
+        if (!autorizacionRepo.findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(
+                pagador.getId(), beneficiario.getId()).contains(request.tutorId())) {
+            throw new TutorNoAutorizadoParaMenorException();
+        }
+        return crearReserva(pagador, beneficiario, tutor, request.horario());
     }
 
     /**
      * STUB TEMPORAL — reemplazar cuando M5 implemente el webhook real de
      * MercadoPago (Chunk M5-B). Simula la confirmación del pago: transición
-     * pendiente_pago → confirmada. Idempotente (los webhooks de MP se
-     * reintentan, así que confirmar algo ya confirmado no es un error). Al
-     * confirmar, emite {@link ReservaConfirmadaEvent} para que M3 cree y agende
-     * la Sesión de Aprendizaje (T-M3-03/04/05).
+     * pendiente_pago → confirmada, cancelando el timeout de pago (T-M4-06).
+     * Idempotente (los webhooks de MP se reintentan, así que confirmar algo ya
+     * confirmado no es un error). Al confirmar, emite {@link ReservaConfirmadaEvent}
+     * para que M3 cree y agende la Sesión de Aprendizaje (T-M3-03/04/05).
      */
     @Transactional
     public Reserva confirmarPagoSimulado(UUID reservaId) {
@@ -108,15 +159,110 @@ public class ReservaService {
         if (reserva.getEstado() == EstadoReserva.PENDIENTE_PAGO) {
             reserva.setEstado(EstadoReserva.CONFIRMADA);
             reservaRepo.save(reserva);
+            cancelarTimeoutPago(reserva.getId());
             events.publishEvent(new ReservaConfirmadaEvent(this, reserva.getId()));
         }
         return reserva;
+    }
+
+    /** Reglas comunes a toda creación de Reserva y al timeout (FR-RES-020). Si la
+     * Reserva ya dejó de estar {@code pendiente_pago}, no hace nada (idempotente). */
+    @Transactional
+    public void expirarPorTimeoutPago(UUID reservaId) {
+        reservaRepo.findById(reservaId).ifPresent(this::expirarSiSiguePendiente);
+    }
+
+    /** Barrido de recuperación (FR-RES-020): expira reservas pendientes cuyo
+     * timeout ya venció — cubre el caso de un job perdido (misma mecánica que
+     * {@code SolicitudService.expirarVencidas}). */
+    @Transactional
+    public int expirarPendientesDePago() {
+        List<Reserva> vencidas = reservaRepo.findByEstadoAndCreatedAtBefore(
+                EstadoReserva.PENDIENTE_PAGO, Instant.now().minus(TIMEOUT_PENDIENTE_PAGO));
+        vencidas.forEach(this::expirarSiSiguePendiente);
+        if (!vencidas.isEmpty()) {
+            reservaRepo.saveAll(vencidas);
+        }
+        return vencidas.size();
+    }
+
+    /** Clave del trigger del timeout de pago de una Reserva (usada en tests). */
+    public TriggerKey triggerTimeoutPago(UUID reservaId) {
+        return new TriggerKey("timeout-pago-trigger-" + reservaId, GRUPO_JOB);
+    }
+
+    private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor, Instant horario) {
+        if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
+            throw new VentanaMinimaException(
+                    "Faltan menos de 15 minutos para el horario — no se puede reservar (FR-RES-013).");
+        }
+        if (!franjaService.estaDentroDeFranjaActiva(tutor.getId(), horario)) {
+            throw new HorarioFueraDeFranjaException(
+                    "La franja ya no está activa o ya no cubre el horario (FR-RES-012).");
+        }
+
+        // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(beneficiario);
+        reserva.setTutor(tutor);
+        reserva.setHorario(horario);
+        reserva.setPrecio(tarifaProveedor.tarifaPorSesion(tutor.getId()));
+        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        Reserva guardada = reservaRepo.save(reserva);
+        programarTimeoutPago(guardada);
+        return guardada;
+    }
+
+    /** Job puntual de Quartz a {@code created_at + 15min} (FR-RES-020, persistido). */
+    void programarTimeoutPago(Reserva reserva) {
+        JobDetail detail = JobBuilder.newJob(ReservaTimeoutPagoJob.class)
+                .withIdentity("timeout-pago-" + reserva.getId(), GRUPO_JOB)
+                .usingJobData(ReservaTimeoutPagoJob.PARAM_RESERVA_ID, reserva.getId().toString())
+                .storeDurably()
+                .build();
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity(triggerTimeoutPago(reserva.getId()).getName(), GRUPO_JOB)
+                .startAt(Date.from(Instant.now().plus(TIMEOUT_PENDIENTE_PAGO)))
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule().withMisfireHandlingInstructionIgnoreMisfires())
+                .build();
+        try {
+            scheduler.scheduleJob(detail, trigger);
+        } catch (SchedulerException e) {
+            // Fail-closed: una reserva pendiente de pago sin su deadline no debe
+            // nacer aunque el scheduler falle.
+            throw new IllegalStateException("No se pudo programar el timeout de pago de la Reserva.", e);
+        }
+    }
+
+    /** Cancelación explícita al confirmarse el pago (mismo patrón que M3-B con el no-show). */
+    void cancelarTimeoutPago(UUID reservaId) {
+        try {
+            scheduler.unscheduleJob(triggerTimeoutPago(reservaId));
+        } catch (SchedulerException e) {
+            // Benigno: si el job ya corrió o no se pudo remover, la idempotencia
+            // de expirarPorTimeoutPago protege (estado != pendiente_pago → no-op).
+        }
+    }
+
+    private void expirarSiSiguePendiente(Reserva reserva) {
+        if (reserva.getEstado() == EstadoReserva.PENDIENTE_PAGO) {
+            reserva.setEstado(EstadoReserva.CANCELADA);
+            reserva.setMotivoCancelacion(MotivoCancelacion.TIMEOUT_PAGO);
+            reservaRepo.save(reserva);
+        }
     }
 
     private void exigirCapacidadAdultoResponsable(Usuario usuario) {
         if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadAdultoResponsable()) {
             throw new SoloAdultoResponsableException(
                     "Solo la capacidad 'Adulto Responsable' puede aprobar y crear Reservas.");
+        }
+    }
+
+    private void exigirCapacidadEstudiante(Usuario usuario) {
+        if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadEstudiante()) {
+            throw new CapacidadDePagoRequeridaException();
         }
     }
 }
