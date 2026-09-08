@@ -14,8 +14,10 @@ import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.LiberacionProveedor;
+import com.tinku.pagos.port.ReembolsoParcialProveedor;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
+import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
@@ -39,6 +41,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -77,6 +80,7 @@ class EscrowListenersIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
+    @Autowired ReembolsoParcialProveedor reembolsoParcial;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -103,10 +107,14 @@ class EscrowListenersIntegracionTest {
     }
 
     /** Escena base: reserva pendiente de pagar + escrow retenido sobre ella. */
-    private record Escena(UUID reservaId, UUID pagadorId, Transaccion transaccion) {
+    private record Escena(UUID reservaId, UUID pagadorId, UUID tutorId, Transaccion transaccion) {
     }
 
     private Escena escena() {
+        return escena(Instant.now().plusSeconds(3600));
+    }
+
+    private Escena escena(Instant horario) {
         Usuario ar = guardarUsuario(TipoUsuario.ADULTO, "Ana");
         Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, "Pablo");
 
@@ -114,7 +122,7 @@ class EscrowListenersIntegracionTest {
         reserva.setPagador(ar);
         reserva.setBeneficiario(ar);
         reserva.setTutor(tutor);
-        reserva.setHorario(Instant.now().plusSeconds(3600));
+        reserva.setHorario(horario);
         reserva.setPrecio(BigDecimal.valueOf(15000));
         reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
         reservaRepository.save(reserva);
@@ -126,7 +134,15 @@ class EscrowListenersIntegracionTest {
         transaccion.setComisionPlataforma(new BigDecimal("2250.00"));
         transaccionRepository.save(transaccion);
 
-        return new Escena(reserva.getId(), ar.getId(), transaccion);
+        return new Escena(reserva.getId(), ar.getId(), tutor.getId(), transaccion);
+    }
+
+    /** La cancelación manual solo aplica a Reservas confirmadas (FR-RES-008);
+     * el listener de M5 además necesita horario y pagador, que ya están. */
+    private void confirmarReserva(UUID reservaId) {
+        Reserva reserva = reservaRepository.findById(reservaId).orElseThrow();
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(reserva);
     }
 
     // ------------------------------------------------ tests
@@ -261,5 +277,66 @@ class EscrowListenersIntegracionTest {
         assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
         // El segundo evento no re-embolsa ni toca el estado.
         verify(reembolso, times(1)).reembolsarTotal(any(Transaccion.class));
+    }
+
+    // ------------------------------------------------ M5-D (T-M5-07/08)
+
+    @Test
+    void reservaCancelada_menosDe24hs_cancelaElTutor_reembolsaTotal() {
+        Escena e = escena(Instant.now().plusSeconds(3600));
+        confirmarReserva(e.reservaId());
+
+        events.publishEvent(new ReservaCanceladaEvent("M4", e.reservaId(), e.tutorId()));
+
+        // FR-RES-008: cancela el Tutor a último momento → reembolso total, aunque
+        // la Sesión se pierda por responsabilidad del Tutor.
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
+        assertThat(t.getLiberarAt()).isNull();
+        verify(reembolso).reembolsarTotal(any(Transaccion.class));
+        verifyNoInteractions(liberacion);
+    }
+
+    @Test
+    void reservaCancelada_menosDe24hs_cancelaElPagador_liberaAlTutor() {
+        Escena e = escena(Instant.now().plusSeconds(3600));
+        confirmarReserva(e.reservaId());
+
+        events.publishEvent(new ReservaCanceladaEvent("M4", e.reservaId(), e.pagadorId()));
+
+        // FR-RES-008/016 (US-7): quien pagó cancela con <24hs → el dinero ya
+        // retenido se libera al Tutor (no es transacción nueva, es el mismo escrow).
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.LIBERADO);
+        assertThat(t.getLiberarAt()).isNull();
+        verify(liberacion).liberarAlTutor(any(Transaccion.class));
+        verifyNoInteractions(reembolso);
+    }
+
+    @Test
+    void reservaCancelada_masDe24hs_reembolsaTotal_aunqueCanceleElPagador() {
+        Escena e = escena(Instant.now().plusSeconds(25 * 3600L));
+        confirmarReserva(e.reservaId());
+
+        events.publishEvent(new ReservaCanceladaEvent("M4", e.reservaId(), e.pagadorId()));
+
+        // US-6: con margen, quien pague cancela sin penalidad → reembolso.
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
+        verify(reembolso).reembolsarTotal(any(Transaccion.class));
+        verifyNoInteractions(liberacion);
+    }
+
+    @Test
+    void reembolsoParcial_failClosed_lanzaError_hastaQueM8LoReemplace() {
+        Escena e = escena();
+        confirmarReserva(e.reservaId());
+
+        // T-M5-08: el reembolso PARCIAL es flujo manual de M8; hasta entonces el
+        // port falla ruidoso — jamás un parcial registrado sin ejecutar.
+        assertThatThrownBy(() -> reembolsoParcial.reembolsarParcial(
+                e.transaccion().getMpPaymentId(), BigDecimal.valueOf(5000)))
+                .isInstanceOf(ReembolsoNoDisponibleException.class);
+        verifyNoInteractions(liberacion, reembolso);
     }
 }

@@ -14,10 +14,13 @@ import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
+import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +43,13 @@ import java.util.UUID;
  *   <li><b>Listeners (T-M5-04, completados en M5-C):</b> uno por evento entrante
  *       de la tabla del Plan M5 §2 — {@code sesion.finalizada} fija {@code liberar_at}
  *       (fin + 24hs) y agenda el job de liberación (Chunk M5-C); los de
- *       reembolso pasan por el port (fail-closed hasta M5-D) y {@code denuncia.registrada}
+ *       reembolso pasan por el port (real desde M5-D) y {@code denuncia.registrada}
  *       pausa el escrow; ambos salen de la ventana cancelando el job.</li>
+ *   <li><b>M5-D:</b> {@code reserva.cancelada} resuelve la asimetría de FR-RES-008
+ *       (≥24hs o cancela el Tutor → reembolso total; <24hs y cancela quien pagó →
+ *       liberación al Tutor) y el webhook reembolsa los pagos tardíos (una
+ *       notificación aprobada que llega cuando la Reserva ya salió de
+ *       {@code pendiente_pago} — dinero cobrado sin sesión que se devuelve).</li>
  * </ol>
  *
  * Transiciones solo desde {@code retenido_escrow} (idempotente; un evento
@@ -53,8 +61,13 @@ import java.util.UUID;
 @Service
 public class EscrowService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(EscrowService.class);
+
     /** FR-PAG-002: liberación al Tutor 24hs después de finalizada la Sesión. */
     static final Duration VENTANA_LIBERACION = Duration.ofHours(24);
+
+    /** FR-RES-008/016: ventana de cancelación sin penalidad — ≥24hs al horario. */
+    static final Duration VENTANA_CANCELACION = Duration.ofHours(24);
 
     private final TransaccionRepository transaccionRepo;
     private final ReservaRepository reservaRepo;
@@ -86,10 +99,11 @@ public class EscrowService {
      * Procesa una notificación de pago firmada y válida. Idempotente: si ya
      * existe una {@code Transaccion} para ese {@code mpPaymentId}, no hace nada
      * (MP reintenta los no-2xx — nunca duplicar el escrow). Los ack's sin efecto
-     * (pago no aprobado, external_reference desconocida, reserva no pendiente)
-     * responden 2xx igual que LiveKit: el provider no debe reintentar en loop;
-     * el caso "pago que llega después del timeout/cancelación" queda documentado
-     * para el flujo de reembolso de M5-D.
+     * (pago no aprobado, external_reference no atribuible) responden 2xx igual
+     * que LiveKit: el provider no debe reintentar en loop. Un pago aprobado que
+     * llega cuando la Reserva YA no está {@code pendiente_pago} (timeout o
+     * cancelación posterior al cobro, Chunk M5-D) se reembolsa en total: el
+     * dinero se cobró pero la sesión ya no va a existir.
      */
     @Transactional
     public void procesarPagoAprobado(String mpPaymentId) {
@@ -101,7 +115,15 @@ public class EscrowService {
             return;
         }
         Reserva reserva = reservaPorExternalReference(pago.externalReference());
-        if (reserva == null || reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+        if (reserva == null) {
+            // external_reference no corresponde a ninguna Reserva de Tinku: no
+            // reembolsar automáticamente un pago que no podemos atribuir.
+            LOG.warn("Pago aprobado con external_reference no atribuible, se ignora: {} -> {}",
+                    mpPaymentId, pago.externalReference());
+            return;
+        }
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+            reembolsarPagoTardio(pago, reserva);
             return;
         }
         // Fail-closed: monto pagado ≠ precio congelado → no se confirma.
@@ -229,5 +251,55 @@ public class EscrowService {
                 liberacionEscrow.cancelarLiberacion(t.getId());
             }
         });
+    }
+
+    // ------------------------------------------------------ M5-D (T-M5-07)
+
+    /** Cancelación tardía (US-7, FR-RES-008/016): asimetría según quién cancela.
+     * Con ≥24hs al horario, o si cancela el Tutor → reembolso total. Con <24hs y
+     * cancela quien pagó → se libera el escrow al Tutor (no es una transacción
+     * nueva, es el mismo dinero ya retenido que simplemente se libera). */
+    @EventListener
+    @Transactional
+    public void onReservaCancelada(ReservaCanceladaEvent evento) {
+        transaccionRepo.findByReservaId(evento.getReservaId())
+                .filter(t -> t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW)
+                .ifPresent(t -> {
+                    Reserva reserva = reservaRepo.findById(evento.getReservaId()).orElse(null);
+                    if (reserva == null) {
+                        return; // invariable: no hay Reserva sin escrow confirmado
+                    }
+                    boolean conMargen = !Instant.now().plus(VENTANA_CANCELACION)
+                            .isAfter(reserva.getHorario());
+                    boolean canceloElPagador = reserva.getPagador() != null
+                            && reserva.getPagador().getId().equals(evento.getCanceladaPorUsuarioId());
+                    if (conMargen || !canceloElPagador) {
+                        reembolsarSiRetenida(evento.getReservaId());
+                    } else {
+                        // Liberación inmediata, mismo camino resiliente que el
+                        // no-show del Estudiante (backoff de FR-PAG-007 si falla).
+                        liberacionEscrow.ejecutarLiberacion(t.getId());
+                    }
+                });
+    }
+
+    /** Pago aprobado que llega después de que la Reserva salió de {@code
+     * pendiente_pago} (timeout o cancelación posterior al cobro): el dinero se
+     * cobró pero la sesión no se va a dar → reembolso total. Si la Reserva nunca
+     * tuvo escrow, se registra una {@code Transaccion} {@code reembolsado} como
+     * ancla (idempotencia del reenvío del webhook + auditoría); si ya tuvo escrow
+     * (Reserva confirmada que recién canceló), NO se crea una fila duplicada —
+     * se preserva la unicidad de {@code findByReservaId}. */
+    private void reembolsarPagoTardio(PagoMercadoPago pago, Reserva reserva) {
+        Transaccion tardia = new Transaccion();
+        tardia.setReservaId(reserva.getId());
+        tardia.setMpPaymentId(pago.mpPaymentId());
+        tardia.setMontoBruto(pago.monto() != null ? pago.monto() : reserva.getPrecio());
+        tardia.setComisionPlataforma(BigDecimal.ZERO);
+        if (!transaccionRepo.existsByReservaId(reserva.getId())) {
+            tardia.setEstado(EstadoTransaccion.REEMBOLSADO);
+            transaccionRepo.save(tardia);
+        }
+        reembolso.reembolsarTotal(tardia);
     }
 }

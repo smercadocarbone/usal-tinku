@@ -265,15 +265,74 @@ class MercadoPagoClientHttpTest {
         }
     }
 
+    // ------------------------------------------------ reembolso (T-M5-07)
+
+    private HttpServer serverPara(String path, String status, AtomicInteger hits,
+                                  AtomicReference<String> method, AtomicReference<String> body,
+                                  AtomicReference<String> authHeader) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext(path, exchange -> {
+            if (hits != null) hits.incrementAndGet();
+            if (method != null) method.set(exchange.getRequestMethod());
+            if (body != null) body.set(new String(exchange.getRequestBody().readAllBytes(),
+                    StandardCharsets.UTF_8));
+            if (authHeader != null) authHeader.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            responder(exchange, status, null);
+        });
+        server.start();
+        return server;
+    }
+
     @Test
-    void getPago_respuestaSinStatus_noFabricaPago() throws Exception {
-        HttpServer server = serverPagos("/v1/payments/pago-empty", "200", "{}");
+    void reembolsoPago_posteaBodyVacio_conAuth_alEndpointDeRefunds() throws Exception {
+        AtomicReference<String> method = new AtomicReference<>();
+        AtomicReference<String> body = new AtomicReference<>();
+        AtomicReference<String> authHeader = new AtomicReference<>();
+        HttpServer server = serverPara("/v1/payments/pago-reembolso/refunds", "201",
+                new AtomicInteger(), method, body, authHeader);
         try {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.getPago("pago-empty"))
+            cliente.reembolsarPago("pago-reembolso");
+
+            // FR-PAG-009: body VACÍO — el reembolso total hace que MP devuelva
+            // también su propia comisión (costo real cero para Tinku).
+            assertThat(method.get()).isEqualTo("POST");
+            assertThat(body.get()).isEqualTo("{}");
+            assertThat(authHeader.get()).isEqualTo("Bearer mp-token");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void reembolsoPago_errorDelProvider_seTraduceANoDisponible() throws Exception {
+        HttpServer server = serverPara("/v1/payments/pago-reembolso-500/refunds", "500",
+                new AtomicInteger(), null, null, null);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-500"))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void reembolsoPago_sinAccessToken_noLlamaAlProvider_yFallaConMensajeClaro() throws Exception {
+        AtomicInteger hits = new AtomicInteger();
+        HttpServer server = serverPara("/v1/payments/pago-reembolso-2/refunds", "201",
+                hits, null, null, null);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
+
+            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-2"))
+                    .isInstanceOf(MercadoPagoNoConfiguradoException.class);
+            assertThat(hits.get()).isZero();
         } finally {
             server.stop(0);
         }

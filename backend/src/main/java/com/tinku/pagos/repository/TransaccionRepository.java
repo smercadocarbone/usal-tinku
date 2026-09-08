@@ -23,6 +23,17 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, UUID> 
 
     Optional<Transaccion> findByReservaId(UUID reservaId);
 
+    /**
+     * ¿Alguna {@code Transaccion} para la Reserva? La usa el reembolso de pagos
+     * tardíos (T-M5-07): si la Reserva llegó a tener escrow, un segundo pago
+     * sobre la misma {@code external_reference} se reembolsa SIN crear una fila
+     * nueva (se preserva la unicidad de {@link #findByReservaId}); si nunca tuvo
+     * escrow (timeout/cancelación de un {@code pendiente_pago}), se registra una
+     * {@code Transaccion} {@code reembolsado} como ancla de idempotencia y
+     * auditoría.
+     */
+    boolean existsByReservaId(UUID reservaId);
+
     List<Transaccion> findByEstadoAndIntentosLiberacion(
             EstadoTransaccion estado, int intentosLiberacion);
 }

@@ -112,6 +112,27 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                 respuesta.externalReference(), respuesta.transactionAmount());
     }
 
+    @Override
+    public void reembolsarPago(String mpPaymentId) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new MercadoPagoNoConfiguradoException();
+        }
+        try {
+            restClient.post()
+                    .uri(PATH_PAGOS + mpPaymentId + "/refunds")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new MpReembolsoRequest(null))
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        throw new MercadoPagoNoDisponibleException();
+                    })
+                    .toBodilessEntity();
+        } catch (RestClientException ex) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+    }
+
     /** Traduccion de la preferencia de dominio al JSON de /checkout/preferences
      * (snake_case: contrato del provider, no tocar). */
     private MpPreferenciaRequest cuerpo(PreferenciaRequest request) {
@@ -148,5 +169,12 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
             String status,
             @JsonProperty("external_reference") String externalReference,
             @JsonProperty("transaction_amount") BigDecimal transactionAmount) {
+    }
+
+    /** Cuerpo de POST /v1/payments/{id}/refunds (T-M5-07, Plan M5 §3.3): el
+     * reembolso TOTAL lleva monto null → cuerpo vacío ({@code {}}), que es lo
+     * que hace que MP devuelva además su propia comisión (costo cero Tinku). */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record MpReembolsoRequest(@JsonProperty("amount") BigDecimal amount) {
     }
 }

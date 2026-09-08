@@ -18,6 +18,7 @@ import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.model.EstadoReserva;
+import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
@@ -239,6 +240,13 @@ class PagosWebhookIntegracionTest {
         return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
     }
 
+    private void cancelarReserva(UUID reservaId) {
+        Reserva reserva = reservaRepository.findById(reservaId).orElseThrow();
+        reserva.setEstado(EstadoReserva.CANCELADA);
+        reserva.setMotivoCancelacion(MotivoCancelacion.VOLUNTARIA);
+        reservaRepository.save(reserva);
+    }
+
     private String cuerpoNotificacion(String mpPaymentId) throws Exception {
         var payload = objectMapper.createObjectNode();
         payload.put("action", "payment.updated");
@@ -425,5 +433,58 @@ class PagosWebhookIntegracionTest {
 
         assertThat(transaccionRepository.findByReservaId(reservaId)).isNotPresent();
         verify(mercadopago, times(0)).getPago(any());
+    }
+
+    // ------------------------------------------------ M5-D: pago tardío
+
+    @Test
+    void webhook_pagoAprobadoPeroReservaYaCancelada_reembolsaTotalYRegistraTransaccion() throws Exception {
+        UUID reservaId = crearReservaEnPendiente();
+        cancelarReserva(reservaId);
+        String mpPaymentId = "pago-tardio";
+        pagoAprobado(mpPaymentId, reservaId, new BigDecimal("15000"));
+
+        mockMvc.perform(post("/api/webhooks/mercadopago")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("data.id", mpPaymentId)
+                        .header("x-signature", firma(mpPaymentId, null))
+                        .content(cuerpoNotificacion(mpPaymentId)))
+                .andExpect(status().isOk());
+
+        // El dinero se cobró pero la sesión no va a existir → reembolso total
+        // (Chunk M5-D). La fila REEMBOLSADO con comisión 0 es el ancla de
+        // auditoría e idempotencia del reenvío.
+        Transaccion transaccion = transaccionRepository.findByReservaId(reservaId).orElseThrow();
+        assertThat(transaccion.getMpPaymentId()).isEqualTo(mpPaymentId);
+        assertThat(transaccion.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
+        assertThat(transaccion.getMontoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
+        assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CANCELADA);
+        verify(mercadopago).reembolsarPago(mpPaymentId);
+    }
+
+    @Test
+    void webhook_reenvioDePagoTardio_noReEmbolsa() throws Exception {
+        UUID reservaId = crearReservaEnPendiente();
+        cancelarReserva(reservaId);
+        String mpPaymentId = "pago-tardio-ree";
+        pagoAprobado(mpPaymentId, reservaId, new BigDecimal("15000"));
+        String cuerpo = cuerpoNotificacion(mpPaymentId);
+        String firma = firma(mpPaymentId, null);
+
+        mockMvc.perform(post("/api/webhooks/mercadopago").contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("data.id", mpPaymentId).header("x-signature", firma)
+                        .content(cuerpo))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/webhooks/mercadopago").contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("data.id", mpPaymentId).header("x-signature", firma)
+                        .content(cuerpo))
+                .andExpect(status().isOk());
+
+        // Una sola fila y un solo reembolso: el reenvío no re-embolsa.
+        assertThat(transaccionRepository.findAll().stream()
+                .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
+        verify(mercadopago, times(1)).reembolsarPago(mpPaymentId);
     }
 }

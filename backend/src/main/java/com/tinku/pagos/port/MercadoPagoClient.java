@@ -27,6 +27,16 @@ public interface MercadoPagoClient {
      */
     PagoMercadoPago getPago(String mpPaymentId);
 
+    /**
+     * Reembolso TOTAL (POST /v1/payments/{id}/refunds con body VACÍO, Plan M5
+     * §3.3, T-M5-07): MercadoPago reintegra también su propia comisión (costo
+     * real cero para Tinku, FR-PAG-009). Es la ÚNICA llamada de reembolso que
+     * usa el flujo automático del escrow — los reembolsos parciales son flujo
+     * manual de M8 (T-M5-08) y jamás pasan por acá ni por {@code
+     * ReembolsoProveedor}.
+     */
+    void reembolsarPago(String mpPaymentId);
+
     record PreferenciaRequest(UUID reservaId, BigDecimal montoBruto,
                               BigDecimal comisionPlataforma, String descripcion) {
     }
