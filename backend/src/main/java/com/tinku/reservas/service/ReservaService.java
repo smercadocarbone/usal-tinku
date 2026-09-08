@@ -4,6 +4,7 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.reservas.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.evento.ReservaConfirmadaEvent;
 import com.tinku.reservas.evento.ReservaReprogramadaEvent;
@@ -13,6 +14,7 @@ import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
+import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.port.TarifaProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
@@ -26,13 +28,16 @@ import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -67,6 +72,7 @@ public class ReservaService {
     private final ReservaRepository reservaRepo;
     private final FranjaService franjaService;
     private final TarifaProveedor tarifaProveedor;
+    private final ReputacionBloqueoProveedor reputacionBloqueo;
     private final ApplicationEventPublisher events;
     private final Scheduler scheduler;
 
@@ -76,6 +82,7 @@ public class ReservaService {
                           ReservaRepository reservaRepo,
                           FranjaService franjaService,
                           TarifaProveedor tarifaProveedor,
+                          ReputacionBloqueoProveedor reputacionBloqueo,
                           ApplicationEventPublisher events,
                           Scheduler scheduler) {
         this.solicitudRepo = solicitudRepo;
@@ -84,6 +91,7 @@ public class ReservaService {
         this.reservaRepo = reservaRepo;
         this.franjaService = franjaService;
         this.tarifaProveedor = tarifaProveedor;
+        this.reputacionBloqueo = reputacionBloqueo;
         this.events = events;
         this.scheduler = scheduler;
     }
@@ -256,12 +264,63 @@ public class ReservaService {
         return vencidas.size();
     }
 
+    /**
+     * T-M4-09 — sanción de M9 (FR-SEC-008/012): se cancelan las reservas
+     * futuras del sancionado con motivo {@code sancion}. Cobertura doble: las
+     * que él (sancionado) dicta como Tutor y las que paga como Adulto
+     * Responsable/Estudiante — un usuario puede estar en ambos roles en
+     * reservas distintas. Las {@code pendiente_pago} se cancelan sin evento
+     * (mismo criterio que FR-RES-017: no hay dinero en juego); las
+     * {@code confirmada} emiten {@code reserva.cancelada} para que M5 resuelva
+     * el reembolso con el contexto de la denuncia (FR-PAG-011/FR-SEC-012) y M3
+     * desagende su Sesión. Idempotente (solo mira estados cancelables).
+     */
+    @Transactional
+    public int cancelarFuturasPorSancion(UUID usuarioSancionadoId) {
+        List<EstadoReserva> cancelables = List.of(
+                EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA);
+        Instant ahora = Instant.now();
+        Map<UUID, Reserva> aCancelar = new LinkedHashMap<>();
+        reservaRepo.findByEstadoInAndHorarioAfterAndTutor_Id(cancelables, ahora, usuarioSancionadoId)
+                .forEach(r -> aCancelar.putIfAbsent(r.getId(), r));
+        reservaRepo.findByEstadoInAndHorarioAfterAndPagador_Id(cancelables, ahora, usuarioSancionadoId)
+                .forEach(r -> aCancelar.putIfAbsent(r.getId(), r));
+        aCancelar.values().forEach(r -> cancelarPorSancion(r, usuarioSancionadoId));
+        return aCancelar.size();
+    }
+
+    /** {@code denuncia.resuelta} ← M9 (FR-SEC-008/012, Chunk M4-E): listener del
+     * evento que M9 publicará (hoy STUB en {@link DenunciaResueltaEvent}). Corre
+     * en la transacción del publicador; si falla, se aborta (fail-closed). */
+    @EventListener
+    @Transactional
+    public void onDenunciaResuelta(DenunciaResueltaEvent evento) {
+        cancelarFuturasPorSancion(evento.getUsuarioSancionadoId());
+    }
+
+    private Reserva cancelarPorSancion(Reserva reserva, UUID usuarioSancionadoId) {
+        boolean estabaConfirmada = reserva.getEstado() == EstadoReserva.CONFIRMADA;
+        reserva.setEstado(EstadoReserva.CANCELADA);
+        reserva.setMotivoCancelacion(MotivoCancelacion.SANCION);
+        reservaRepo.save(reserva);
+        cancelarTimeoutPago(reserva.getId());
+        if (estabaConfirmada) {
+            events.publishEvent(new ReservaCanceladaEvent(
+                    this, reserva.getId(), usuarioSancionadoId));
+        }
+        return reserva;
+    }
+
     /** Clave del trigger del timeout de pago de una Reserva (usada en tests). */
     public TriggerKey triggerTimeoutPago(UUID reservaId) {
         return new TriggerKey("timeout-pago-trigger-" + reservaId, GRUPO_JOB);
     }
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor, Instant horario) {
+        // FR-REP-006 (T-M4-10): Tutor con calificación pendiente no toma reservas nuevas.
+        if (reputacionBloqueo.tutoresConCalificacionPendiente().contains(tutor.getId())) {
+            throw new TutorPendienteCalificacionException();
+        }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
             throw new VentanaMinimaException(
                     "Faltan menos de 15 minutos para el horario — no se puede reservar (FR-RES-013).");

@@ -18,6 +18,7 @@ import com.tinku.reservas.service.SolicitudNoPendienteException;
 import com.tinku.reservas.service.TarifaNoConfiguradaException;
 import com.tinku.reservas.service.TutorNoAutorizadoParaMenorException;
 import com.tinku.reservas.service.TutorNoEncontradoException;
+import com.tinku.reservas.service.TutorPendienteCalificacionException;
 import com.tinku.reservas.service.VentanaMinimaException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -41,7 +42,7 @@ public class ReservasExceptionHandler {
             SoloTutorException.class, SolicitudMenorNoPerteneceException.class,
             TutorNoAutorizadoParaMenorException.class, CapacidadDePagoRequeridaException.class,
             BeneficiarioNoPerteneceException.class, SoloPagadorReservaException.class,
-            NoPuedeCancelarReservaException.class})
+            NoPuedeCancelarReservaException.class, TutorPendienteCalificacionException.class})
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }

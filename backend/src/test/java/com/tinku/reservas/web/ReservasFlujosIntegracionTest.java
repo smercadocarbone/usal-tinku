@@ -14,11 +14,13 @@ import com.tinku.matching.ReputacionSignalProvider;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.reservas.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
+import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
 import com.tinku.reservas.service.ReservaService;
@@ -31,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -99,10 +102,12 @@ class ReservasFlujosIntegracionTest {
     @Autowired Scheduler scheduler;
     @Autowired SesionAprendizajeRepository sesionRepo;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @Autowired ApplicationEventPublisher eventos;
 
     @MockBean OcrService ocrService;
     @MockBean MatchingServiceClient matchingClient;
     @MockBean ReputacionSignalProvider reputacion;
+    @MockBean ReputacionBloqueoProveedor reputacionBloqueo;
 
     private static final String PASSWORD = "password123";
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
@@ -119,6 +124,9 @@ class ReservasFlujosIntegracionTest {
                 .thenReturn(resultado("10000000", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
+        // FR-REP-006: por defecto ningún Tutor bloqueado (M7 no existe; el test
+        // puntual T-M4-10 stubbee el bloqueo del Tutor afectado).
+        when(reputacionBloqueo.tutoresConCalificacionPendiente()).thenReturn(Set.of());
     }
 
     // ------------------------------------------------ helpers
@@ -971,5 +979,78 @@ class ReservasFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "nuevoHorario", dentroDeFranja(fecha).toString()))))
                 .andExpect(status().isConflict());
+    }
+
+    // ------------------------------------------------ Chunk M4-E (T-M4-09 / T-M4-10)
+
+    @Test
+    void frRep006_tutorConCalificacionPendiente_quedaBloqueadaSuNuevaReserva() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        // M7 (aún no existe) reporta al Tutor con una calificación pendiente.
+        when(reputacionBloqueo.tutoresConCalificacionPendiente()).thenReturn(Set.of(e.tutorId()));
+
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void frSec008_sancionTutor_cancelaSoloReservasFuturas_conMotivoSancion() throws Exception {
+        EscenarioAdulto e = escenarioAdulto(); // franja puntual en e.fecha() (+2 días)
+        publicarFranjaPuntual(e.tokenTutor(), e.fecha().plusDays(1));
+        publicarFranjaPuntual(e.tokenTutor(), e.fecha().plusDays(2));
+
+        // Futura sin pagar → se cancela sin evento (mismo criterio que FR-RES-017).
+        UUID pendiente = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null,
+                dentroDeFranja(e.fecha().plusDays(1)));
+        // Futura confirmada → se cancela y M3 desagenda su Sesión.
+        UUID confirmada = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null,
+                dentroDeFranja(e.fecha().plusDays(2)));
+        confirmarPago(e.tokenEstudiante(), confirmada);
+        UUID sesionId = sesionRepo.findByReservaId(confirmada).orElseThrow().getId();
+        // Ya ocurrida (horario corrido al pasado por SQL): es trabajo hecho, FR-PAG-011
+        // lo paga igual — la sanción NO la toca.
+        UUID pasada = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), pasada);
+        assertThat(jdbcTemplate.update(
+                "UPDATE reservas.reservas SET horario = now() - interval '2 days' WHERE id = ?",
+                pasada)).isEqualTo(1);
+
+        // M9 no existe aún: publico el evento como lo hará (Chunk M9-D).
+        eventos.publishEvent(new DenunciaResueltaEvent(this, UUID.randomUUID(), e.tutorId()));
+
+        Reserva p = reservaRepo.findById(pendiente).orElseThrow();
+        assertThat(p.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(p.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.SANCION);
+
+        Reserva c = reservaRepo.findById(confirmada).orElseThrow();
+        assertThat(c.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(c.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.SANCION);
+        // El listener reserva.cancelada llegó a M3 y desagendó los jobs.
+        assertThat(scheduler.checkExists(SesionService.triggerSala(sesionId))).isFalse();
+
+        Reserva r = reservaRepo.findById(pasada).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(r.getMotivoCancelacion()).isNull();
+    }
+
+    @Test
+    void frSec012_sancionAlAdultoResponsable_cancelaReservasFuturasQuePago() throws Exception {
+        Escenario e = escenarioBase(); // AR pagando por su menor
+        UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
+        confirmarPago(e.tokenAr(), reservaId);
+        UUID sesionId = sesionRepo.findByReservaId(reservaId).orElseThrow().getId();
+
+        eventos.publishEvent(new DenunciaResueltaEvent(
+                this, UUID.randomUUID(), usuarioPorDni(e.dniAr()).getId()));
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(r.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.SANCION);
+        assertThat(scheduler.checkExists(SesionService.triggerSala(sesionId))).isFalse();
     }
 }

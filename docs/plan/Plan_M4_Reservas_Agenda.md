@@ -69,6 +69,10 @@
 - La asimetría (quién cancela/falta determina el reembolso) se resuelve **en M5**, no acá — este módulo solo cambia el `estado` de la Reserva y emite el evento correspondiente (`sesion.no_show_estudiante`, etc., recibidos desde M3) o lo emite directamente si la cancelación ocurre antes de que exista una Sesión en M3 (cancelación manual, no vía no-show).
 - Cancelación manual ({@code POST /api/reservas/{id}/cancelar}): sobre `pendiente_pago` no hay nada que cobrar/reembolsar y se cancela sin evento (FR-RES-017); sobre `confirmada` se emite `reserva.cancelada` con quién canceló (la decide M5: reembolso o liberación del escrow, FR-RES-008) y M3 desagenda la Sesión derivada (los jobs ya eran no-op por guard de estado; es limpieza).
 
+### 2.6 Sanción (M9) y calificación pendiente (M7) — stubs (Chunk M4-E)
+- **FR-SEC-008/012 (T-M4-09):** M4 escucha `denuncia.resuelta` (stub: consumidor M4 define el payload mínimo `usuarioSancionadoId` en `DenunciaResueltaEvent`; M9-D publicará el evento real cuando exista). Cancela las reservas FUTURAS del sancionado — como Tutor (FR-SEC-008) o como quien pagó (FR-SEC-012, por un menor a su cargo o para sí) — con `motivo_cancelacion = sancion`. Las `pendiente_pago` se cancelan sin evento (mismo criterio que FR-RES-017); las `confirmada` emiten `reserva.cancelada` (M5 resuelve el reembolso con el contexto de la denuncia: FR-PAG-011 paga trabajo ya hecho / FR-SEC-012 reembolso normal; M3 desagenda). Las reservas ya ocurridas no se tocan.
+- **FR-REP-006 (T-M4-10):** M4 bloquea nuevas Reservas del Tutor con una calificación de Estudiante pendiente. La lista la posee M7 (no existe aún): port `ReputacionBloqueoProveedor` + stub vacío en M4, consultado al crear cada Reserva (directa o por Solicitud); el Chunk M7-C reemplaza el stub por la implementación real. Bloqueo = 403 en la creación.
+
 ## 3. API (contratos de alto nivel)
 
 | Método | Endpoint | Notas |
