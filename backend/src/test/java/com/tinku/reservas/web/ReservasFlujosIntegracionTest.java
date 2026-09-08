@@ -53,6 +53,11 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1052,5 +1057,49 @@ class ReservasFlujosIntegracionTest {
         assertThat(r.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
         assertThat(r.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.SANCION);
         assertThat(scheduler.checkExists(SesionService.triggerSala(sesionId))).isFalse();
+    }
+
+    // ------------------------------------------------ Chunk M4-F (T-M4-11)
+
+    private int crearReservaDirectaStatus(String token, UUID tutorId, UUID beneficiarioId,
+                                          Instant horario, java.util.concurrent.CountDownLatch largada) throws Exception {
+        if (largada != null) {
+            largada.await(30, TimeUnit.SECONDS);
+        }
+        return mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "beneficiarioId", beneficiarioId == null ? "" : beneficiarioId.toString(),
+                                "horario", horario.toString()))))
+                .andReturn().getResponse().getStatus();
+    }
+
+    @Test
+    void frRes007_dosReservasSimultaneasMismoHorario_laResuelveLaExcludeConstraint() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        long reservasAntes = reservaRepo.count();
+
+        // Dos requests idénticos (mismo Tutor, mismo horario) que parten al unísono:
+        // la validación de aplicación no alcanza (ninguna ve a la otra antes de
+        // insertar) — la EXCLUDE constraint de V9 decide: una gana, la otra 409.
+        CountDownLatch largada = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> res1 = pool.submit(() -> crearReservaDirectaStatus(
+                    e.tokenEstudiante(), e.tutorId(), null, e.horario(), largada));
+            Future<Integer> res2 = pool.submit(() -> crearReservaDirectaStatus(
+                    e.tokenEstudiante(), e.tutorId(), null, e.horario(), largada));
+            largada.countDown();
+
+            Integer s1 = res1.get(30, TimeUnit.SECONDS);
+            Integer s2 = res2.get(30, TimeUnit.SECONDS);
+            // Una sola reserva creada: quién ganó no importa, el resultado es único.
+            assertThat(Set.of(s1, s2)).isEqualTo(Set.of(201, 409));
+            assertThat(reservaRepo.count()).isEqualTo(reservasAntes + 1);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }
