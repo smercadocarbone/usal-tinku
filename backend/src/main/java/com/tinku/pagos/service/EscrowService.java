@@ -10,7 +10,6 @@ import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
 import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
-import com.tinku.pagos.port.LiberacionProveedor;
 import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.port.ReembolsoProveedor;
@@ -25,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -37,10 +37,11 @@ import java.util.UUID;
  *       defensiva: consulta el pago real (GET /v1/payments/{id}) y solo si está
  *       {@code approved} y el monto coincide con el precio congelado crea la
  *       {@code Transaccion} en {@code retenido_escrow} y confirma la Reserva.</li>
- *   <li><b>Listeners (T-M5-04):</b> uno por evento entrante de la tabla del Plan
- *       M5 §2 — {@code sesion.finalizada} programa la cuenta de 24hs, los de
- *       reembolso/liberación pasan por los puertos (fail-closed hasta M5-C/M5-D)
- *       y {@code denuncia.registrada} pausa el escrow.</li>
+ *   <li><b>Listeners (T-M5-04, completados en M5-C):</b> uno por evento entrante
+ *       de la tabla del Plan M5 §2 — {@code sesion.finalizada} fija {@code liberar_at}
+ *       (fin + 24hs) y agenda el job de liberación (Chunk M5-C); los de
+ *       reembolso pasan por el port (fail-closed hasta M5-D) y {@code denuncia.registrada}
+ *       pausa el escrow; ambos salen de la ventana cancelando el job.</li>
  * </ol>
  *
  * Transiciones solo desde {@code retenido_escrow} (idempotente; un evento
@@ -59,7 +60,7 @@ public class EscrowService {
     private final ReservaRepository reservaRepo;
     private final ReservaService reservaService;
     private final MercadoPagoClient mercadopago;
-    private final LiberacionProveedor liberacion;
+    private final LiberacionEscrowService liberacionEscrow;
     private final ReembolsoProveedor reembolso;
     private final ComisionPlataforma comision;
 
@@ -67,14 +68,14 @@ public class EscrowService {
                          ReservaRepository reservaRepo,
                          ReservaService reservaService,
                          MercadoPagoClient mercadopago,
-                         LiberacionProveedor liberacion,
+                         LiberacionEscrowService liberacionEscrow,
                          ReembolsoProveedor reembolso,
                          ComisionPlataforma comision) {
         this.transaccionRepo = transaccionRepo;
         this.reservaRepo = reservaRepo;
         this.reservaService = reservaService;
         this.mercadopago = mercadopago;
-        this.liberacion = liberacion;
+        this.liberacionEscrow = liberacionEscrow;
         this.reembolso = reembolso;
         this.comision = comision;
     }
@@ -133,14 +134,17 @@ public class EscrowService {
 
     // ------------------------------------------------------ listeners (T-M5-04)
 
-    /** {@code sesion.finalizada} (FR-PAG-002): inicia la cuenta de 24hs. */
+    /** {@code sesion.finalizada} (FR-PAG-002): inicia la cuenta de 24hs y agenda
+     * el job de liberación (Chunk M5-C, T-M5-05). */
     @EventListener
     @Transactional
     public void onSesionFinalizada(SesionFinalizadaEvent evento) {
         transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
-                t.setLiberarAt(evento.getTimestampFin().plus(VENTANA_LIBERACION));
+                Instant liberarAt = evento.getTimestampFin().plus(VENTANA_LIBERACION);
+                t.setLiberarAt(liberarAt);
                 transaccionRepo.save(t);
+                liberacionEscrow.programarLiberacion(t.getId(), liberarAt);
             }
         });
     }
@@ -153,15 +157,15 @@ public class EscrowService {
     }
 
     /** {@code sesion.no_show_estudiante} (FR-RES-005): se cobra y se libera al
-     * Tutor de inmediato (no espera las 24hs — el no-show ya confirma la ausencia). */
+     * Tutor de inmediato (no espera las 24hs — el no-show ya confirma la ausencia).
+     * Va por el mismo camino resiliente que el job (Chunk M5-C): si la liberación
+     * falla, entra el backoff de FR-PAG-007 en lugar de fallar la transacción. */
     @EventListener
     @Transactional
     public void onSesionNoShowEstudiante(SesionNoShowEstudianteEvent evento) {
         transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
-                liberacion.liberarAlTutor(t);
-                t.setEstado(EstadoTransaccion.LIBERADO);
-                transaccionRepo.save(t);
+                liberacionEscrow.ejecutarLiberacion(t.getId());
             }
         });
     }
@@ -207,6 +211,7 @@ public class EscrowService {
                 t.setEstado(EstadoTransaccion.PAUSADO_DENUNCIA);
                 t.setLiberarAt(null);
                 transaccionRepo.save(t);
+                liberacionEscrow.cancelarLiberacion(t.getId());
             }
         });
     }
@@ -220,6 +225,8 @@ public class EscrowService {
                 t.setEstado(EstadoTransaccion.REEMBOLSADO);
                 t.setLiberarAt(null);
                 transaccionRepo.save(t);
+                // No liberar después de haber reembolsado (Chunk M5-C).
+                liberacionEscrow.cancelarLiberacion(t.getId());
             }
         });
     }

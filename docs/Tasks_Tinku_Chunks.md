@@ -67,7 +67,7 @@ _(requiere M4 cerrado; los listeners de sesión se completan cuando M3 exista)_
 
 - [x] **Chunk M5-A** — Migraciones + integración MercadoPago con split (T-M5-01, T-M5-02)
 - [x] **Chunk M5-B** — Webhook con validación de firma + listeners de eventos (T-M5-03, T-M5-04) — _cerrado en `chunk/m5-b`: webhook MP real (firma HMAC X-Signature + anti-replay, reconcilia contra `/v1/payments/{id}` y confirma la Reserva) reemplaza al `confirmar-pago-simulado` de M3-B; listeners 1:1 con la tabla del Plan §2 (ver NOTA en T-M5-04). Pendiente fuera de scope: `denuncia.resuelta` (M5-C/D, payload) y `reserva.cancelada` tardía (M5-D). Suite 198 tests, 0 fallos; merge FF a `main` sin pr — todos los chunks anteriores del legacy se mergearon a `main` igual_
-- [ ] **Chunk M5-C** — Job de liberación automática + reintentos con backoff (T-M5-05, T-M5-06)
+- [x] **Chunk M5-C** — Job de liberación automática + reintentos con backoff (T-M5-05, T-M5-06) — _cerrado en `chunk/m5-c`: LiberacionEscrowService + LiberacionEscrowJob (Quartz persistido, agenda en `sesion.finalizada`, cancela en reembolso/denuncia), backoff 5/15/1h con alerta a Soporte (port stub hasta M8) y cola `pagos-fallidos` vía `intentos_liberacion`. Provider real `LiberacionProveedorMercadoPago` reemplaza el fail-closed (verifica `approved` contra la API — la retención de cuenta queda pendiente de ADR-M5-01). Suite 232 tests, 0 fallos; merge FF a `main`._
 - [ ] **Chunk M5-D** — Función única de reembolso total + flujo manual de reembolso parcial (T-M5-07, T-M5-08)
 - [ ] **Chunk M5-E** — Precio de referencia regional (T-M5-09)
 - [ ] **Chunk M5-F** — Tests (T-M5-10)
