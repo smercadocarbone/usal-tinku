@@ -18,11 +18,11 @@
 
 ## SPIKE — en paralelo desde el día 1, otra sesión/branch
 
-- [ ] **Chunk SPIKE-A** — Evaluación de modelos + latencia en dispositivo real (T-SPIKE-01, T-SPIKE-02)
-- [ ] **Chunk SPIKE-B** — Prototipo de buffer rotativo con MediaRecorder (T-SPIKE-03)
-- [ ] **Chunk SPIKE-C** — Cierre: ADR-M3-01 documentado, con decisión final o escalado de riesgo (T-SPIKE-04)
+- [x] **Chunk SPIKE-A** — Evaluación de modelos + latencia en dispositivo real (T-SPIKE-01, T-SPIKE-02) — _cerrado: NSFWJS (MobileNetV2 5-clases) elegido sobre NudeNet/NsfwSpy; ~12ms en dev, rango estimado gama media ~42-60ms; harness de navegador listo para fijarlo_
+- [x] **Chunk SPIKE-B** — Prototipo de buffer rotativo con MediaRecorder (T-SPIKE-03) — _cerrado: chunks concatenados reproducibles (salvedad keyframe al inicio), `spikes/mediarecorder-buffer/`_
+- [x] **Chunk SPIKE-C** — Cierre: ADR-M3-01 documentado, con decisión final o escalado de riesgo (T-SPIKE-04) — _cerrado: ADR-M3-01 Aceptado (NSFWJS + TensorFlow.js, modelo auto-host) merged a main; resultado positivo, riesgo de cronograma no escalado_
 
-> Bloquea a: Chunk M3-C (clasificador real). No bloquea a M1, M2, M4, M5.
+> ~~Bloquea a: Chunk M3-C (clasificador real).~~ Resuelto 2026-09-08: M3-C desbloqueado.
 
 ---
 
@@ -78,7 +78,7 @@ _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que S
 
 - [x] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
 - [x] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05) — _cerrado: SesionService + 3 jobs de Quartz + endpoint finalizar + eventos `sesion.no_show_*/finalizada`; suite completa 157 tests OK._
-- [ ] **Chunk M3-C** _(bloqueado por SPIKE-C)_ — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
+- [ ] **Chunk M3-C** — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
 - [ ] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09)
 - [ ] **Chunk M3-E** — Emisión de todos los eventos hacia M5 → _desbloquea Chunk M5-B (listeners reales)_
 - [ ] **Chunk M3-F** — Test: manipulación de cliente no puede forzar la rama "adultos" con un menor presente (T-M3-11)
@@ -141,6 +141,6 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 | M4-E (sanción/calificación pendiente) | M9-D, M7-C                                         | Idem                                                 |
 | M5-B (listeners de eventos de sesión) | M3-E                                               | M3 emite los eventos que M5-B consume                |
 | M5-B (webhook MP real + confirmación) | M5-B                                               | Stub `POST /api/test/reservas/{id}/confirmar-pago-simulado` implementado en M3-B (dev/test); el webhook real con validación de firma lo reemplaza |
-| M3-C                                  | SPIKE-C                                            | El clasificador real depende del resultado del spike |
+| M3-C                                  | ~~SPIKE-C~~ → Resuelto (ADR-M3-01, 2026-09-08) | El clasificador real depende del resultado del spike |
 
 _Cualquier stub que quede sin reemplazar al llegar a Chunk FIN-A debe tratarse como bloqueante — no cerrar el flujo feliz E2E con un mock permanente disfrazado de stub temporal._

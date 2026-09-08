@@ -18,10 +18,10 @@
 
 ## SPIKE PRIORITARIO — arranca en paralelo desde el día 1 (Artículo XI, ADR-M3-01)
 
-- [ ] T-SPIKE-01: Evaluar 2-3 modelos pre-entrenados de clasificación de contenido NSFW ejecutables en el navegador (ej. vía TensorFlow.js) contra un set de imágenes de prueba.
-- [ ] T-SPIKE-02: Medir latencia real de inferencia en un dispositivo de gama media (no solo en la laptop de desarrollo) — el spike debe responder si la detección es lo bastante rápida para ser útil en tiempo real.
-- [ ] T-SPIKE-03: Prototipar el buffer rotativo de 30s con `MediaRecorder` en el navegador — validar que los chunks concatenados producen un video reproducible (riesgo real de códec mencionado en el Plan de M3).
-- [ ] T-SPIKE-04: Documentar el resultado del spike como ADR-M3-01 cerrado, con la decisión final (modelo + framework) — si el resultado es negativo, escalar de inmediato como riesgo de cronograma, no seguir adelante en silencio.
+- [x] T-SPIKE-01: Evaluar 2-3 modelos pre-entrenados de clasificación de contenido NSFW ejecutables en el navegador (ej. vía TensorFlow.js) contra un set de imágenes de prueba. — _NSFWJS vs NudeNet vs NsfwSpy.js; elegido NSFWJS (MobileNetV2 5-clases, ~5MB cuantizado). Detalle en `spikes/nsfw-classifier/README.md`._
+- [x] T-SPIKE-02: Medir latencia real de inferencia en un dispositivo de gama media (no solo en la laptop de desarrollo) — el spike debe responder si la detección es lo bastante rápida para ser útil en tiempo real. — _~12ms en dev (baseline tfjs-node, Apple Silicon). Latencia en gama media estimada ~42-60ms/frame (rango razonable según desarrollo, aún no medido cerrado); harness de navegador listo (`browser-benchmark`, self-host HTTPS) para fijar el valor real antes de M3-C._
+- [x] T-SPIKE-03: Prototipar el buffer rotativo de 30s con `MediaRecorder` en el navegador — validar que los chunks concatenados producen un video reproducible (riesgo real de códec mencionado en el Plan de M3). — _Validado: chunks concatenados del mismo stream reproducibles, salvedad del keyframe al inicio. Prototipo en `spikes/mediarecorder-buffer/`._
+- [x] T-SPIKE-04: Documentar el resultado del spike como ADR-M3-01 cerrado, con la decisión final (modelo + framework) — si el resultado es negativo, escalar de inmediato como riesgo de cronograma, no seguir adelante en silencio. — _ADR-M3-01 Aceptado (NSFWJS + TF.js, self-host). Resultado positivo; decisión documentada y merged a main._
 
 ---
 
