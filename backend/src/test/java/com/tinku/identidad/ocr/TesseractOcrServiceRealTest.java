@@ -129,7 +129,7 @@ class TesseractOcrServiceRealTest {
 
     @Test
     void extraeCamposDeUnDniLibretaConOcrReal() throws Exception {
-        ResultadoOcr r = servicio().procesarDocumento(imagenDniLibreta());
+        ResultadoOcr r = servicio().procesarDocumento(imagenDniLibreta(), null);
 
         assertTrue(r.documentoLegible(), "El OCR real debe leer la imagen sintética libreta");
         assertEquals("12345678", r.dniExtraido());
@@ -140,7 +140,7 @@ class TesseractOcrServiceRealTest {
 
     @Test
     void sinImagenDevuelveIlegible() {
-        ResultadoOcr r = servicio().procesarDocumento(new byte[0]);
+        ResultadoOcr r = servicio().procesarDocumento(new byte[0], null);
         assertFalse(r.documentoLegible());
     }
 }

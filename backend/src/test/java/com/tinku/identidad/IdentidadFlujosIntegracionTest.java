@@ -94,7 +94,7 @@ class IdentidadFlujosIntegracionTest {
     void programarOcr() {
         // Valor por defecto: documento legible; cada test sobreescribe el
         // resultado que necesita.
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("10000000", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
     }
 
@@ -137,7 +137,7 @@ class IdentidadFlujosIntegracionTest {
 
     private String registrarAdultoYToken(String dni, String nombre, String apellido,
                                          boolean capAr) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         registrarAdulto(dni, nombre, apellido, true, capAr);
         return login(dni);
@@ -145,7 +145,7 @@ class IdentidadFlujosIntegracionTest {
 
     /** Registra (y loguea) un Tutor de verdad, necesario para cargar credencial/CAP. */
     private String registrarTutorYToken(String dni, String nombre, String apellido) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroTutorRequest(
@@ -163,7 +163,7 @@ class IdentidadFlujosIntegracionTest {
 
     @Test
     void us1_adultoSeRegistra_yLoguea_yQuedaActivo() throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("12345678", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
 
         registrarAdulto("12345678", "Ana", "Gomez", true, false);
@@ -187,14 +187,14 @@ class IdentidadFlujosIntegracionTest {
     @Test
     void us1_rechazaRegistroPorDniDuplicado_cuandoElOcrExtraeUnDniYaRegistrado() throws Exception {
         // Primer adulto: el OCR extrae 87654321.
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
         registrarAdulto("87654321", "Ana", "Gomez", true, false);
 
         // Segundo intento con DNI declarado distinto, pero el OCR vuelve a
         // extraer el mismo 87654321 (documento real del mismo titular):
         // la unicidad es contra el DNI EXTRAÍDO (FR-ID-001/018) -> 409.
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
@@ -206,7 +206,7 @@ class IdentidadFlujosIntegracionTest {
 
     @Test
     void us1_rechazaRegistroPorEdadMenorDe18() throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("11111111", "Tomas", "Lopez", LocalDate.of(2012, 6, 1))); // 14 anios
 
         mockMvc.perform(multipart("/api/usuarios/registro")
@@ -221,7 +221,7 @@ class IdentidadFlujosIntegracionTest {
 
     @Test
     void us2_tutorSeRegistra() throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("22222222", "Carlos", "Ruiz", LocalDate.of(1980, 1, 1)));
 
         mockMvc.perform(multipart("/api/tutores/registro")
@@ -240,7 +240,7 @@ class IdentidadFlujosIntegracionTest {
     void us3_menorSeRegistraPorSuAdultoResponsable_autenticado() throws Exception {
         String token = registrarAdultoYToken("33333333", "Maria", "Perez", true);
 
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("44444444", "Sofia", "Perez", LocalDate.of(2015, 7, 20)));
 
         mockMvc.perform(multipart("/api/usuarios/menores")
@@ -309,7 +309,7 @@ class IdentidadFlujosIntegracionTest {
         String tokenAr = registrarAdultoYToken("66666666", "Laura", "Diaz", true);
 
         // Menor a cargo.
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("77777777", "Leo", "Diaz", LocalDate.of(2016, 2, 2)));
         mockMvc.perform(multipart("/api/usuarios/menores")
                         .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroMenorRequest(
@@ -319,7 +319,7 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isCreated());
 
         // Tutor a autorizar.
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("88888888", "Pablo", "Sosa", LocalDate.of(1988, 9, 9)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroTutorRequest(

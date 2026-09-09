@@ -132,7 +132,7 @@ class SesionesIntegracionTest {
     @BeforeEach
     void programarMocks() {
         EVENTOS.clear();
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("10000000", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
@@ -150,7 +150,7 @@ class SesionesIntegracionTest {
     // ------------------------------------------------ helpers HTTP (registro/franjas)
 
     private String registrarAdultoYToken(String dni, String nombre, String apellido) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
@@ -162,7 +162,7 @@ class SesionesIntegracionTest {
     }
 
     private String registrarTutorYToken(String dni, String nombre, String apellido) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
@@ -193,7 +193,7 @@ class SesionesIntegracionTest {
     }
 
     private void registrarMenor(String dniMenor, String tokenAr) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dniMenor, "Sofia", "Perez", LocalDate.of(2015, 7, 20)));
         mockMvc.perform(multipart("/api/usuarios/menores")
                         .file(jsonPart("datos", new RegistroMenorRequest(

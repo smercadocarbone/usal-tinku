@@ -8,6 +8,7 @@ import com.tinku.identidad.model.ConsentimientoMenor;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.ocr.DatosDniDeclarados;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.port.VerificadorReservasFuturas;
@@ -82,8 +83,11 @@ public class UsuarioService {
         // Paso 0: respetar el backoff de OCR (FR-ID-011) del DNI declarado.
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
 
-        // Paso 2: OCR sobre la foto.
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
+        // Paso 2: OCR sobre la foto. Lo declarado viaja aparte para que el
+        // stub de dev/test pueda hacer eco (ver DatosDniDeclarados).
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
+                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
+                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
 
         // Fallo de LECTURA (no de validación) — consume el contador de reintentos
         // (FR-ID-011) y señaliza el caso. La política de 3 intentos + 24hs la
@@ -158,7 +162,9 @@ public class UsuarioService {
             throw new LimiteMenoresAlcanzadoException();
         }
 
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
+                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
+                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
         if (!ocr.documentoLegible()) {
             ocrBackoffService.registrarIntentoFallido(request.dniDeclarado());
             throw new DocumentoIlegibleException();
@@ -219,7 +225,9 @@ public class UsuarioService {
     public Usuario registrarTutor(RegistroTutorRequest request, byte[] fotoDni) {
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado()); // FR-ID-011
 
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni);
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
+                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
+                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
         if (!ocr.documentoLegible()) {
             ocrBackoffService.registrarIntentoFallido(request.dniDeclarado()); // FR-ID-011
             throw new DocumentoIlegibleException();
