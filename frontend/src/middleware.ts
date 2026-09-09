@@ -28,5 +28,6 @@ export const config = {
     "/tutores/:path*",
     "/reservar/:path*",
     "/pagar/:path*",
+    "/aula/:path*",
   ],
 };
