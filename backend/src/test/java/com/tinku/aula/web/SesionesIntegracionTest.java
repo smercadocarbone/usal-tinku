@@ -139,6 +139,9 @@ class SesionesIntegracionTest {
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
         when(liveKitService.crearSala(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(liveKitService.generarTokenParticipante(anyString(), anyString()))
+                .thenReturn("jwt-test-token");
+        when(liveKitService.getBaseUrl()).thenReturn("wss://test.livekit.cloud");
     }
 
     private String dniUnico() {
@@ -536,6 +539,55 @@ class SesionesIntegracionTest {
     void tM305_corteAutomatico_sesionInexistente_noRompe() throws Exception {
         sesionService.ejecutarCorteAutomatico(UUID.randomUUID());
         assertThat(EVENTOS).isEmpty();
+    }
+
+    // ------------------------------------------------ token de acceso (frontend M3)
+
+    @Test
+    void tM3Token_participanteConSalaCreada_obtieneTokenYUrl() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setLivekitRoomId("sesion-" + sesion.getId());
+        sesionRepository.save(sesion);
+
+        MvcResult res = mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var body = objectMapper.readTree(res.getResponse().getContentAsString());
+        assertThat(body.get("token").asText()).isEqualTo("jwt-test-token");
+        assertThat(body.get("livekitUrl").asText()).isEqualTo("wss://test.livekit.cloud");
+        assertThat(body.get("livekitRoomId").asText()).isEqualTo("sesion-" + sesion.getId());
+        verify(liveKitService).generarTokenParticipante(e.dniTutor(), "sesion-" + sesion.getId());
+    }
+
+    @Test
+    void tM3Token_terceroNoParticipante_403() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setLivekitRoomId("sesion-" + sesion.getId());
+        sesionRepository.save(sesion);
+        String tokenTercero = registrarAdultoYToken(dniUnico(), "Pepe", "Garcia");
+
+        mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        .header("Authorization", "Bearer " + tokenTercero))
+                .andExpect(status().isForbidden());
+        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString());
+    }
+
+    @Test
+    void tM3Token_salonAunNoCreado_422() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isUnprocessableEntity());
+        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString());
     }
 
     // ------------------------------------------------ helper
