@@ -3,8 +3,8 @@ package com.tinku.identidad.web;
 import com.tinku.identidad.dto.AutorizarTutorRequest;
 import com.tinku.identidad.dto.MarcarNoConfiableRequest;
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.identidad.service.AutorizacionService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,12 +27,12 @@ import java.util.Map;
 public class AutorizacionController {
 
     private final AutorizacionService autorizacionService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
     public AutorizacionController(AutorizacionService autorizacionService,
-                                  UsuarioRepository usuarioRepository) {
+                                  UsuarioActual usuarioActual) {
         this.autorizacionService = autorizacionService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping
@@ -40,7 +40,7 @@ public class AutorizacionController {
             @Valid @RequestBody AutorizarTutorRequest request,
             Authentication authentication
     ) {
-        Usuario adulto = usuarioActual(authentication);
+        Usuario adulto = usuarioActual.obtener(authentication);
         var autorizacion = autorizacionService.autorizarTutor(
                 adulto, request.menorId(), request.tutorId());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -52,13 +52,8 @@ public class AutorizacionController {
             @Valid @RequestBody MarcarNoConfiableRequest request,
             Authentication authentication
     ) {
-        Usuario adulto = usuarioActual(authentication);
+        Usuario adulto = usuarioActual.obtener(authentication);
         autorizacionService.marcarNoConfiable(adulto, request.tutorId(), request.noConfiable());
         return ResponseEntity.noContent().build();
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

@@ -40,7 +40,7 @@ public class AdminCapController {
 
     @GetMapping
     public ResponseEntity<List<CapResponse>> cola() {
-        return ResponseEntity.ok(certificadoService.colaModeracion().stream().map(this::toResponse).toList());
+        return ResponseEntity.ok(certificadoService.colaModeracion().stream().map(CapResponse::from).toList());
     }
 
     @PatchMapping("/{id}")
@@ -51,7 +51,7 @@ public class AdminCapController {
     ) {
         CertificadoAntecedentesPenales cap = certificadoService.revisar(
                 id, adminId(authentication), request.accion(), request.categoriaAntecedente());
-        return ResponseEntity.ok(toResponse(cap));
+        return ResponseEntity.ok(CapResponse.from(cap));
     }
 
     private UUID adminId(Authentication authentication) {
@@ -62,10 +62,5 @@ public class AdminCapController {
             // M8 proveerá la identidad real del Admin (UUID); hoy puede venir un dni.
             return null;
         }
-    }
-
-    private CapResponse toResponse(CertificadoAntecedentesPenales c) {
-        return new CapResponse(c.getId(), c.getEstado(), c.isTieneAntecedentes(),
-                c.getVenceAt(), c.getNumeroIntento());
     }
 }

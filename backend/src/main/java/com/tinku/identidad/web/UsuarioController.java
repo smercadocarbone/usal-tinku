@@ -5,8 +5,8 @@ import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
 import com.tinku.identidad.dto.UsuarioResponse;
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.identidad.service.UsuarioService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,11 +27,11 @@ import java.util.UUID;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
-    public UsuarioController(UsuarioService usuarioService, UsuarioRepository usuarioRepository) {
+    public UsuarioController(UsuarioService usuarioService, UsuarioActual usuarioActual) {
         this.usuarioService = usuarioService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -51,7 +51,7 @@ public class UsuarioController {
     ) throws IOException {
         // El menor no se registra solo: lo hace su Adulto Responsable
         // autenticado (FR-ID-020, Artículo II). El principal es User(dni).
-        Usuario adulto = usuarioActual(authentication);
+        Usuario adulto = usuarioActual.obtener(authentication);
 
         Usuario menor = usuarioService.registrarMenor(request, fotoDni.getBytes(), adulto);
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(menor));
@@ -62,7 +62,7 @@ public class UsuarioController {
             @Valid @RequestBody ActualizarCapacidadesRequest request,
             Authentication authentication
     ) {
-        Usuario usuario = usuarioService.actualizarCapacidades(usuarioActual(authentication), request);
+        Usuario usuario = usuarioService.actualizarCapacidades(usuarioActual.obtener(authentication), request);
         return ResponseEntity.ok(UsuarioResponse.from(usuario));
     }
 
@@ -74,12 +74,7 @@ public class UsuarioController {
     ) {
         // FR-ID-014: solo el Adulto Responsable del menor puede darlo de baja;
         // si tiene reservas futuras se exige confirmación explícita.
-        usuarioService.darDeBajaMenor(usuarioActual(authentication), id, confirmar);
+        usuarioService.darDeBajaMenor(usuarioActual.obtener(authentication), id, confirmar);
         return ResponseEntity.noContent().build();
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

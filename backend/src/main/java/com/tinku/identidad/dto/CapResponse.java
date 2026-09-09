@@ -1,5 +1,6 @@
 package com.tinku.identidad.dto;
 
+import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.EstadoCap;
 
 import java.time.LocalDate;
@@ -15,4 +16,8 @@ public record CapResponse(
         LocalDate venceAt,
         int numeroIntento
 ) {
+    public static CapResponse from(CertificadoAntecedentesPenales c) {
+        return new CapResponse(c.getId(), c.getEstado(), c.isTieneAntecedentes(),
+                c.getVenceAt(), c.getNumeroIntento());
+    }
 }

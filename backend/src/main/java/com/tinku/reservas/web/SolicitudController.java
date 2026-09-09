@@ -1,10 +1,10 @@
 package com.tinku.reservas.web;
 
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.service.ReservaService;
 import com.tinku.reservas.service.SolicitudService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,14 +30,14 @@ public class SolicitudController {
 
     private final SolicitudService solicitudService;
     private final ReservaService reservaService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
     public SolicitudController(SolicitudService solicitudService,
                                ReservaService reservaService,
-                               UsuarioRepository usuarioRepository) {
+                               UsuarioActual usuarioActual) {
         this.solicitudService = solicitudService;
         this.reservaService = reservaService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     /** US-2: la genera la cuenta del menor. No bloquea horario ni genera cobro (FR-RES-021). */
@@ -46,7 +46,7 @@ public class SolicitudController {
             @Valid @RequestBody NuevaSolicitudRequest request,
             Authentication authentication) {
         SolicitudSesion solicitud = solicitudService.crear(
-                usuarioActual(authentication), request);
+                usuarioActual.obtener(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SolicitudResponse.from(solicitud));
     }
 
@@ -54,7 +54,7 @@ public class SolicitudController {
     @GetMapping("/pendientes")
     public ResponseEntity<List<SolicitudResponse>> pendientes(Authentication authentication) {
         List<SolicitudSesion> pendientes = solicitudService.pendientesDelAdultoResponsable(
-                usuarioActual(authentication));
+                usuarioActual.obtener(authentication));
         return ResponseEntity.ok(pendientes.stream().map(SolicitudResponse::from).toList());
     }
 
@@ -63,12 +63,7 @@ public class SolicitudController {
     public ResponseEntity<ReservaResponse> aprobar(
             @PathVariable UUID id,
             Authentication authentication) {
-        var reserva = reservaService.aprobarSolicitud(usuarioActual(authentication), id);
+        var reserva = reservaService.aprobarSolicitud(usuarioActual.obtener(authentication), id);
         return ResponseEntity.status(HttpStatus.CREATED).body(ReservaResponse.from(reserva));
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

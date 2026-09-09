@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -66,7 +63,7 @@ public class TesseractOcrService implements OcrService {
             return ResultadoOcr.ilegible();
         }
 
-        BufferedImage img = leer(lista);
+        BufferedImage img = preprocesador.leer(lista);
         if (img == null) {
             return ResultadoOcr.ilegible();
         }
@@ -89,14 +86,6 @@ public class TesseractOcrService implements OcrService {
             // (reintentos + backoff FR-ID-011), no como rechazo de identidad.
             log.warn("Falló el OCR de documento: {}", e.getMessage());
             return ResultadoOcr.ilegible();
-        }
-    }
-
-    private BufferedImage leer(byte[] bytes) {
-        try {
-            return ImageIO.read(new ByteArrayInputStream(bytes));
-        } catch (IOException e) {
-            return null;
         }
     }
 

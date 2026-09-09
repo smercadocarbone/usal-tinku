@@ -62,9 +62,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     @Override
     public PreferenciaPago crearPreferencia(PreferenciaRequest request) {
-        if (accessToken == null || accessToken.isBlank()) {
-            throw new MercadoPagoNoConfiguradoException();
-        }
+        exigirTokenConfigurado();
         MpPreferenciaRespuesta respuesta;
         try {
             respuesta = restClient.post()
@@ -89,9 +87,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     @Override
     public PagoMercadoPago getPago(String mpPaymentId) {
-        if (accessToken == null || accessToken.isBlank()) {
-            throw new MercadoPagoNoConfiguradoException();
-        }
+        exigirTokenConfigurado();
         MpPagoRespuesta respuesta;
         try {
             respuesta = restClient.get()
@@ -114,9 +110,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     @Override
     public void reembolsarPago(String mpPaymentId) {
-        if (accessToken == null || accessToken.isBlank()) {
-            throw new MercadoPagoNoConfiguradoException();
-        }
+        exigirTokenConfigurado();
         try {
             restClient.post()
                     .uri(PATH_PAGOS + mpPaymentId + "/refunds")
@@ -130,6 +124,12 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                     .toBodilessEntity();
         } catch (RestClientException ex) {
             throw new MercadoPagoNoDisponibleException();
+        }
+    }
+
+    private void exigirTokenConfigurado() {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new MercadoPagoNoConfiguradoException();
         }
     }
 

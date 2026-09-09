@@ -31,7 +31,7 @@ import java.util.UUID;
 @Service
 public class CertificadoService {
 
-    private static final int MAX_INTENTOS_CICLO = 3;
+    private static final int MAX_INTENTOS_CICLO = CicloIntentos.MAX;
     private static final int MESES_VIGENCIA = 12; // FR-ID-025, Tabla_Tiempos
 
     private final CertificadoAntecedentesPenalesRepository capRepo;
@@ -69,11 +69,10 @@ public class CertificadoService {
     }
 
     private int numeroDeIntentoParaCiclo(UUID tutorId) {
-        return capRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId)
-                .filter(c -> c.getEstado() == EstadoCap.RECHAZADO
-                        && c.getNumeroIntento() < MAX_INTENTOS_CICLO)
-                .map(c -> c.getNumeroIntento() + 1)
-                .orElse(1);
+        return CicloIntentos.siguiente(
+                capRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId),
+                c -> c.getEstado() == EstadoCap.RECHAZADO,
+                CertificadoAntecedentesPenales::getNumeroIntento);
     }
 
     /**

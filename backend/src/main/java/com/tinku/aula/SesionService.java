@@ -1,10 +1,10 @@
 package com.tinku.aula;
 
-import com.tinku.aula.evento.SesionEvento;
-import com.tinku.aula.evento.SesionFinalizadaEvent;
-import com.tinku.aula.evento.SesionNoShowDobleEvent;
-import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
-import com.tinku.aula.evento.SesionNoShowTutorEvent;
+import com.tinku.pagos.evento.SesionEvento;
+import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.pagos.evento.SesionNoShowDobleEvent;
+import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
+import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.jobs.CrearSalaJob;
 import com.tinku.aula.jobs.NoShowJob;
@@ -221,13 +221,13 @@ public class SesionService {
         SesionEvento evento;
         if (!tutorEntro && !estudianteEntro) {
             nuevoEstado = EstadoReserva.NO_SHOW_DOBLE;
-            evento = new SesionNoShowDobleEvent(this, sesion.getId(), reserva.getId());
+            evento = new SesionNoShowDobleEvent(this, reserva.getId());
         } else if (tutorEntro) {
             nuevoEstado = EstadoReserva.NO_SHOW_ESTUDIANTE; // faltó el estudiante
-            evento = new SesionNoShowEstudianteEvent(this, sesion.getId(), reserva.getId());
+            evento = new SesionNoShowEstudianteEvent(this, reserva.getId());
         } else {
             nuevoEstado = EstadoReserva.NO_SHOW_TUTOR; // faltó el tutor
-            evento = new SesionNoShowTutorEvent(this, sesion.getId(), reserva.getId());
+            evento = new SesionNoShowTutorEvent(this, reserva.getId());
         }
 
         reserva.setEstado(nuevoEstado);
@@ -303,7 +303,7 @@ public class SesionService {
         reservaRepo.save(reserva);
 
         events.publishEvent(new SesionFinalizadaEvent(
-                this, sesion.getId(), reserva.getId(), fin, (int) duracion));
+                this, reserva.getId(), fin));
         cancelarNoShow(sesion.getId());
         return sesion;
     }

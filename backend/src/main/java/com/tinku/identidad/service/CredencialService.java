@@ -26,7 +26,7 @@ import java.util.UUID;
 @Service
 public class CredencialService {
 
-    private static final int MAX_INTENTOS_CICLO = 3;
+    private static final int MAX_INTENTOS_CICLO = CicloIntentos.MAX;
 
     private final CredencialAcademicaRepository credencialRepo;
     private final CredencialBackoffService backoffService;
@@ -63,11 +63,10 @@ public class CredencialService {
 
     /** El intento dentro del ciclo actual: 1 si el ciclo arranca, o el siguiente tras un rechazo. */
     private int numeroDeIntentoParaCiclo(UUID tutorId) {
-        return credencialRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId)
-                .filter(c -> c.getEstado() == EstadoCredencial.RECHAZADO
-                        && c.getNumeroIntento() < MAX_INTENTOS_CICLO)
-                .map(c -> c.getNumeroIntento() + 1)
-                .orElse(1);
+        return CicloIntentos.siguiente(
+                credencialRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId),
+                c -> c.getEstado() == EstadoCredencial.RECHAZADO,
+                CredencialAcademica::getNumeroIntento);
     }
 
     /** Transición PENDIENTE → APROBADO (invocada por el panel Admin, M8). */

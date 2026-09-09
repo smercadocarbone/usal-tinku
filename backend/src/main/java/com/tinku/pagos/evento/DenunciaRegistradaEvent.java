@@ -1,7 +1,5 @@
 package com.tinku.pagos.evento;
 
-import org.springframework.context.ApplicationEvent;
-
 import java.util.UUID;
 
 /**
@@ -12,21 +10,9 @@ import java.util.UUID;
  * mínimo (reservaId); M9-D publicará esta clase y puede enriquecer la
  * documentación en Spec_M5 §2 (AGENTS §4) si hace falta.
  */
-public class DenunciaRegistradaEvent extends ApplicationEvent {
-
-    private final String nombre = "denuncia.registrada";
-    private final UUID reservaId;
+public class DenunciaRegistradaEvent extends SesionEvento {
 
     public DenunciaRegistradaEvent(Object source, UUID reservaId) {
-        super(source);
-        this.reservaId = reservaId;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public UUID getReservaId() {
-        return reservaId;
+        super(source, "denuncia.registrada", reservaId);
     }
 }
