@@ -25,6 +25,17 @@
 
 ---
 
+## FRONTEND — F1: Base de auth + Registro de Usuario adulto (US-1)
+
+> Primer chunk de frontend (`chunk/f1-a-front`), apoya a M1/US-1. El backend de M1 ya está íntegro y verde; acá se consume desde el navegador. Verificación de cada tarea: build + lint del frontend y flujo manual contra el backend dev.
+
+- [x] F-01: Base de auth — helpers de sesión (`localStorage` + cookie para `middleware.ts`), pantalla de login (`POST /api/usuarios/login` → `{token, tipo, expiresInMinutes}`), logout, y manejo global de 401 en el cliente API (sesión expirada → se limpia y redirige a `/login`, sin dejar consultas colgadas). — _`chunk/f1-a-front`: `src/lib/auth.ts` (setSession/clearSession/getSession/isAuthenticated, cookie + localStorage, misma clave `tinku_jwt`), `src/middleware.ts` (protege `/cuenta`, redirige con `?siguiente=`), `src/lib/api.ts` (parseo de `{error}` del backend, 401 → limpia sesión + redirige; multipart sin Content-Type forzado). Verificado: build + lint verdes; middleware responde 307 sin cookie y 200 con cookie; login con creds inválidas → 401 con mensaje parseado._
+- [x] F-02: Pantalla de registro de Usuario adulto (US-1) — `POST /api/usuarios/registro` multipart (`datos` JSON + `fotoDni`) con los estados de error del OCR: menor de edad (pantalla informativa "Sos menor de edad…", no crea cuenta), DNI duplicado (mensaje genérico, FR-ID-018), documento ilegible / no coincide (reintento), backoff de 3 intentos / 24hs (429 con `espera_restante_hs`). — _`src/app/registro/page.tsx`: mismos campos que `RegistroAdultoRequest`, envío de `datos` (Blob JSON) + `fotoDni`; errores mapeados por status (403 → pantalla menor de edad; 429 → muestra `espera_restante_hs`; resto → mensaje del backend). Multipart verificado contra el backend dev (409 real = DNI duplicado)._
+- [x] F-03: Pantalla autenticada mínima (`/cuenta`) — perfil desde los claims del JWT (`sub`/`tipo`/`cap_est`/`cap_ar`) + logout; rutas protegidas vía `middleware.ts` (cookie). — _`src/app/cuenta/page.tsx`: perfil read-only desde claims (sin endpoint `/me`, sobre lo mínimo) + logout que limpia cookie y localStorage._
+- [x] F-04: Build y lint del frontend verdes + flujo manual registro → login → cuenta contra el backend dev. — _Build + lint verdes; E2E contra el backend dev a partir de `chunk/f1-b` (CORS + OCR stub que hace eco de lo declarado, 251 tests verdes): registro adulto nuevo (DNI `45678901`) → 201; login → 200 (token); `/cuenta` del frontend sin cookie → 307 a `/login?siguiente=%2Fcuenta`; con cookie `tinku_jwt` → 200; `/login` y `/registro` → 200. Preflight CORS desde `http://localhost:3000` → 200 con `Access-Control-Allow-Origin`; desde origen ajeno → 403 sin headers. El bloqueo del stub original (DNI fijo `00000000` ya registrado) quedó resuelto por `chunk/f1-b`._
+
+---
+
 ## M1 — Gestión de Identidad y Perfiles
 
 - [x] T-M1-01: Migración: tabla `usuarios` con constraint `UNIQUE` en `dni`. — _pre-existente, no creada en esta sesión: `V2__m1_identidad.sql` (commit `0616a05`) ya contenía esta migración y fue verificada contra el Plan de M1 durante Chunk 000-B sin requerir migración correctiva. Incluye `UNIQUE` en `dni` y el CHECK `chk_adulto_tiene_capacidad` (adulto con ≥1 capacidad, elegido como CHECK de BD, no validación de app). Reconfirmado por regresión (`./mvnw verify`, 16 tests OK) y por `\d identidad.usuarios`. No se editó V2 (AGENTS.md §7, ya aplicada)._

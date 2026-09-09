@@ -1,0 +1,241 @@
+:root {
+  --color-fondo: #f7f7f5;
+  --color-superficie: #ffffff;
+  --color-texto: #1f2933;
+  --color-texto-suave: #5f6b7a;
+  --color-borde: #e5e7eb;
+  --color-accent: #0d9488;
+  --color-accent-hover: #0f766e;
+  --color-peligro: #b91c1c;
+  --color-aviso: #c2540b;
+  --color-exito: #0f766e;
+  --sombra: 0 1px 3px rgb(0 0 0 / 0.08), 0 4px 14px rgb(0 0 0 / 0.05);
+  --radio: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/* Envoltura centrada de página (login/registro) */
+.pantalla {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.tarjeta {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 2rem;
+}
+
+.tarjeta--ancha {
+  max-width: 32rem;
+}
+
+.tarjeta h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.tarjeta p {
+  color: var(--color-texto-suave);
+  margin: 0 0 1.5rem;
+}
+
+.marca {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-texto);
+}
+.marca span {
+  color: var(--color-accent);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.campo label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.campo input[type="text"],
+.campo input[type="password"],
+.campo input[type="date"],
+.campo input[type="file"] {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.campo input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: #fafaf9;
+}
+
+.opciones p {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.opcion input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-accent);
+}
+
+.boton {
+  appearance: none;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+}
+.boton:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+.boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boton--secundario {
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-borde);
+}
+.boton--secundario:hover {
+  border-color: var(--color-accent);
+  background: #f0fdfa;
+}
+
+.alerta {
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.alerta--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--color-peligro);
+}
+
+.alerta--exito {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: var(--color-exito);
+}
+
+.alerta--informativa {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  color: var(--color-aviso);
+}
+
+.pie-enlace {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-texto-suave);
+}
+
+/* Cabecera de páginas autenticadas */
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--color-borde);
+  background: var(--color-superficie);
+}
+
+.contenido {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.perfil-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.perfil-fila dt {
+  font-weight: 600;
+}
+
+.perfil-fila dd {
+  margin: 0;
+  text-align: right;
+  text-transform: capitalize;
+}

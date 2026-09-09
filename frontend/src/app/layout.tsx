@@ -1,8 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tinku",
-  description: "Tutorías en línea — Tinku",
+  title: "Tinku — Tutorías en línea",
+  description: "Clases particulares en línea con Tutores verificados.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
