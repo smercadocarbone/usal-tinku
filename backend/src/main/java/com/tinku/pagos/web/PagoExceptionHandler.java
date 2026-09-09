@@ -4,6 +4,7 @@ import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
 import com.tinku.pagos.service.MercadoPagoNoDisponibleException;
 import com.tinku.pagos.service.PagoInconsistenteException;
 import com.tinku.pagos.service.PreferenciaNoDisponibleException;
+import com.tinku.pagos.service.ProvinciaSinPrecioReferenciaException;
 import com.tinku.pagos.service.SoloPagadorPreferenciaException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,13 @@ public class PagoExceptionHandler {
 
     @ExceptionHandler(ReservaNoEncontradaException.class)
     public ResponseEntity<Map<String, String>> handleNoEncontrada(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProvinciaSinPrecioReferenciaException.class)
+    public ResponseEntity<Map<String, String>> handleProvinciaSinReferencia(RuntimeException ex) {
+        // La sugerencia es no vinculante y opcional (FR-PAG-005): sin fila para la
+        // provincia, el Tutor configura su precio igual — 404, no un error grave.
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
