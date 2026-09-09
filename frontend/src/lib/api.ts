@@ -7,43 +7,108 @@
  * un único punto de verdad por responsabilidad transversal).
  */
 
+import { clearSession, TOKEN_KEY } from "./auth";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public detalles?: Record<string, unknown>
+  ) {
     super(message);
   }
 }
 
+type Cuerpo = Record<string, unknown> | FormData | string | undefined;
+
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: { method: string; body?: Cuerpo }
 ): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("tinku_jwt") : null;
+  const token =
+    typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : null;
+
+  const esMultipart =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (options.body !== undefined && !esMultipart && typeof options.body !== "string") {
+    headers.set("Content-Type", "application/json");
+  }
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
+    body:
+      options.body instanceof FormData
+        ? options.body
+        : typeof options.body === "string"
+          ? options.body
+          : options.body === undefined
+            ? undefined
+            : JSON.stringify(options.body),
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new ApiError(res.status, body || res.statusText);
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
   }
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
+/** Extrae un mensaje legible y el detalle estructurado del cuerpo de error
+ * del backend (contrato M1: `{"error": "...", ...extra}`). */
+async function leerError(res: Response): Promise<[string, Record<string, unknown>?]> {
+  let texto = "";
+  try {
+    texto = await res.text();
+  } catch {
+    return [res.statusText];
+  }
+
+  if (!texto) return [res.statusText];
+
+  try {
+    const json = JSON.parse(texto) as Record<string, unknown>;
+    const mensaje =
+      (typeof json.error === "string" && json.error) ||
+      (typeof json.message === "string" && json.message) ||
+      (typeof json.detail === "string" && json.detail);
+    return [mensaje || res.statusText, json];
+  } catch {
+    return [texto, { body: texto }];
+  }
+}
+
+async function manageSesion<T>(peticion: () => Promise<T>): Promise<T> {
+  try {
+    return await peticion();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      const ruta = typeof window !== "undefined" ? window.location.pathname : "";
+      if (ruta !== "/login" && ruta !== "/registro") {
+        clearSession();
+        if (typeof window !== "undefined") {
+          window.location.assign("/login?expirado=1");
+        }
+      }
+    }
+    throw err;
+  }
+}
+
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  get: <T>(path: string) =>
+    manageSesion(() => request<T>(path, { method: "GET" })),
+  post: <T>(path: string, body?: Cuerpo) =>
+    manageSesion(() => request<T>(path, { method: "POST", body })),
+  patch: <T>(path: string, body?: Cuerpo) =>
+    manageSesion(() => request<T>(path, { method: "PATCH", body })),
+  delete: <T>(path: string) =>
+    manageSesion(() => request<T>(path, { method: "DELETE" })),
 };
