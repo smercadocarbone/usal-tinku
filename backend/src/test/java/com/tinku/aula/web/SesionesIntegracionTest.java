@@ -3,11 +3,11 @@ package com.tinku.aula.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.aula.LiveKitService;
 import com.tinku.aula.SesionService;
-import com.tinku.aula.evento.SesionEvento;
-import com.tinku.aula.evento.SesionFinalizadaEvent;
-import com.tinku.aula.evento.SesionNoShowDobleEvent;
-import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
-import com.tinku.aula.evento.SesionNoShowTutorEvent;
+import com.tinku.pagos.evento.SesionEvento;
+import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.pagos.evento.SesionNoShowDobleEvent;
+import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
+import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.dto.AutorizarTutorRequest;
@@ -22,6 +22,7 @@ import com.tinku.matching.ReputacionSignalProvider;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
+import com.tinku.reservas.service.ReservaService;
 import com.tinku.reservas.service.ReservasZonaHoraria;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -104,6 +105,7 @@ class SesionesIntegracionTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
+    @Autowired ReservaService reservaService;
     @Autowired SesionAprendizajeRepository sesionRepository;
     @Autowired SesionService sesionService;
     @Autowired Scheduler scheduler;
@@ -321,12 +323,8 @@ class SesionesIntegracionTest {
         UUID reservaId = UUID.fromString(
                 objectMapper.readTree(aprobada.getResponse().getContentAsString()).get("id").asText());
 
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
-                        .header("Authorization", "Bearer " + e.tokenAr()))
-                .andExpect(status().isOk())
-                .andExpect(result -> org.hamcrest.MatcherAssert.assertThat(
-                        result.getResponse().getContentAsString(),
-                        org.hamcrest.Matchers.containsString("confirmada")));
+        Reserva confirmada = reservaService.confirmarPagoSimulado(reservaId);
+        assertThat(confirmada.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
 
         SesionAprendizaje sesion = sesionRepository.findByReservaId(reservaId).orElseThrow();
         assertThat(sesion.getEstado()).isEqualTo("no_iniciada");
@@ -478,7 +476,7 @@ class SesionesIntegracionTest {
         SesionFinalizadaEvent evento = (SesionFinalizadaEvent) EVENTOS.get(0);
         assertThat(evento.getNombre()).isEqualTo("sesion.finalizada");
         assertThat(evento.getReservaId()).isEqualTo(reserva.getId());
-        assertThat(evento.getFinReal()).isEqualTo(cerrada.getFinReal());
+        assertThat(evento.getTimestampFin()).isEqualTo(cerrada.getFinReal());
 
         // Idempotente: repetir (botón o job que dispara después) no re-emite.
         sesionService.ejecutarCorteAutomatico(sesion.getId());

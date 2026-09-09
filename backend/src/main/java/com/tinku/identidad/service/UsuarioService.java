@@ -25,8 +25,6 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.UUID;
 
-import com.tinku.identidad.port.StubVerificadorReservasFuturas;
-
 /**
  * Servicio de alta de Usuario adulto. Implementa el flujo de
  * Plan_M1_Identidad_Perfiles.md, sección 2.1 — leer esa sección antes de
@@ -75,7 +73,7 @@ public class UsuarioService {
                           OcrBackoffService ocrBackoffService,
                           ConsentimientoMenorRepository consentimientoRepo) {
         this(usuarioRepository, ocrService, passwordEncoder, ocrBackoffService,
-                consentimientoRepo, null, new StubVerificadorReservasFuturas());
+                consentimientoRepo, null, null);
     }
 
     @Transactional
@@ -83,26 +81,10 @@ public class UsuarioService {
         // Paso 0: respetar el backoff de OCR (FR-ID-011) del DNI declarado.
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
 
-        // Paso 2: OCR sobre la foto. Lo declarado viaja aparte para que el
-        // stub de dev/test pueda hacer eco (ver DatosDniDeclarados).
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
-                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
-                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
-
-        // Fallo de LECTURA (no de validación) — consume el contador de reintentos
-        // (FR-ID-011) y señaliza el caso. La política de 3 intentos + 24hs la
-        // maneja OcrBackoffService, no acá.
-        if (!ocr.documentoLegible()) {
-            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado());
-            throw new DocumentoIlegibleException();
-        }
-
-        // Paso 4a: nombre/apellido extraído == declarado (tolerante a
-        // mayúsculas/acentos, no exacto carácter por carácter).
-        if (!coincideAproximado(request.nombreDeclarado(), ocr.nombreExtraido())
-                || !coincideAproximado(request.apellidoDeclarado(), ocr.apellidoExtraido())) {
-            throw new DocumentoNoCoincideException();
-        }
+        // Pasos 2/4a: OCR, legibilidad y coincidencia nombre/apellido (FR-ID-019),
+        // compartidos por los tres flujos de registro (ver validarDocumento).
+        ResultadoOcr ocr = validarDocumento(request.dniDeclarado(), request.nombreDeclarado(),
+                request.apellidoDeclarado(), request.fechaNacimientoDeclarada(), fotoDni);
 
         // Paso 4b: edad >= 18, calculada sobre la fecha EXTRAÍDA del
         // documento, nunca sobre la declarada (evita que alguien declare
@@ -162,20 +144,8 @@ public class UsuarioService {
             throw new LimiteMenoresAlcanzadoException();
         }
 
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
-                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
-                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
-        if (!ocr.documentoLegible()) {
-            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado());
-            throw new DocumentoIlegibleException();
-        }
-
-        // Mismas validaciones que un adulto (FR-ID-019): coincidencia
-        // nombre/apellido/DNI y unicidad del DNI en el sistema.
-        if (!coincideAproximado(request.nombreDeclarado(), ocr.nombreExtraido())
-                || !coincideAproximado(request.apellidoDeclarado(), ocr.apellidoExtraido())) {
-            throw new DocumentoNoCoincideException();
-        }
+        ResultadoOcr ocr = validarDocumento(request.dniDeclarado(), request.nombreDeclarado(),
+                request.apellidoDeclarado(), request.fechaNacimientoDeclarada(), fotoDni);
 
         if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
             throw new DniYaRegistradoException();
@@ -225,18 +195,8 @@ public class UsuarioService {
     public Usuario registrarTutor(RegistroTutorRequest request, byte[] fotoDni) {
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado()); // FR-ID-011
 
-        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
-                new DatosDniDeclarados(request.dniDeclarado(), request.nombreDeclarado(),
-                        request.apellidoDeclarado(), request.fechaNacimientoDeclarada()));
-        if (!ocr.documentoLegible()) {
-            ocrBackoffService.registrarIntentoFallido(request.dniDeclarado()); // FR-ID-011
-            throw new DocumentoIlegibleException();
-        }
-
-        if (!coincideAproximado(request.nombreDeclarado(), ocr.nombreExtraido())
-                || !coincideAproximado(request.apellidoDeclarado(), ocr.apellidoExtraido())) {
-            throw new DocumentoNoCoincideException();
-        }
+        ResultadoOcr ocr = validarDocumento(request.dniDeclarado(), request.nombreDeclarado(),
+                request.apellidoDeclarado(), request.fechaNacimientoDeclarada(), fotoDni);
 
         int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
         if (edad < EDAD_MINIMA_ADULTO) {
@@ -329,6 +289,31 @@ public class UsuarioService {
         consentimientoRepo.deleteByMenorId(menorId);
         usuarioRepository.delete(menor);
     }
+
+    /**
+     * Pasos compartidos de los tres flujos de registro (FR-ID-019): lectura OCR
+     * del documento, distinción ilegible/no-coincide y devolución del resultado.
+     * El backoff previo (FR-ID-011), el check de edad y la unicidad del DNI
+     * quedan en cada flujo: su orden relativo es intencional y difiere entre
+     * adulto/Tutor y menor (ver javadoc de la clase).
+     */
+    private ResultadoOcr validarDocumento(String dniDeclarado, String nombreDeclarado,
+                                          String apellidoDeclarado, LocalDate fechaNacimientoDeclarada,
+                                          byte[] fotoDni) {
+        ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
+                new DatosDniDeclarados(dniDeclarado, nombreDeclarado,
+                        apellidoDeclarado, fechaNacimientoDeclarada));
+        if (!ocr.documentoLegible()) {
+            ocrBackoffService.registrarIntentoFallido(dniDeclarado);
+            throw new DocumentoIlegibleException();
+        }
+        if (!coincideAproximado(nombreDeclarado, ocr.nombreExtraido())
+                || !coincideAproximado(apellidoDeclarado, ocr.apellidoExtraido())) {
+            throw new DocumentoNoCoincideException();
+        }
+        return ocr;
+    }
+
     private boolean coincideAproximado(String declarado, String extraido) {
         if (declarado == null || extraido == null) return false;
         return normalizar(declarado).equals(normalizar(extraido));

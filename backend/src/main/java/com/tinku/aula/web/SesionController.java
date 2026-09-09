@@ -4,7 +4,7 @@ import com.tinku.aula.SesionService;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.shared.UsuarioActual;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,19 +26,18 @@ import java.util.UUID;
 public class SesionController {
 
     private final SesionService sesionService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
-    public SesionController(SesionService sesionService, UsuarioRepository usuarioRepository) {
+    public SesionController(SesionService sesionService, UsuarioActual usuarioActual) {
         this.sesionService = sesionService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */
     @PostMapping("/{id}/finalizar")
     public ResponseEntity<SesionResponse> finalizar(@PathVariable UUID id,
                                                     Authentication authentication) {
-        Usuario usuario = usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
+        Usuario usuario = usuarioActual.obtener(authentication);
         SesionAprendizaje sesion = sesionService.finalizar(usuario, id);
         return ResponseEntity.ok(SesionResponse.from(sesion));
     }

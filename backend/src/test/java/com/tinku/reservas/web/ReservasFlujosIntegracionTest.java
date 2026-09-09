@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
@@ -516,25 +517,18 @@ class ReservasFlujosIntegracionTest {
         UUID reservaId = UUID.fromString(objectMapper.readTree(
                 aprobada.getResponse().getContentAsString()).get("id").asText());
 
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
-                        .header("Authorization", "Bearer " + e.tokenAr()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("confirmada"));
+        Reserva confirmada = reservaService.confirmarPagoSimulado(reservaId);
+        assertThat(confirmada.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
 
         // Los webhooks de MP se reintentan: repetir la confirmación no es un error.
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
-                        .header("Authorization", "Bearer " + e.tokenAr()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("confirmada"));
+        Reserva idempotente = reservaService.confirmarPagoSimulado(reservaId);
+        assertThat(idempotente.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
     }
 
     @Test
-    void stubConfirmacion_reservaInexistente_queda404() throws Exception {
-        Escenario e = escenarioBase();
-
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", UUID.randomUUID())
-                        .header("Authorization", "Bearer " + e.tokenAr()))
-                .andExpect(status().isNotFound());
+    void stubConfirmacion_reservaInexistente_lanzaExcepcion() {
+        assertThatThrownBy(() -> reservaService.confirmarPagoSimulado(UUID.randomUUID()))
+                .isInstanceOf(com.tinku.reservas.service.ReservaNoEncontradaException.class);
     }
 
     // ------------------------------------------------ Chunk M4-C (T-M4-05 / T-M4-06)
@@ -735,10 +729,8 @@ class ReservasFlujosIntegracionTest {
 
         UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
 
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
-                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("confirmada"));
+        Reserva confirmada = reservaService.confirmarPagoSimulado(reservaId);
+        assertThat(confirmada.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
 
         // El job ya no está programado: confirmar canceló el timeout (T-M4-06).
         assertThat(scheduler.checkExists(
@@ -747,11 +739,9 @@ class ReservasFlujosIntegracionTest {
 
     // ------------------------------------------------ Chunk M4-D (T-M4-07 / T-M4-08)
 
-    private void confirmarPago(String token, UUID reservaId) throws Exception {
-        mockMvc.perform(post("/api/test/reservas/{id}/confirmar-pago-simulado", reservaId)
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("confirmada"));
+    private void confirmarPago(String token, UUID reservaId) {
+        Reserva confirmada = reservaService.confirmarPagoSimulado(reservaId);
+        assertThat(confirmada.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
     }
 
     private void reprogramar(String token, UUID reservaId, Instant nuevoHorario) throws Exception {

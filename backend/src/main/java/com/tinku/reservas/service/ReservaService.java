@@ -258,9 +258,6 @@ public class ReservaService {
         List<Reserva> vencidas = reservaRepo.findByEstadoAndCreatedAtBefore(
                 EstadoReserva.PENDIENTE_PAGO, Instant.now().minus(TIMEOUT_PENDIENTE_PAGO));
         vencidas.forEach(this::expirarSiSiguePendiente);
-        if (!vencidas.isEmpty()) {
-            reservaRepo.saveAll(vencidas);
-        }
         return vencidas.size();
     }
 

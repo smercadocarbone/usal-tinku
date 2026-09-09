@@ -1,7 +1,7 @@
 package com.tinku.matching;
 
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,14 +29,14 @@ public class BusquedaController {
 
     private final MatchingOrquestador orquestador;
     private final BusquedasGuardadasService guardadasService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
     public BusquedaController(MatchingOrquestador orquestador,
                               BusquedasGuardadasService guardadasService,
-                              UsuarioRepository usuarioRepository) {
+                              UsuarioActual usuarioActual) {
         this.orquestador = orquestador;
         this.guardadasService = guardadasService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     /** US-1: búsqueda en lenguaje natural. US-2: respeta el contexto del menor. */
@@ -46,7 +46,7 @@ public class BusquedaController {
             Authentication authentication
     ) {
         List<BusquedaResponse> resultados = orquestador.buscar(
-                usuarioActual(authentication), request.textoBusqueda().trim());
+                usuarioActual.obtener(authentication), request.textoBusqueda().trim());
         return ResponseEntity.ok(resultados);
     }
 
@@ -57,7 +57,7 @@ public class BusquedaController {
             Authentication authentication
     ) {
         BusquedaGuardada guardada = guardadasService.guardar(
-                usuarioActual(authentication).getId(), request.textoBusqueda().trim());
+                usuarioActual.obtener(authentication).getId(), request.textoBusqueda().trim());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new GuardadaResponse(guardada.getId(),
                         guardada.getTextoBusqueda(), guardada.getCreatedAt()));
@@ -66,7 +66,7 @@ public class BusquedaController {
     /** US-6: lista las búsquedas guardadas del usuario autenticado. */
     @GetMapping("/guardadas")
     public ResponseEntity<List<GuardadaResponse>> listar(Authentication authentication) {
-        Usuario usuario = usuarioActual(authentication);
+        Usuario usuario = usuarioActual.obtener(authentication);
         List<GuardadaResponse> guardadas = guardadasService.listar(usuario.getId())
                 .stream()
                 .map(g -> new GuardadaResponse(g.getId(), g.getTextoBusqueda(), g.getCreatedAt()))
@@ -80,14 +80,9 @@ public class BusquedaController {
             @PathVariable UUID id,
             Authentication authentication
     ) {
-        Usuario usuario = usuarioActual(authentication);
+        Usuario usuario = usuarioActual.obtener(authentication);
         BusquedaGuardada guardada = guardadasService.propia(usuario.getId(), id);
         List<BusquedaResponse> resultados = orquestador.buscar(usuario, guardada.getTextoBusqueda());
         return ResponseEntity.ok(resultados);
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

@@ -1,6 +1,5 @@
 package com.tinku.identidad.dto;
 
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,8 +23,4 @@ public record RegistroMenorRequest(
         @NotNull Boolean consentimientoExplicito,
         String versionTextoConsentimiento
 ) {
-    @AssertTrue(message = "Se requiere el consentimiento explícito del Adulto Responsable.")
-    public boolean isConsentimientoOtorgado() {
-        return Boolean.TRUE.equals(consentimientoExplicito);
-    }
 }

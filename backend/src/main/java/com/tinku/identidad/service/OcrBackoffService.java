@@ -31,7 +31,7 @@ import java.time.Instant;
 @Service
 public class OcrBackoffService {
 
-    private static final int MAX_INTENTOS_CICLO = 3;
+    private static final int MAX_INTENTOS_CICLO = CicloIntentos.MAX;
 
     private final IntentoOcrRepository intentoRepo;
     private final Duration cooldown;

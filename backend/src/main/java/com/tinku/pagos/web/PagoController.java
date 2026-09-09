@@ -1,10 +1,9 @@
 package com.tinku.pagos.web;
 
-import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.service.PagoService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,11 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class PagoController {
 
     private final PagoService pagoService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
-    public PagoController(PagoService pagoService, UsuarioRepository usuarioRepository) {
+    public PagoController(PagoService pagoService, UsuarioActual usuarioActual) {
         this.pagoService = pagoService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping("/preferencia")
@@ -42,7 +41,7 @@ public class PagoController {
             @Valid @RequestBody SolicitudPreferenciaRequest request,
             Authentication authentication) {
         PreferenciaPago preferencia = pagoService.generarPreferencia(
-                usuarioActual(authentication), request.reservaId());
+                usuarioActual.obtener(authentication), request.reservaId());
         return ResponseEntity.ok(PreferenciaResponse.from(preferencia));
     }
 
@@ -51,10 +50,5 @@ public class PagoController {
             @PathVariable String provincia) {
         PrecioReferenciaRegional precio = pagoService.sugerirPrecioReferencia(provincia);
         return ResponseEntity.ok(PrecioReferenciaResponse.from(precio));
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

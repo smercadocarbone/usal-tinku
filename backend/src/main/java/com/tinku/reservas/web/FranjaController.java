@@ -1,8 +1,9 @@
 package com.tinku.reservas.web;
 
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.reservas.model.FranjaDisponibilidad;
 import com.tinku.reservas.service.FranjaService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,19 +23,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class FranjaController {
 
     private final FranjaService franjaService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
-    public FranjaController(FranjaService franjaService, UsuarioRepository usuarioRepository) {
+    public FranjaController(FranjaService franjaService, UsuarioActual usuarioActual) {
         this.franjaService = franjaService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping("/franjas")
     public ResponseEntity<FranjaResponse> publicar(
             @Valid @RequestBody PublicarFranjaRequest request,
             Authentication authentication) {
-        Usuario tutor = usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
+        Usuario tutor = usuarioActual.obtener(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(FranjaResponse.from(franjaService.publicar(tutor, request)));
     }

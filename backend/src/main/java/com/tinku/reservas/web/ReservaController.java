@@ -1,9 +1,9 @@
 package com.tinku.reservas.web;
 
 import com.tinku.identidad.model.Usuario;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.service.ReservaService;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,18 +26,18 @@ import java.util.UUID;
 public class ReservaController {
 
     private final ReservaService reservaService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
-    public ReservaController(ReservaService reservaService, UsuarioRepository usuarioRepository) {
+    public ReservaController(ReservaService reservaService, UsuarioActual usuarioActual) {
         this.reservaService = reservaService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping
     public ResponseEntity<ReservaResponse> crear(
             @Valid @RequestBody NuevaReservaDirectaRequest request,
             Authentication authentication) {
-        Reserva reserva = reservaService.crearDirecta(usuarioActual(authentication), request);
+        Reserva reserva = reservaService.crearDirecta(usuarioActual.obtener(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ReservaResponse.from(reserva));
     }
 
@@ -46,7 +46,7 @@ public class ReservaController {
             @PathVariable UUID id,
             @Valid @RequestBody ReprogramarReservaRequest request,
             Authentication authentication) {
-        Reserva reserva = reservaService.reprogramar(usuarioActual(authentication), id, request.nuevoHorario());
+        Reserva reserva = reservaService.reprogramar(usuarioActual.obtener(authentication), id, request.nuevoHorario());
         return ResponseEntity.ok(ReservaResponse.from(reserva));
     }
 
@@ -54,12 +54,7 @@ public class ReservaController {
     public ResponseEntity<ReservaResponse> cancelar(
             @PathVariable UUID id,
             Authentication authentication) {
-        Reserva reserva = reservaService.cancelar(usuarioActual(authentication), id);
+        Reserva reserva = reservaService.cancelar(usuarioActual.obtener(authentication), id);
         return ResponseEntity.ok(ReservaResponse.from(reserva));
-    }
-
-    private Usuario usuarioActual(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }
