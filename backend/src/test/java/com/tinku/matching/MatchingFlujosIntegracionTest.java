@@ -96,7 +96,7 @@ class MatchingFlujosIntegracionTest {
 
     @BeforeEach
     void programarMocks() {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("10000000", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
         // ReputacionSignalProvider neutro salvo que el test stubbee (BR-MATCH-01, FR-MATCH-003).
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
@@ -111,7 +111,7 @@ class MatchingFlujosIntegracionTest {
 
     private String registrarAdultoYToken(String dni, String nombre, String apellido,
                                          boolean capEst, boolean capAr) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
@@ -124,7 +124,7 @@ class MatchingFlujosIntegracionTest {
 
     /** Registra y loguea un Tutor real (necesario para cargar CAP y quedar activo). */
     private String registrarTutorYToken(String dni, String nombre, String apellido) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
@@ -180,7 +180,7 @@ class MatchingFlujosIntegracionTest {
     }
 
     private UUID registrarMenor(String dniMenor, String tokenAr) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dniMenor, "Sofia", "Perez", LocalDate.of(2015, 7, 20)));
         mockMvc.perform(multipart("/api/usuarios/menores")
                         .file(jsonPart("datos", new RegistroMenorRequest(

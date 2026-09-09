@@ -53,7 +53,13 @@ public class TesseractOcrService implements OcrService {
     }
 
     @Override
-    public ResultadoOcr procesarDocumento(byte[] imagenDocumento) {
+    public ResultadoOcr procesarDocumento(byte[] imagenDocumento, DatosDniDeclarados datosDeclarados) {
+        // El proveedor real extrae todo de la imagen; `datosDeclarados` solo
+        // alimenta al stub de dev/test (ver DatosDniDeclarados).
+        return procesarImagen(imagenDocumento);
+    }
+
+    private ResultadoOcr procesarImagen(byte[] imagenDocumento) {
         // Preprocesamiento ANTES de Tesseract (ADR-M1-01: mitigación de exactitud).
         byte[] lista = preprocesador.preprocesar(imagenDocumento);
         if (lista == null) {

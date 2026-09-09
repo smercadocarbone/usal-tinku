@@ -22,7 +22,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -117,5 +119,25 @@ class SecurityHttpTest {
         // request NUNCA llega al controller sin estar autenticado.
         mockMvc.perform(post("/api/usuarios"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void preflightCorsDesdeElOrigenDelFrontendDevEsPermitido() throws Exception {
+        mockMvc.perform(options("/api/usuarios/login")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization, Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Methods",
+                        org.hamcrest.Matchers.containsString("POST")));
+    }
+
+    @Test
+    void preflightDesdeUnOrigenNoPermitidoEsRechazado() throws Exception {
+        mockMvc.perform(options("/api/usuarios/login")
+                        .header("Origin", "http://malicioso.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }
 }

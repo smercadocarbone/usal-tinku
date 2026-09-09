@@ -68,7 +68,7 @@ class UsuarioServiceRegistroUnitTest {
 
     @Test
     void registrarMenorExitosoCreaMenorYConsentimiento() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.of(2014, 5, 5))); // 12 años
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
@@ -90,7 +90,7 @@ class UsuarioServiceRegistroUnitTest {
 
     @Test
     void registrarMenorEdadMenorA6Rechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.now().minusYears(5))); // 5 años
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
@@ -103,7 +103,7 @@ class UsuarioServiceRegistroUnitTest {
 
     @Test
     void registrarMenorEdadMayorOIgualA18Rechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.now().minusYears(19))); // 19 años
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
@@ -131,12 +131,12 @@ class UsuarioServiceRegistroUnitTest {
 
         assertThrows(LimiteMenoresAlcanzadoException.class,
                 () -> service.registrarMenor(request(), new byte[]{1}, adulto()));
-        verify(ocrService, never()).procesarDocumento(any());
+        verify(ocrService, never()).procesarDocumento(any(), any());
     }
 
     @Test
     void registrarMenorDocumentoIlegibleConsumeBackoff() {
-        when(ocrService.procesarDocumento(new byte[]{1})).thenReturn(ResultadoOcr.ilegible());
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any())).thenReturn(ResultadoOcr.ilegible());
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
                 .thenReturn(0L);
 
@@ -147,7 +147,7 @@ class UsuarioServiceRegistroUnitTest {
 
     @Test
     void registrarMenorNombreNoCoincideRechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "OTRO", "PEREZ",
                         LocalDate.of(2014, 5, 5)));
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
@@ -159,7 +159,7 @@ class UsuarioServiceRegistroUnitTest {
 
     @Test
     void registrarMenorDniYaRegistradoRechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.of(2014, 5, 5)));
         when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
@@ -183,6 +183,6 @@ class UsuarioServiceRegistroUnitTest {
 
         assertThrows(DocumentoEnBackoffException.class,
                 () -> service.registrarAdulto(adult, new byte[]{1}));
-        verify(ocrService, never()).procesarDocumento(any());
+        verify(ocrService, never()).procesarDocumento(any(), any());
     }
 }

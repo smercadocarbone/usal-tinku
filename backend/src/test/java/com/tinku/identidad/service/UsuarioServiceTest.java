@@ -19,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Cubre los casos de US-1 del Spec de M1: alta exitosa, DNI duplicado,
- * y (implícitamente, vía el stub) documento ilegible.
+ * documento ilegible y edad insuficiente.
  *
- * El "documento no coincide" y "edad insuficiente" no se pueden ejercitar
- * con el StubOcrService actual (siempre devuelve el mismo resultado fijo)
- * — pendiente: parametrizar el stub para variar el resultado en tests,
- * o mockear OcrService directamente en un test más unitario aparte.
+ * El stub de OCR hace eco de lo declarado (dev/test), por lo que la edad
+ * y el DNI se pueden variar desde la request sin mockear OcrService. El
+ * caso "documento no coincide" se cubre por separado en
+ * {@code UsuarioServiceRegistroUnitTest} (mock fino del OCR).
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -95,6 +95,23 @@ class UsuarioServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 usuarioService.registrarAdulto(sinCapacidades, "foto-valida".getBytes())
+        );
+    }
+
+    @Test
+    void rechazaElRegistroSiElDocumentoCorrespondeAMenorDeEdad() {
+        // El stub hace eco de la fecha declarada, así que una fecha de menor
+        // habilita el caso "edad insuficiente" (antes imposible con el stub de
+        // resultados fijos). La edad se computa sobre lo EXTRAÍDO, nunca lo
+        // declarado (Plan M1 sección 2.1, paso 4b).
+        RegistroAdultoRequest menor = new RegistroAdultoRequest(
+                "33333333", "Nombre Stub", "Apellido Stub",
+                LocalDate.now().minusYears(15), "password123",
+                true, false
+        );
+
+        assertThrows(EdadInsuficienteException.class, () ->
+                usuarioService.registrarAdulto(menor, "foto-valida".getBytes())
         );
     }
 }

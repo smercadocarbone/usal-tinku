@@ -58,7 +58,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorExitoso() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.now().minusYears(25)));
         when(passwordEncoder.encode("password123")).thenReturn("hash");
@@ -75,7 +75,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorMenorDe18RechazaSinExcepciones() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.now().minusYears(15))); // 15 años
 
@@ -86,7 +86,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorDocumentoIlegibleConsumeBackoff() {
-        when(ocrService.procesarDocumento(new byte[]{1})).thenReturn(ResultadoOcr.ilegible());
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any())).thenReturn(ResultadoOcr.ilegible());
 
         assertThrows(DocumentoIlegibleException.class,
                 () -> service.registrarTutor(tutorRequest(), new byte[]{1}));
@@ -95,7 +95,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorNombreNoCoincideRechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "OTRO", "PEREZ",
                         LocalDate.now().minusYears(25)));
 
@@ -105,7 +105,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorDniDuplicadoRechaza() {
-        when(ocrService.procesarDocumento(new byte[]{1}))
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
                         LocalDate.now().minusYears(25)));
         when(usuarioRepo.existsByDni("12345678")).thenReturn(true);
@@ -139,7 +139,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
         assertTrue(result.isCapacidadAdultoResponsable());
         assertTrue(result.isCapacidadEstudiante());
         // FR-ID-015: no se debe necesitar re-OCR (no hay ninguna llamada a ocr).
-        verify(ocrService, never()).procesarDocumento(any());
+        verify(ocrService, never()).procesarDocumento(any(), any());
     }
 
     @Test

@@ -92,7 +92,7 @@ class PrecioReferenciaIntegracionTest {
 
     @BeforeEach
     void programarMocks() {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado("10000000", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
@@ -106,7 +106,7 @@ class PrecioReferenciaIntegracionTest {
     }
 
     private String registrarTutorYToken(String dni) throws Exception {
-        when(ocrService.procesarDocumento(any()))
+        when(ocrService.procesarDocumento(any(), any()))
                 .thenReturn(resultado(dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(

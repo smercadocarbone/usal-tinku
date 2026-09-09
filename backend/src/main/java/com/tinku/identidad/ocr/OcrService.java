@@ -16,5 +16,11 @@ package com.tinku.identidad.ocr;
  * minimización de datos).
  */
 public interface OcrService {
-    ResultadoOcr procesarDocumento(byte[] imagenDocumento);
+    /**
+     * Procesa la foto del documento. {@code datosDeclarados} lleva lo que el
+     * usuario dijo en el formulario: el proveedor real lo ignora (todo sale de
+     * la imagen), y {@link StubOcrService} lo usa para fabricar un resultado
+     * de dev/test coherente con lo declarado.
+     */
+    ResultadoOcr procesarDocumento(byte[] imagenDocumento, DatosDniDeclarados datosDeclarados);
 }
