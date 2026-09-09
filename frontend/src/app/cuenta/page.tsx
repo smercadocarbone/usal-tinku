@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { clearSession, getSession } from "@/lib/auth";
 
 const NOMBRE_TIPO: Record<string, string> = {
@@ -33,9 +34,32 @@ export default function CuentaPage() {
       <main className="contenido">
         <h1>Mi cuenta</h1>
         <p>
-          Esta es la primera pantalla autenticada. A medida que se implementen
-          los módulos (M2+, reservas, aula) aterrizarán acá.
+          Tu espacio en Tinku. Busca un tutor, reserva una clase y segui tus
+          reservas.
         </p>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "0.75rem",
+            margin: "1.5rem 0",
+          }}
+        >
+          <Link
+            href="/buscar"
+            className="boton"
+            style={{ textDecoration: "none", textAlign: "center" }}
+          >
+            Buscar tutores
+          </Link>
+          <Link
+            href="/cuenta/reservas"
+            className="boton boton--secundario"
+            style={{ textDecoration: "none", textAlign: "center" }}
+          >
+            Mis reservas
+          </Link>
+        </div>
 
         <dl>
           <div className="perfil-fila">
