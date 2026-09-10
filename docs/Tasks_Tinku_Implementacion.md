@@ -124,14 +124,14 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 ## M6 — Resumen Automático de Sesiones
 
-- [ ] T-M6-01: Migración: `resumenes_sesion`, con constraint de unicidad por `sesion_id`.
-- [ ] T-M6-02: Listener de `sesion.finalizada` que valida duración ≥10min antes de crear cualquier registro.
-- [ ] T-M6-03: Consulta a M9/M3 para verificar Denuncia/Alerta activa antes de generar (`suspendido_seguridad`).
-- [ ] T-M6-04: Módulo de anonimización (regex + NER liviano) — **ejecutar y testear como componente aislado antes de conectarlo al pipeline de LLM.**
-- [ ] T-M6-05: Integración con el proveedor de LLM elegido (audio directo o transcript, según ADR ya resuelto en la Constitución).
-- [ ] T-M6-06: Job de reintento con el mismo patrón de backoff que M5 (reutilizar, no reinventar).
-- [ ] T-M6-07: Job de recordatorio único a 24hs.
-- [ ] T-M6-08: Tests: verificar que el transcript anonimizado nunca llega con datos personales al proveedor externo (test con datos de prueba que contengan nombres/teléfonos reales de prueba).
+- [x] T-M6-01: Migración: `resumenes_sesion`, con constraint de unicidad por `sesion_id`.
+- [x] T-M6-02: Listener de `sesion.finalizada` que valida duración ≥10min antes de crear cualquier registro.
+- [x] T-M6-03: Consulta a M9/M3 para verificar Denuncia/Alerta activa antes de generar (`suspendido_seguridad`).
+- [x] T-M6-04: Módulo de anonimización (regex + NER liviano) — **ejecutar y testear como componente aislado antes de conectarlo al pipeline de LLM.**
+- [x] T-M6-05: Integración con el proveedor de LLM elegido (audio directo o transcript, según ADR ya resuelto en la Constitución) — puerto fail-closed; ADR (T-FIN-03) sigue pendiente.
+- [x] T-M6-06: Job de reintento con el mismo patrón de backoff que M5 (reutilizar, no reinventar).
+- [x] T-M6-07: Job de recordatorio único a 24hs.
+- [x] T-M6-08: Tests: verificar que el transcript anonimizado nunca llega con datos personales al proveedor externo (test con datos de prueba que contengan nombres/teléfonos reales de prueba).
 
 ## M7 — Sistema de Calificaciones y Reputación
 
