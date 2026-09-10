@@ -36,4 +36,14 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, UUID> 
 
     List<Transaccion> findByEstadoAndIntentosLiberacion(
             EstadoTransaccion estado, int intentosLiberacion);
+
+    /**
+     * Cola de intervención manual de M8 (US-5, FR-PAG-007): el Admin de Soporte
+     * Financiero ve las transacciones {@code retenido_escrow} que AGOTARON los
+     * reintentos automáticos ({@code intentos_liberacion >= 3}). Distinto de
+     * {@link #findByEstadoAndIntentosLiberacion} (igualdad): acá el ítem de la
+     * cola es el escrow que ya se salió del flujo automático de M5.
+     */
+    List<Transaccion> findByEstadoAndIntentosLiberacionGreaterThanEqual(
+            EstadoTransaccion estado, int intentosLiberacion);
 }

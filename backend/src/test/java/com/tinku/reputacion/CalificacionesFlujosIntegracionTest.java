@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.admin.model.Admin;
+import com.tinku.admin.model.RolAdmin;
+import com.tinku.admin.repository.AdminRepository;
 import com.tinku.identidad.dto.LoginRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroTutorRequest;
@@ -107,6 +110,7 @@ class CalificacionesFlujosIntegracionTest {
     @Autowired ApplicationEventPublisher events;
     @Autowired Scheduler scheduler;
     @Autowired UsuarioRepository usuarioRepository;
+    @Autowired AdminRepository adminRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired SesionAprendizajeRepository sesionRepository;
     @Autowired CalificacionRepository calificacionRepository;
@@ -125,6 +129,15 @@ class CalificacionesFlujosIntegracionTest {
 
     private String dniUnico() {
         return String.format("%08d", 40_000_000 + CONTADOR_DNIS.incrementAndGet());
+    }
+
+    /** Marca a un Usuario ya registrado como Admin de Moderación en {@code admin.admins} (M8 V16). */
+    private void adminModeracion(String dni) {
+        Usuario admin = usuarioRepository.findByDni(dni).orElseThrow();
+        Admin fila = new Admin();
+        fila.setUsuario(admin);
+        fila.setRol(RolAdmin.MODERACION_SEGURIDAD);
+        adminRepository.save(fila);
     }
 
     // ------------------------------------------------ helpers
@@ -612,9 +625,10 @@ class CalificacionesFlujosIntegracionTest {
                         .header("Authorization", "Bearer " + tokenEst))
                 .andExpect(status().isForbidden());
 
-        // El admin de moderacion (DNI permitido en application-test.yml) lo ve:
+        // El admin de moderacion (con fila en `admin.admins`, M8) lo ve:
         // estrellas y autor, sin comentario ni datos sensibles.
         registrarAdulto("39999999", "Admin", false, true);
+        adminModeracion("39999999");
         String tokenAdmin = login("39999999");
         mockMvc.perform(get("/api/admin/moderacion/calificaciones-ocultas/{id}", estudianteId)
                         .header("Authorization", "Bearer " + tokenAdmin))

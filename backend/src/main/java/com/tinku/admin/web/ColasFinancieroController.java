@@ -1,0 +1,122 @@
+package com.tinku.admin.web;
+
+import com.tinku.pagos.model.EstadoTransaccion;
+import com.tinku.pagos.model.PrecioReferenciaRegional;
+import com.tinku.pagos.model.Transaccion;
+import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
+import com.tinku.pagos.repository.TransaccionRepository;
+import com.tinku.pagos.service.LiberacionEscrowService;
+import com.tinku.pagos.web.PrecioReferenciaResponse;
+import com.tinku.shared.AdminModeracionGate;
+import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Intervención manual del Admin de Soporte Financiero (US-5/US-8,
+ * FR-ADM-004/007). Todas las operaciones requieren rol {@code soporte_financiero}
+ * en {@code admin.admins} (T-M8-03/06) — un Admin de Moderación recibe 403 acá.
+ *
+ *  - {@code GET /pagos-fallidos}: cola de escrows con {@code intentos_liberacion}
+ *    agotados (FR-PAG-007) — la regla de negocio (3 reintentos, backoff 5/15/1h)
+ *    vive en M5, esta cola solo la consume.
+ *  - {@code POST /pagos-fallidos/{id}/reintentar}: una liberación manual que
+ *    reusa EL flujo de M5 ({@link LiberacionEscrowService#ejecutarLiberacion}),
+ *    jamás reimplementa la llamada al proveedor.
+ *  - {@code POST /precios-regionales}: agrega una versión nueva por provincia
+ *    (nunca sobreescribe la vigente — FR-PAG-006, FR-ADM-007).
+ */
+@RestController
+@RequestMapping("/api/admin/financiero")
+public class ColasFinancieroController {
+
+    /** FR-PAG-007 / Tabla_Tiempos: 3 reintentos automáticos; desde ahí, cola manual. */
+    private static final int LIBERACIONES_AGOTADAS = 3;
+
+    private final AdminModeracionGate gate;
+    private final TransaccionRepository transaccionRepo;
+    private final PrecioReferenciaRegionalRepository precioRepo;
+    private final LiberacionEscrowService liberacionEscrow;
+
+    public ColasFinancieroController(AdminModeracionGate gate,
+                                     TransaccionRepository transaccionRepo,
+                                     PrecioReferenciaRegionalRepository precioRepo,
+                                     LiberacionEscrowService liberacionEscrow) {
+        this.gate = gate;
+        this.transaccionRepo = transaccionRepo;
+        this.precioRepo = precioRepo;
+        this.liberacionEscrow = liberacionEscrow;
+    }
+
+    @GetMapping("/pagos-fallidos")
+    public ResponseEntity<List<PagoFallidoResponse>> pagosFallidos(Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(transaccionRepo
+                .findByEstadoAndIntentosLiberacionGreaterThanEqual(
+                        EstadoTransaccion.RETENIDO_ESCROW, LIBERACIONES_AGOTADAS)
+                .stream().map(PagoFallidoResponse::from).toList());
+    }
+
+    @PostMapping("/pagos-fallidos/{transaccionId}/reintentar")
+    public ResponseEntity<?> reintentarLiberacion(@PathVariable UUID transaccionId,
+                                                  Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        Transaccion transaccion = transaccionRepo.findById(transaccionId)
+                .orElse(null);
+        if (transaccion == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // Solo la cola de intervención manual (estado retenido + reintentos agotados):
+        // una transacción aún en reintento automático no se toca en paralelo.
+        if (transaccion.getEstado() != EstadoTransaccion.RETENIDO_ESCROW
+                || transaccion.getIntentosLiberacion() < LIBERACIONES_AGOTADAS) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", "La transacción no está en la cola de intervención manual."));
+        }
+        liberacionEscrow.ejecutarLiberacion(transaccionId);
+        return ResponseEntity.ok(PagoFallidoResponse.from(
+                transaccionRepo.findById(transaccionId).orElseThrow()));
+    }
+
+    @PostMapping("/precios-regionales")
+    public ResponseEntity<?> actualizarPrecioRegional(
+            @Valid @RequestBody ActualizarPrecioRegionalRequest request,
+            Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        // FR-ADM-007: versión nueva = mayor versión + 1 de esa provincia.
+        int proximaVersion = precioRepo
+                .findFirstByProvinciaOrderByVersionDesc(request.provincia())
+                .map(p -> p.getVersion() + 1)
+                .orElse(1);
+        PrecioReferenciaRegional nuevo = new PrecioReferenciaRegional();
+        nuevo.setProvincia(request.provincia());
+        nuevo.setVersion(proximaVersion);
+        nuevo.setValorSugerido(request.valorSugerido());
+        nuevo.setVigenteDesde(Instant.now());
+        try {
+            precioRepo.save(nuevo);
+        } catch (DataIntegrityViolationException e) {
+            // Dos revisiones concurrentes sobre la misma provincia: la otra ya
+            // clavó su versión. Se reintenta una sola vez con la versión recalculada.
+            int versionReintento = precioRepo
+                    .findFirstByProvinciaOrderByVersionDesc(request.provincia())
+                    .map(p -> p.getVersion() + 1)
+                    .orElse(1);
+            nuevo.setVersion(versionReintento);
+            precioRepo.save(nuevo);
+        }
+        return ResponseEntity.ok(PrecioReferenciaResponse.from(nuevo));
+    }
+}
