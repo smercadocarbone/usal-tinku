@@ -51,10 +51,10 @@
 - [x] T-M1-11: Endpoints de `autorizaciones_tutor` (crear, marcar `no_confiable`) — FR-ID-009.
 - [x] T-M1-12: Endpoint `DELETE /api/usuarios/menores/{id}` con verificación de reservas futuras (FR-ID-014).
 - [x] T-M1-14 _(agregado, enmienda Constitución v2.1)_: Migración: tabla `certificados_antecedentes_penales`.
-- [x] T-M1-15: Endpoint `POST /api/tutores/antecedentes-penales` — carga del CAP, mismo backoff que credenciales (FR-ID-021).
-- [x] T-M1-16: Endpoints de revisión del CAP para M8 (`GET`/`PATCH /api/admin/moderacion/antecedentes-penales`) — aprobar, rechazar (BR-CAP-01), marcar `en_revision_legal` (BR-CAP-02) (FR-ID-022/023/024).
-- [x] T-M1-17: Job Quartz de vencimiento del CAP a los 12 meses — marca `vencido` y suspende `activo_para_matching` del Tutor (FR-ID-025).
-- [x] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.), incluyendo: CAP aprobado sin antecedentes, CAP rechazado por BR-CAP-01, CAP a `en_revision_legal` por BR-CAP-02, vencimiento a los 12 meses suspende matching. — _verificado: 111 tests verdes, OCR real Tesseract 5.5.3 end-to-end._
+- [x] T-M1-15: Endpoint `POST /api/tutores/antecedentes-penales` — carga del CAP, mismo backoff que credenciales (FR-ID-021). — _**RETIRADO** (decisión de producto): se desactivó la función de CAP del onboarding; la Credencial Académica aprobada es la ÚNICA verificación que habilita matching. Código eliminado, la tabla de V6 queda sin uso en BD (no se edita la migración)._
+- [x] T-M1-16: Endpoints de revisión del CAP para M8 (`GET`/`PATCH /api/admin/moderacion/antecedentes-penales`) — aprobar, rechazar (BR-CAP-01), marcar `en_revision_legal` (BR-CAP-02) (FR-ID-022/023/024). — _RETIRADO junto con T-M1-15._
+- [x] T-M1-17: Job Quartz de vencimiento del CAP a los 12 meses — marca `vencido` y suspende `activo_para_matching` del Tutor (FR-ID-025). — _RETIRADO junto con T-M1-15 (ya no hay certificados que venzan)._
+- [x] T-M1-13: Tests: cada Historia de Usuario del Spec de M1 tiene al menos un test de integración que la ejercita de punta a punta (registro rechazado por DNI duplicado, por edad, backoff de credencial, etc.). — _verificado: 309 tests verdes. Los casos "CAP aprobado/rechazado/en_revision_legal/vencimiento" se sustituyeron por: credencial aprobada habilita matching (FR-ID-025), backoff de credencial al 3er rechazo (FR-ID-012), tutor suspendido (activo_para_matching=false) excluido del ranking._
 
 ## M2 — Motor de Matching Semántico
 

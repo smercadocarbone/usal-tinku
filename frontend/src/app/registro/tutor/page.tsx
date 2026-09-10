@@ -9,10 +9,6 @@ interface CredencialResponse {
   id: string;
 }
 
-interface AntecedentesResponse {
-  id: string;
-}
-
 const TIPOS_CREDENCIAL = [
   { value: "TITULO", label: "Titulo" },
   { value: "CERTIFICADO_ANALITICO", label: "Certificado analitico" },
@@ -214,12 +210,6 @@ function PasoDos() {
   const [okCredencial, setOkCredencial] = useState(false);
   const [errorCredencial, setErrorCredencial] = useState<string | null>(null);
 
-  const [fechaEmision, setFechaEmision] = useState("");
-  const [archivoAntecedentes, setArchivoAntecedentes] = useState<File | null>(null);
-  const [enviandoAntecedentes, setEnviandoAntecedentes] = useState(false);
-  const [okAntecedentes, setOkAntecedentes] = useState(false);
-  const [errorAntecedentes, setErrorAntecedentes] = useState<string | null>(null);
-
   async function onSubmitCredencial(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setEnviandoCredencial(true);
@@ -252,41 +242,6 @@ function PasoDos() {
       );
     } finally {
       setEnviandoCredencial(false);
-    }
-  }
-
-  async function onSubmitAntecedentes(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setEnviandoAntecedentes(true);
-    setErrorAntecedentes(null);
-    setOkAntecedentes(false);
-
-    if (!archivoAntecedentes) {
-      setErrorAntecedentes("Selecciona un archivo.");
-      setEnviandoAntecedentes(false);
-      return;
-    }
-
-    const form = new FormData();
-    form.append(
-      "datos",
-      new Blob([JSON.stringify({ fechaEmision })], {
-        type: "application/json",
-      })
-    );
-    form.append("archivo", archivoAntecedentes);
-
-    try {
-      await api.post<AntecedentesResponse>("/api/tutores/antecedentes-penales", form);
-      setOkAntecedentes(true);
-    } catch (err) {
-      setErrorAntecedentes(
-        err instanceof ApiError
-          ? err.message || "No se pudieron subir los antecedentes."
-          : "No se pudieron subir los antecedentes."
-      );
-    } finally {
-      setEnviandoAntecedentes(false);
     }
   }
 
@@ -347,50 +302,6 @@ function PasoDos() {
             disabled={enviandoCredencial || okCredencial}
           >
             {enviandoCredencial ? "Cargando..." : "Subir credencial"}
-          </button>
-        </form>
-
-        <form className="formulario" onSubmit={onSubmitAntecedentes}>
-          <div className="campo">
-            <label htmlFor="fechaEmision">Fecha de emision</label>
-            <input
-              id="fechaEmision"
-              type="date"
-              required
-              value={fechaEmision}
-              onChange={(e) => setFechaEmision(e.target.value)}
-            />
-          </div>
-
-          <div className="campo">
-            <label htmlFor="archivoAntecedentes">Archivo de antecedentes</label>
-            <input
-              id="archivoAntecedentes"
-              type="file"
-              accept=".pdf,image/*"
-              required
-              onChange={(e) => setArchivoAntecedentes(e.target.files?.[0] ?? null)}
-            />
-          </div>
-
-          {errorAntecedentes && (
-            <div className="alerta alerta--error" role="alert">
-              {errorAntecedentes}
-            </div>
-          )}
-
-          {okAntecedentes && (
-            <div className="alerta alerta--exito" role="status">
-              Antecedentes subidos. Quedan en revision.
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="boton"
-            disabled={enviandoAntecedentes || okAntecedentes}
-          >
-            {enviandoAntecedentes ? "Cargando..." : "Subir antecedentes"}
           </button>
         </form>
 

@@ -6,6 +6,7 @@ import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
+import com.tinku.identidad.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,11 @@ import java.util.UUID;
  *    de {@code CredencialBackoffService} (FR-ID-012).
  *  - FR-ID-008: hasta 3 intentos por ciclo. Al rechazar el 3ro, el Tutor entra
  *    en espera escalada (24hs * 2^n) y el ciclo siguiente arranca en intento 1.
+ *
+ *  Nota (decisión de producto): la Credencial aprobada es la ÚNICA verificación
+ *  que habilita el matching del Tutor; la función de Certificado de Antecedentes
+ *  Penales fue retirada del onboarding y ya no existe en el código (las tablas
+ *  de la migración V6 quedan en la BD, sin uso).
  */
 @Service
 public class CredencialService {
@@ -30,11 +36,14 @@ public class CredencialService {
 
     private final CredencialAcademicaRepository credencialRepo;
     private final CredencialBackoffService backoffService;
+    private final UsuarioRepository usuarioRepo;
 
     public CredencialService(CredencialAcademicaRepository credencialRepo,
-                             CredencialBackoffService backoffService) {
+                             CredencialBackoffService backoffService,
+                             UsuarioRepository usuarioRepo) {
         this.credencialRepo = credencialRepo;
         this.backoffService = backoffService;
+        this.usuarioRepo = usuarioRepo;
     }
 
     /**
@@ -69,14 +78,23 @@ public class CredencialService {
                 CredencialAcademica::getNumeroIntento);
     }
 
-    /** Transición PENDIENTE → APROBADO (invocada por el panel Admin, M8). */
+    /** Transición PENDIENTE → APROBADO (invocada por el panel Admin, M8).
+     * Con el CAP retirado del onboarding, la Credencial aprobada es la que
+     * habilita el matching del Tutor (antes lo hacía el CAP aprobado). */
     @Transactional
     public CredencialAcademica marcarAprobada(UUID credencialId, UUID adminRevisorId) {
         CredencialAcademica c = credencialO(credencialId);
         c.setEstado(EstadoCredencial.APROBADO);
         c.setAdminRevisorId(adminRevisorId);
         c.setRevisadoAt(Instant.now());
-        return credencialRepo.save(c);
+        CredencialAcademica guardada = credencialRepo.save(c);
+
+        Usuario tutor = c.getTutor();
+        if (!tutor.isActivoParaMatching()) {
+            tutor.setActivoParaMatching(true);
+            usuarioRepo.save(tutor);
+        }
+        return guardada;
     }
 
     /**

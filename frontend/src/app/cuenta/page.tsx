@@ -146,7 +146,7 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
     <section style={{ marginTop: "2rem" }}>
       <h2>Panel del tutor</h2>
       <div className="alerta alerta--informativa" role="status">
-        Tus credenciales y antecedentes estan en revision por el equipo de Tinku.
+        Tus credenciales estan en revision por el equipo de Tinku.
       </div>
 
       <div className="tarjeta" style={{ marginTop: "1rem" }}>

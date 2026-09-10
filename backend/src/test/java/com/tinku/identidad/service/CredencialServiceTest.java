@@ -6,6 +6,7 @@ import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
+import com.tinku.identidad.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,13 +31,15 @@ class CredencialServiceTest {
 
     private CredencialAcademicaRepository credencialRepo;
     private CredencialBackoffService backoffService;
+    private UsuarioRepository usuarioRepo;
     private CredencialService service;
 
     @BeforeEach
     void setUp() {
         credencialRepo = mock(CredencialAcademicaRepository.class);
         backoffService = mock(CredencialBackoffService.class);
-        service = new CredencialService(credencialRepo, backoffService);
+        usuarioRepo = mock(UsuarioRepository.class);
+        service = new CredencialService(credencialRepo, backoffService, usuarioRepo);
     }
 
     private Usuario tutor() {
@@ -134,6 +138,8 @@ class CredencialServiceTest {
         CredencialAcademica r = service.marcarAprobada(pendiente.getId(), UUID.randomUUID());
 
         assertEquals(EstadoCredencial.APROBADO, r.getEstado());
+        assertTrue(tutor.isActivoParaMatching()); // credencial aprobada -> matching habilitado
+        verify(usuarioRepo).save(tutor);
         verify(backoffService, never()).registrarCicloAgotado(any());
     }
 

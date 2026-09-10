@@ -1,7 +1,5 @@
 package com.tinku.identidad.web;
 
-import com.tinku.identidad.dto.CapResponse;
-import com.tinku.identidad.dto.CargarCapRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.dto.MateriasNivel;
@@ -9,13 +7,11 @@ import com.tinku.identidad.dto.RegistroTutorRequest;
 import com.tinku.identidad.dto.ReputacionTutor;
 import com.tinku.identidad.dto.TutorPerfilResponse;
 import com.tinku.identidad.dto.UsuarioResponse;
-import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.port.PerfilMatchingProvider;
 import com.tinku.identidad.port.ReputacionPerfilProvider;
-import com.tinku.identidad.service.CertificadoService;
 import com.tinku.identidad.service.CredencialService;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
@@ -45,7 +41,6 @@ public class TutorController {
 
     private final UsuarioService usuarioService;
     private final CredencialService credencialService;
-    private final CertificadoService certificadoService;
     private final UsuarioActual usuarioActual;
     private final Almacenamiento almacenamiento;
     private final PerfilMatchingProvider perfilMatchingProvider;
@@ -53,14 +48,12 @@ public class TutorController {
 
     public TutorController(UsuarioService usuarioService,
                            CredencialService credencialService,
-                           CertificadoService certificadoService,
                            UsuarioActual usuarioActual,
                            Almacenamiento almacenamiento,
                            PerfilMatchingProvider perfilMatchingProvider,
                            ReputacionPerfilProvider reputacionPerfilProvider) {
         this.usuarioService = usuarioService;
         this.credencialService = credencialService;
-        this.certificadoService = certificadoService;
         this.usuarioActual = usuarioActual;
         this.almacenamiento = almacenamiento;
         this.perfilMatchingProvider = perfilMatchingProvider;
@@ -104,18 +97,5 @@ public class TutorController {
     private CredencialResponse toResponse(CredencialAcademica c) {
         return new CredencialResponse(c.getId(), c.getTipoDocumento(), c.getEstado(),
                 c.getNumeroIntento(), c.getCreatedAt());
-    }
-
-    @PostMapping(value = "/antecedentes-penales", consumes = "multipart/form-data")
-    public ResponseEntity<CapResponse> cargarCap(
-            @Valid @RequestPart("datos") CargarCapRequest request,
-            @RequestPart("archivo") MultipartFile archivo,
-            Authentication authentication
-    ) throws IOException {
-        Usuario tutor = usuarioActual.obtener(authentication);
-        String archivoUrl = almacenamiento.guardar(archivo.getBytes(), archivo.getOriginalFilename());
-        CertificadoAntecedentesPenales cap =
-                certificadoService.cargarCap(tutor, archivoUrl, request.fechaEmision());
-        return ResponseEntity.status(HttpStatus.CREATED).body(CapResponse.from(cap));
     }
 }

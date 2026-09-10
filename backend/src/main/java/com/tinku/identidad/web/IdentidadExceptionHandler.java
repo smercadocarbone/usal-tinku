@@ -94,11 +94,6 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(CapNoEncontradoException.class)
-    public ResponseEntity<Map<String, String>> handleCapNoEncontrado(CapNoEncontradoException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
-    }
-
     @ExceptionHandler(TutorNoAutorizadoException.class)
     public ResponseEntity<Map<String, String>> handleTutorNoAutorizado(TutorNoAutorizadoException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));

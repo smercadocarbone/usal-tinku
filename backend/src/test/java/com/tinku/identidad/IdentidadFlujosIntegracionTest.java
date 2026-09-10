@@ -2,18 +2,15 @@ package com.tinku.identidad;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
-import com.tinku.identidad.model.CertificadoAntecedentesPenales;
-import com.tinku.identidad.model.EstadoCap;
+import com.tinku.identidad.model.EstadoCredencial;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
-import com.tinku.identidad.repository.CertificadoAntecedentesPenalesRepository;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.identidad.service.CertificadoService;
 import com.tinku.identidad.service.CredencialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +39,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -81,10 +77,8 @@ class IdentidadFlujosIntegracionTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
-    @Autowired CertificadoAntecedentesPenalesRepository capRepo;
     @Autowired CredencialAcademicaRepository credencialRepo;
     @Autowired CredencialService credencialService;
-    @Autowired CertificadoService certificadoService;
 
     @MockBean OcrService ocrService;
 
@@ -338,104 +332,20 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isCreated());
     }
 
-    // ------------------------------------------------ US-6: CAP
-
-    private UUID cargarCap(String token, int expectedStatus) throws Exception {
-        MvcResult res = mockMvc.perform(multipart("/api/tutores/antecedentes-penales")
-                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCapRequest(LocalDate.now())))
-                        .file(new MockMultipartFile("archivo", "cap.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().is(expectedStatus))
-                .andReturn();
-        return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
-    }
-
-    private MvcResult revisarCap(UUID capId, String token, String accion, String categoria) throws Exception {
-        return mockMvc.perform(patch("/api/admin/moderacion/antecedentes-penales/" + capId)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new com.tinku.identidad.dto.RevisarCapRequest(
-                                        com.tinku.identidad.dto.AccionRevisionCap.valueOf(accion),
-                                        categoria))))
-                .andExpect(status().isOk())
-                .andReturn();
-    }
+    // ------------------------------------------------ US-4: credencial aprobada habilita matching
 
     @Test
-    void us6_capAprobadoHabilitaMatching_delTutor() throws Exception {
+    void us4_credencialAprobada_habilitaMatching_delTutor() throws Exception {
         String token = registrarTutorYToken("12121212", "Ramiro", "Vega");
-        UUID capId = cargarCap(token, 201);
-        assertThat(capRepo.findById(capId).orElseThrow().getEstado()).isEqualTo(EstadoCap.PENDIENTE);
+        UUID credencialId = cargarCredencial(token, 201);
+        assertThat(credencialRepo.findById(credencialId).orElseThrow()
+                .getEstado()).isEqualTo(EstadoCredencial.PENDIENTE);
 
-        revisarCap(capId, token, "APROBAR", null);
+        credencialService.marcarAprobada(credencialId, null);
 
-        CertificadoAntecedentesPenales cap = capRepo.findById(capId).orElseThrow();
-        assertThat(cap.getEstado()).isEqualTo(EstadoCap.APROBADO);
-        assertThat(usuarioPorDni("12121212").isActivoParaMatching()).isTrue(); // FR-ID-025
-    }
-
-    @Test
-    void us6_capRechazadoPorBrCap01_disparaBackoffEnElTercerIntento() throws Exception {
-        String token = registrarTutorYToken("13131313", "Nico", "Flores");
-
-        UUID c1 = cargarCap(token, 201);
-        revisarCap(c1, token, "RECHAZAR", "grooming"); // BR-CAP-01
-
-        UUID c2 = cargarCap(token, 201);
-        revisarCap(c2, token, "RECHAZAR", "grooming");
-
-        UUID c3 = cargarCap(token, 201);
-        assertThat(capRepo.findById(c3).orElseThrow().getNumeroIntento()).isEqualTo(3);
-        revisarCap(c3, token, "RECHAZAR", "grooming");
-
-        // 3er rechazo -> backoff escalado (FR-ID-021/012) -> 429.
-        mockMvc.perform(multipart("/api/tutores/antecedentes-penales")
-                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCapRequest(LocalDate.now())))
-                        .file(new MockMultipartFile("archivo", "cap.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isTooManyRequests());
-
-        assertThat(usuarioPorDni("13131313").isActivoParaMatching()).isFalse();
-    }
-
-    @Test
-    void us6_capEnRevisionLegal_brCap02_quedaEsperandoDecisionManual() throws Exception {
-        String token = registrarTutorYToken("14141414", "Seba", "Rios");
-        UUID capId = cargarCap(token, 201);
-
-        revisarCap(capId, token, "EN_REVISION_LEGAL", "tenencia"); // BR-CAP-02
-
-        CertificadoAntecedentesPenales cap = capRepo.findById(capId).orElseThrow();
-        assertThat(cap.getEstado()).isEqualTo(EstadoCap.EN_REVISION_LEGAL);
-        assertThat(cap.isTieneAntecedentes()).isTrue();
-        assertThat(cap.getCategoriaAntecedente()).isEqualTo("tenencia");
-
-        // No se auto-resuelve: sigue esperando al Admin (BR-CAP-02).
-        certificadoService.marcarVencidos();
-        assertThat(capRepo.findById(capId).orElseThrow().getEstado())
-                .isEqualTo(EstadoCap.EN_REVISION_LEGAL);
-        assertThat(usuarioPorDni("14141414").isActivoParaMatching()).isFalse();
-    }
-
-    @Test
-    void us6_capVencidoAlos12Meses_suspendeMatchingDelTutor() throws Exception {
-        String token = registrarTutorYToken("15151515", "Alan", "Paz");
-        UUID capId = cargarCap(token, 201);
-        revisarCap(capId, token, "APROBAR", null);
-
-        // Simula el paso del tiempo: el CAP ya venció (vence_at en el pasado).
-        CertificadoAntecedentesPenales cap = capRepo.findById(capId).orElseThrow();
-        cap.setVenceAt(LocalDate.now().minusDays(1));
-        capRepo.save(cap);
-
-        assertThat(certificadoService.marcarVencidos()).isEqualTo(1);
-
-        cap = capRepo.findById(capId).orElseThrow();
-        assertThat(cap.getEstado()).isEqualTo(EstadoCap.VENCIDO); // FR-ID-025
-        assertThat(usuarioPorDni("15151515").isActivoParaMatching()).isFalse(); // sacado del matching
-        assertThat(usuarioPorDni("15151515").getEstadoCuenta()).isEqualTo(EstadoCuenta.ACTIVA); // no la cuenta
+        assertThat(credencialRepo.findById(credencialId).orElseThrow()
+                .getEstado()).isEqualTo(EstadoCredencial.APROBADO);
+        // FR-ID-025 (heredado de CAP retirado): la credencial aprobada activa matching.
+        assertThat(usuarioPorDni("12121212").isActivoParaMatching()).isTrue();
     }
 }
