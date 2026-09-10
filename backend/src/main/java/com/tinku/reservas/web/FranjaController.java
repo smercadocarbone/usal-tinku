@@ -8,10 +8,15 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Publicación de disponibilidad del Tutor (US-1, FR-RES-012; T-M4-02).
@@ -37,5 +42,14 @@ public class FranjaController {
         Usuario tutor = usuarioActual.obtener(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(FranjaResponse.from(franjaService.publicar(tutor, request)));
+    }
+
+    /** Franjas activas publicadas por un Tutor (autenticado). Vacía si no tiene. */
+    @GetMapping("/{tutorId}/franjas")
+    public ResponseEntity<List<FranjaResponse>> franjas(@PathVariable UUID tutorId) {
+        List<FranjaResponse> franjas = franjaService.franjasActivas(tutorId).stream()
+                .map(FranjaResponse::from)
+                .toList();
+        return ResponseEntity.ok(franjas);
     }
 }

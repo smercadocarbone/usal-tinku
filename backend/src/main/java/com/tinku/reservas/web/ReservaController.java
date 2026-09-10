@@ -8,12 +8,14 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,6 +33,19 @@ public class ReservaController {
     public ReservaController(ReservaService reservaService, UsuarioActual usuarioActual) {
         this.reservaService = reservaService;
         this.usuarioActual = usuarioActual;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ReservaResponse>> listar(Authentication authentication) {
+        List<ReservaResponse> reservas = reservaService.listarDe(usuarioActual.obtener(authentication))
+                .stream().map(ReservaResponse::from).toList();
+        return ResponseEntity.ok(reservas);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ReservaResponse> obtener(@PathVariable UUID id, Authentication authentication) {
+        Reserva reserva = reservaService.obtener(usuarioActual.obtener(authentication), id);
+        return ResponseEntity.ok(ReservaResponse.from(reserva));
     }
 
     @PostMapping

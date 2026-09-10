@@ -291,6 +291,17 @@ public class UsuarioService {
     }
 
     /**
+     * Perfil del Tutor por id (GET /api/tutores/{id}). Solo perfiles TUTOR;
+     * cualquier otro tipo (o inexistente) responde 404.
+     */
+    @Transactional
+    public Usuario obtenerTutor(UUID id) {
+        return usuarioRepository.findById(id)
+                .filter(u -> u.getTipo() == TipoUsuario.TUTOR)
+                .orElseThrow(TutorNoEncontradoException::new);
+    }
+
+    /**
      * Pasos compartidos de los tres flujos de registro (FR-ID-019): lectura OCR
      * del documento, distinción ilegible/no-coincide y devolución del resultado.
      * El backoff previo (FR-ID-011), el check de edad y la unicidad del DNI

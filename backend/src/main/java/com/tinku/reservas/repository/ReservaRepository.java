@@ -21,4 +21,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
     /** T-M4-09 (FR-SEC-012): reservas futuras y cancelables pagadas por un sancionado. */
     List<Reserva> findByEstadoInAndHorarioAfterAndPagador_Id(Collection<EstadoReserva> estados,
                                                              Instant despuesDe, UUID pagadorId);
+
+    /** GET /api/reservas — las reservas donde el usuario es pagador, beneficiario o tutor. */
+    List<Reserva> findByPagador_IdOrBeneficiario_IdOrTutor_IdOrderByHorario(
+            UUID pagadorId, UUID beneficiarioId, UUID tutorId);
 }

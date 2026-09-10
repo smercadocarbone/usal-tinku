@@ -1092,4 +1092,70 @@ class ReservasFlujosIntegracionTest {
             pool.shutdownNow();
         }
     }
+
+    // ------------------------------------------------ Endpoints para el front (T-M4-GET)
+
+    @Test
+    void getReservas_visibilidadPorRol_pagadorTutorYCiertoParticipanteCadaUno() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        UUID r1 = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        // El pagador (estudiante) ve su reserva en el listado y por id.
+        mockMvc.perform(get("/api/reservas").header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(r1.toString()))
+                .andExpect(jsonPath("$[0].pagadorId").value(e.estudianteId().toString()));
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(r1.toString()));
+
+        // El tutor de esa reserva también es participante y puede verla.
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(r1.toString()));
+
+        // Un tercero autenticado sin relación con la reserva: no la lista ni la ve.
+        String tokenOtro = registrarAdultoYToken(dniUnico(), "Sofia", "Gomez", true, false);
+        mockMvc.perform(get("/api/reservas").header("Authorization", "Bearer " + tokenOtro))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + tokenOtro))
+                .andExpect(status().isNotFound());
+
+        // Sin autenticación: nada de esto es público (403, ver SecurityHttpTest).
+        mockMvc.perform(get("/api/reservas")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getTutores_perfilPublicoYfranjasActivas_ocultanDatosSensiblesHastaM2M7() throws Exception {
+        EscenarioAdulto e = escenarioAdulto(); // franja puntual publicada en e.fecha()
+
+        // Perfil público del tutor: sin passwordHash ni DNI; M2/M7 ausentes → materias
+        // vacías y calificación oculta (FR-REP-007: promedio null si count < 5).
+        mockMvc.perform(get("/api/tutores/" + e.tutorId()).header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(e.tutorId().toString()))
+                .andExpect(jsonPath("$.nombre").value("Pablo"))
+                .andExpect(jsonPath("$.tipo").value("TUTOR"))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                .andExpect(jsonPath("$.dni").doesNotExist())
+                .andExpect(jsonPath("$.materias").isEmpty())
+                .andExpect(jsonPath("$.nivel").isEmpty())
+                .andExpect(jsonPath("$.calificacionPromedio").isEmpty())
+                .andExpect(jsonPath("$.cantidadCalificaciones").value(0));
+
+        // Franjas activas publicadas, visibles para un participante autenticado.
+        mockMvc.perform(get("/api/tutores/" + e.tutorId() + "/franjas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].fechaEspecifica").value(e.fecha().toString()))
+                .andExpect(jsonPath("$[0].horaInicio").value("15:00:00"))
+                .andExpect(jsonPath("$[0].activa").value(true));
+
+        // Tutor inexistente → 404.
+        mockMvc.perform(get("/api/tutores/" + UUID.randomUUID())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isNotFound());
+    }
 }

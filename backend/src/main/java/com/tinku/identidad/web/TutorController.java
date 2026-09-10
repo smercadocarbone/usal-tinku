@@ -4,12 +4,17 @@ import com.tinku.identidad.dto.CapResponse;
 import com.tinku.identidad.dto.CargarCapRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
+import com.tinku.identidad.dto.MateriasNivel;
 import com.tinku.identidad.dto.RegistroTutorRequest;
+import com.tinku.identidad.dto.ReputacionTutor;
+import com.tinku.identidad.dto.TutorPerfilResponse;
 import com.tinku.identidad.dto.UsuarioResponse;
 import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
+import com.tinku.identidad.port.PerfilMatchingProvider;
+import com.tinku.identidad.port.ReputacionPerfilProvider;
 import com.tinku.identidad.service.CertificadoService;
 import com.tinku.identidad.service.CredencialService;
 import com.tinku.identidad.service.UsuarioService;
@@ -18,6 +23,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -25,6 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Alta de Tutor (FR-ID-007, T-M1-09, endpoint público de autorregistro) y
@@ -39,17 +48,23 @@ public class TutorController {
     private final CertificadoService certificadoService;
     private final UsuarioActual usuarioActual;
     private final Almacenamiento almacenamiento;
+    private final PerfilMatchingProvider perfilMatchingProvider;
+    private final ReputacionPerfilProvider reputacionPerfilProvider;
 
     public TutorController(UsuarioService usuarioService,
                            CredencialService credencialService,
                            CertificadoService certificadoService,
                            UsuarioActual usuarioActual,
-                           Almacenamiento almacenamiento) {
+                           Almacenamiento almacenamiento,
+                           PerfilMatchingProvider perfilMatchingProvider,
+                           ReputacionPerfilProvider reputacionPerfilProvider) {
         this.usuarioService = usuarioService;
         this.credencialService = credencialService;
         this.certificadoService = certificadoService;
         this.usuarioActual = usuarioActual;
         this.almacenamiento = almacenamiento;
+        this.perfilMatchingProvider = perfilMatchingProvider;
+        this.reputacionPerfilProvider = reputacionPerfilProvider;
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -59,6 +74,18 @@ public class TutorController {
     ) throws IOException {
         Usuario tutor = usuarioService.registrarTutor(request, fotoDni.getBytes());
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(tutor));
+    }
+
+    /** Perfil público del Tutor (autenticado). No expone DNI, passwordHash ni
+     * capacidad de pago. Materias/nivel (M2) y calificaciones (M7) vienen de
+     * puertos con stubs hasta que esos módulos existan. */
+    @GetMapping("/{id}")
+    public ResponseEntity<TutorPerfilResponse> obtener(@PathVariable UUID id) {
+        Usuario tutor = usuarioService.obtenerTutor(id);
+        Optional<MateriasNivel> materiasNivel = perfilMatchingProvider.materiasYNivel(id);
+        ReputacionTutor reputacion = reputacionPerfilProvider.reputacion(id);
+        return ResponseEntity.ok(TutorPerfilResponse.of(
+                tutor, materiasNivel.orElse(null), reputacion));
     }
 
     @PostMapping(value = "/credenciales", consumes = "multipart/form-data")
