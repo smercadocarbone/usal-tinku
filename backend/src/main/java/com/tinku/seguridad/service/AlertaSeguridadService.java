@@ -1,5 +1,7 @@
 package com.tinku.seguridad.service;
 
+import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
@@ -9,12 +11,10 @@ import com.tinku.seguridad.DescargoInvalidoException;
 import com.tinku.seguridad.SancionInvalidaException;
 import com.tinku.seguridad.SoloParteInteresadaException;
 import com.tinku.seguridad.evento.SancionAplicadaEvent;
-import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.seguridad.model.DecisionAlerta;
 import com.tinku.seguridad.model.OrigenSancion;
 import com.tinku.seguridad.model.Sancion;
 import com.tinku.seguridad.model.TipoSancion;
-import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.seguridad.repository.SancionRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

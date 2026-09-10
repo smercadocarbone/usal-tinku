@@ -1,6 +1,6 @@
 package com.tinku.seguridad.web;
 
-import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.aula.model.AlertaSeguridad;
 
 import java.time.Instant;
 import java.util.UUID;

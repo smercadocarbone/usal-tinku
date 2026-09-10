@@ -24,6 +24,10 @@ import java.util.UUID;
 @NoArgsConstructor
 public class AlertaSeguridad {
 
+    public static final String ESTADO_PENDIENTE_REVISION = "pendiente_revision";
+    public static final String ESTADO_RESUELTA_REACTIVACION = "resuelta_reactivacion";
+    public static final String ESTADO_RESUELTA_BAJA = "resuelta_baja";
+
     @Id
     @GeneratedValue
     private UUID id;
@@ -44,7 +48,14 @@ public class AlertaSeguridad {
     private Instant clipRetencionHasta;
 
     @Column(nullable = false, length = 30)
-    private String estado = "pendiente_revision";
+    private String estado = ESTADO_PENDIENTE_REVISION;
+
+    /** Descargo del Tutor detectado como apelación — nunca bloquea la resolución (FR-SEC-004). */
+    @Column(name = "descargo_texto", length = 300)
+    private String descargoTexto;
+
+    @Column(name = "descargo_recibido_at")
+    private Instant descargoRecibidoAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
