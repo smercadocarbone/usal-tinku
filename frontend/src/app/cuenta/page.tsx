@@ -308,12 +308,18 @@ function PanelAdulto() {
   const [solicitudesError, setSolicitudesError] = useState(false);
   const [aprobandoId, setAprobandoId] = useState<string | null>(null);
 
-  useEffect(() => {
+  function cargarSolicitudes() {
+    setCargandoSolicitudes(true);
+    setSolicitudesError(false);
     api
       .get<Solicitud[]>("/api/solicitudes/pendientes")
       .then(setSolicitudes)
       .catch(() => setSolicitudesError(true))
       .finally(() => setCargandoSolicitudes(false));
+  }
+
+  useEffect(() => {
+    cargarSolicitudes();
   }, []);
 
   function altaMenor(e: FormEvent) {
@@ -520,8 +526,16 @@ function PanelAdulto() {
       {cargandoSolicitudes ? (
         <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
       ) : solicitudesError ? (
-        <div className="alerta alerta--informativa" role="status">
-          No se pudieron cargar las solicitudes. Proba de nuevo.
+        <div className="alerta alerta--error" role="alert">
+          No se pudieron cargar las solicitudes.
+          <button
+            type="button"
+            className="boton boton--secundario"
+            onClick={cargarSolicitudes}
+            style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+          >
+            Reintentar
+          </button>
         </div>
       ) : solicitudes.length === 0 ? (
         <p style={{ color: "var(--color-texto-suave)" }}>No hay solicitudes pendientes.</p>

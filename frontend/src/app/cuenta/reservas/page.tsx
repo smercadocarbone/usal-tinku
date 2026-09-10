@@ -9,23 +9,26 @@ import Cabecera from "@/components/Cabecera";
 
 export default function ReservasPage() {
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
+  const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    let activo = true;
+  function cargar() {
+    setCargando(true);
+    setReservas(null);
     api
       .get<Reserva[]>("/api/reservas")
-      .then((lista) => activo && setReservas(lista))
+      .then((lista) => setReservas(lista))
       .catch((err) => {
-        if (!activo) return;
         if (err instanceof ApiError && err.status === 404) {
           setReservas([]);
         } else {
           setReservas(null);
         }
-      });
-    return () => {
-      activo = false;
-    };
+      })
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   return (
@@ -37,10 +40,21 @@ export default function ReservasPage() {
           Mis reservas
         </h1>
 
-        {reservas === null && (
-          <div className="alerta alerta--informativa" role="status">
-            No se pudieron cargar tus reservas en este momento. Si acabas de
-            crear una, proba de nuevo en un momento.
+        {cargando && (
+          <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
+        )}
+
+        {!cargando && reservas === null && (
+          <div className="alerta alerta--error" role="alert">
+            No se pudieron cargar tus reservas en este momento.
+            <button
+              type="button"
+              className="boton boton--secundario"
+              onClick={cargar}
+              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+            >
+              Reintentar
+            </button>
           </div>
         )}
 

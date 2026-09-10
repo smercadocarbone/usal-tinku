@@ -66,16 +66,17 @@ function ReservarForm() {
   const payload = session?.payload;
   const esMenor = payload?.tipo === "MENOR";
 
-  useEffect(() => {
+  function cargar() {
     if (!tutorId) {
       setError("Falta el Tutor para reservar.");
       setCargando(false);
       return;
     }
-    let activo = true;
+    setCargando(true);
+    setError(null);
     api
       .get<TutorPerfil>(`/api/tutores/${tutorId}`)
-      .then((p) => activo && setPerfil(p))
+      .then((p) => setPerfil(p))
       .catch((err) => {
         if (err instanceof ApiError) {
           setError(
@@ -85,15 +86,18 @@ function ReservarForm() {
           );
         }
       })
-      .finally(() => activo && setCargando(false));
+      .finally(() => setCargando(false));
+    setCargandoFranjas(true);
     api
       .get<FranjaDisponible[]>(`/api/tutores/${tutorId}/franjas`)
-      .then((lista) => activo && setFranjas(lista.filter((f) => f.activa)))
-      .catch(() => activo && setFranjas([]))
-      .finally(() => activo && setCargandoFranjas(false));
-    return () => {
-      activo = false;
-    };
+      .then((lista) => setFranjas(lista.filter((f) => f.activa)))
+      .catch(() => setFranjas([]))
+      .finally(() => setCargandoFranjas(false));
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutorId]);
 
   function elegirFecha(e: React.ChangeEvent<HTMLInputElement>) {
@@ -176,9 +180,17 @@ function ReservarForm() {
         <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
       )}
 
-      {error && (
+      {error && !cargando && (
         <div className="alerta alerta--error" role="alert" style={{ marginBottom: "1rem" }}>
           {error}
+          <button
+            type="button"
+            className="boton boton--secundario"
+            onClick={cargar}
+            style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+          >
+            Reintentar
+          </button>
         </div>
       )}
 

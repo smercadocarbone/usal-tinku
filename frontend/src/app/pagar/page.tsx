@@ -29,41 +29,39 @@ function PagarForm() {
   const [preferencia, setPreferencia] = useState<Preferencia | null>(null);
   const [reserva, setReserva] = useState<ReservaInfo | null>(null);
 
-  useEffect(() => {
+  function cargar() {
     if (!reservaId) {
       setEstado("error");
       setError("Falta la reserva a pagar.");
       return;
     }
-    let activo = true;
+    setEstado("cargando");
+    setError(null);
     api
       .get<ReservaInfo>(`/api/reservas/${reservaId}`)
-      .then((r) => activo && setReserva(r))
-      .catch(() => {
-        // la reserva puede no tener endpoint GET aún — seguimos con la preferencia
-      })
+      .then((r) => setReserva(r))
+      .catch(() => {})
       .then(() =>
         api
           .post<Preferencia>("/api/pagos/preferencia", { reservaId })
           .then((p) => {
-            if (!activo) return;
             setPreferencia(p);
             setEstado("listo");
           })
       )
       .catch((err) => {
-        if (activo) {
-          setEstado("error");
-          setError(
-            err instanceof ApiError
-              ? err.message
-              : "No se pudo generar el pago."
-          );
-        }
+        setEstado("error");
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "No se pudo generar el pago."
+        );
       });
-    return () => {
-      activo = false;
-    };
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservaId]);
 
   function irAPagar() {
@@ -126,6 +124,14 @@ function PagarForm() {
       {estado === "error" && (
         <div className="alerta alerta--error" role="alert">
           {error}
+          <button
+            type="button"
+            className="boton boton--secundario"
+            onClick={cargar}
+            style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+          >
+            Reintentar
+          </button>
         </div>
       )}
 

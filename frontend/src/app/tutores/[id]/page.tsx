@@ -39,11 +39,12 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
   const [mensajeNoConfiable, setMensajeNoConfiable] = useState<string | null>(null);
   const [mostrarAvisoMenores, setMostrarAvisoMenores] = useState(true);
 
-  useEffect(() => {
-    let activo = true;
+  function cargar() {
+    setCargando(true);
+    setError(null);
     api
       .get<TutorPerfil>(`/api/tutores/${params.id}`)
-      .then((p) => activo && setPerfil(p))
+      .then((p) => setPerfil(p))
       .catch((err) => {
         if (err instanceof ApiError) {
           setError(
@@ -55,10 +56,12 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
           setError("No se pudo cargar el perfil.");
         }
       })
-      .finally(() => activo && setCargando(false));
-    return () => {
-      activo = false;
-    };
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   const esMenor = payload?.tipo === "MENOR";
@@ -100,9 +103,17 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
           <p style={{ color: "var(--color-texto-suave)" }}>Cargando perfil...</p>
         )}
 
-        {error && (
+        {error && !cargando && (
           <div className="alerta alerta--error" role="alert">
             {error}
+            <button
+              type="button"
+              className="boton boton--secundario"
+              onClick={cargar}
+              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+            >
+              Reintentar
+            </button>
           </div>
         )}
 

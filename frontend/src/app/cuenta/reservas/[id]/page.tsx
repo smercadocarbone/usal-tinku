@@ -196,9 +196,17 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
           <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
         )}
 
-        {error && (
+        {error && !cargando && (
           <div className="alerta alerta--error" role="alert" style={{ marginBottom: "1rem" }}>
             {error}
+            <button
+              type="button"
+              className="boton boton--secundario"
+              onClick={cargar}
+              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+            >
+              Reintentar
+            </button>
           </div>
         )}
 
