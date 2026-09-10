@@ -31,6 +31,10 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
   const [perfil, setPerfil] = useState<TutorPerfil | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noConfiable, setNoConfiable] = useState(false);
+  const [enviandoNoConfiable, setEnviandoNoConfiable] = useState(false);
+  const [mensajeNoConfiable, setMensajeNoConfiable] = useState<string | null>(null);
+  const [mostrarAvisoMenores, setMostrarAvisoMenores] = useState(true);
 
   useEffect(() => {
     let activo = true;
@@ -61,6 +65,33 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
   const esMenor = payload?.tipo === "MENOR";
   const puedeReservar = !esMenor;
+  const esAdultoConAR = !esMenor && payload?.cap_ar === true;
+
+  async function toggleNoConfiable(nuevoValor: boolean) {
+    setEnviandoNoConfiable(true);
+    setMensajeNoConfiable(null);
+    setError(null);
+    try {
+      await api.patch("/api/autorizaciones/no-confiable", {
+        tutorId: params.id,
+        noConfiable: nuevoValor,
+      });
+      setNoConfiable(nuevoValor);
+      setMensajeNoConfiable(
+        nuevoValor
+          ? "Tutor marcado como no confiable. Ya no aparece en los resultados de matching de tu cuenta."
+          : "Tutor desmarcado como no confiable."
+      );
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message || "No se pudo actualizar el estado de confianza.");
+      } else {
+        setError("No se pudo actualizar el estado de confianza.");
+      }
+    } finally {
+      setEnviandoNoConfiable(false);
+    }
+  }
 
   return (
     <>
@@ -168,8 +199,85 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
               </Link>
             ) : (
               <div className="alerta alerta--informativa" role="status">
-                Tu Adulto Responsable debe autorizar a este Tutor antes de
-                reservar.
+                Pedile a tu adulto responsable que te autorice a esta tutora/o.
+              </div>
+            )}
+
+            {esAdultoConAR && (
+              <div style={{ marginTop: "1.5rem" }}>
+                <h2 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>
+                  Autorizacion
+                </h2>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <button
+                    type="button"
+                    className="boton"
+                    onClick={() => {}}
+                    disabled
+                  >
+                    Autorizar para mi menor
+                  </button>
+                  {mostrarAvisoMenores && (
+                    <div
+                      className="alerta alerta--informativa"
+                      role="status"
+                      style={{ marginTop: "0.5rem" }}
+                    >
+                      El listado de tus menores esta pendiente en backend. Cuando
+                      este disponible, vas a poder autorizar tutores para cada
+                      menor.
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <label
+                    htmlFor="no-confiable"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: enviandoNoConfiable ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <input
+                      id="no-confiable"
+                      type="checkbox"
+                      checked={noConfiable}
+                      disabled={enviandoNoConfiable}
+                      onChange={(e) => toggleNoConfiable(e.target.checked)}
+                      style={{ width: "1.1rem", height: "1.1rem" }}
+                    />
+                    Marcar como no confiable
+                  </label>
+                </div>
+                <p
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--color-texto-suave)",
+                    margin: "0 0 0.5rem 0",
+                  }}
+                >
+                  Sacarlo de tus resultados de busqueda.
+                </p>
+
+                {mensajeNoConfiable && (
+                  <div
+                    className="alerta alerta--exito"
+                    role="status"
+                    style={{ marginTop: "0.5rem" }}
+                  >
+                    {mensajeNoConfiable}
+                  </div>
+                )}
               </div>
             )}
 
