@@ -1,5 +1,6 @@
 package com.tinku.aula.web;
 
+import com.tinku.aula.LiveKitService;
 import com.tinku.aula.model.AlertaSeguridad;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
@@ -30,11 +31,25 @@ import java.util.UUID;
 public class SesionController {
 
     private final SesionService sesionService;
+    private final LiveKitService liveKitService;
     private final UsuarioActual usuarioActual;
 
-    public SesionController(SesionService sesionService, UsuarioActual usuarioActual) {
+    public SesionController(SesionService sesionService,
+                            LiveKitService liveKitService,
+                            UsuarioActual usuarioActual) {
         this.sesionService = sesionService;
+        this.liveKitService = liveKitService;
         this.usuarioActual = usuarioActual;
+    }
+
+    /** Token de acceso a la sala LiveKit — solo participantes de la reserva. */
+    @PostMapping("/{id}/token")
+    public ResponseEntity<TokenSesionResponse> token(@PathVariable UUID id,
+                                                     Authentication authentication) {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        String[] resultado = sesionService.obtenerToken(usuario, id);
+        return ResponseEntity.ok(new TokenSesionResponse(
+                resultado[0], liveKitService.getBaseUrl(), resultado[1]));
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */

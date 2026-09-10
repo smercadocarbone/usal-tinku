@@ -264,6 +264,29 @@ public class SesionService {
         return nuevoEstado;
     }
 
+    // ------------------------------------------------ token de acceso (M3-frontend)
+
+    /**
+     * Devuelve el token de LiveKit para que el participante se conecte a la sala.
+     * Misma autorización que {@link #finalizar}: solo tutor, beneficiario o pagador.
+     * La sala debe haber sido creada ya (T-5, {@link com.tinku.aula.jobs.CrearSalaJob}).
+     */
+    public String[] obtenerToken(Usuario usuario, UUID sesionId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        if (sesion.getLivekitRoomId() == null) {
+            throw new SesionSinSalaException("La sala aún no fue creada (T-5 no alcanzado).");
+        }
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        String token = liveKitService.generarTokenParticipante(
+                usuario.getDni(), sesion.getLivekitRoomId());
+        return new String[]{token, sesion.getLivekitRoomId()};
+    }
+
     // ------------------------------------------------ finalización (T-M3-05)
 
     /** US-8: el botón «Finalizar» — solo tutor, beneficiario o pagador (403 si no). */

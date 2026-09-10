@@ -39,6 +39,7 @@ public class LiveKitService {
     private static final String PATH_CREATE_ROOM = "/twirp/livekit.RoomService/CreateRoom";
 
     private final RestClient restClient;
+    private final String baseUrl;
     private final String apiKey;
     private final SecretKey secretKey;
     private final long tokenTtlSegundos;
@@ -49,6 +50,7 @@ public class LiveKitService {
             @Value("${tinku.livekit.api-secret}") String apiSecret,
             @Value("${tinku.livekit.token-ttl-segundos}") long tokenTtlSegundos) {
         this.apiKey = apiKey;
+        this.baseUrl = baseUrl;
         this.secretKey = apiKey.isBlank() || apiSecret.isBlank()
                 ? null
                 : Keys.hmacShaKeyFor(apiSecret.getBytes(StandardCharsets.UTF_8));
@@ -123,6 +125,11 @@ public class LiveKitService {
                 .claim("video", new VideoClaim("", false, true, false))
                 .signWith(secretKey)
                 .compact();
+    }
+
+    /** URL del servidor LiveKit (wss://...) que el frontend necesita para conectarse. */
+    public String getBaseUrl() {
+        return baseUrl;
     }
 
     private void verificarConfigurado() {
