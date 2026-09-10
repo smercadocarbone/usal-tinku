@@ -10,16 +10,19 @@ import java.util.Arrays;
  * valores de base de datos son minúsculas (V11__m5_pagos.sql, CHECK de la columna
  * {@code estado}: {'retenido_escrow','liberado','reembolsado','pausado_denuncia'}).
  *
- * Transiciones actuales (Chunk M5-B, {@code EscrowService}):
+ * Transiciones actuales:
  * <pre>
  * retenido_escrow ─┬─ sesion.finalizada        → (liberar_at = fin + 24h, sigue retenido)
  *                  ├─ no_show_estudiante       → liberado   (liberación inmediata, Plan §2)
  *                  ├─ interrumpida / no_show_* / killswitch_* → reembolsado
- *                  └─ denuncia.registrada      → pausado_denuncia
+ *                  ├─ denuncia.registrada      → pausado_denuncia
+ *                  └─ reserva.cancelada tardía → liberado / reembolsado (asimetría FR-RES-008)
+ * pausado_denuncia ─ denuncia.resuelta → retenido_escrow (T-M9-04) y de ahí:
+ *                  infundada → +24h de liberación (FR-SEC-011), fundada → liberado,
+ *                  escalada → reembolsado (FR-PAG-009/011)
  * </pre>
  * La liberación efectiva al Tutor (retenido_escrow/liberar_at → liberado) la
- * ejecuta el job de Chunk M5-C. {@code denuncia.resuelta} (M5 side) queda
- * pendiente: payload y resolución dependen de M9-D + M5-C/M5-D (documentado).
+ * ejecuta el job de {@code LiberacionEscrowService}.
  */
 public enum EstadoTransaccion {
     RETENIDO_ESCROW("retenido_escrow"),
