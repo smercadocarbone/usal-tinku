@@ -5,6 +5,7 @@ import com.tinku.aula.LiveKitService;
 import com.tinku.aula.SesionService;
 import com.tinku.pagos.evento.SesionEvento;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.pagos.evento.SesionInterrumpidaEvent;
 import com.tinku.pagos.evento.SesionNoShowDobleEvent;
 import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
 import com.tinku.pagos.evento.SesionNoShowTutorEvent;
@@ -522,14 +523,21 @@ class SesionesIntegracionTest {
 
         sesionService.ejecutarCorteAutomatico(sesion.getId());
 
+        // Nadie se unió (inicioReal null → duración efectiva 0 < 50% de la
+        // agendada de 60min): con la regla de US-5/FR-AULA-005 (T-M3-10) el
+        // corte automático emite sesion.interrumpida, no finalizada.
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
-                .isEqualTo("finalizada");
+                .isEqualTo("interrumpida");
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getDuracionEfectivaSegundos())
                 .isZero(); // nadie se unió → sin duración efectiva
         assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.FINALIZADA);
         assertThat(EVENTOS).hasSize(1);
-        assertThat(EVENTOS.get(0)).isInstanceOf(SesionFinalizadaEvent.class);
+        assertThat(EVENTOS.get(0)).isInstanceOf(SesionInterrumpidaEvent.class);
+        assertThat(EVENTOS.get(0).getNombre()).isEqualTo("sesion.interrumpida");
+        // Idempotente: otro disparo del corte no re-emite ni re-marca.
+        sesionService.ejecutarCorteAutomatico(sesion.getId());
+        assertThat(EVENTOS).hasSize(1);
     }
 
     @Test

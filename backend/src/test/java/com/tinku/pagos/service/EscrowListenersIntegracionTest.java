@@ -213,7 +213,7 @@ class EscrowListenersIntegracionTest {
     void sesionKillswitchMenor_reembolsaAlEstudiante() {
         Escena e = escena();
 
-        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId()));
+        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
         assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
