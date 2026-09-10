@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
+import { formatearFechaCorta } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 
 const NOMBRE_TIPO: Record<string, string> = {
@@ -52,11 +53,6 @@ interface ReservaResponse {
 function parseMinutos(hora: string): number {
   const [h, m] = hora.split(":").map(Number);
   return h * 60 + m;
-}
-
-function formatFechaEsAr(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatFechaHoraEsAr(iso: string): string {
@@ -268,7 +264,7 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
               <span>
                 {f.diaSemana !== null
                   ? `${DIAS[f.diaSemana]} de ${f.horaInicio} a ${f.horaFin}`
-                  : `${formatFechaEsAr(f.fechaEspecifica!)} de ${f.horaInicio} a ${f.horaFin}`}
+                  : `${formatearFechaCorta(f.fechaEspecifica!)} de ${f.horaInicio} a ${f.horaFin}`}
               </span>
               <span
                 style={{

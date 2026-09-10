@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
@@ -217,27 +218,20 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 <div className="perfil-fila">
                   <dt>Fecha</dt>
                   <dd style={{ textTransform: "none" }}>
-                    {new Date(reserva.horario).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {formatearFecha(reserva.horario)}
                   </dd>
                 </div>
                 <div className="perfil-fila">
                   <dt>Horario</dt>
                   <dd style={{ textTransform: "none" }}>
-                    {new Date(reserva.horario).toLocaleTimeString("es-AR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatearHora(reserva.horario)}
                   </dd>
                 </div>
                 <div className="perfil-fila">
                   <dt>Monto</dt>
                   <dd style={{ textTransform: "none" }}>
                     {reserva.precio !== null
-                      ? `$${Number(reserva.precio).toLocaleString("es-AR")}`
+                      ? formatearPrecio(reserva.precio)
                       : "—"}
                   </dd>
                 </div>

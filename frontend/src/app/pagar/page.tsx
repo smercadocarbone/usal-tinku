@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
+import { formatearPrecio } from "@/lib/formatos";
 
 interface Preferencia {
   preferenciaId: string;
@@ -97,7 +98,7 @@ function PagarForm() {
                 <div className="perfil-fila">
                   <dt>Monto</dt>
                   <dd style={{ textTransform: "none" }}>
-                    ${Number(reserva.precio).toLocaleString("es-AR")}
+                    {formatearPrecio(reserva.precio)}
                   </dd>
                 </div>
               )}

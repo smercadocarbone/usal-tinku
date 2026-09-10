@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 
 export default function ReservasPage() {
@@ -68,17 +69,7 @@ export default function ReservasPage() {
               >
                 <div>
                   <div style={{ fontWeight: 600 }}>
-                    {new Date(r.horario).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}{" "}
-                    {
-                      new Date(r.horario).toLocaleTimeString("es-AR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    }
+                    {formatearFecha(r.horario)} {formatearHora(r.horario)}
                   </div>
                   <div
                     style={{
@@ -89,7 +80,7 @@ export default function ReservasPage() {
                   >
                     {ESTADO_ETIQUETA[r.estado] ?? r.estado}
                     {r.precio !== null &&
-                      ` — $${Number(r.precio).toLocaleString("es-AR")}`}
+                      ` — ${formatearPrecio(r.precio)}`}
                   </div>
                 </div>
                 <Link

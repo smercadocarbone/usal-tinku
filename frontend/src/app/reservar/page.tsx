@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { clearSession, getSession } from "@/lib/auth";
+import { formatearFechaCorta, formatearPrecio } from "@/lib/formatos";
 
 interface TutorPerfil {
   id: string;
@@ -205,7 +206,7 @@ function ReservarForm() {
             </span>
             {typeof perfil.precioHora === "number" && (
               <span style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
-                ${perfil.precioHora.toLocaleString("es-AR")} por hora
+                {formatearPrecio(perfil.precioHora)} por hora
               </span>
             )}
           </div>
@@ -241,7 +242,7 @@ function ReservarForm() {
                     >
                       {f.diaSemana !== null
                         ? `${NOMBRE_DIA[f.diaSemana]} de ${f.horaInicio} a ${f.horaFin}`
-                        : `${new Date(`${f.fechaEspecifica}T12:00:00`).toLocaleDateString("es-AR")} de ${f.horaInicio} a ${f.horaFin}`}
+                        : `${formatearFechaCorta(`${f.fechaEspecifica}T12:00:00`)} de ${f.horaInicio} a ${f.horaFin}`}
                     </button>
                   </li>
                 ))}

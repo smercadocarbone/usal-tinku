@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 
 interface TutorPerfil {
@@ -152,7 +153,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   <div className="perfil-fila">
                     <dt>Precio por hora</dt>
                     <dd style={{ textTransform: "none" }}>
-                      ${perfil.precioHora.toLocaleString("es-AR")}
+                      {formatearPrecio(perfil.precioHora)}
                     </dd>
                   </div>
                 )}
