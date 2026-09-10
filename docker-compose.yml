@@ -1,4 +1,5 @@
-# Desarrollo local de Tinku — solo Postgres por ahora (Fase 0).
+# Stack completo de Tinku — dev local dockerizado:
+#   db (Postgres 16 pgvector) + matching-service (Python) + backend (Spring Boot) + frontend (Next.js)
 # Los schemas se crean/versionan via Flyway al levantar el backend (ver V1__crear_schemas.sql).
 # Credenciales por defecto compatibles con backend/src/main/resources/application.yml.
 # Nunca usar estos valores en ningun ambiente que no sea local.
@@ -19,6 +20,60 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  matching:
+    build:
+      context: ./matching-service
+    container_name: tinku-matching
+    environment:
+      TINKU_PG_HOST: db
+      TINKU_PG_PORT: 5432
+      TINKU_PG_DBNAME: tinku
+      TINKU_PG_USER: tinku_dev
+      TINKU_PG_PASSWORD: changeme
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+    container_name: tinku-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tinku
+      SPRING_DATASOURCE_USERNAME: tinku_dev
+      SPRING_DATASOURCE_PASSWORD: changeme
+      MATCHING_SERVICE_URL: http://matching:8000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      DB_USER: tinku_dev
+      DB_PASSWORD: changeme
+      JWT_SECRET: ${JWT_SECRET:-CAMBIAR_EN_TODOS_LOS_AMBIENTES_AL_AGREGAR_UN_SECRET_REAL}
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+      RESERVAS_TARIFA_STUB: ${RESERVAS_TARIFA_STUB:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      matching:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    container_name: tinku-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   tinku_pgdata:
