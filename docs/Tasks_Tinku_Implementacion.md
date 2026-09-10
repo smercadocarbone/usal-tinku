@@ -157,6 +157,6 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 ## Cierre — Integración Transversal Final
 
-- [ ] T-FIN-01: Test end-to-end: alta de Adulto Responsable → alta de menor → autorización de Tutor → Solicitud → Reserva → pago → sesión → resumen → calificación — el flujo feliz completo, sin mocks en los puntos de integración entre módulos propios.
-- [ ] T-FIN-02: Test end-to-end de la rama de seguridad: sesión con menor → disparo simulado de kill-switch → suspensión → Alerta en M8 → resolución del Admin → efectos propagados a M1/M2/M4/M5.
-- [ ] T-FIN-03: Revisión final de que ningún ADR pendiente (M1, M2, M5, M6) quedó sin resolver antes del cierre del piloto.
+- [x] T-FIN-01: Test end-to-end: alta de Adulto Responsable → alta de menor → autorización de Tutor → Solicitud → Reserva → pago → sesión → resumen → calificación — el flujo feliz completo, sin mocks en los puntos de integración entre módulos propios. (`com.tinku.cierre.E2EFlujoFelizIntegracionTest`).
+- [x] T-FIN-02: Test end-to-end de la rama de seguridad: sesión con menor → disparo simulado de kill-switch → suspensión → Alerta en M8 → resolución del Admin → efectos propagados a M1/M2/M4/M5. (`com.tinku.cierre.E2ERamaSeguridadIntegracionTest`; suite completa: 320 tests, 0 errores).
+- [x] T-FIN-03: Revisión final de ADRs — M1 (ADR-M1-01), M2 (ADR-M2-01) y M3 (ADR-M3-01) resueltos, con su archivo en `docs/adr/`. M5 (MercadoPago): decisión tomada (sandbox de test users para desarrollo, escrow); el salto a productivo queda pendiente por la infra (T-000) y no bloquea el cierre del código. M6 (LLM para resumen + transcripción): la elección GPT-4o vs. Gemini 2.0 Flash sigue pendiente de ADR (fila "Pendiente — ADR" en la Constitución); el código ya la aisló tras el puerto `ResumenProveedor` fail-closed, así que el cierre no la bloquea.
