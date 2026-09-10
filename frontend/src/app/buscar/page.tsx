@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import { clearSession, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import Cabecera from "@/components/Cabecera";
 
 interface ResultadoBusqueda {
   tutorId: string;
@@ -25,7 +25,6 @@ interface BusquedaGuardada {
 }
 
 export default function BuscarPage() {
-  const router = useRouter();
   const session = getSession();
   const payload = session?.payload;
 
@@ -150,30 +149,9 @@ export default function BuscarPage() {
     }
   }
 
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
-
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
-        </div>
-        <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <Link href="/cuenta" style={{ fontSize: "0.9rem" }}>
-            Mi cuenta
-          </Link>
-          <button
-            type="button"
-            className="boton boton--secundario"
-            onClick={logout}
-          >
-            Cerrar sesion
-          </button>
-        </nav>
-      </header>
+      <Cabecera enlaces={[{ href: "/cuenta", label: "Mi cuenta" }]} />
 
       <main className="contenido">
         <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>

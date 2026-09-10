@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { clearSession } from "@/lib/auth";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import Cabecera from "@/components/Cabecera";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 
@@ -60,11 +59,6 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
-
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
 
   function pagar() {
     if (!reserva) return;
@@ -190,23 +184,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
-        </div>
-        <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <Link href="/cuenta/reservas" style={{ fontSize: "0.9rem" }}>
-            Mis reservas
-          </Link>
-          <button
-            type="button"
-            className="boton boton--secundario"
-            onClick={logout}
-          >
-            Cerrar sesion
-          </button>
-        </nav>
-      </header>
+      <Cabecera enlaces={[{ href: "/cuenta/reservas", label: "Mis reservas" }]} />
 
       <main className="contenido">
         <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>

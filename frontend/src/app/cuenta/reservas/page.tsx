@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { clearSession } from "@/lib/auth";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import Cabecera from "@/components/Cabecera";
 
 export default function ReservasPage() {
-  const router = useRouter();
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
-
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
 
   useEffect(() => {
     let activo = true;
@@ -36,26 +29,7 @@ export default function ReservasPage() {
 
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
-        </div>
-        <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <Link href="/buscar" style={{ fontSize: "0.9rem" }}>
-            Buscar
-          </Link>
-          <Link href="/cuenta" style={{ fontSize: "0.9rem" }}>
-            Mi cuenta
-          </Link>
-          <button
-            type="button"
-            className="boton boton--secundario"
-            onClick={logout}
-          >
-            Cerrar sesion
-          </button>
-        </nav>
-      </header>
+      <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }, { href: "/cuenta", label: "Mi cuenta" }]} />
 
       <main className="contenido">
         <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>

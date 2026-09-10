@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clearSession, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
+import Cabecera from "@/components/Cabecera";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
@@ -605,25 +605,12 @@ function PanelAdulto() {
 }
 
 export default function CuentaPage() {
-  const router = useRouter();
   const session = getSession();
   const payload = session?.payload;
 
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
-
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
-        </div>
-        <button type="button" className="boton boton--secundario" onClick={logout}>
-          Cerrar sesion
-        </button>
-      </header>
+      <Cabecera />
 
       <main className="contenido">
         <h1>Mi cuenta</h1>

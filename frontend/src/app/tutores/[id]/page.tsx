@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { clearSession, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import Cabecera from "@/components/Cabecera";
 
 interface TutorPerfil {
   id: string;
@@ -27,7 +27,6 @@ const NOMBRE_TIPO: Record<string, string> = {
 };
 
 export default function TutorPerfilPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
   const session = getSession();
   const payload = session?.payload;
 
@@ -61,11 +60,6 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
     };
   }, [params.id]);
 
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
-
   const esMenor = payload?.tipo === "MENOR";
   const puedeReservar = !esMenor;
   const esAdultoConAR = !esMenor && payload?.cap_ar === true;
@@ -98,23 +92,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
-        </div>
-        <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <Link href="/buscar" style={{ fontSize: "0.9rem" }}>
-            Buscar
-          </Link>
-          <button
-            type="button"
-            className="boton boton--secundario"
-            onClick={logout}
-          >
-            Cerrar sesion
-          </button>
-        </nav>
-      </header>
+      <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }]} />
 
       <main className="contenido">
         {cargando && (
