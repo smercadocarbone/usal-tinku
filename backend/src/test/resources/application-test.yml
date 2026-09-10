@@ -22,9 +22,3 @@ tinku:
     # Stub del puerto TarifaProveedor (M5 no implementado). Valor en centavos/pesos
     # para poder ejercitar la creacion de Reservas en los tests de integracion.
     tarifa-stub: 15000
-  admin:
-    # Identidad de un Admin de Moderacion durante el desarrollo (M7/M9 usan
-    # AdminModeracionGate; la tabla `admins` llega en M8). DNI de un unico
-    # usuario de test — ver CalificacionesFlujosIntegracionTest.
-    moderacion:
-      ids: 39999999

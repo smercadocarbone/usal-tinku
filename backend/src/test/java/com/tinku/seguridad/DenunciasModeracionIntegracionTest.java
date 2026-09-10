@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.admin.model.Admin;
+import com.tinku.admin.model.RolAdmin;
+import com.tinku.admin.repository.AdminRepository;
 import com.tinku.config.security.JwtUtil;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
@@ -82,9 +85,10 @@ class DenunciasModeracionIntegracionTest {
             new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
-    /** DNI fijos del Admin de Moderación y Seguridad — el allowlist es fail-closed
-     * y se setea acá (contexto) porque en {code application-test.yml} no existe.
-     * Por rango (42.001.000 + i) para que cada test use el suyo sin colisión UNIQUE. */
+    /** DNI fijos del Admin de Moderación y Seguridad. Con la tabla {@code admins}
+     * (M8, V16) el gate resuelve por {@code admin.admins} y ya no lee un allowlist
+     * de propiedades — cada {@code admin()} siembra su fila en BD. Por rango
+     * (42.001.000 + i) para que cada test use el suyo sin colisión UNIQUE. */
     static final String DNI_ADMIN_BASE = "4200";
 
     @DynamicPropertySource
@@ -92,11 +96,6 @@ class DenunciasModeracionIntegracionTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("tinku.admin.moderacion.ids", () -> String.join(",",
-                java.util.stream.IntStream.rangeClosed(1, 20)
-                        // 42_001_000 + i → "42001001"…"42001020"
-                        .mapToObj(i -> DNI_ADMIN_BASE + String.format("%04d", 1000 + i))
-                        .toList()));
     }
 
     @Autowired MockMvc mvc;
@@ -111,6 +110,7 @@ class DenunciasModeracionIntegracionTest {
     @Autowired DenunciaRepository denunciaRepository;
     @Autowired SancionRepository sancionRepository;
     @Autowired AlertaSeguridadRepository alertaRepository;
+    @Autowired AdminRepository adminRepository;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -121,6 +121,11 @@ class DenunciasModeracionIntegracionTest {
 
     // ------------------------------------------------------------- helpers
 
+    /**
+     * Crea el Usuario Admin Y su fila en {@code admin.admins} (donde M8 resolvió
+     * la autorización). El JWT sigue llevando el DNI; el gate cruza por
+     * {@code usuarios.dni} y chequea rol + {@code activo}.
+     */
     private Usuario admin() {
         Usuario u = new Usuario();
         u.setDni(String.format("%08d", 42_001_000 + ADMIN_COUNTER.incrementAndGet()));
@@ -131,7 +136,13 @@ class DenunciasModeracionIntegracionTest {
         u.setPasswordHash("hash");
         u.setCapacidadEstudiante(true);
         u.setCapacidadAdultoResponsable(true);
-        return usuarioRepository.save(u);
+        usuarioRepository.save(u);
+
+        Admin admin = new Admin();
+        admin.setUsuario(u);
+        admin.setRol(RolAdmin.MODERACION_SEGURIDAD);
+        adminRepository.save(admin);
+        return u;
     }
 
     private Usuario usuario(TipoUsuario tipo, boolean activoParaMatching) {
