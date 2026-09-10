@@ -202,6 +202,9 @@ Verificamos tu identidad con la foto de tu DNI y que seas mayor de 18
 
         <p className="pie-enlace">
           ¿Ya tenés cuenta? <Link href="/login">Iniciar sesión</Link>
+          <br />
+          ¿Querés dar clases?{" "}
+          <Link href="/registro/tutor">Registrate como tutor</Link>
         </p>
       </div>
     </main>
