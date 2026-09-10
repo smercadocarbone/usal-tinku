@@ -249,7 +249,10 @@ function ReservarForm() {
               </ul>
             </div>
           ) : (
-            <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+            <p
+              role="status"
+              style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}
+            >
               Este tutor no publico disponibilidad todavia.
             </p>
           )}

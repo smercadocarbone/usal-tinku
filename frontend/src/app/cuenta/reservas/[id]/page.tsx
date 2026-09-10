@@ -363,7 +363,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                       />
                     </div>
                     <div className="campo">
-                      <label>Franja del tutor</label>
+                      <label htmlFor="franja">Franja del tutor</label>
                       {franjasAplicables.length === 0 ? (
                         <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
                           Elegi una fecha que corresponda a una franja.

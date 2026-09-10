@@ -269,6 +269,7 @@ export default function BuscarPage() {
 
         {buscado && resultados.length === 0 && (
           <div
+            role="status"
             style={{
               textAlign: "center",
               padding: "2rem 1rem",

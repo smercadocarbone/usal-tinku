@@ -152,7 +152,11 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
       <div className="tarjeta" style={{ marginTop: "1rem" }}>
         <form className="formulario" onSubmit={publicar}>
           <label> tipo de franja </label>
-          <div className="opciones">
+          <div
+            className="opciones"
+            role="group"
+            aria-label="Tipo de franja"
+          >
             <label className="opcion">
               <input
                 type="radio"
@@ -562,9 +566,12 @@ function PanelAdulto() {
         <div className="tarjeta" style={{ marginTop: "0.75rem", padding: "1rem" }}>
           {bajaPaso === "advertencia" ? (
             <>
-              <p style={{ color: "var(--color-aviso)", marginBottom: "0.5rem" }}>
-                Este menor tiene reservas futuras. Se cancelaran.
-              </p>
+              <p
+                    role="alert"
+                    style={{ color: "var(--color-aviso)", marginBottom: "0.5rem" }}
+                  >
+                    Este menor tiene reservas futuras. Se cancelaran.
+                  </p>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   type="button"
