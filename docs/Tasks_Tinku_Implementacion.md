@@ -135,14 +135,14 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 ## M7 — Sistema de Calificaciones y Reputación
 
-- [ ] T-M7-01: Migración: `calificaciones`, `señales_implicitas_tutor`.
-- [ ] T-M7-02: Endpoint de calificación — `direccion` derivada del rol del autor, nunca aceptada como input libre.
-- [ ] T-M7-03: Endpoint de perfil público de Tutor — oculta el promedio si `count < 5` (FR-REP-007), **sin exponer nunca `tutor_a_estudiante` en ningún query de este endpoint.**
-- [ ] T-M7-04: Endpoint interno de calificaciones ocultas — solo accesible por rol Moderación y Seguridad (M8).
-- [ ] T-M7-05: Lógica de bloqueo de nueva Reserva por calificación pendiente (expuesta como servicio interno que M4 consulta, T-M4-10).
-- [ ] T-M7-06: Job de recordatorio único a 24hs + validación de ventana de edición de 48hs.
-- [ ] T-M7-07: Actualización incremental de `señales_implicitas_tutor` en cada evento relevante (no-show, cancelación, recontratación).
-- [ ] T-M7-08: Tests: confirmar que ningún endpoint público, ni siquiera con parámetros manipulados, puede devolver una calificación `tutor_a_estudiante`.
+- [x] T-M7-01: Migración: `calificaciones`, `señales_implicitas_tutor`.
+- [x] T-M7-02: Endpoint de calificación — `direccion` derivada del rol del autor, nunca aceptada como input libre.
+- [x] T-M7-03: Endpoint de perfil público de Tutor — oculta el promedio si `count < 5` (FR-REP-007), **sin exponer nunca `tutor_a_estudiante` en ningún query de este endpoint.**
+- [x] T-M7-04: Endpoint interno de calificaciones ocultas — solo accesible por rol Moderación y Seguridad (M8).
+- [x] T-M7-05: Lógica de bloqueo de nueva Reserva por calificación pendiente (expuesta como servicio interno que M4 consulta, T-M4-10).
+- [x] T-M7-06: Job de recordatorio único a 24hs + validación de ventana de edición de 48hs.
+- [x] T-M7-07: Actualización incremental de `señales_implicitas_tutor` en cada evento relevante (no-show, cancelación, recontratación).
+- [x] T-M7-08: Tests: confirmar que ningún endpoint público, ni siquiera con parámetros manipulados, puede devolver una calificación `tutor_a_estudiante`.
 
 ## M8 — Panel de Administración
 
