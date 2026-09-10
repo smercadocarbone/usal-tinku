@@ -66,7 +66,7 @@ export default function BuscarPage() {
             const t = await api.get<TutorBasico>(`/api/tutores/${id}`);
             nuevos.set(id, t);
           } catch {
-            nuevos.set(id, { id, nombre: "Tutor", apellido: id.slice(0, 8) });
+            nuevos.set(id, { id, nombre: `Tutor #${id}`, apellido: "" });
           }
         })
       );
@@ -136,7 +136,7 @@ export default function BuscarPage() {
             const t = await api.get<TutorBasico>(`/api/tutores/${id}`);
             nuevos.set(id, t);
           } catch {
-            nuevos.set(id, { id, nombre: "Tutor", apellido: id.slice(0, 8) });
+            nuevos.set(id, { id, nombre: `Tutor #${id}`, apellido: "" });
           }
         })
       );
@@ -226,39 +226,21 @@ export default function BuscarPage() {
           <button
             type="button"
             className="boton boton--secundario"
-            onClick={cargarGuardadas}
+            onClick={mostrarGuardadas ? () => setMostrarGuardadas(false) : cargarGuardadas}
             disabled={cargandoGuardadas}
             style={{ fontSize: "0.85rem", padding: "0.5rem 0.75rem" }}
           >
-            {cargandoGuardadas ? "Cargando..." : "Ver guardadas"}
+            {cargandoGuardadas
+              ? "Cargando..."
+              : mostrarGuardadas
+                ? "Ocultar guardadas"
+                : "Ver guardadas"}
           </button>
         </div>
 
         {mostrarGuardadas && (
           <div style={{ marginBottom: "1.5rem" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <h2 style={{ fontSize: "1rem", margin: 0 }}>Guardadas</h2>
-              <button
-                type="button"
-                onClick={() => setMostrarGuardadas(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--color-texto-suave)",
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                }}
-              >
-                Cerrar
-              </button>
-            </div>
+            <h2 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>Guardadas</h2>
             {guardadas.length === 0 ? (
               <p
                 style={{
@@ -270,36 +252,33 @@ export default function BuscarPage() {
                 No tenes busquedas guardadas.
               </p>
             ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                 {guardadas.map((g) => (
-                  <li
+                  <button
                     key={g.id}
+                    type="button"
+                    onClick={() => ejecutarGuardada(g)}
+                    aria-label={`Ejecutar busqueda guardada: ${g.textoBusqueda}`}
                     style={{
-                      padding: "0.6rem 0",
-                      borderBottom: "1px solid var(--color-borde)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
+                      display: "inline-block",
+                      padding: "0.3rem 0.6rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      background: "var(--color-superficie)",
+                      color: "var(--color-accent)",
+                      border: "1px solid var(--color-borde)",
+                      borderRadius: "999px",
+                      cursor: "pointer",
+                      maxWidth: "100%",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <span style={{ fontSize: "0.9rem" }}>{g.textoBusqueda}</span>
-                    <button
-                      type="button"
-                      onClick={() => ejecutarGuardada(g)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--color-accent)",
-                        cursor: "pointer",
-                        fontSize: "0.85rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Ejecutar
-                    </button>
-                  </li>
+                    {g.textoBusqueda}
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
@@ -343,7 +322,9 @@ export default function BuscarPage() {
                   <div>
                     <div style={{ fontWeight: 600 }}>
                       {tutor
-                        ? `${tutor.nombre} ${tutor.apellido}`
+                        ? tutor.apellido
+                          ? `${tutor.nombre} ${tutor.apellido}`
+                          : tutor.nombre
                         : "Cargando..."}
                     </div>
                     <div
