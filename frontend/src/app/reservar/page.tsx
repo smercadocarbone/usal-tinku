@@ -11,20 +11,35 @@ interface TutorPerfil {
   id: string;
   nombre: string;
   apellido: string;
+  tipo: string;
+  capacidadEstudiante: boolean;
+  capacidadAdultoResponsable: boolean;
   materias: string[];
   nivel: string;
-  precioHora: number | null;
   calificacionPromedio: number | null;
   cantidadCalificaciones: number;
+  precioHora?: number | null;
 }
 
 interface FranjaDisponible {
   id: string;
+  tutorId: string;
   diaSemana: number | null;
   fechaEspecifica: string | null;
   horaInicio: string;
   horaFin: string;
+  activa: boolean;
 }
+
+const NOMBRE_DIA = [
+  "Domingo",
+  "Lunes",
+  "Martes",
+  "Miercoles",
+  "Jueves",
+  "Viernes",
+  "Sabado",
+];
 
 interface ReservaCreada {
   id: string;
@@ -64,49 +79,36 @@ function ReservarForm() {
         if (err instanceof ApiError) {
           setError(
             err.status === 404
-              ? "El tutor no existe."
+              ? "Tutor no encontrado."
               : err.message || "No se pudo cargar el perfil."
           );
         }
       })
       .finally(() => activo && setCargando(false));
+    api
+      .get<FranjaDisponible[]>(`/api/tutores/${tutorId}/franjas`)
+      .then((lista) => activo && setFranjas(lista.filter((f) => f.activa)))
+      .catch(() => activo && setFranjas([]))
+      .finally(() => activo && setCargandoFranjas(false));
     return () => {
       activo = false;
     };
   }, [tutorId]);
 
-  async function cargarFranjas() {
-    if (!tutorId) return;
-    setCargandoFranjas(true);
-    setError(null);
-    try {
-      const lista = await api.get<FranjaDisponible[]>(
-        `/api/tutores/${tutorId}/franjas`
-      );
-      setFranjas(lista);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      }
-    } finally {
-      setCargandoFranjas(false);
-    }
-  }
-
-  useEffect(() => {
-    if (fechaElegida) cargarFranjas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fechaElegida]);
-
-  async function elegirFecha(e: React.ChangeEvent<HTMLInputElement>) {
+  function elegirFecha(e: React.ChangeEvent<HTMLInputElement>) {
     setFechaElegida(e.target.value);
     setHoraElegida("");
+    setHoras([]);
+    setError(null);
   }
 
-  async function verHoras(franja: FranjaDisponible) {
+  function verHoras(franja: FranjaDisponible) {
     if (franja.diaSemana !== null && !fechaElegida) {
       setError("Elegi una fecha valida.");
       return;
+    }
+    if (franja.fechaEspecifica !== null) {
+      setFechaElegida(franja.fechaEspecifica.slice(0, 10));
     }
     setError(null);
     const [inicio, fin] = [franja.horaInicio, franja.horaFin].map((h) => {
@@ -128,6 +130,16 @@ function ReservarForm() {
     clearSession();
     router.replace("/");
   }
+
+  const franjasVisibles = fechaElegida
+    ? franjas.filter(
+        (f) =>
+          (f.diaSemana !== null &&
+            f.diaSemana === new Date(`${fechaElegida}T12:00:00`).getDay()) ||
+          (f.fechaEspecifica !== null &&
+            f.fechaEspecifica.slice(0, 10) === fechaElegida)
+      )
+    : franjas;
 
   async function reservar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -191,9 +203,9 @@ function ReservarForm() {
             <span style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
               {perfil.nombre} {perfil.apellido}
             </span>
-            {perfil.precioHora !== null && (
+            {typeof perfil.precioHora === "number" && (
               <span style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
-                ${Number(perfil.precioHora).toLocaleString("es-AR")} por hora
+                ${perfil.precioHora.toLocaleString("es-AR")} por hora
               </span>
             )}
           </div>
@@ -209,13 +221,17 @@ function ReservarForm() {
             />
           </div>
 
-          {franjas.length > 0 ? (
+          {cargandoFranjas ? (
+            <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+              Cargando franjas...
+            </p>
+          ) : franjasVisibles.length > 0 ? (
             <div>
               <p style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.5rem" }}>
                 Franjas de disponibilidad
               </p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {franjas.map((f) => (
+                {franjasVisibles.map((f) => (
                   <li key={f.id} style={{ marginBottom: "0.35rem" }}>
                     <button
                       type="button"
@@ -224,19 +240,17 @@ function ReservarForm() {
                       style={{ fontSize: "0.85rem", padding: "0.4rem 0.75rem", width: "100%", textAlign: "left" }}
                     >
                       {f.diaSemana !== null
-                        ? `Dia ${f.diaSemana} — de ${f.horaInicio} a ${f.horaFin}`
-                        : `${f.fechaEspecifica} — de ${f.horaInicio} a ${f.horaFin}`}
+                        ? `${NOMBRE_DIA[f.diaSemana]} de ${f.horaInicio} a ${f.horaFin}`
+                        : `${new Date(`${f.fechaEspecifica}T12:00:00`).toLocaleDateString("es-AR")} de ${f.horaInicio} a ${f.horaFin}`}
                     </button>
                   </li>
                 ))}
               </ul>
             </div>
           ) : (
-            cargandoFranjas && (
-              <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
-                Cargando franjas...
-              </p>
-            )
+            <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+              Este tutor no publico disponibilidad todavia.
+            </p>
           )}
 
           {horas.length > 0 && (

@@ -10,11 +10,14 @@ interface TutorPerfil {
   id: string;
   nombre: string;
   apellido: string;
+  tipo: string;
+  capacidadEstudiante: boolean;
+  capacidadAdultoResponsable: boolean;
   materias: string[];
   nivel: string;
-  precioHora: number | null;
   calificacionPromedio: number | null;
   cantidadCalificaciones: number;
+  precioHora?: number | null;
 }
 
 const NOMBRE_TIPO: Record<string, string> = {
@@ -45,7 +48,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
         if (err instanceof ApiError) {
           setError(
             err.status === 404
-              ? "El tutor no existe."
+              ? "Tutor no encontrado."
               : err.message || "No se pudo cargar el perfil."
           );
         } else {
@@ -167,20 +170,21 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                     <dd style={{ textTransform: "none" }}>{perfil.nivel}</dd>
                   </div>
                 )}
-                {perfil.precioHora !== null && (
+                {typeof perfil.precioHora === "number" && (
                   <div className="perfil-fila">
                     <dt>Precio por hora</dt>
                     <dd style={{ textTransform: "none" }}>
-                      ${Number(perfil.precioHora).toLocaleString("es-AR")}
+                      ${perfil.precioHora.toLocaleString("es-AR")}
                     </dd>
                   </div>
                 )}
                 <div className="perfil-fila">
                   <dt>Calificacion</dt>
                   <dd style={{ textTransform: "none" }}>
-                    {perfil.cantidadCalificaciones >= 5
-                      ? `${perfil.calificacionPromedio?.toFixed(1) ?? "—"} (${perfil.cantidadCalificaciones})`
-                      : "Sin suficiente historial"}
+                    {perfil.calificacionPromedio !== null &&
+                    perfil.cantidadCalificaciones >= 5
+                      ? `${perfil.calificacionPromedio.toFixed(1)} (${perfil.cantidadCalificaciones})`
+                      : "Sin calificaciones suficientes"}
                   </dd>
                 </div>
               </dl>

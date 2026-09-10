@@ -71,7 +71,7 @@ export default function ReservasPage() {
 
         {reservas && reservas.length === 0 && (
           <p style={{ color: "var(--color-texto-suave)" }}>
-            Aun no tenes reservas.{" "}
+            No tenes reservas todavia.{" "}
             <Link href="/buscar">Busca un tutor</Link> para empezar.
           </p>
         )}
