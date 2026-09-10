@@ -114,13 +114,13 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 ## M9 — Denuncias, Seguridad y Moderación
 
-- [ ] T-M9-01: Migración: `denuncias`, `sanciones`.
-- [ ] T-M9-02: Endpoint `POST /api/denuncias` — rechazo a nivel de autorización si `denunciante.tipo == menor` (403, no solo oculto en frontend).
-- [ ] T-M9-03: Job de vencimiento de descargo (48hs) y de SLA de resolución (5 días hábiles) — **track completamente separado** del de Alertas de kill-switch, sin compartir código de plazos.
-- [ ] T-M9-04: Endpoint de resolución de Denuncia (infundada/fundada/escalada) — reanuda escrow **solo de esa sesión puntual** (FR-SEC-011).
-- [ ] T-M9-05: Endpoint de resolución de Alerta de Seguridad — separado del anterior, sin esperar descargo previo, dentro de la ventana de 12hs.
-- [ ] T-M9-06: Publicación del evento de sanción + listeners en M1, M2, M4, M5 (saga o, como mínimo, reintentos con alerta si algún listener falla — riesgo señalado explícitamente en el Plan).
-- [ ] T-M9-07: Tests: denuncias cruzadas resuelven su escrow de forma independiente; sanción a un Tutor se propaga correctamente a los 4 módulos listeners.
+- [x] T-M9-01: Migración: `denuncias`, `sanciones`.
+- [x] T-M9-02: Endpoint `POST /api/denuncias` — rechazo a nivel de autorización si `denunciante.tipo == menor` (403, no solo oculto en frontend).
+- [x] T-M9-03: Job de vencimiento de descargo (48hs) y de SLA de resolución (5 días hábiles) — **track completamente separado** del de Alertas de kill-switch, sin compartir código de plazos.
+- [x] T-M9-04: Endpoint de resolución de Denuncia (infundada/fundada/escalada) — reanuda escrow **solo de esa sesión puntual** (FR-SEC-011).
+- [x] T-M9-05: Endpoint de resolución de Alerta de Seguridad — separado del anterior, sin esperar descargo previo, dentro de la ventana de 12hs.
+- [x] T-M9-06: Publicación del evento de sanción + listeners en M1, M2, M4, M5 (saga o, como mínimo, reintentos con alerta si algún listener falla — riesgo señalado explícitamente en el Plan).
+- [x] T-M9-07: Tests: denuncias cruzadas resuelven su escrow de forma independiente; sanción a un Tutor se propaga correctamente a los 4 módulos listeners.
 
 ## M6 — Resumen Automático de Sesiones
 
