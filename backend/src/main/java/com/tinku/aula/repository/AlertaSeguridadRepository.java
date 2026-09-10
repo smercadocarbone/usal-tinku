@@ -13,4 +13,8 @@ public interface AlertaSeguridadRepository extends JpaRepository<AlertaSeguridad
 
     /** Cola de M8: alertas pendientes de resolución (ventana 12hs, prioridad alta). */
     List<AlertaSeguridad> findByEstadoOrderByCreatedAtAsc(String estado);
+
+    /** Alerta pendiente sobre una sesión puntual (T-M6-03): M6 pausa la generación
+     *  del resumen si existe (FR-SUM-008, BR-KS-03). */
+    boolean existsBySesionIdAndEstado(UUID sesionId, String estado);
 }
