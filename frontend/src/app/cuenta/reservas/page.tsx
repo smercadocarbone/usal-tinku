@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
@@ -11,7 +11,7 @@ export default function ReservasPage() {
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  function cargar() {
+  const cargar = useCallback(() => {
     setCargando(true);
     setReservas(null);
     api
@@ -25,11 +25,11 @@ export default function ReservasPage() {
         }
       })
       .finally(() => setCargando(false));
-  }
+  }, []);
 
   useEffect(() => {
     cargar();
-  }, []);
+  }, [cargar]);
 
   return (
     <>

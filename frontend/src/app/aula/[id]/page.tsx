@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { api, ApiError } from "@/lib/api";
-import { clearSession } from "@/lib/auth";
 
 interface TokenResponse {
   token: string;
@@ -41,13 +40,16 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const [micActiva, setMicActiva] = useState(true);
 
   /** Refs espejo del estado para usarlos dentro de callbacks de eventos del
-   * Room (que cierran sobre el render de creación) sin recrear la conexión. */
+   * Room (que cierran sobre el render de creación) sin recrear la conexión.
+   * Se actualizan en un efecto (post-render), no durante el render. */
   const estadoRef = useRef<Estado>(estado);
-  estadoRef.current = estado;
   const camActivaRef = useRef(camActiva);
-  camActivaRef.current = camActiva;
   const micActivaRef = useRef(micActiva);
-  micActivaRef.current = micActiva;
+  useEffect(() => {
+    estadoRef.current = estado;
+    camActivaRef.current = camActiva;
+    micActivaRef.current = micActiva;
+  });
 
   /** Pensar la conexión como una operación: crea el room, registra listeners y
    * recién después conecta. roomRef se setea ANTES del connect para que el

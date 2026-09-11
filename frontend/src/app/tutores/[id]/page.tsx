@@ -37,7 +37,6 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
   const [noConfiable, setNoConfiable] = useState(false);
   const [enviandoNoConfiable, setEnviandoNoConfiable] = useState(false);
   const [mensajeNoConfiable, setMensajeNoConfiable] = useState<string | null>(null);
-  const [mostrarAvisoMenores, setMostrarAvisoMenores] = useState(true);
 
   function cargar() {
     setCargando(true);
@@ -212,17 +211,15 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   >
                     Autorizar para mi menor
                   </button>
-                  {mostrarAvisoMenores && (
-                    <div
-                      className="alerta alerta--informativa"
-                      role="status"
-                      style={{ marginTop: "0.5rem" }}
-                    >
-                      El listado de tus menores esta pendiente en backend. Cuando
-                      este disponible, vas a poder autorizar tutores para cada
-                      menor.
-                    </div>
-                  )}
+                  <div
+                    className="alerta alerta--informativa"
+                    role="status"
+                    style={{ marginTop: "0.5rem" }}
+                  >
+                    El listado de tus menores esta pendiente en backend. Cuando
+                    este disponible, vas a poder autorizar tutores para cada
+                    menor.
+                  </div>
                 </div>
 
                 <div

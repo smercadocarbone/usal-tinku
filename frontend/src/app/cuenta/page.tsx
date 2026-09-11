@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
@@ -151,7 +151,7 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
 
       <div className="tarjeta" style={{ marginTop: "1rem" }}>
         <form className="formulario" onSubmit={publicar}>
-          <label> tipo de franja </label>
+          <p style={{ margin: "0 0 0.5rem", fontWeight: 600 }}>Tipo de franja</p>
           <div
             className="opciones"
             role="group"
@@ -188,7 +188,7 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
                 onChange={(e) => setDiaSemana(e.target.value)}
               >
                 {DIAS.map((d, i) => (
-                  <option key={i} value={i}>
+                  <option key={d} value={i}>
                     {d}
                   </option>
                 ))}
@@ -308,7 +308,7 @@ function PanelAdulto() {
   const [solicitudesError, setSolicitudesError] = useState(false);
   const [aprobandoId, setAprobandoId] = useState<string | null>(null);
 
-  function cargarSolicitudes() {
+  const cargarSolicitudes = useCallback(() => {
     setCargandoSolicitudes(true);
     setSolicitudesError(false);
     api
@@ -316,11 +316,11 @@ function PanelAdulto() {
       .then(setSolicitudes)
       .catch(() => setSolicitudesError(true))
       .finally(() => setCargandoSolicitudes(false));
-  }
+  }, []);
 
   useEffect(() => {
     cargarSolicitudes();
-  }, []);
+  }, [cargarSolicitudes]);
 
   function altaMenor(e: FormEvent) {
     e.preventDefault();

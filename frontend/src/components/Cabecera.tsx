@@ -8,7 +8,9 @@ interface CabeceraProps {
   enlaces?: { href: string; label: string }[];
 }
 
-export default function Cabecera({ enlaces = [] }: CabeceraProps) {
+const SIN_ENLACES: { href: string; label: string }[] = [];
+
+export default function Cabecera({ enlaces = SIN_ENLACES }: CabeceraProps) {
   const router = useRouter();
 
   function logout() {

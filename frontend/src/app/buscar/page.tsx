@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { getSession } from "@/lib/auth";
 import Cabecera from "@/components/Cabecera";
 
 interface ResultadoBusqueda {
@@ -25,9 +24,6 @@ interface BusquedaGuardada {
 }
 
 export default function BuscarPage() {
-  const session = getSession();
-  const payload = session?.payload;
-
   const [texto, setTexto] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,14 +46,14 @@ export default function BuscarPage() {
     setBuscado(false);
 
     try {
-      const resultados = await api.post<ResultadoBusqueda[]>(
+      const lista = await api.post<ResultadoBusqueda[]>(
         "/api/busquedas",
         { textoBusqueda: texto.trim() }
       );
-      setResultados(resultados);
+      setResultados(lista);
       setBuscado(true);
 
-      const tutorIds = [...new Set(resultados.map((r) => r.tutorId))];
+      const tutorIds = [...new Set(lista.map((r) => r.tutorId))];
       const nuevos = new Map<string, TutorBasico>();
       await Promise.allSettled(
         tutorIds.map(async (id) => {
@@ -121,13 +117,13 @@ export default function BuscarPage() {
     setBuscado(false);
 
     try {
-      const resultados = await api.post<ResultadoBusqueda[]>(
+      const lista = await api.post<ResultadoBusqueda[]>(
         `/api/busquedas/guardadas/${guardada.id}/ejecutar`
       );
-      setResultados(resultados);
+      setResultados(lista);
       setBuscado(true);
 
-      const tutorIds = [...new Set(resultados.map((r) => r.tutorId))];
+      const tutorIds = [...new Set(lista.map((r) => r.tutorId))];
       const nuevos = new Map<string, TutorBasico>();
       await Promise.allSettled(
         tutorIds.map(async (id) => {
