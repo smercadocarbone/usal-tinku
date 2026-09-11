@@ -14,9 +14,11 @@ snapshot que reconstruir al reiniciar el proceso (Plan_M2_Motor_Matching.md,
 secciones 1 y 3).
 
 Endpoints:
-- GET  /health   (T-000-08): comunicacion interna backend Java -> Python.
-- POST /match    (T-M2-04): ranking por similitud semantica sobre la lista
-  de candidatos que llega YA acotada por el backend Java.
+- GET  /health               (T-000-08): comunicacion interna backend Java -> Python.
+- POST /match                (T-M2-04): ranking por similitud semantica sobre la
+  lista de candidatos que llega YA acotada por el backend Java.
+- POST /recompute-embeddings (M2-F, contrato 2c): repopula `embedding` de TODOS
+  los perfiles desde sus `tema_ids` (idempotente, sin reglas de negocio).
 """
 
 import os
@@ -43,12 +45,25 @@ _embedder: Callable[[str], list[float]] | None = None
 
 class MatchRequest(BaseModel):
     texto_busqueda: str
-    tutor_ids_candidatos: list[str]  # lista YA acotada por el backend Java
+    tutor_ids_candidatos: list[
+        str
+    ]  # lista YA acotada por el backend Java (autorizacion, suspensiones)
 
 
 class MatchResult(BaseModel):
     tutor_id: str
     score: float
+
+
+def _conectar() -> psycopg.Connection:
+    """Conexion a Postgres con las mismas TINKU_PG_* usadas por RepoScores."""
+    return psycopg.connect(
+        host=os.environ["TINKU_PG_HOST"],
+        port=int(os.environ.get("TINKU_PG_PORT", "5432")),
+        dbname=os.environ["TINKU_PG_DBNAME"],
+        user=os.environ["TINKU_PG_USER"],
+        password=os.environ["TINKU_PG_PASSWORD"],
+    )
 
 
 class RepoScores:
@@ -61,13 +76,7 @@ class RepoScores:
     def obtener_scores(
         self, tutor_ids: Iterable[str], consulta_embedding: list[float]
     ) -> list[tuple[str, float]]:
-        conn = psycopg.connect(
-            host=os.environ["TINKU_PG_HOST"],
-            port=int(os.environ.get("TINKU_PG_PORT", "5432")),
-            dbname=os.environ["TINKU_PG_DBNAME"],
-            user=os.environ["TINKU_PG_USER"],
-            password=os.environ["TINKU_PG_PASSWORD"],
-        )
+        conn = _conectar()
         try:
             register_vector(conn)
             ids = list(tutor_ids)
@@ -93,6 +102,64 @@ class RepoScores:
 _repo: RepoScores = RepoScores()
 
 
+class RecomputeRepo:
+    """Lee perfiles con sus temas y persiste el embedding (contrato 2c, M2-F).
+
+    SIN reglas de negocio: consume los `tema_ids` ya validados en Java y solo
+    escribe `embedding` (o lo deja NULL) para que /match pueda rankear.
+    """
+
+    def perfiles_con_temas(self) -> list[tuple[str, list[tuple[str, str]]]]:
+        """Todos los perfiles como [(tutor_id, [(nombre, descripcion), ...])].
+
+        Los temas de cada perfil se resuelven en el orden del array `tema_ids`;
+        los ids sin fila en `matching.temas` (fuera de catalogo) se ignoran. Un
+        unico query resuelve todos los temas de golpe (`id = ANY(ids)`), sin
+        leer filas por tutor.
+        """
+        conn = _conectar()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT tutor_id::text, tema_ids FROM matching.perfiles_tutor_matching"
+                )
+                perfiles = cur.fetchall()
+                ids = {tid for _, tema_ids in perfiles for tid in tema_ids}
+                temas = {}
+                if ids:
+                    cur.execute(
+                        "SELECT id, nombre, descripcion FROM matching.temas WHERE id = ANY(%s::uuid[])",
+                        (list(ids),),
+                    )
+                    temas = {
+                        tid: (nombre, descripcion)
+                        for tid, nombre, descripcion in cur.fetchall()
+                    }
+            return [
+                (tutor_id, [temas[tid] for tid in tema_ids if tid in temas])
+                for tutor_id, tema_ids in perfiles
+            ]
+        finally:
+            conn.close()
+
+    def guardar_embedding(self, tutor_id: str, vector: list[float] | None) -> None:
+        """Persiste el embedding de 384 dims del tutor (NULL si el perfil no tiene temas)."""
+        conn = _conectar()
+        try:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE matching.perfiles_tutor_matching SET embedding = %s WHERE tutor_id = %s::uuid",
+                    (None if vector is None else Vector(vector), tutor_id),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+_recompute_repo: RecomputeRepo = RecomputeRepo()
+
+
 def _cargar_embedder() -> Callable[[str], list[float]]:
     """Carga el modelo sentence-transformers una sola vez (lazy)."""
     global _embedder
@@ -106,6 +173,15 @@ def _cargar_embedder() -> Callable[[str], list[float]]:
 
 class MatchError(RuntimeError):
     """El servicio no puede computar el ranking (modelo o base no disponibles)."""
+
+
+def texto_fuente(temas: list[tuple[str, str]]) -> str:
+    """'{nombre}: {descripcion}' por tema, separados por '. ' (contrato 2c).
+
+    Funcion pura: el texto es la unica fuente del embedding del Tutor, asi la
+    busqueda por nombre ("como dividir") matchea el tema, no la materia.
+    """
+    return ". ".join(f"{nombre}: {descripcion}" for nombre, descripcion in temas)
 
 
 def _embed(texto: str) -> list[float]:
@@ -157,6 +233,30 @@ def match(request: MatchRequest) -> list[MatchResult]:
 
 class Unavailable(Exception):
     """Respuesta 503: el ranking real no se puede computar en este momento."""
+
+
+@app.post("/recompute-embeddings")
+def recompute_embeddings() -> dict:
+    """Repopula `embedding` de TODOS los perfiles desde sus `tema_ids` (2c).
+
+    Idempotente (mismo estado -> mismo resultado) y SIN reglas de negocio:
+    no lee autorizacion, reputacion ni activo_para_matching. Toma los
+    `tema_ids` ya validados en Java, arma el texto fuente '{nombre}:
+    {descripcion}' de cada tema ('. ' entre temas), lo embeddea con el MISMO
+    modelo lazy de /match y escribe el vector — NULL si el perfil no tiene
+    temas. Si el modelo o la base no estan disponibles se responde 503 de
+    forma explicita; nunca fabrica un embedding falso.
+    """
+    try:
+        perfiles = _recompute_repo.perfiles_con_temas()
+        for tutor_id, temas in perfiles:
+            vector = None if not temas else _embed(texto_fuente(temas))
+            _recompute_repo.guardar_embedding(tutor_id, vector)
+    except MatchError as exc:
+        raise Unavailable(str(exc)) from exc
+    except Exception as exc:
+        raise Unavailable(f"base de pgvector no disponible: {exc}") from exc
+    return {"actualizados": len(perfiles)}
 
 
 @app.exception_handler(Unavailable)

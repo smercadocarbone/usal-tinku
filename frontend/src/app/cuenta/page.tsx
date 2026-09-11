@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
 import { formatearFechaCorta } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
+import TemasTutor from "@/components/TemasTutor";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
@@ -679,6 +680,7 @@ export default function CuentaPage() {
         </dl>
 
         {payload?.tipo === "TUTOR" && <PanelTutor tutorId={String(payload.sub)} />}
+        {payload?.tipo === "TUTOR" && <TemasTutor />}
         {payload?.cap_ar === true && <PanelAdulto />}
       </main>
     </>

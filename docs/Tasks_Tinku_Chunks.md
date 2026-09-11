@@ -50,6 +50,8 @@ _(requiere M1 cerrado)_
 
 > Nota: M2-C referencia M7 y M9 (reputación, suspensión) que todavía no existen como módulos completos en este punto del roadmap — usar stubs/interfaces mínimas y dejarlo señalado para cuando M7/M9 se implementen.
 
+- [ ] **Chunk M2-F** — Catálogo granular de temas + búsqueda por nombre (T-M2-11…T-M2-17) — _contratos cerrados en `docs/plan/Plan_M2_Temas.md` (rama `chunk/m2-f-temas`): trayectos+temas con descripciones (reemplaza el uso de `materias_niveles`), `tema_ids` por Tutor, búsqueda por nombre/materia en Java antes de `/match`, recompute de embeddings en matching-service. Nota: la "Res. CFE 371/23" del encargo no existe (res. 371 es de 2020/E TP) — fuentes reales en Plan_M2_Temas.md §1. V12 ya tiene el skeleton; seed en V13._
+
 ## M4 — Sistema de Reservas y Agenda
 
 _(requiere M1 y M2 cerrados)_
