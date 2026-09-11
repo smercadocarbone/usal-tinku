@@ -151,9 +151,14 @@ Body: `{"texto_busqueda"?, "nombre"?, "filtro_materia"?}`
   para un perfil `TUTOR`.
 - **Página de búsqueda (nueva, `/busqueda`)**: input de texto libre + input de nombre +
   selectores de rama del catálogo (nivel/curso/materia, data de `GET /api/catalogos`).
-  Resultados en cards: nombre del tutor (por ahora `tutor_id` si no hay endpoint de perfil),
-  materias/temas que cubre (a acordar en FASE 3), y si `no_autorizado:true` en un perfil de
-  menor → botón **"Solicitar autorización"** (flujo M1 existente).
+  Resultados en cards y si `no_autorizado:true` en un perfil de menor → botón
+  **"Solicitar autorización"** (notificación al AR — no hay endpoint de solicitud en este
+  chunk; el botón muestra un aviso local sin llamar a la API, marcado TODO).
+- **Decisión de orquestador (cerrada en FASE 0):** la respuesta de `POST /api/busquedas`
+  NO cambia (`tutor_id, score, no_autorizado`) — el card muestra `tutor_id` (etiqueta
+  "Tutor #…"). Mostrar "materias/temas que cubre" requeriría un endpoint de perfil público
+  de Tutor que no existe (queda diferido, señalado en el resumen — no se inventa un endpoint
+  nuevo en este chunk).
 - S4 puede mockear `GET /api/catalogos` localmente mientras el backend no aterrice; la
   integración real la hace el orquestador en FASE 3.
 - `middleware.ts` protege `/busqueda` y `/cuenta` (mismo patrón actual).

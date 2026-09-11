@@ -101,7 +101,8 @@ a {
 .campo input[type="text"],
 .campo input[type="password"],
 .campo input[type="date"],
-.campo input[type="file"] {
+.campo input[type="file"],
+.campo select {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-borde);
   border-radius: 8px;
@@ -110,10 +111,16 @@ a {
   color: var(--color-texto);
 }
 
-.campo input:focus {
+.campo input:focus,
+.campo select:focus {
   outline: 2px solid var(--color-accent);
   outline-offset: 1px;
   border-color: transparent;
+}
+
+.campo select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .opciones {
@@ -318,4 +325,90 @@ a {
   margin: 0;
   text-align: right;
   text-transform: capitalize;
+}
+
+/* Cabecera con varias acciones a la derecha */
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.fila-selectores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Árbol colapsable del perfil Tutor */
+.arbol-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.45rem 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-texto);
+  cursor: pointer;
+  text-align: left;
+}
+
+.arbol-fila:hover {
+  color: var(--color-accent);
+}
+
+.arbol-grupo {
+  margin-left: 1rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--color-borde);
+}
+
+.arbol-tema-linea {
+  align-items: flex-start;
+}
+
+.arbol-tema {
+  display: flex;
+  flex-direction: column;
+}
+
+.arbol-descripcion {
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.arbol-estado {
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
+/* Resultados de búsqueda */
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.resultado {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 1rem 1.25rem;
+}
+
+.resultado h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.resultado-meta {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-texto-suave);
 }

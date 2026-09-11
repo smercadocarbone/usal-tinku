@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clearSession, getSession } from "@/lib/auth";
+import TemasTutor from "@/components/TemasTutor";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
@@ -25,9 +27,18 @@ export default function CuentaPage() {
         <div className="marca" style={{ marginBottom: 0 }}>
           Tinku<span>.</span>
         </div>
-        <button type="button" className="boton boton--secundario" onClick={logout}>
-          Cerrar sesión
-        </button>
+        <div className="cabecera-acciones">
+          <Link
+            href="/busqueda"
+            className="boton boton--secundario"
+            style={{ textDecoration: "none" }}
+          >
+            Buscar tutores
+          </Link>
+          <button type="button" className="boton boton--secundario" onClick={logout}>
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       <main className="contenido">
@@ -55,6 +66,8 @@ export default function CuentaPage() {
             <dd>{payload?.cap_ar ? "Activa" : "Inactiva"}</dd>
           </div>
         </dl>
+
+        {payload?.tipo === "TUTOR" && <TemasTutor />}
       </main>
     </>
   );

@@ -39,25 +39,37 @@ public class BusquedaController {
         this.usuarioActual = usuarioActual;
     }
 
-    /** US-1: búsqueda en lenguaje natural. US-2: respeta el contexto del menor. */
+    /** US-1: búsqueda en lenguaje natural. US-2: respeta el contexto del menor.
+     * Contrato 2b: al menos uno de texto/nombre/materia debe venir no vacío. */
     @PostMapping
     public ResponseEntity<List<BusquedaResponse>> buscar(
             @Valid @RequestBody BusquedaRequest request,
             Authentication authentication
     ) {
-        List<BusquedaResponse> resultados = orquestador.buscar(
-                usuarioActual.obtener(authentication), request.textoBusqueda().trim());
+        Usuario usuario = usuarioActual.obtener(authentication);
+        String texto = trimToNull(request.textoBusqueda());
+        String nombre = trimToNull(request.nombre());
+        String materia = trimToNull(request.filtroMateria());
+        if (texto == null && nombre == null && materia == null) {
+            throw new BusquedaInvalidaException();
+        }
+        List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto, nombre, materia);
         return ResponseEntity.ok(resultados);
     }
 
-    /** US-6: guarda una búsqueda para re-ejecutar después (FR-MATCH-008). */
+    /** US-6: guarda una búsqueda para re-ejecutar después (FR-MATCH-008).
+     * Almacena el texto EFECTIVO (nombre/materia si no vino texto libre). */
     @PostMapping("/guardadas")
     public ResponseEntity<GuardadaResponse> guardar(
             @Valid @RequestBody BusquedaRequest request,
             Authentication authentication
     ) {
-        BusquedaGuardada guardada = guardadasService.guardar(
-                usuarioActual.obtener(authentication).getId(), request.textoBusqueda().trim());
+        Usuario usuario = usuarioActual.obtener(authentication);
+        String textoEfectivo = textoEfectivo(request);
+        if (textoEfectivo == null) {
+            throw new BusquedaInvalidaException();
+        }
+        BusquedaGuardada guardada = guardadasService.guardar(usuario.getId(), textoEfectivo);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new GuardadaResponse(guardada.getId(),
                         guardada.getTextoBusqueda(), guardada.getCreatedAt()));
@@ -84,5 +96,19 @@ public class BusquedaController {
         BusquedaGuardada guardada = guardadasService.propia(usuario.getId(), id);
         List<BusquedaResponse> resultados = orquestador.buscar(usuario, guardada.getTextoBusqueda());
         return ResponseEntity.ok(resultados);
+    }
+
+    /** Primer campo no vacío siguiendo el orden del contrato 2b: texto_busqueda
+     * si viene, si no nombre, si no filtro_materia. Null si ninguno. */
+    private static String textoEfectivo(BusquedaRequest request) {
+        String texto = trimToNull(request.textoBusqueda());
+        if (texto != null) return texto;
+        String nombre = trimToNull(request.nombre());
+        if (nombre != null) return nombre;
+        return trimToNull(request.filtroMateria());
+    }
+
+    private static String trimToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

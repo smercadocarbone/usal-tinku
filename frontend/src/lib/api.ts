@@ -8,6 +8,7 @@
  */
 
 import { clearSession, TOKEN_KEY } from "./auth";
+import { catalogoMock } from "./catalogoMock";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -107,8 +108,100 @@ export const api = {
     manageSesion(() => request<T>(path, { method: "GET" })),
   post: <T>(path: string, body?: Cuerpo) =>
     manageSesion(() => request<T>(path, { method: "POST", body })),
+  put: <T>(path: string, body?: Cuerpo) =>
+    manageSesion(() => request<T>(path, { method: "PUT", body })),
   patch: <T>(path: string, body?: Cuerpo) =>
     manageSesion(() => request<T>(path, { method: "PATCH", body })),
   delete: <T>(path: string) =>
     manageSesion(() => request<T>(path, { method: "DELETE" })),
 };
+
+/* ---- Contrato 2b (M2): catálogo de temas + búsqueda ---- */
+
+/** Árbol nivel → curso/carrera → materia → tema (contrato 2b, claves ya
+ *  independientes de snake_case; solo `tema_ids`/`tutor_id` se mapean). */
+export interface TemaCatalogo {
+  id: string;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface MateriaCatalogo {
+  nombre: string;
+  temas: TemaCatalogo[];
+}
+
+export interface CursoCatalogo {
+  nombre: string;
+  materias: MateriaCatalogo[];
+}
+
+export interface NivelCatalogo {
+  nivel: string;
+  cursos: CursoCatalogo[];
+}
+
+export interface FiltrosCatalogos {
+  nivel?: string;
+  curso?: string;
+  materia?: string;
+}
+
+export interface MisTemas {
+  temaIds: string[];
+}
+
+export interface ResultadoBusqueda {
+  tutorId: string;
+  score: number;
+  noAutorizado: boolean;
+}
+
+export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[]> {
+  const params = new URLSearchParams();
+  if (filtros?.nivel) params.set("nivel", filtros.nivel);
+  if (filtros?.curso) params.set("curso", filtros.curso);
+  if (filtros?.materia) params.set("materia", filtros.materia);
+  const qs = params.toString();
+  return api.get<NivelCatalogo[]>(`/api/catalogos${qs ? `?${qs}` : ""}`).catch((err) => {
+    if (err instanceof ApiError && err.status !== 404) throw err;
+    // ponytail: fallback local hasta que el backend aterrice en FASE 3
+    // (orquestador). El GET real es la fuente; este fixture solo cubre
+    // red caída / endpoint 404. Los filtros no aplican al fixture: nadie
+    // los usa en este chunk todavía.
+    return catalogoMock;
+  });
+}
+
+interface MisTemasRaw {
+  tema_ids: string[];
+}
+
+export function getMisTemas(): Promise<MisTemas> {
+  return api.get<MisTemasRaw>("/api/tutores/me/temas").then((r) => ({
+    temaIds: r.tema_ids,
+  }));
+}
+
+export function setMisTemas(temaIds: string[]): Promise<void> {
+  return api.put<void>("/api/tutores/me/temas", { tema_ids: temaIds });
+}
+
+export interface CuerpoBusqueda {
+  textoBusqueda?: string;
+  nombre?: string;
+  filtroMateria?: string;
+}
+
+export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]> {
+  return api.post<ResultadoBusqueda[]>("/api/busquedas", {
+    texto_busqueda: body.textoBusqueda || undefined,
+    nombre: body.nombre || undefined,
+    filtro_materia: body.filtroMateria || undefined,
+  });
+}
+
+/** Mensaje legible desde un error de red o un ApiError del backend ({error}). */
+export function mensajeDeError(err: unknown, fallback: string): string {
+  return err instanceof ApiError && err.message ? err.message : fallback;
+}
