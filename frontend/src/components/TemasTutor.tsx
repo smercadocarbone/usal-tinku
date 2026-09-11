@@ -15,11 +15,6 @@ const NOMBRE_NIVEL: Record<string, string> = {
   universitario: "Universitario",
 };
 
-/**
- * Sección del perfil Tutor en /cuenta: árbol colapsable nivel → curso →
- * materia → temas con descripción inline y guardado automático (debounced)
- * contra el contrato 2b.
- */
 export default function TemasTutor() {
   const [catalogos, setCatalogos] = useState<NivelCatalogo[] | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -28,9 +23,6 @@ export default function TemasTutor() {
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [estado, setEstado] = useState<string | null>(null);
 
-  // Contador de cambios hechos por el usuario: la precarga de getMisTemas()
-  // setea `seleccion` sin incrementarlo, así el efecto de guardado no dispara
-  // un PUT redundante apenas monta la sección.
   const interaccion = useRef(0);
 
   useEffect(() => {
@@ -68,8 +60,6 @@ export default function TemasTutor() {
     };
   }, []);
 
-  // Guardado automático con pequeño debounce: varios clicks rápidos coalescen
-  // en un solo PUT con el estado final, sin requests fuera de orden.
   useEffect(() => {
     if (interaccion.current === 0) return;
     const id = setTimeout(() => {
@@ -118,7 +108,7 @@ export default function TemasTutor() {
       <section aria-label="Mis temas">
         <h2>Mis temas</h2>
         {errorPrecarga && (
-          <div className="alerta alerta--error" role="alert">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {errorPrecarga}
           </div>
         )}
@@ -135,12 +125,12 @@ export default function TemasTutor() {
       </p>
 
       {errorPrecarga && (
-        <div className="alerta alerta--error" role="alert">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
           {errorPrecarga}
         </div>
       )}
 
-      <div className="arbol">
+      <div>
         {catalogos.map((nivel) => {
           const claveNivel = nivel.nivel;
           const abiertoNivel = abiertos.has(claveNivel);
@@ -148,7 +138,7 @@ export default function TemasTutor() {
             <div key={claveNivel}>
               <button
                 type="button"
-                className="arbol-fila"
+                className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
                 aria-expanded={abiertoNivel}
                 onClick={() => alternarBloque(claveNivel)}
               >
@@ -157,7 +147,7 @@ export default function TemasTutor() {
               </button>
 
               {abiertoNivel && (
-                <div className="arbol-grupo">
+                <div className="ml-4 border-l border-borde pl-[0.6rem]">
                   {nivel.cursos.map((curso) => {
                     const claveCurso = `${claveNivel}|${curso.nombre}`;
                     const abiertoCurso = abiertos.has(claveCurso);
@@ -165,7 +155,7 @@ export default function TemasTutor() {
                       <div key={claveCurso}>
                         <button
                           type="button"
-                          className="arbol-fila"
+                          className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
                           aria-expanded={abiertoCurso}
                           onClick={() => alternarBloque(claveCurso)}
                         >
@@ -174,7 +164,7 @@ export default function TemasTutor() {
                         </button>
 
                         {abiertoCurso && (
-                          <div className="arbol-grupo">
+                          <div className="ml-4 border-l border-borde pl-[0.6rem]">
                             {curso.materias.map((materia) => {
                               const claveMateria = `${claveCurso}|${materia.nombre}`;
                               const abiertaMateria = abiertos.has(claveMateria);
@@ -182,7 +172,7 @@ export default function TemasTutor() {
                                 <div key={claveMateria}>
                                   <button
                                     type="button"
-                                    className="arbol-fila"
+                                    className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
                                     aria-expanded={abiertaMateria}
                                     onClick={() => alternarBloque(claveMateria)}
                                   >
@@ -193,21 +183,22 @@ export default function TemasTutor() {
                                   </button>
 
                                   {abiertaMateria && (
-                                    <div className="arbol-grupo">
+                                    <div className="ml-4 border-l border-borde pl-[0.6rem]">
                                       {materia.temas.map((tema) => (
                                         <label
                                           key={tema.id}
                                           aria-label={tema.nombre}
-                                          className="opcion arbol-tema-linea"
+                                          className="flex cursor-pointer items-start gap-2 text-[0.9rem]"
                                         >
                                           <input
                                             type="checkbox"
+                                            className="mt-[0.2rem] accent-accent"
                                             checked={seleccion.has(tema.id)}
                                             onChange={() => alternarTema(tema.id)}
                                           />
-                                          <span className="arbol-tema">
+                                          <span className="flex flex-col">
                                             <strong>{tema.nombre}</strong>
-                                            <span className="arbol-descripcion">
+                                            <span className="text-[0.8rem] text-texto-suave">
                                               {tema.descripcion}
                                             </span>
                                           </span>
@@ -234,10 +225,10 @@ export default function TemasTutor() {
         <p
           className={
             estado === "Cambios guardados."
-              ? "alerta alerta--exito"
+              ? "mt-2 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
               : estado.startsWith("Guardando")
-                ? "arbol-estado"
-                : "alerta alerta--error"
+                ? "mt-2 text-[0.9rem] text-texto-suave"
+                : "mt-2 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
           }
           role={estado.startsWith("No se pudieron") ? "alert" : "status"}
         >

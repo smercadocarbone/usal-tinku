@@ -187,23 +187,22 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
     <>
       <Cabecera enlaces={[{ href: "/cuenta/reservas", label: "Mis reservas" }]} />
 
-      <main className="contenido">
-        <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
+        <h1 className="text-[1.3rem] tracking-[-0.01em]">
           Detalle de la reserva
         </h1>
 
         {cargando && (
-          <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
+          <p className="text-texto-suave">Cargando...</p>
         )}
 
         {error && !cargando && (
-          <div className="alerta alerta--error" role="alert" style={{ marginBottom: "1rem" }}>
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {error}
             <button
               type="button"
-              className="boton boton--secundario"
+              className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
               onClick={cargar}
-              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
             >
               Reintentar
             </button>
@@ -212,41 +211,38 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
         {reserva && (
           <>
-            <div
-              className="tarjeta"
-              style={{ maxWidth: "none", marginBottom: "1rem" }}
-            >
-              <dl style={{ margin: 0 }}>
-                <div className="perfil-fila">
-                  <dt>Estado</dt>
-                  <dd style={{ textTransform: "none" }}>
+            <div className="mb-4 w-full max-w-none rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+              <dl className="m-0">
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Estado</dt>
+                  <dd className="m-0 text-right">
                     {ESTADO_ETIQUETA[reserva.estado] ?? reserva.estado}
                   </dd>
                 </div>
-                <div className="perfil-fila">
-                  <dt>Fecha</dt>
-                  <dd style={{ textTransform: "none" }}>
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Fecha</dt>
+                  <dd className="m-0 text-right">
                     {formatearFecha(reserva.horario)}
                   </dd>
                 </div>
-                <div className="perfil-fila">
-                  <dt>Horario</dt>
-                  <dd style={{ textTransform: "none" }}>
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Horario</dt>
+                  <dd className="m-0 text-right">
                     {formatearHora(reserva.horario)}
                   </dd>
                 </div>
-                <div className="perfil-fila">
-                  <dt>Monto</dt>
-                  <dd style={{ textTransform: "none" }}>
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Monto</dt>
+                  <dd className="m-0 text-right">
                     {reserva.precio !== null
                       ? formatearPrecio(reserva.precio)
                       : "—"}
                   </dd>
                 </div>
                 {reserva.motivoCancelacion && (
-                  <div className="perfil-fila">
-                    <dt>Motivo de cancelacion</dt>
-                    <dd style={{ textTransform: "none" }}>
+                  <div className="flex justify-between gap-4 border-b border-borde py-3">
+                    <dt className="font-semibold">Motivo de cancelacion</dt>
+                    <dd className="m-0 text-right">
                       {reserva.motivoCancelacion}
                     </dd>
                   </div>
@@ -254,11 +250,13 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
               </dl>
             </div>
 
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-            >
+            <div className="flex flex-col gap-2">
               {puedePagar && (
-                <button type="button" className="boton" onClick={pagar}>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
+                  onClick={pagar}
+                >
                   Pagar ahora
                 </button>
               )}
@@ -266,7 +264,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
               {puedeReprogramar && (
                 <button
                   type="button"
-                  className="boton boton--secundario"
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
                   onClick={abrirReprogramar}
                 >
                   {editandoHorario ? "Cancelar edicion" : "Reprogramar"}
@@ -276,10 +274,9 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
               {puedeCancelar && (
                 <button
                   type="button"
-                  className="boton boton--secundario"
+                  className="cursor-pointer rounded-lg border border-red-200 bg-transparent px-4 py-[0.65rem] font-semibold text-peligro enabled:hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={cancelar}
                   disabled={confirmando}
-                  style={{ color: "var(--color-peligro)", borderColor: "#fecaca" }}
                 >
                   {confirmando ? "Procesando..." : "Cancelar reserva"}
                 </button>
@@ -289,14 +286,12 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
             {editandoHorario && puedeReprogramar && (
               <form
                 onSubmit={reprogramar}
-                className="formulario"
-                style={{ marginTop: "1.5rem" }}
+                className="mt-6 flex flex-col gap-4"
               >
                 {faltanMenosDe24hs && (
                   <div
-                    className="alerta alerta--informativa"
+                    className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
                     role="status"
-                    style={{ color: "var(--color-aviso)", marginBottom: "1rem" }}
                   >
                     Faltan menos de 24 horas para esta clase. La reprogramacion se va a tratar
                     como cancelacion tardia.
@@ -304,7 +299,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 )}
 
                 {cargandoFranjas && (
-                  <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+                  <p className="text-[0.9rem] text-texto-suave">
                     Cargando franjas...
                   </p>
                 )}
@@ -312,20 +307,20 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && franjasPendiente && (
                   <>
                     <div
-                      className="alerta alerta--informativa"
+                      className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
                       role="status"
-                      style={{ marginBottom: "1rem" }}
                     >
                       El listado de franjas del tutor esta pendiente en backend.
                     </div>
-                    <div className="campo">
-                      <label htmlFor="nuevoHorario">Nuevo horario</label>
+                    <div className="flex flex-col gap-[0.35rem]">
+                      <label htmlFor="nuevoHorario" className="text-[0.85rem] font-semibold">Nuevo horario</label>
                       <input
                         id="nuevoHorario"
                         type="datetime-local"
                         required
                         value={nuevoHorario}
                         onChange={(e) => setNuevoHorario(e.target.value)}
+                        className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </div>
                   </>
@@ -334,21 +329,21 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && !franjasPendiente && franjas?.length === 0 && (
                   <>
                     <div
-                      className="alerta alerta--informativa"
+                      className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
                       role="status"
-                      style={{ marginBottom: "1rem" }}
                     >
                       Este tutor no publico disponibilidad todavia. Elegi un horario manual o
                       cerra el panel.
                     </div>
-                    <div className="campo">
-                      <label htmlFor="nuevoHorario">Nuevo horario</label>
+                    <div className="flex flex-col gap-[0.35rem]">
+                      <label htmlFor="nuevoHorario" className="text-[0.85rem] font-semibold">Nuevo horario</label>
                       <input
                         id="nuevoHorario"
                         type="datetime-local"
                         required
                         value={nuevoHorario}
                         onChange={(e) => setNuevoHorario(e.target.value)}
+                        className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </div>
                   </>
@@ -356,8 +351,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
                 {!cargandoFranjas && !franjasPendiente && franjas && franjas.length > 0 && (
                   <>
-                    <div className="campo">
-                      <label htmlFor="fechaReprogramar">Fecha</label>
+                    <div className="flex flex-col gap-[0.35rem]">
+                      <label htmlFor="fechaReprogramar" className="text-[0.85rem] font-semibold">Fecha</label>
                       <input
                         id="fechaReprogramar"
                         type="date"
@@ -368,12 +363,13 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                           setHoraElegida("");
                           setHoras([]);
                         }}
+                        className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </div>
-                    <div className="campo">
-                      <label htmlFor="franja">Franja del tutor</label>
+                    <div className="flex flex-col gap-[0.35rem]">
+                      <label htmlFor="franja" className="text-[0.85rem] font-semibold">Franja del tutor</label>
                       {franjasAplicables.length === 0 ? (
-                        <p style={{ color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+                        <p className="text-[0.9rem] text-texto-suave">
                           Elegi una fecha que corresponda a una franja.
                         </p>
                       ) : (
@@ -381,14 +377,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                           id="franja"
                           value={franjaElegida}
                           onChange={(e) => elegirFranja(e.target.value)}
-                          style={{
-                            padding: "0.6rem 0.75rem",
-                            border: "1px solid var(--color-borde)",
-                            borderRadius: "8px",
-                            fontSize: "1rem",
-                            background: "var(--color-superficie)",
-                            color: "var(--color-texto)",
-                          }}
+                          className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="">Elegi una franja</option>
                           {franjasAplicables.map((f) => (
@@ -405,20 +394,13 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                       )}
                     </div>
                     {horas.length > 0 && (
-                      <div className="campo">
-                        <label htmlFor="hora">Horario</label>
+                      <div className="flex flex-col gap-[0.35rem]">
+                        <label htmlFor="hora" className="text-[0.85rem] font-semibold">Horario</label>
                         <select
                           id="hora"
                           value={horaElegida}
                           onChange={(e) => setHoraElegida(e.target.value)}
-                          style={{
-                            padding: "0.6rem 0.75rem",
-                            border: "1px solid var(--color-borde)",
-                            borderRadius: "8px",
-                            fontSize: "1rem",
-                            background: "var(--color-superficie)",
-                            color: "var(--color-texto)",
-                          }}
+                          className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="">Elegi un horario</option>
                           {horas.map((h) => (
@@ -434,7 +416,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
                 <button
                   type="submit"
-                  className="boton"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={confirmando || (!nuevoHorario && !(franjaElegida && horaElegida))}
                 >
                   {confirmando ? "Reprogramando..." : "Confirmar nuevo horario"}

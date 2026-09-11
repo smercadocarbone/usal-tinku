@@ -97,19 +97,18 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
     <>
       <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }]} />
 
-      <main className="contenido">
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
         {cargando && (
-          <p style={{ color: "var(--color-texto-suave)" }}>Cargando perfil...</p>
+          <p className="text-texto-suave">Cargando perfil...</p>
         )}
 
         {error && !cargando && (
-          <div className="alerta alerta--error" role="alert">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {error}
             <button
               type="button"
-              className="boton boton--secundario"
+              className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
               onClick={cargar}
-              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
             >
               Reintentar
             </button>
@@ -118,33 +117,17 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
         {perfil && (
           <div>
-            <div
-              className="tarjeta"
-              style={{
-                maxWidth: "none",
-                padding: "2rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <h1 style={{ fontSize: "1.6rem", marginBottom: "0.5rem" }}>
+            <div className="mb-4 w-full max-w-none rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+              <h1 className="mb-2 text-[1.6rem]">
                 {perfil.nombre} {perfil.apellido}
               </h1>
 
               {perfil.materias.length > 0 && (
-                <div style={{ marginBottom: "1rem" }}>
+                <div className="mb-4">
                   {perfil.materias.map((m) => (
                     <span
                       key={m}
-                      style={{
-                        display: "inline-block",
-                        margin: "0 0.35rem 0.35rem 0",
-                        padding: "0.25rem 0.6rem",
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        background: "#f0fdfa",
-                        color: "var(--color-accent)",
-                        borderRadius: "999px",
-                      }}
+                      className="mb-[0.35rem] mr-[0.35rem] inline-block rounded-full bg-teal-50 px-2.5 py-1 text-[0.8rem] font-semibold text-accent"
                     >
                       {m}
                     </span>
@@ -152,24 +135,24 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                 </div>
               )}
 
-              <dl style={{ margin: 0 }}>
+              <dl className="m-0">
                 {perfil.nivel && (
-                  <div className="perfil-fila">
-                    <dt>Nivel</dt>
-                    <dd style={{ textTransform: "none" }}>{perfil.nivel}</dd>
+                  <div className="flex justify-between gap-4 border-b border-borde py-3">
+                    <dt className="font-semibold">Nivel</dt>
+                    <dd className="m-0 text-right">{perfil.nivel}</dd>
                   </div>
                 )}
                 {typeof perfil.precioHora === "number" && (
-                  <div className="perfil-fila">
-                    <dt>Precio por hora</dt>
-                    <dd style={{ textTransform: "none" }}>
+                  <div className="flex justify-between gap-4 border-b border-borde py-3">
+                    <dt className="font-semibold">Precio por hora</dt>
+                    <dd className="m-0 text-right">
                       {formatearPrecio(perfil.precioHora)}
                     </dd>
                   </div>
                 )}
-                <div className="perfil-fila">
-                  <dt>Calificacion</dt>
-                  <dd style={{ textTransform: "none" }}>
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Calificacion</dt>
+                  <dd className="m-0 text-right">
                     {perfil.calificacionPromedio !== null &&
                     perfil.cantidadCalificaciones >= 5
                       ? `${perfil.calificacionPromedio.toFixed(1)} (${perfil.cantidadCalificaciones})`
@@ -182,39 +165,34 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
             {puedeReservar ? (
               <Link
                 href={`/reservar?tutor=${perfil.id}`}
-                className="boton"
-                style={{
-                  textDecoration: "none",
-                  display: "inline-block",
-                }}
+                className="inline-block cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
               >
                 Reservar clase
               </Link>
             ) : (
-              <div className="alerta alerta--informativa" role="status">
+              <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
                 Pedile a tu adulto responsable que te autorice a esta tutora/o.
               </div>
             )}
 
             {esAdultoConAR && (
-              <div style={{ marginTop: "1.5rem" }}>
-                <h2 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>
+              <div className="mt-6">
+                <h2 className="mb-3 text-[1.1rem]">
                   Autorizacion
                 </h2>
 
-                <div style={{ marginBottom: "1rem" }}>
+                <div className="mb-4">
                   <button
                     type="button"
-                    className="boton"
+                    className="cursor-not-allowed rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white opacity-60"
                     onClick={() => {}}
                     disabled
                   >
                     Autorizar para mi menor
                   </button>
                   <div
-                    className="alerta alerta--informativa"
+                    className="mt-2 w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
                     role="status"
-                    style={{ marginTop: "0.5rem" }}
                   >
                     El listado de tus menores esta pendiente en backend. Cuando
                     este disponible, vas a poder autorizar tutores para cada
@@ -223,48 +201,34 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                 </div>
 
                 <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    marginBottom: "0.5rem",
-                  }}
+                  className="mb-2 flex items-center gap-3"
                 >
                   <label
                     htmlFor="no-confiable"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      cursor: enviandoNoConfiable ? "not-allowed" : "pointer",
-                    }}
+                    className="flex cursor-pointer items-center gap-2"
+                    style={{ cursor: enviandoNoConfiable ? "not-allowed" : "pointer" }}
                   >
                     <input
                       id="no-confiable"
                       type="checkbox"
+                      className="h-[1.1rem] w-[1.1rem] accent-accent disabled:cursor-not-allowed"
                       checked={noConfiable}
                       disabled={enviandoNoConfiable}
                       onChange={(e) => toggleNoConfiable(e.target.checked)}
-                      style={{ width: "1.1rem", height: "1.1rem" }}
                     />
                     Marcar como no confiable
                   </label>
                 </div>
                 <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--color-texto-suave)",
-                    margin: "0 0 0.5rem 0",
-                  }}
+                  className="mb-2 text-[0.85rem] text-texto-suave"
                 >
                   Sacarlo de tus resultados de busqueda.
                 </p>
 
                 {mensajeNoConfiable && (
                   <div
-                    className="alerta alerta--exito"
+                    className="mt-2 w-fit rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
                     role="status"
-                    style={{ marginTop: "0.5rem" }}
                   >
                     {mensajeNoConfiable}
                   </div>
@@ -273,7 +237,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
             )}
 
             {payload && (
-              <p style={{ fontSize: "0.8rem", color: "var(--color-texto-suave)" }}>
+              <p className="text-[0.8rem] text-texto-suave">
                 Sesion de {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
               </p>
             )}

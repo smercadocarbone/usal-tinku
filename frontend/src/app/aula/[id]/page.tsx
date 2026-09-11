@@ -39,9 +39,6 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const [camActiva, setCamActiva] = useState(true);
   const [micActiva, setMicActiva] = useState(true);
 
-  /** Refs espejo del estado para usarlos dentro de callbacks de eventos del
-   * Room (que cierran sobre el render de creación) sin recrear la conexión.
-   * Se actualizan en un efecto (post-render), no durante el render. */
   const estadoRef = useRef<Estado>(estado);
   const camActivaRef = useRef(camActiva);
   const micActivaRef = useRef(micActiva);
@@ -51,9 +48,6 @@ export default function AulaPage({ params }: { params: { id: string } }) {
     micActivaRef.current = micActiva;
   });
 
-  /** Pensar la conexión como una operación: crea el room, registra listeners y
-   * recién después conecta. roomRef se setea ANTES del connect para que el
-   * cleanup del unmount pueda desconectar siempre, aunque el connect falle. */
   const conectar = useCallback(async () => {
     setError(null);
     setEstado("conectando");
@@ -193,48 +187,47 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <main className="pantalla" style={{ padding: 0 }}>
-      <div className="aula">
-        <header className="aula-cabecera">
-          <div className="marca" style={{ marginBottom: 0 }}>
-            Tinku<span>.</span>
+    <main className="flex min-h-screen flex-col p-0">
+      <div className="flex min-h-screen flex-col bg-gray-900 text-gray-50">
+        <header className="flex items-center justify-between bg-gray-800 px-5 py-3">
+          <div className="text-[1.05rem] font-bold text-gray-50">
+            Tinku<span className="text-accent">.</span>
           </div>
-          <span className="aula-estado">{MENSAJES_ESTADO[estado]}</span>
+          <span className="text-[0.8rem] capitalize text-gray-400">{MENSAJES_ESTADO[estado]}</span>
         </header>
 
-        <div className="aula-video">
-          <div className="aula-video-remoto">
-            <video ref={remoteVideoRef} autoPlay playsInline />
+        <div className="relative flex min-h-0 flex-1">
+          <div className="relative flex flex-1 items-center justify-center bg-black">
+            <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
             {!remoteActivo && (
-              <div className="aula-esperando">
+              <div className="text-[0.95rem] text-gray-500">
                 {estado === "conectado" || estado === "esperando"
                   ? "Esperando al otro participante"
                   : MENSAJES_ESTADO[estado]}
               </div>
             )}
           </div>
-          <div className="aula-video-local">
-            <video ref={localVideoRef} autoPlay playsInline muted />
+          <div className="absolute bottom-4 right-4 w-[180px] overflow-hidden rounded-lg border-2 border-gray-700">
+            <video ref={localVideoRef} autoPlay playsInline muted className="block w-full" />
           </div>
           <audio ref={remoteAudioRef} autoPlay />
         </div>
 
         {error && (
           <div
-            className="alerta alerta--error"
+            className="mx-4 my-2 self-center rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
             role="alert"
-            style={{ margin: "0.5rem 1rem", alignSelf: "center" }}
           >
             {error}
           </div>
         )}
 
-        <div className="aula-controles">
+        <div className="flex items-center justify-center gap-3 bg-gray-800 p-4">
           {(estado === "conectado" || estado === "esperando") && (
-            <div className="aula-controles-grupo">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                className={`aula-tool ${camActiva ? "" : "aula-tool--apagado"}`}
+                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-[0.85rem] font-semibold text-gray-50 ${camActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
                 onClick={alternarCam}
                 aria-label={camActiva ? "Apagar camara" : "Prender camara"}
                 title={camActiva ? "Apagar camara" : "Prender camara"}
@@ -243,19 +236,23 @@ export default function AulaPage({ params }: { params: { id: string } }) {
               </button>
               <button
                 type="button"
-                className={`aula-tool ${micActiva ? "" : "aula-tool--apagado"}`}
+                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-[0.85rem] font-semibold text-gray-50 ${micActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
                 onClick={alternarMic}
                 aria-label={micActiva ? "Silenciar" : "Activar microfono"}
                 title={micActiva ? "Silenciar" : "Activar microfono"}
               >
                 {micActiva ? "Micro on" : "Micro off"}
               </button>
-              <span className="aula-separador" />
+              <span className="mx-1 h-6 w-px bg-gray-700" />
             </div>
           )}
 
           {estado === "sala_no_disponible" && (
-            <button type="button" className="boton" onClick={conectar}>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
+              onClick={conectar}
+            >
               Volver a intentar
             </button>
           )}
@@ -265,7 +262,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
             estado === "sala_no_disponible") && (
             <button
               type="button"
-              className="aula-finalizar"
+              className="cursor-pointer rounded-full bg-red-600 px-5 py-2.5 text-[0.9rem] font-semibold text-white enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={finalizar}
               disabled={finalizando}
             >

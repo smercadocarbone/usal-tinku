@@ -55,35 +55,35 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="pantalla">
-      <div className="tarjeta">
-        <div className="marca">
-          Tinku<span>.</span>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <div className="mb-6 text-[1.05rem] font-bold text-texto">
+          Tinku<span className="text-accent">.</span>
         </div>
-        <h1>Iniciar sesión</h1>
-        <p>Ingresá con tu DNI para acceder a tu cuenta.</p>
+        <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Iniciar sesión</h1>
+        <p className="mb-6 text-texto-suave">Ingresá con tu DNI para acceder a tu cuenta.</p>
 
         {expirado && (
-          <div className="alerta alerta--informativa" role="status">
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
             Tu sesión expiró. Inicio sesión de nuevo para continuar.
           </div>
         )}
 
         {registrado && (
-          <div className="alerta alerta--exito" role="status">
+          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
             Cuenta creada. Ya podés iniciar sesión.
           </div>
         )}
 
         {tutorRegistrado && (
-          <div className="alerta alerta--exito" role="status">
+          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
             Cuenta de tutor creada. Iniciá sesión con tu DNI y contraseña.
           </div>
         )}
 
-        <form className="formulario" onSubmit={onSubmit}>
-          <div className="campo">
-            <label htmlFor="dni">DNI</label>
+        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="dni" className="text-[0.85rem] font-semibold">DNI</label>
             <input
               id="dni"
               type="text"
@@ -92,11 +92,12 @@ export default function LoginPage() {
               required
               value={dni}
               onChange={(e) => setDni(e.target.value)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          <div className="campo">
-            <label htmlFor="password">Contraseña</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="password" className="text-[0.85rem] font-semibold">Contraseña</label>
             <input
               id="password"
               type="password"
@@ -105,21 +106,26 @@ export default function LoginPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           {error && (
-            <div className="alerta alerta--error" role="alert">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
               {error}
             </div>
           )}
 
-          <button type="submit" className="boton" disabled={enviando}>
+          <button
+            type="submit"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={enviando}
+          >
             {enviando ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
 
-        <p className="pie-enlace">
+        <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
           ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
         </p>
       </div>

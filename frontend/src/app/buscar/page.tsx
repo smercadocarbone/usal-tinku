@@ -149,17 +149,17 @@ export default function BuscarPage() {
     <>
       <Cabecera enlaces={[{ href: "/cuenta", label: "Mi cuenta" }]} />
 
-      <main className="contenido">
-        <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
+        <h1 className="text-[1.3rem] tracking-[-0.01em]">
           Buscar tutores
         </h1>
-        <p style={{ color: "var(--color-texto-suave)", marginTop: 0 }}>
+        <p className="text-texto-suave">
           Describe lo que necesitas y encontramos al Tutor mas relevante.
         </p>
 
         <form
           onSubmit={buscar}
-          style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}
+          className="mb-6 flex gap-2"
         >
           <input
             type="text"
@@ -168,41 +168,31 @@ export default function BuscarPage() {
             placeholder="Ej: clases de matematica para secundario"
             required
             maxLength={500}
-            style={{
-              flex: 1,
-              padding: "0.65rem 0.75rem",
-              border: "1px solid var(--color-borde)",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              background: "var(--color-superficie)",
-              color: "var(--color-texto)",
-            }}
+            className="flex-1 rounded-lg border border-borde bg-superficie px-3 py-[0.65rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <button
             type="submit"
-            className="boton"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             disabled={buscando || !texto.trim()}
           >
             {buscando ? "Buscando..." : "Buscar"}
           </button>
         </form>
 
-        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
+        <div className="mb-6 flex gap-3">
           <button
             type="button"
-            className="boton boton--secundario"
+            className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-2 text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={guardarBusqueda}
             disabled={!texto.trim() || buscando}
-            style={{ fontSize: "0.85rem", padding: "0.5rem 0.75rem" }}
           >
             Guardar busqueda
           </button>
           <button
             type="button"
-            className="boton boton--secundario"
+            className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-2 text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={mostrarGuardadas ? () => setMostrarGuardadas(false) : cargarGuardadas}
             disabled={cargandoGuardadas}
-            style={{ fontSize: "0.85rem", padding: "0.5rem 0.75rem" }}
           >
             {cargandoGuardadas
               ? "Cargando..."
@@ -213,41 +203,22 @@ export default function BuscarPage() {
         </div>
 
         {mostrarGuardadas && (
-          <div style={{ marginBottom: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>Guardadas</h2>
+          <div className="mb-6">
+            <h2 className="mb-2 text-base">Guardadas</h2>
             {guardadas.length === 0 ? (
-              <p
-                style={{
-                  color: "var(--color-texto-suave)",
-                  fontSize: "0.9rem",
-                  margin: 0,
-                }}
-              >
+              <p className="m-0 text-[0.9rem] text-texto-suave">
                 No tenes busquedas guardadas.
               </p>
             ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div className="flex flex-wrap gap-2">
                 {guardadas.map((g) => (
                   <button
                     key={g.id}
                     type="button"
                     onClick={() => ejecutarGuardada(g)}
                     aria-label={`Ejecutar busqueda guardada: ${g.textoBusqueda}`}
-                    style={{
-                      display: "inline-block",
-                      padding: "0.3rem 0.6rem",
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                      background: "var(--color-superficie)",
-                      color: "var(--color-accent)",
-                      border: "1px solid var(--color-borde)",
-                      borderRadius: "999px",
-                      cursor: "pointer",
-                      maxWidth: "100%",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
+                    title={g.textoBusqueda}
+                    className="max-w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-borde bg-superficie px-2.5 py-1.5 text-[0.8rem] font-semibold text-accent"
                   >
                     {g.textoBusqueda}
                   </button>
@@ -258,7 +229,7 @@ export default function BuscarPage() {
         )}
 
         {error && (
-          <div className="alerta alerta--error" role="alert" style={{ marginBottom: "1rem" }}>
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {error}
           </div>
         )}
@@ -266,72 +237,42 @@ export default function BuscarPage() {
         {buscado && resultados.length === 0 && (
           <div
             role="status"
-            style={{
-              textAlign: "center",
-              padding: "2rem 1rem",
-              color: "var(--color-texto-suave)",
-            }}
+            className="px-4 py-8 text-center text-texto-suave"
           >
             No se encontraron tutores para esa busqueda.
           </div>
         )}
 
         {resultados.length > 0 && (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          <ul className="m-0 list-none p-0">
             {resultados.map((r) => {
               const tutor = tutores.get(r.tutorId);
               return (
                 <li
                   key={r.tutorId}
-                  style={{
-                    padding: "1rem",
-                    marginBottom: "0.5rem",
-                    background: "var(--color-superficie)",
-                    border: "1px solid var(--color-borde)",
-                    borderRadius: "var(--radio)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
+                  className="mb-2 flex items-center justify-between rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta"
                 >
                   <div>
-                    <div style={{ fontWeight: 600 }}>
+                    <div className="font-semibold">
                       {tutor
                         ? tutor.apellido
                           ? `${tutor.nombre} ${tutor.apellido}`
                           : tutor.nombre
                         : "Cargando..."}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--color-texto-suave)",
-                        marginTop: "0.15rem",
-                      }}
-                    >
+                    <div className="mt-[0.15rem] text-[0.8rem] text-texto-suave">
                       Relevancia: {Math.round(r.score * 100)}%
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <div className="flex items-center gap-2">
                     {r.noAutorizado && (
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--color-aviso)",
-                          fontWeight: 600,
-                        }}
-                      >
+                      <span className="text-[0.75rem] font-semibold text-aviso">
                         No autorizado
                       </span>
                     )}
                     <Link
                       href={`/tutores/${r.tutorId}`}
-                      className="boton boton--secundario"
-                      style={{
-                        fontSize: "0.85rem",
-                        padding: "0.4rem 0.75rem",
-                        textDecoration: "none",
-                      }}
+                      className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
                     >
                       Ver perfil
                     </Link>

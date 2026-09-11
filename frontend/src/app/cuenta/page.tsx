@@ -86,12 +86,8 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
     api
       .get<Franja[]>(`/api/tutores/${tutorId}/franjas`)
       .then(setFranjas)
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) {
-          setListaPendiente(true);
-        } else {
-          setListaPendiente(true);
-        }
+      .catch(() => {
+        setListaPendiente(true);
       })
       .finally(() => setCargandoLista(false));
   }
@@ -144,35 +140,33 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
   }
 
   return (
-    <section style={{ marginTop: "2rem" }}>
+    <section className="mt-8">
       <h2>Panel del tutor</h2>
-      <div className="alerta alerta--informativa" role="status">
+      <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
         Tus credenciales estan en revision por el equipo de Tinku.
       </div>
 
-      <div className="tarjeta" style={{ marginTop: "1rem" }}>
-        <form className="formulario" onSubmit={publicar}>
-          <p style={{ margin: "0 0 0.5rem", fontWeight: 600 }}>Tipo de franja</p>
-          <div
-            className="opciones"
-            role="group"
-            aria-label="Tipo de franja"
-          >
-            <label className="opcion">
+      <div className="mt-4 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <form className="flex flex-col gap-4" onSubmit={publicar}>
+          <p className="mb-2 font-semibold">Tipo de franja</p>
+          <div className="flex flex-col gap-2 rounded-lg border border-borde bg-stone-50 p-3" role="group" aria-label="Tipo de franja">
+            <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
               <input
                 type="radio"
                 name="tipoFranja"
                 value="semanal"
+                className="mt-[0.2rem] accent-accent"
                 checked={tipoFranja === "semanal"}
                 onChange={() => setTipoFranja("semanal")}
               />
               Semanal
             </label>
-            <label className="opcion">
+            <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
               <input
                 type="radio"
                 name="tipoFranja"
                 value="puntual"
+                className="mt-[0.2rem] accent-accent"
                 checked={tipoFranja === "puntual"}
                 onChange={() => setTipoFranja("puntual")}
               />
@@ -181,12 +175,13 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
           </div>
 
           {tipoFranja === "semanal" ? (
-            <div className="campo">
-              <label htmlFor="diaSemana">Dia de la semana</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="diaSemana" className="text-[0.85rem] font-semibold">Dia de la semana</label>
               <select
                 id="diaSemana"
                 value={diaSemana}
                 onChange={(e) => setDiaSemana(e.target.value)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {DIAS.map((d, i) => (
                   <option key={d} value={i}>
@@ -196,75 +191,81 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
               </select>
             </div>
           ) : (
-            <div className="campo">
-              <label htmlFor="fechaEspecifica">Fecha</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="fechaEspecifica" className="text-[0.85rem] font-semibold">Fecha</label>
               <input
                 id="fechaEspecifica"
                 type="date"
                 value={fechaEspecifica}
                 onChange={(e) => setFechaEspecifica(e.target.value)}
                 required
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
           )}
 
-          <div className="campo">
-            <label htmlFor="horaInicio">Hora de inicio</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="horaInicio" className="text-[0.85rem] font-semibold">Hora de inicio</label>
             <input
               id="horaInicio"
               type="time"
               value={horaInicio}
               onChange={(e) => setHoraInicio(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          <div className="campo">
-            <label htmlFor="horaFin">Hora de fin</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="horaFin" className="text-[0.85rem] font-semibold">Hora de fin</label>
             <input
               id="horaFin"
               type="time"
               value={horaFin}
               onChange={(e) => setHoraFin(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           {error && (
-            <div className="alerta alerta--error" role="alert">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
               {error}
             </div>
           )}
           {exito && (
-            <div className="alerta alerta--exito" role="status">
+            <div className="rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
               {exito}
             </div>
           )}
 
-          <button type="submit" className="boton" disabled={procesando}>
+          <button
+            type="submit"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={procesando}
+          >
             {procesando ? "Publicando..." : "Publicar franja"}
           </button>
         </form>
       </div>
 
-      <h3 style={{ marginTop: "1.5rem" }}>Mis franjas</h3>
+      <h3 className="mt-6">Mis franjas</h3>
       {cargandoLista ? (
-        <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
+        <p className="text-texto-suave">Cargando...</p>
       ) : listaPendiente ? (
-        <div className="alerta alerta--informativa" role="status">
+        <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
           El listado de franjas esta pendiente en backend.
         </div>
       ) : franjas.length === 0 ? (
-        <p style={{ color: "var(--color-texto-suave)" }}>
+        <p className="text-texto-suave">
           No publicaste franjas todavia.
         </p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginTop: "0.5rem" }}>
+        <ul className="mt-2 list-none p-0">
           {franjas.map((f) => (
             <li
               key={f.id}
-              className="perfil-fila"
-              style={{ justifyContent: "space-between" }}
+              className="flex justify-between gap-4 border-b border-borde py-3"
             >
               <span>
                 {f.diaSemana !== null
@@ -272,11 +273,11 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
                   : `${formatearFechaCorta(f.fechaEspecifica!)} de ${f.horaInicio} a ${f.horaFin}`}
               </span>
               <span
-                style={{
-                  fontSize: "0.85rem",
-                  color: f.activa ? "var(--color-accent)" : "var(--color-texto-suave)",
-                  fontWeight: 500,
-                }}
+                className={
+                  f.activa
+                    ? "text-[0.85rem] font-medium text-accent"
+                    : "text-[0.85rem] font-medium text-texto-suave"
+                }
               >
                 {f.activa ? "Activa" : "Inactiva"}
               </span>
@@ -429,13 +430,13 @@ function PanelAdulto() {
   }
 
   return (
-    <section style={{ marginTop: "2rem" }}>
+    <section className="mt-8">
       <h2>Menores a cargo</h2>
 
-      <div className="tarjeta" style={{ marginTop: "1rem" }}>
-        <form className="formulario" onSubmit={altaMenor}>
-          <div className="campo">
-            <label htmlFor="dniMenor">DNI del menor</label>
+      <div className="mt-4 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <form className="flex flex-col gap-4" onSubmit={altaMenor}>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="dniMenor" className="text-[0.85rem] font-semibold">DNI del menor</label>
             <input
               id="dniMenor"
               type="text"
@@ -443,40 +444,44 @@ function PanelAdulto() {
               value={dni}
               onChange={(e) => setDni(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <div className="campo">
-            <label htmlFor="nombreMenor">Nombre</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="nombreMenor" className="text-[0.85rem] font-semibold">Nombre</label>
             <input
               id="nombreMenor"
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <div className="campo">
-            <label htmlFor="apellidoMenor">Apellido</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="apellidoMenor" className="text-[0.85rem] font-semibold">Apellido</label>
             <input
               id="apellidoMenor"
               type="text"
               value={apellido}
               onChange={(e) => setApellido(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <div className="campo">
-            <label htmlFor="fechaNacMenor">Fecha de nacimiento</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="fechaNacMenor" className="text-[0.85rem] font-semibold">Fecha de nacimiento</label>
             <input
               id="fechaNacMenor"
               type="date"
               value={fechaNac}
               onChange={(e) => setFechaNac(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <div className="campo">
-            <label htmlFor="passMenor">Contrasena</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="passMenor" className="text-[0.85rem] font-semibold">Contrasena</label>
             <input
               id="passMenor"
               type="password"
@@ -484,21 +489,24 @@ function PanelAdulto() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <div className="campo">
-            <label htmlFor="fotoDniMenor">Foto del DNI</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="fotoDniMenor" className="text-[0.85rem] font-semibold">Foto del DNI</label>
             <input
               id="fotoDniMenor"
               type="file"
               accept="image/*"
               onChange={(e) => setFotoDni(e.target.files?.[0] ?? null)}
               required
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-          <label className="opcion" style={{ gap: "0.5rem" }}>
+          <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
             <input
               type="checkbox"
+              className="mt-[0.2rem] accent-accent"
               checked={consentimiento}
               onChange={(e) => setConsentimiento(e.target.checked)}
               required
@@ -507,62 +515,64 @@ function PanelAdulto() {
           </label>
 
           {error && (
-            <div className="alerta alerta--error" role="alert">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
               {error}
             </div>
           )}
           {exito && (
-            <div className="alerta alerta--exito" role="status">
+            <div className="rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
               {exito}
             </div>
           )}
 
-          <button type="submit" className="boton" disabled={procesando}>
+          <button
+            type="submit"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={procesando}
+          >
             {procesando ? "Cargando..." : "Dar de alta"}
           </button>
         </form>
       </div>
 
-      <h3 style={{ marginTop: "1.5rem" }}>Solicitudes pendientes</h3>
+      <h3 className="mt-6">Solicitudes pendientes</h3>
       {cargandoSolicitudes ? (
-        <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
+        <p className="text-texto-suave">Cargando...</p>
       ) : solicitudesError ? (
-        <div className="alerta alerta--error" role="alert">
+        <div className="w-fit rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
           No se pudieron cargar las solicitudes.
           <button
             type="button"
-            className="boton boton--secundario"
+            className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
             onClick={cargarSolicitudes}
-            style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
           >
             Reintentar
           </button>
         </div>
       ) : solicitudes.length === 0 ? (
-        <p style={{ color: "var(--color-texto-suave)" }}>No hay solicitudes pendientes.</p>
+        <p className="text-texto-suave">No hay solicitudes pendientes.</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginTop: "0.5rem" }}>
+        <ul className="mt-2 list-none p-0">
           {solicitudes.map((s) => (
-            <li key={s.id} className="tarjeta" style={{ marginBottom: "0.75rem", padding: "1rem" }}>
+            <li key={s.id} className="mb-3 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
               <strong>Solicitud #{s.id.slice(0, 8)}</strong>
-              <p style={{ margin: "0.25rem 0", color: "var(--color-texto-suave)", fontSize: "0.9rem" }}>
+              <p className="my-1 text-[0.9rem] text-texto-suave">
                 {formatFechaHoraEsAr(s.horarioPropuesto)}
               </p>
-              <p style={{ margin: "0.25rem 0", fontSize: "0.85rem" }}>
+              <p className="my-1 text-[0.85rem]">
                 Estado: {LABEL_ESTADO_SOLICITUD[s.estado] ?? s.estado}
               </p>
               {s.expiraAt && (
-                <p style={{ margin: "0.25rem 0", fontSize: "0.85rem", color: "var(--color-texto-suave)" }}>
+                <p className="my-1 text-[0.85rem] text-texto-suave">
                   Expira: {formatFechaHoraEsAr(s.expiraAt)}
                 </p>
               )}
               {s.estado === "pendiente" && (
                 <button
                   type="button"
-                  className="boton"
+                  className="mt-2 cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={aprobandoId === s.id}
                   onClick={() => aprobarSolicitud(s.id)}
-                  style={{ marginTop: "0.5rem" }}
                 >
                   {aprobandoId === s.id ? "Procesando..." : "Aprobar"}
                 </button>
@@ -572,34 +582,30 @@ function PanelAdulto() {
         </ul>
       )}
 
-      <h3 style={{ marginTop: "1.5rem" }}>Baja de menor</h3>
-      <div className="alerta alerta--informativa" role="status">
+      <h3 className="mt-6">Baja de menor</h3>
+      <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
         El listado de menores esta pendiente en backend.
       </div>
 
       {menorAlta && (
-        <div className="tarjeta" style={{ marginTop: "0.75rem", padding: "1rem" }}>
+        <div className="mt-3 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
           {bajaPaso === "advertencia" ? (
             <>
-              <p
-                    role="alert"
-                    style={{ color: "var(--color-aviso)", marginBottom: "0.5rem" }}
-                  >
-                    Este menor tiene reservas futuras. Se cancelaran.
-                  </p>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <p role="alert" className="mb-2 text-aviso">
+                Este menor tiene reservas futuras. Se cancelaran.
+              </p>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  className="boton"
+                  className="cursor-pointer rounded-lg bg-peligro px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={bajaProcesando}
                   onClick={bajaMenorConfirmar}
-                  style={{ background: "var(--color-peligro)" }}
                 >
                   {bajaProcesando ? "Procesando..." : "Confirmar baja"}
                 </button>
                 <button
                   type="button"
-                  className="boton boton--secundario"
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
                   onClick={() => setBajaPaso("idle")}
                 >
                   Cancelar
@@ -609,7 +615,7 @@ function PanelAdulto() {
           ) : (
             <button
               type="button"
-              className="boton boton--secundario"
+              className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={bajaProcesando}
               onClick={bajaMenorSinConfirmar}
             >
@@ -630,52 +636,50 @@ export default function CuentaPage() {
     <>
       <Cabecera />
 
-      <main className="contenido">
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
         <h1>Mi cuenta</h1>
         <p>
           Tu espacio en Tinku. Busca un tutor, reserva una clase y segui tus
           reservas.
         </p>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "0.75rem",
-            margin: "1.5rem 0",
-          }}
-        >
+        <div className="my-6 grid gap-3">
           <Link
             href="/buscar"
-            className="boton"
-            style={{ textDecoration: "none", textAlign: "center" }}
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] text-center font-semibold text-white enabled:hover:bg-accent-hover"
           >
             Buscar tutores
           </Link>
           <Link
             href="/cuenta/reservas"
-            className="boton boton--secundario"
-            style={{ textDecoration: "none", textAlign: "center" }}
+            className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] text-center font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
           >
             Mis reservas
           </Link>
         </div>
 
         <dl>
-          <div className="perfil-fila">
-            <dt>DNI</dt>
-            <dd>{payload?.sub ?? "—"}</dd>
+          <div className="flex justify-between gap-4 border-b border-borde py-3">
+            <dt className="font-semibold">DNI</dt>
+            <dd className="m-0 text-right capitalize">{payload?.sub ?? "—"}</dd>
           </div>
-          <div className="perfil-fila">
-            <dt>Tipo de cuenta</dt>
-            <dd>{payload?.tipo ? NOMBRE_TIPO[payload.tipo] ?? payload.tipo : "—"}</dd>
+          <div className="flex justify-between gap-4 border-b border-borde py-3">
+            <dt className="font-semibold">Tipo de cuenta</dt>
+            <dd className="m-0 text-right capitalize">
+              {payload?.tipo ? NOMBRE_TIPO[payload.tipo] ?? payload.tipo : "—"}
+            </dd>
           </div>
-          <div className="perfil-fila">
-            <dt>Capacidad Estudiante</dt>
-            <dd>{payload?.cap_est ? "Activa" : "Inactiva"}</dd>
+          <div className="flex justify-between gap-4 border-b border-borde py-3">
+            <dt className="font-semibold">Capacidad Estudiante</dt>
+            <dd className="m-0 text-right capitalize">
+              {payload?.cap_est ? "Activa" : "Inactiva"}
+            </dd>
           </div>
-          <div className="perfil-fila">
-            <dt>Adulto Responsable</dt>
-            <dd>{payload?.cap_ar ? "Activa" : "Inactiva"}</dd>
+          <div className="flex justify-between gap-4 border-b border-borde py-3">
+            <dt className="font-semibold">Adulto Responsable</dt>
+            <dd className="m-0 text-right capitalize">
+              {payload?.cap_ar ? "Activa" : "Inactiva"}
+            </dd>
           </div>
         </dl>
 
