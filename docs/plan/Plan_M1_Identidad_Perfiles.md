@@ -15,6 +15,7 @@
 | dni                          | varchar, **UNIQUE, NOT NULL**     | Aplica FR-ID-001/018/019: un DNI = una sola fila en todo el sistema, sin importar el `tipo`. |
 | nombre, apellido             | varchar                           | Extraídos por OCR y confirmados contra lo declarado.                                         |
 | fecha_nacimiento             | date                              | Usada para calcular edad (≥18 adultos, ≥6 menores).                                          |
+| email                        | varchar(255), **UNIQUE** (índice parcial `WHERE email IS NOT NULL`) | Credencial de acceso (login). Nulo en cuentas creadas antes de V12 y en perfiles de menor (no se autorregistran con email). |
 | tipo                         | enum(`adulto`, `menor`, `tutor`)  | Determina qué otras tablas/columnas aplican.                                                 |
 | capacidad_estudiante         | boolean, default false            | Solo relevante si `tipo = adulto`.                                                           |
 | capacidad_adulto_responsable | boolean, default false            | Solo relevante si `tipo = adulto`.                                                           |
@@ -86,13 +87,23 @@ _Nota de implementación: no se valida automáticamente la firma digital del PDF
 
 ### 2.1 Registro de Usuario adulto (US-1)
 
-1. Cliente envía DNI (foto) + datos declarados + password.
+1. Cliente envía DNI (foto) + datos declarados + email + password. El **email** es la credencial de acceso y se persiste con la cuenta.
 2. Backend llama al servicio de OCR (**proveedor a definir — ver ADR-M1-01**) con la foto.
 3. OCR devuelve: nombre, apellido, fecha de nacimiento extraídos del documento.
 4. Backend valida: (a) nombre/apellido extraído == declarado (fuzzy match tolerante a mayúsculas/acentos, no exacto carácter por carácter), (b) edad ≥ 18, (c) `SELECT 1 FROM usuarios WHERE dni = ?` no devuelve fila.
 5. Si las tres pasan → crea el usuario, hashea password, retorna JWT.
 6. Si falla cualquiera → rechazo con motivo específico (no exponer detalles del OCR al usuario final, solo "no pudimos verificar tu documento" para (a), mensaje claro y específico para (b) y (c) según FR-ID-018).
 7. Fallos de lectura del documento (no de validación, sino que el OCR no pudo procesar la imagen) cuentan aparte, contra el contador de 3 intentos + 24hs (FR-ID-011) — **distinto** de un rechazo por edad o DNI duplicado, que no consume reintentos (no tiene sentido "reintentar" ser mayor de edad).
+
+#### 2.1.1 Verificación previa del DNI (compuerta del wizard de registro)
+
+El frontend de registro es un wizard de 4 pasos: (0) rol, (1) datos personales, (2) verificación de identidad, (3) credenciales. Para que el paso de credenciales (email + contraseña) no se pida antes de confirmar que la persona es adulta y su documento es válido, existe una verificación previa **sin creación de cuenta**:
+
+1. Cliente envía a `/verificar-dni` el DNI (foto) + datos declarados — **sin** email ni password.
+2. El backend aplica el mismo chequeo de backoff + OCR + validaciones (edad ≥ 18, coincidencia, DNI no usado) que 2.1, **pero no persiste nada**.
+3. Si pasa → responde **204 No Content** y el cliente habilita el paso de credenciales (el body no lleva información; el contrato real son los status de error, ver paso 4).
+4. Si el OCR detecta minoría de edad → 403 (pantalla informativa, no se crea cuenta); DNI duplicado → 409; no coincide → 422; backoff → 429.
+5. El alta real sigue siendo un único POST a `/registro` con email + password (paso 2.1) — la verificación previa es solo la compuerta.
 
 ### 2.2 Alta de cuenta de menor (US-2)
 
@@ -119,10 +130,12 @@ Job persistido (Quartz, Constitución Artículo IV/X) que:
 
 | Método   | Endpoint                                          | Notas                                                                                                                                     |
 | -------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/usuarios/registro`                          | Alta de adulto (Estudiante y/o Adulto Responsable).                                                                                       |
+| `POST`   | `/api/usuarios/registro`                          | Alta de adulto (Estudiante y/o Adulto Responsable). Incluye email + password.                                                            |
+| `POST`   | `/api/usuarios/verificar-dni`                     | Verificación previa del DNI del adulto (compuerta del wizard). No crea cuenta.                                                            |
 | `POST`   | `/api/usuarios/menores`                           | Alta de cuenta de menor (auth: adulto_responsable).                                                                                       |
 | `PATCH`  | `/api/usuarios/me/capacidades`                    | Activa/desactiva Estudiante o Adulto Responsable (FR-ID-015/016).                                                                         |
-| `POST`   | `/api/tutores/registro`                           | Alta de Tutor.                                                                                                                            |
+| `POST`   | `/api/tutores/registro`                           | Alta de Tutor. Incluye email + password.                                                                                                  |
+| `POST`   | `/api/tutores/verificar-dni`                      | Verificación previa del DNI del Tutor (compuerta del wizard). No crea cuenta.                                                             |
 | `POST`   | `/api/tutores/credenciales`                       | Carga de documento (respeta backoff).                                                                                                     |
 | `GET`    | `/api/admin/moderacion/credenciales`              | Cola de M8 (rol Moderación y Seguridad).                                                                                                  |
 | `PATCH`  | `/api/admin/moderacion/credenciales/{id}`         | Aprobar/rechazar.                                                                                                                         |

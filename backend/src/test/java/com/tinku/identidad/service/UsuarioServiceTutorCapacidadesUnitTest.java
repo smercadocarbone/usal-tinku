@@ -53,7 +53,8 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     private RegistroTutorRequest tutorRequest() {
         return new RegistroTutorRequest(
-                "12345678", "JUAN", "PEREZ", LocalDate.of(1990, 1, 1), "password123");
+                "12345678", "JUAN", "PEREZ", LocalDate.of(1990, 1, 1),
+                "12345678@tinku.test", "password123");
     }
 
     @Test

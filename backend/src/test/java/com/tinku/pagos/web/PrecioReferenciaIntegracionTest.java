@@ -110,7 +110,8 @@ class PrecioReferenciaIntegracionTest {
                 .thenReturn(resultado(dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);

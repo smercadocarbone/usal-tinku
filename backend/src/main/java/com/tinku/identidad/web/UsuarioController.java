@@ -4,6 +4,7 @@ import com.tinku.identidad.dto.ActualizarCapacidadesRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
 import com.tinku.identidad.dto.UsuarioResponse;
+import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
@@ -41,6 +42,19 @@ public class UsuarioController {
     ) throws IOException {
         Usuario usuario = usuarioService.registrarAdulto(request, fotoDni.getBytes());
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(usuario));
+    }
+
+    /** Verificación previa del DNI en el wizard (paso 2): OCR + edad + unicidad
+     * sin crear la cuenta; el email/password se piden recién después de acá. */
+    @PostMapping(value = "/verificar-dni", consumes = "multipart/form-data")
+    public ResponseEntity<Void> verificarDni(
+            @Valid @RequestPart("datos") VerificarDniRequest request,
+            @RequestPart("fotoDni") MultipartFile fotoDni
+    ) throws IOException {
+        usuarioService.verificarDocumentoParaRegistro(request.dniDeclarado(),
+                request.nombreDeclarado(), request.apellidoDeclarado(),
+                request.fechaNacimientoDeclarada(), fotoDni.getBytes());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/menores", consumes = "multipart/form-data")
