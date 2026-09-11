@@ -482,10 +482,11 @@ class SesionesIntegracionTest {
         SesionFinalizadaEvent evento = (SesionFinalizadaEvent) EVENTOS.get(0);
         assertThat(evento.getNombre()).isEqualTo("sesion.finalizada");
         assertThat(evento.getReservaId()).isEqualTo(reserva.getId());
-        // el evento lleva el Instant en nanos; la columna TIMESTAMP(6) trunca a
-        // micros al persistir, así que la comparación se hace a micros.
-        assertThat(evento.getTimestampFin().truncatedTo(ChronoUnit.MICROS))
-                .isEqualTo(cerrada.getFinReal());
+        // el evento lleva el Instant in-memory (nanos); la columna TIMESTAMP(6) al
+        // persistir redondea a micros. Se compara a milisegundos, estable ante el
+        // redondeo de la BD.
+        assertThat(evento.getTimestampFin().truncatedTo(ChronoUnit.MILLIS))
+                .isEqualTo(cerrada.getFinReal().truncatedTo(ChronoUnit.MILLIS));
 
         // Idempotente: repetir (botón o job que dispara después) no re-emite.
         sesionService.ejecutarCorteAutomatico(sesion.getId());
