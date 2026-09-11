@@ -19,19 +19,23 @@ export default function Cabecera({ enlaces = SIN_ENLACES }: CabeceraProps) {
   }
 
   return (
-    <header className="cabecera">
-      <div className="marca" style={{ marginBottom: 0 }}>
-        Tinku<span>.</span>
+    <header className="flex items-center justify-between border-b border-borde bg-superficie px-5 py-[0.9rem]">
+      <div className="text-[1.05rem] font-bold text-texto">
+        Tinku<span className="text-accent">.</span>
       </div>
-      <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+      <nav className="flex items-center gap-4">
         {enlaces.map((e) => (
-          <Link key={e.href} href={e.href} style={{ fontSize: "0.9rem" }}>
+          <Link
+            key={e.href}
+            href={e.href}
+            className="text-[0.9rem] font-semibold"
+          >
             {e.label}
           </Link>
         ))}
         <button
           type="button"
-          className="boton boton--secundario"
+          className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
           onClick={logout}
         >
           Cerrar sesion

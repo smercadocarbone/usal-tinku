@@ -86,27 +86,27 @@ export default function RegistroTutorPage() {
   }
 
   return (
-    <main className="pantalla">
-      <div className="tarjeta tarjeta--ancha">
-        <div className="marca">
-          Tinku<span>.</span>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-[32rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <div className="mb-6 text-[1.05rem] font-bold text-texto">
+          Tinku<span className="text-accent">.</span>
         </div>
-        <h1>Registrate como tutor</h1>
-        <p>
+        <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Registrate como tutor</h1>
+        <p className="mb-6 text-texto-suave">
           Verificamos tu identidad con la foto de tu DNI y que seas mayor de 18
           anos para poder dar clases en Tinku.
         </p>
 
         {bloqueado && (
-          <div className="alerta alerta--informativa" role="status">
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
             Sos menor de edad. No se puede crear la cuenta de tutor.
           </div>
         )}
 
         {!bloqueado && (
-          <form className="formulario" onSubmit={onSubmitRegistro}>
-            <div className="campo">
-              <label htmlFor="dniDeclarado">DNI</label>
+          <form className="flex flex-col gap-4" onSubmit={onSubmitRegistro}>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="dniDeclarado" className="text-[0.85rem] font-semibold">DNI</label>
               <input
                 id="dniDeclarado"
                 type="text"
@@ -114,12 +114,13 @@ export default function RegistroTutorPage() {
                 required
                 value={dniDeclarado}
                 onChange={(e) => setDniDeclarado(e.target.value)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <div className="campo">
-                <label htmlFor="nombreDeclarado">Nombre</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="nombreDeclarado" className="text-[0.85rem] font-semibold">Nombre</label>
                 <input
                   id="nombreDeclarado"
                   type="text"
@@ -127,11 +128,12 @@ export default function RegistroTutorPage() {
                   required
                   value={nombreDeclarado}
                   onChange={(e) => setNombreDeclarado(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
-              <div className="campo">
-                <label htmlFor="apellidoDeclarado">Apellido</label>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="apellidoDeclarado" className="text-[0.85rem] font-semibold">Apellido</label>
                 <input
                   id="apellidoDeclarado"
                   type="text"
@@ -139,12 +141,13 @@ export default function RegistroTutorPage() {
                   required
                   value={apellidoDeclarado}
                   onChange={(e) => setApellidoDeclarado(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
             </div>
 
-            <div className="campo">
-              <label htmlFor="fechaNacimientoDeclarada">Fecha de nacimiento</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="fechaNacimientoDeclarada" className="text-[0.85rem] font-semibold">Fecha de nacimiento</label>
               <input
                 id="fechaNacimientoDeclarada"
                 type="date"
@@ -152,11 +155,12 @@ export default function RegistroTutorPage() {
                 required
                 value={fechaNacimientoDeclarada}
                 onChange={(e) => setFechaNacimientoDeclarada(e.target.value)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
-            <div className="campo">
-              <label htmlFor="password">Contrasena</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="password" className="text-[0.85rem] font-semibold">Contrasena</label>
               <input
                 id="password"
                 type="password"
@@ -165,33 +169,39 @@ export default function RegistroTutorPage() {
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
-            <div className="campo">
-              <label htmlFor="fotoDni">Foto de tu DNI (frente)</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="fotoDni" className="text-[0.85rem] font-semibold">Foto de tu DNI (frente)</label>
               <input
                 id="fotoDni"
                 type="file"
                 accept="image/*"
                 required
                 onChange={(e) => setFotoDni(e.target.files?.[0] ?? null)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
             {error && (
-              <div className="alerta alerta--error" role="alert">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
                 {error}
               </div>
             )}
 
-            <button type="submit" className="boton" disabled={enviando}>
+            <button
+              type="submit"
+              className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={enviando}
+            >
               {enviando ? "Verificando..." : "Crear cuenta"}
             </button>
           </form>
         )}
 
-        <p className="pie-enlace">
+        <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
           Ya tenes cuenta? <Link href="/login">Iniciar sesion</Link>
         </p>
       </div>
@@ -244,24 +254,25 @@ function PasoDos() {
   }
 
   return (
-    <main className="pantalla">
-      <div className="tarjeta tarjeta--ancha">
-        <div className="marca">
-          Tinku<span>.</span>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-[32rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <div className="mb-6 text-[1.05rem] font-bold text-texto">
+          Tinku<span className="text-accent">.</span>
         </div>
-        <h1>Cuenta de tutor creada</h1>
-        <p>
+        <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Cuenta de tutor creada</h1>
+        <p className="mb-6 text-texto-suave">
           Ya podes iniciar sesion. Si queres, subi estos documentos ahora para
           que el equipo de Tinku los revise.
         </p>
 
-        <form className="formulario" onSubmit={onSubmitCredencial}>
-          <div className="campo">
-            <label htmlFor="tipoCredencial">Tipo de credencial</label>
+        <form className="flex flex-col gap-4" onSubmit={onSubmitCredencial}>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="tipoCredencial" className="text-[0.85rem] font-semibold">Tipo de credencial</label>
             <select
               id="tipoCredencial"
               value={tipoCredencial}
               onChange={(e) => setTipoCredencial(e.target.value)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {TIPOS_CREDENCIAL.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -271,45 +282,46 @@ function PasoDos() {
             </select>
           </div>
 
-          <div className="campo">
-            <label htmlFor="archivoCredencial">Archivo de credencial</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="archivoCredencial" className="text-[0.85rem] font-semibold">Archivo de credencial</label>
             <input
               id="archivoCredencial"
               type="file"
               accept=".pdf,image/*"
               required
               onChange={(e) => setArchivoCredencial(e.target.files?.[0] ?? null)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           {errorCredencial && (
-            <div className="alerta alerta--error" role="alert">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
               {errorCredencial}
             </div>
           )}
 
           {okCredencial && (
-            <div className="alerta alerta--exito" role="status">
+            <div className="rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
               Credencial subida. Queda en revision por el equipo de Tinku.
             </div>
           )}
 
           <button
             type="submit"
-            className="boton"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             disabled={enviandoCredencial || okCredencial}
           >
             {enviandoCredencial ? "Cargando..." : "Subir credencial"}
           </button>
         </form>
 
-        <div className="alerta alerta--informativa" role="status">
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
           Los documentos quedan pendientes de revision. Podes completarlos
           despues desde tu cuenta.
         </div>
 
         <button
-          className="boton"
+          className="mt-4 w-full cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
           onClick={() => router.replace("/login?tutorRegistrado=1")}
         >
           Ir a iniciar sesion

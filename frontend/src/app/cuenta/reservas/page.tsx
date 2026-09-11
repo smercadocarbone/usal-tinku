@@ -35,23 +35,22 @@ export default function ReservasPage() {
     <>
       <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }, { href: "/cuenta", label: "Mi cuenta" }]} />
 
-      <main className="contenido">
-        <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
+        <h1 className="text-[1.3rem] tracking-[-0.01em]">
           Mis reservas
         </h1>
 
         {cargando && (
-          <p style={{ color: "var(--color-texto-suave)" }}>Cargando...</p>
+          <p className="text-texto-suave">Cargando...</p>
         )}
 
         {!cargando && reservas === null && (
-          <div className="alerta alerta--error" role="alert">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             No se pudieron cargar tus reservas en este momento.
             <button
               type="button"
-              className="boton boton--secundario"
+              className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
               onClick={cargar}
-              style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
             >
               Reintentar
             </button>
@@ -59,39 +58,24 @@ export default function ReservasPage() {
         )}
 
         {reservas && reservas.length === 0 && (
-          <p style={{ color: "var(--color-texto-suave)" }}>
+          <p className="text-texto-suave">
             No tenes reservas todavia.{" "}
             <Link href="/buscar">Busca un tutor</Link> para empezar.
           </p>
         )}
 
         {reservas && reservas.length > 0 && (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          <ul className="m-0 list-none p-0">
             {reservas.map((r) => (
               <li
                 key={r.id}
-                style={{
-                  padding: "1rem",
-                  marginBottom: "0.5rem",
-                  background: "var(--color-superficie)",
-                  border: "1px solid var(--color-borde)",
-                  borderRadius: "var(--radio)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
+                className="mb-2 flex items-center justify-between rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta"
               >
                 <div>
-                  <div style={{ fontWeight: 600 }}>
+                  <div className="font-semibold">
                     {formatearFecha(r.horario)} {formatearHora(r.horario)}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "var(--color-texto-suave)",
-                      marginTop: "0.15rem",
-                    }}
-                  >
+                  <div className="mt-[0.15rem] text-[0.85rem] text-texto-suave">
                     {ESTADO_ETIQUETA[r.estado] ?? r.estado}
                     {r.precio !== null &&
                       ` — ${formatearPrecio(r.precio)}`}
@@ -99,12 +83,7 @@ export default function ReservasPage() {
                 </div>
                 <Link
                   href={`/cuenta/reservas/${r.id}`}
-                  className="boton boton--secundario"
-                  style={{
-                    fontSize: "0.85rem",
-                    padding: "0.4rem 0.75rem",
-                    textDecoration: "none",
-                  }}
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
                 >
                   Detalle
                 </Link>

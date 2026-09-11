@@ -104,40 +104,53 @@ export default function RegistroPage() {
   }
 
   return (
-    <main className="pantalla">
-      <div className="tarjeta tarjeta--ancha">
-        <div className="marca">
-          Tinku<span>.</span>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-[32rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+        <div className="mb-6 text-[1.05rem] font-bold text-texto">
+          Tinku<span className="text-accent">.</span>
         </div>
 
         {paso === 0 && (
           <>
-            <h1>¿Quién va a usar Tinku?</h1>
-            <p>Elegí de qué lado estás para armarte la cuenta correcta.</p>
+            <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">¿Quién va a usar Tinku?</h1>
+            <p className="mb-6 text-texto-suave">Elegí de qué lado estás para armarte la cuenta correcta.</p>
 
-            <div className="rol-opciones" role="group" aria-label="Tipo de cuenta">
+            <div className="mb-4 flex flex-col gap-3" role="group" aria-label="Tipo de cuenta">
               <button
                 type="button"
-                className={rol === "adulto" ? "rol-opcion rol-opcion--seleccionada" : "rol-opcion"}
                 aria-pressed={rol === "adulto"}
                 onClick={() => setRol("adulto")}
+                className={
+                  rol === "adulto"
+                    ? "flex cursor-pointer flex-col gap-1 rounded-[10px] border border-accent bg-teal-50 p-4 text-left text-[0.95rem] shadow-[0_0_0_1px_#0d9488] enabled:hover:border-accent enabled:hover:bg-teal-50"
+                    : "flex cursor-pointer flex-col gap-1 rounded-[10px] border border-borde bg-superficie p-4 text-left text-[0.95rem] enabled:hover:border-accent enabled:hover:bg-teal-50"
+                }
               >
                 <strong>Soy mayor de edad</strong>
-                <span>Quiero tomar clases o tengo un menor a cargo.</span>
+                <span className="text-[0.85rem] text-texto-suave">Quiero tomar clases o tengo un menor a cargo.</span>
               </button>
 
               <button
                 type="button"
-                className={rol === "tutor" ? "rol-opcion rol-opcion--seleccionada" : "rol-opcion"}
                 aria-pressed={rol === "tutor"}
                 onClick={() => setRol("tutor")}
+                className={
+                  rol === "tutor"
+                    ? "flex cursor-pointer flex-col gap-1 rounded-[10px] border border-accent bg-teal-50 p-4 text-left text-[0.95rem] shadow-[0_0_0_1px_#0d9488] enabled:hover:border-accent enabled:hover:bg-teal-50"
+                    : "flex cursor-pointer flex-col gap-1 rounded-[10px] border border-borde bg-superficie p-4 text-left text-[0.95rem] enabled:hover:border-accent enabled:hover:bg-teal-50"
+                }
               >
                 <strong>Soy Tutor</strong>
-                <span>Quiero dar clases y ofrecer mis tutorías.</span>
+                <span className="text-[0.85rem] text-texto-suave">Quiero dar clases y ofrecer mis tutorías.</span>
               </button>
             </div>
 
-            <button type="button" className="boton" disabled={!rol} onClick={() => setPaso(1)}>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!rol}
+              onClick={() => setPaso(1)}
+            >
               Continuar
             </button>
           </>
@@ -145,19 +158,19 @@ export default function RegistroPage() {
 
         {paso === 1 && (
           <>
-            <h1>Tus datos</h1>
-            <p>Así figura en tu DNI. Los verificamos después con su foto.</p>
+            <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Tus datos</h1>
+            <p className="mb-6 text-texto-suave">Así figura en tu DNI. Los verificamos después con su foto.</p>
 
             <form
-              className="formulario"
+              className="flex flex-col gap-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 setPaso(2);
               }}
             >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div className="campo">
-                  <label htmlFor="nombre">Nombre</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-[0.35rem]">
+                  <label htmlFor="nombre" className="text-[0.85rem] font-semibold">Nombre</label>
                   <input
                     id="nombre"
                     type="text"
@@ -165,10 +178,11 @@ export default function RegistroPage() {
                     required
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
+                    className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
-                <div className="campo">
-                  <label htmlFor="apellido">Apellido</label>
+                <div className="flex flex-col gap-[0.35rem]">
+                  <label htmlFor="apellido" className="text-[0.85rem] font-semibold">Apellido</label>
                   <input
                     id="apellido"
                     type="text"
@@ -176,12 +190,13 @@ export default function RegistroPage() {
                     required
                     value={apellido}
                     onChange={(e) => setApellido(e.target.value)}
+                    className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               </div>
 
-              <div className="campo">
-                <label htmlFor="dni">DNI</label>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="dni" className="text-[0.85rem] font-semibold">DNI</label>
                 <input
                   id="dni"
                   type="text"
@@ -190,11 +205,12 @@ export default function RegistroPage() {
                   required
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
-              <div className="campo">
-                <label htmlFor="fechaNacimiento">Fecha de nacimiento</label>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="fechaNacimiento" className="text-[0.85rem] font-semibold">Fecha de nacimiento</label>
                 <input
                   id="fechaNacimiento"
                   type="date"
@@ -202,43 +218,50 @@ export default function RegistroPage() {
                   required
                   value={fechaNacimiento}
                   onChange={(e) => setFechaNacimiento(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
               {rol === "adulto" && (
-                <div className="opciones" role="group" aria-label="Para qué vas a usar Tinku">
-                  <p>¿Para qué vas a usar Tinku?</p>
-                  <label className="opcion">
+                <div className="flex flex-col gap-2 rounded-lg border border-borde bg-stone-50 p-3" role="group" aria-label="Para qué vas a usar Tinku">
+                  <p className="mb-1 text-[0.85rem] font-semibold text-texto">¿Para qué vas a usar Tinku?</p>
+                  <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
                     <input
                       type="checkbox"
+                      className="mt-[0.2rem] accent-accent"
                       checked={capacidadEstudiante}
                       onChange={(e) => setCapacidadEstudiante(e.target.checked)}
                     />
                     Tomar clases para mí
                   </label>
-                  <label className="opcion">
+                  <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
                     <input
                       type="checkbox"
+                      className="mt-[0.2rem] accent-accent"
                       checked={capacidadAdultoResponsable}
                       onChange={(e) => setCapacidadAdultoResponsable(e.target.checked)}
                     />
                     Gestionar clases para un menor a mi cargo
                   </label>
                   {!capacidadEstudiante && !capacidadAdultoResponsable && (
-                    <span className="nota nota--alerta">
+                    <span className="text-[0.8rem] text-texto-suave">
                       Elegí al menos una opción para continuar.
                     </span>
                   )}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button type="button" className="boton boton--secundario" onClick={() => setPaso(0)}>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+                  onClick={() => setPaso(0)}
+                >
                   Volver
                 </button>
                 <button
                   type="submit"
-                  className="boton"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={rol === "adulto" && !capacidadEstudiante && !capacidadAdultoResponsable}
                 >
                   Continuar
@@ -250,39 +273,50 @@ export default function RegistroPage() {
 
         {paso === 2 && (
           <>
-            <h1>Verificá tu identidad</h1>
-            <p>Subí una foto de tu DNI (frente). Confirmamos tus datos y tu edad.</p>
+            <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Verificá tu identidad</h1>
+            <p className="mb-6 text-texto-suave">Subí una foto de tu DNI (frente). Confirmamos tus datos y tu edad.</p>
 
-            <div className="formulario">
-              <div className="campo">
-                <label htmlFor="fotoDni">Foto de tu DNI (frente)</label>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="fotoDni" className="text-[0.85rem] font-semibold">Foto de tu DNI (frente)</label>
                 <input
                   id="fotoDni"
                   type="file"
                   accept="image/*"
                   required
                   onChange={(e) => setFotoDni(e.target.files?.[0] ?? null)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
-              <div className="campo">
-                <label htmlFor="fotoRostro">Foto de tu cara</label>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="fotoRostro" className="text-[0.85rem] font-semibold">Foto de tu cara</label>
                 <input
                   id="fotoRostro"
                   type="file"
                   accept="image/*"
                   disabled
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <span className="nota">
+                <span className="text-[0.8rem] text-texto-suave">
                   La comparación facial es un paso que se habilita próximamente.
                 </span>
               </div>
 
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button type="button" className="boton boton--secundario" onClick={() => setPaso(1)}>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+                  onClick={() => setPaso(1)}
+                >
                   Volver
                 </button>
-                <button type="button" className="boton" disabled={verificando || !fotoDni} onClick={verificarDni}>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={verificando || !fotoDni}
+                  onClick={verificarDni}
+                >
                   {verificando ? "Verificando…" : "Verificar"}
                 </button>
               </div>
@@ -292,12 +326,12 @@ export default function RegistroPage() {
 
         {paso === 3 && (
           <>
-            <h1>Creá tu acceso</h1>
-            <p>Tu identidad fue verificada. Faltan tus credenciales.</p>
+            <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Creá tu acceso</h1>
+            <p className="mb-6 text-texto-suave">Tu identidad fue verificada. Faltan tus credenciales.</p>
 
-            <form className="formulario" onSubmit={crearCuenta}>
-              <div className="campo">
-                <label htmlFor="email">Email</label>
+            <form className="flex flex-col gap-4" onSubmit={crearCuenta}>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="email" className="text-[0.85rem] font-semibold">Email</label>
                 <input
                   id="email"
                   type="email"
@@ -305,11 +339,12 @@ export default function RegistroPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
-              <div className="campo">
-                <label htmlFor="password">Contraseña</label>
+              <div className="flex flex-col gap-[0.35rem]">
+                <label htmlFor="password" className="text-[0.85rem] font-semibold">Contraseña</label>
                 <input
                   id="password"
                   type="password"
@@ -318,27 +353,35 @@ export default function RegistroPage() {
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
-              <div className="separador">o</div>
+              <div className="flex items-center gap-3 text-[0.85rem] text-texto-suave before:flex-1 before:h-px before:bg-borde before:content-[''] after:flex-1 after:h-px after:bg-borde after:content-['']">
+                o
+              </div>
 
-              <button type="button" className="boton boton--secundario" disabled>
+              <button
+                type="button"
+                className="cursor-not-allowed rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent opacity-60"
+                disabled
+              >
                 Continuar con Google
               </button>
-              <span className="nota">Ingreso con Google disponible próximamente.</span>
+              <span className="text-[0.8rem] text-texto-suave">Ingreso con Google disponible próximamente.</span>
 
-              <label className="opcion">
+              <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
                 <input
                   type="checkbox"
+                  className="mt-[0.2rem] accent-accent"
                   checked={aceptaTerminos}
                   required
                   onChange={(e) => setAceptaTerminos(e.target.checked)}
                 />
                 Acepto los Términos y Condiciones
               </label>
-              <div className="terminos">
-                <p>
+              <div className="rounded-lg border border-dashed border-borde bg-stone-50 p-3">
+                <p className="m-0 text-[0.8rem] leading-snug text-texto-suave">
                   <strong>Versión provisoria.</strong> Al crear tu cuenta confirmás que sos
                   mayor de 18 años, que los datos cargados son verdaderos y que tus clases
                   quedan cubiertas por el protocolo de seguridad de la plataforma. El texto
@@ -346,11 +389,19 @@ export default function RegistroPage() {
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button type="button" className="boton boton--secundario" onClick={() => setPaso(2)}>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+                  onClick={() => setPaso(2)}
+                >
                   Volver
                 </button>
-                <button type="submit" className="boton" disabled={enviando}>
+                <button
+                  type="submit"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={enviando}
+                >
                   {enviando ? "Creando cuenta…" : "Crear cuenta"}
                 </button>
               </div>
@@ -359,35 +410,35 @@ export default function RegistroPage() {
         )}
 
         {menorDeEdad && (
-          <div className="alerta alerta--informativa" role="status">
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
             <strong>Sos menor de edad.</strong> Un Adulto Responsable debe
             crearte el perfil. No se creó ninguna cuenta.
           </div>
         )}
 
         {error && (
-          <div className="alerta alerta--error" role="alert">
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {error}
           </div>
         )}
 
-        <p className="pie-enlace">
+        <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
           ¿Ya tenés cuenta? <Link href="/login">Iniciar sesión</Link>
           <br />
           ¿Querés dar clases?{" "}
           <Link href="/registro/tutor">Registrate como tutor</Link>
         </p>
 
-        <div className="progreso" aria-label="Progreso del registro">
+        <div className="mt-7 flex gap-[0.35rem]" aria-label="Progreso del registro">
           {PASOS.map((nombrePaso, i) => (
             <div
               key={nombrePaso}
-              className={i <= paso ? "progreso-segmento progreso-segmento--activo" : "progreso-segmento"}
+              className={i <= paso ? "h-1 flex-1 rounded bg-accent" : "h-1 flex-1 rounded bg-borde"}
               title={nombrePaso}
             />
           ))}
         </div>
-        <div className="progreso-etiqueta">
+        <div className="mt-[0.4rem] text-center text-[0.75rem] text-texto-suave">
           Paso {paso + 1} de {PASOS.length}: {PASOS[paso]}
         </div>
       </div>

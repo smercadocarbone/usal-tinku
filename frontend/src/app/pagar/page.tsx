@@ -69,66 +69,68 @@ function PagarForm() {
   }
 
   return (
-    <main className="contenido">
-      <h1 style={{ fontSize: "1.3rem", letterSpacing: "-0.01em" }}>
+    <main className="mx-auto max-w-[44rem] px-5 py-8">
+      <h1 className="text-[1.3rem] tracking-[-0.01em]">
         Pago de la reserva
       </h1>
 
       {estado === "cargando" && (
-        <p style={{ color: "var(--color-texto-suave)" }}>Generando pago...</p>
+        <p className="text-texto-suave">Generando pago...</p>
       )}
 
       {estado === "listo" && preferencia && (
         <>
           <div
-            className="tarjeta"
-            style={{ maxWidth: "none", marginBottom: "1rem" }}
+            className="mb-4 w-full max-w-none rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta"
           >
-            <dl style={{ margin: 0 }}>
+            <dl className="m-0">
               {reserva && reserva.precio !== null && (
-                <div className="perfil-fila">
-                  <dt>Monto</dt>
-                  <dd style={{ textTransform: "none" }}>
+                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <dt className="font-semibold">Monto</dt>
+                  <dd className="m-0 text-right">
                     {formatearPrecio(reserva.precio)}
                   </dd>
                 </div>
               )}
-              <div className="perfil-fila">
-                <dt>Metodo</dt>
-                <dd style={{ textTransform: "none" }}>MercadoPago</dd>
+              <div className="flex justify-between gap-4 border-b border-borde py-3">
+                <dt className="font-semibold">Metodo</dt>
+                <dd className="m-0 text-right">MercadoPago</dd>
               </div>
             </dl>
           </div>
-          <button type="button" className="boton" onClick={irAPagar}>
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
+            onClick={irAPagar}
+          >
             Pagar con MercadoPago
           </button>
-          <p style={{ fontSize: "0.8rem", color: "var(--color-texto-suave)" }}>
+          <p className="text-[0.8rem] text-texto-suave">
             Vas a salir de Tinku y continuar en el sitio de MercadoPago.
           </p>
         </>
       )}
 
       {estado === "finalizado" && (
-        <div className="alerta alerta--informativa" role="status">
+        <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
           Redirigiendo a MercadoPago...
         </div>
       )}
 
       {estado === "error" && (
-        <div className="alerta alerta--error" role="alert">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
           {error}
           <button
             type="button"
-            className="boton boton--secundario"
+            className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
             onClick={cargar}
-            style={{ marginTop: "0.75rem", fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
           >
             Reintentar
           </button>
         </div>
       )}
 
-      <p className="pie-enlace">
+      <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
         <Link href="/cuenta/reservas">Volver a mis reservas</Link>
       </p>
     </main>
@@ -137,7 +139,7 @@ function PagarForm() {
 
 export default function PagarPage() {
   return (
-    <Suspense fallback={<div className="contenido">Cargando...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-[44rem] px-5 py-8">Cargando...</div>}>
       <PagarForm />
     </Suspense>
   );

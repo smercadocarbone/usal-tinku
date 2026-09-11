@@ -78,61 +78,66 @@ export default function BusquedaPage() {
 
   return (
     <>
-      <header className="cabecera">
-        <div className="marca" style={{ marginBottom: 0 }}>
-          Tinku<span>.</span>
+      <header className="flex items-center justify-between border-b border-borde bg-superficie px-5 py-[0.9rem]">
+        <div className="text-[1.05rem] font-bold text-texto">
+          Tinku<span className="text-accent">.</span>
         </div>
         <Link
           href="/cuenta"
-          className="boton boton--secundario"
-          style={{ textDecoration: "none" }}
+          className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
         >
           Mi cuenta
         </Link>
       </header>
 
-      <main className="contenido">
-        <h1>Buscar tutores</h1>
-        <p>
+      <main className="mx-auto max-w-[44rem] px-5 py-8">
+        <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Buscar tutores</h1>
+        <p className="mb-6 text-texto-suave">
           Buscá por texto libre, por nombre de tema o acotá por materia del
           catálogo.
         </p>
 
         {errorCat && !catalogos && (
-          <div className="alerta alerta--error" role="alert">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
             {errorCat}{" "}
-            <button type="button" className="boton boton--secundario" onClick={cargarCatalogos}>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+              onClick={cargarCatalogos}
+            >
               Reintentar
             </button>
           </div>
         )}
 
-        <form className="formulario" onSubmit={onSubmit}>
-          <div className="campo">
-            <label htmlFor="texto">Texto libre</label>
+        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="texto" className="text-[0.85rem] font-semibold">Texto libre</label>
             <input
               id="texto"
               type="text"
               placeholder="Ej.: cómo dividir"
               value={textoBusqueda}
               onChange={(e) => setTextoBusqueda(e.target.value)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          <div className="campo">
-            <label htmlFor="nombre">Nombre del tema</label>
+          <div className="flex flex-col gap-[0.35rem]">
+            <label htmlFor="nombre" className="text-[0.85rem] font-semibold">Nombre del tema</label>
             <input
               id="nombre"
               type="text"
               placeholder="Ej.: División"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
+              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
-          <div className="fila-selectores">
-            <div className="campo">
-              <label htmlFor="sel-nivel">Nivel</label>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="sel-nivel" className="text-[0.85rem] font-semibold">Nivel</label>
               <select
                 id="sel-nivel"
                 value={nivel}
@@ -141,6 +146,7 @@ export default function BusquedaPage() {
                   setCurso("");
                   setMateria("");
                 }}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="">Todos</option>
                 {(catalogos ?? []).map((n) => (
@@ -151,8 +157,8 @@ export default function BusquedaPage() {
               </select>
             </div>
 
-            <div className="campo">
-              <label htmlFor="sel-curso">Curso / carrera</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="sel-curso" className="text-[0.85rem] font-semibold">Curso / carrera</label>
               <select
                 id="sel-curso"
                 value={curso}
@@ -161,6 +167,7 @@ export default function BusquedaPage() {
                   setCurso(e.target.value);
                   setMateria("");
                 }}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="">Todos</option>
                 {nivelSel?.cursos.map((c) => (
@@ -171,13 +178,14 @@ export default function BusquedaPage() {
               </select>
             </div>
 
-            <div className="campo">
-              <label htmlFor="sel-materia">Materia</label>
+            <div className="flex flex-col gap-[0.35rem]">
+              <label htmlFor="sel-materia" className="text-[0.85rem] font-semibold">Materia</label>
               <select
                 id="sel-materia"
                 value={materia}
                 disabled={!cursoSel}
                 onChange={(e) => setMateria(e.target.value)}
+                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="">Todas</option>
                 {cursoSel?.materias.map((m) => (
@@ -190,32 +198,39 @@ export default function BusquedaPage() {
           </div>
 
           {error && (
-            <div className="alerta alerta--error" role="alert">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
               {error}
             </div>
           )}
 
-          <button type="submit" className="boton" disabled={buscando}>
+          <button
+            type="submit"
+            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={buscando}
+          >
             {buscando ? "Buscando…" : "Buscar"}
           </button>
         </form>
 
         {resultados !== null && !buscando && (
           resultados.length === 0 ? (
-            <p className="pie-enlace">No se encontraron resultados.</p>
+            <p className="mt-5 text-center text-[0.9rem] text-texto-suave">No se encontraron resultados.</p>
           ) : (
-            <div className="resultados">
+            <div className="mt-6 flex flex-col gap-3">
               {resultados.map((r) => (
-                <article className="resultado" key={r.tutorId}>
-                  <h3>Tutor #{r.tutorId}</h3>
-                  <p className="resultado-meta">
+                <article
+                  className="rounded-tarjeta border border-borde bg-superficie px-5 py-4 shadow-tarjeta"
+                  key={r.tutorId}
+                >
+                  <h3 className="mb-1 text-[1.05rem]">Tutor #{r.tutorId}</h3>
+                  <p className="mb-3 text-[0.9rem] text-texto-suave">
                     Coincidencia: {r.score.toFixed(2)}
                   </p>
                   {r.noAutorizado && (
                     <>
                       <button
                         type="button"
-                        className="boton boton--secundario"
+                        className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
                         onClick={() =>
                           setAviso((prev) =>
                             prev === r.tutorId ? null : r.tutorId
@@ -230,7 +245,7 @@ export default function BusquedaPage() {
                           implementa cuando exista el endpoint de solicitud;
                           este chunk no llama a la API. */}
                       {aviso === r.tutorId && (
-                        <p className="alerta alerta--informativa" role="status">
+                        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
                           Tu adulto a cargo debe autorizar a este tutor para
                           poder contactarte.
                         </p>
