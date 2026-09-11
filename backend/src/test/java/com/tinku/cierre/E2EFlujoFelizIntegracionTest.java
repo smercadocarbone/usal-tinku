@@ -178,7 +178,7 @@ class E2EFlujoFelizIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, "Lopez", LocalDate.of(1990, 5, 15),
-                                PASSWORD, true, true)))
+                                dni + "@tinku.test", PASSWORD, true, true)))
                         .file(foto()))
                 .andExpect(status().isCreated());
     }
@@ -188,7 +188,8 @@ class E2EFlujoFelizIntegracionTest {
                 .thenReturn(resultado(dni, nombre, "Garcia", LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, "Garcia", LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, "Garcia", LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
     }
