@@ -69,6 +69,16 @@
 - [x] T-M2-09: Endpoints de búsquedas guardadas (crear, listar, re-ejecutar).
 - [x] T-M2-10: Tests: búsqueda de un menor sin autorizados devuelve resultados marcados; búsqueda excluye correctamente a un Tutor suspendido.
 
+### M2-F — Catálogo granular de temas (Chunk M2-F, rama `chunk/m2-f-temas`) — contratos en `docs/plan/Plan_M2_Temas.md`
+
+- [ ] T-M2-11: Migración V12: tablas `trayectos` y `temas` (con descripciones), columna `tema_ids UUID[]` en `perfiles_tutor_matching` + índice GIN; `unaccent` instalado (contratos 2a). Seed en V13 (T-M2-14), no en V12.
+- [ ] T-M2-12: Endpoints `GET /api/catalogos` (árbol por rama, filtros `?nivel=&curso=&materia=`), `GET/PUT /api/tutores/me/temas` (solo TUTOR, upsert de `tema_ids`, validación contra catálogo vigente 404/422) — FR-MATCH-006 granular.
+- [ ] T-M2-13: `POST /api/busquedas` con `nombre`/`filtro_materia` opcionales (texto opcional si hay filtro, 422 si los tres vacíos); acotamiento de candidatos por nombre (unaccent + ILIKE parcial) y por materia EN JAVA antes de `/match`; texto efectivo para el ranking; guardadas persisten el texto efectivo; respuesta sin cambios. Tests de integración con casos borde US-2/US-5.
+- [ ] T-M2-14: Seed del catálogo en V13 (datos de la investigación con fuentes citadas): primario y secundario 1°–6° (NAP + diseño curricular PBA de referencia) + 10–15 carreras universitarias más tutoradas; target ~1.200–1.500 temas, con rama que quede fuera señalada.
+- [ ] T-M2-15: (Python) `POST /recompute-embeddings`: idempotente, texto por tema `"{nombre}: {descripcion}"` unido con ". ", mismo modelo, `embedding=NULL` si `tema_ids` vacío, sin reglas de negocio. `/match` sin cambios. Tests pytest con embedder/repo falsos.
+- [ ] T-M2-16: (Frontend) Perfil Tutor: árbol colapsable nivel→curso→materia→temas con descripciones, `PUT/GET /api/tutores/me/temas`. Página `/busqueda`: texto libre + nombre + rama del catálogo; cards con `no_autorizado` → "Solicitar autorización".
+- [ ] T-M2-17: Verificación de punta a punta (orquestador): tutor con tema "División" rankea arriba en "cómo dividir" (semántico); búsqueda por nombre parcial; menor con/ sin autorizados, filtros FR-MATCH-004/005/007 intactos; suite completa verde.
+
 ## M4 — Sistema de Reservas y Agenda
 
 - [x] T-M4-01: Migración: `franjas_disponibilidad`, `solicitudes_sesion`, `reservas` — incluir la `EXCLUDE constraint` sobre superposición de horario (tutor y beneficiario) desde el primer momento, no agregarla después. _(Verificado en dev: V9__m4_reservas.sql; dos INSERT mismos beneficiario+horario → el 2do viola la EXCLUDE. Agrega tambien la FK pendiente de V8: `aula.sesiones_aprendizaje.reserva_id → reservas.reservas.id`. ADR-M4-01 resuelto: franja semanal recurrente (`dia_semana`) o puntual (`fecha_especifica`), CHECK exige exactamente uno.)_
