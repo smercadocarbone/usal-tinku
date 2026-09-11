@@ -28,7 +28,10 @@ mal — esa pregunta se responde en el backend Java, antes de la llamada.
 ## Cómo correr localmente
 
 ```bash
-pip install -r requirements.txt --break-system-packages
+# Instalación y venv con uv (Rust): órdenes de magnitud más rápido que pip.
+uv venv
+uv pip install -r requirements.txt
+source .venv/bin/activate
 # Config de la base pgvector (misma base que el backend):
 export TINKU_PG_HOST=localhost TINKU_PG_PORT=5432 \
        TINKU_PG_DBNAME=tinku TINKU_PG_USER=... TINKU_PG_PASSWORD=...
@@ -37,6 +40,12 @@ uvicorn main:app --reload --port 8000
 
 El modelo `paraphrase-multilingual-MiniLM-L12-v2` (384 dims, español incluido)
 se descarga la primera vez y se carga de forma perezosa en el primer `/match`.
+
+## Lint y formato
+
+```bash
+ruff check . && ruff format . --check
+```
 
 ## Verificar
 
@@ -49,7 +58,7 @@ curl -X POST localhost:8000/match -H 'Content-Type: application/json' \
 ## Tests
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 python -m pytest test_main.py -q
 ```
 

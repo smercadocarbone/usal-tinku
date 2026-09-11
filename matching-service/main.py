@@ -20,13 +20,13 @@ Endpoints:
 """
 
 import os
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
 
 import psycopg
 from fastapi import FastAPI
-from pydantic import BaseModel
 from pgvector import Vector
 from pgvector.psycopg import register_vector
+from pydantic import BaseModel
 
 app = FastAPI(title="tinku-matching-service", version="0.2.0")
 
@@ -43,7 +43,7 @@ _embedder: Callable[[str], list[float]] | None = None
 
 class MatchRequest(BaseModel):
     texto_busqueda: str
-    tutor_ids_candidatos: list[str]  # lista YA acotada por el backend Java (autorizacion, suspensiones)
+    tutor_ids_candidatos: list[str]  # lista YA acotada por el backend Java
 
 
 class MatchResult(BaseModel):
@@ -58,7 +58,9 @@ class RepoScores:
     acotada y devuelve solo el ranking por similitud de esos candidatos.
     """
 
-    def obtener_scores(self, tutor_ids: Iterable[str], consulta_embedding: list[float]) -> list[tuple[str, float]]:
+    def obtener_scores(
+        self, tutor_ids: Iterable[str], consulta_embedding: list[float]
+    ) -> list[tuple[str, float]]:
         conn = psycopg.connect(
             host=os.environ["TINKU_PG_HOST"],
             port=int(os.environ.get("TINKU_PG_PORT", "5432")),
@@ -98,7 +100,7 @@ def _cargar_embedder() -> Callable[[str], list[float]]:
         from sentence_transformers import SentenceTransformer  # import tardio: pesado
 
         modelo = SentenceTransformer(MODELO)
-        _embedder = lambda texto: modelo.encode(texto).tolist()  # noqa: E731
+        _embedder = lambda texto: modelo.encode(texto).tolist()
     return _embedder
 
 
@@ -109,14 +111,16 @@ class MatchError(RuntimeError):
 def _embed(texto: str) -> list[float]:
     try:
         return _cargar_embedder()(texto)
-    except Exception as exc:  # noqa: BLE001 — el fallo de carga se expone como 503
+    except Exception as exc:
         raise MatchError(f"modelo de embeddings no disponible: {exc}") from exc
 
 
-def _scores(tutor_ids: Iterable[str], consulta_embedding: list[float]) -> list[tuple[str, float]]:
+def _scores(
+    tutor_ids: Iterable[str], consulta_embedding: list[float]
+) -> list[tuple[str, float]]:
     try:
         return _repo.obtener_scores(tutor_ids, consulta_embedding)
-    except Exception as exc:  # noqa: BLE001 — config/base caida se expone como 503
+    except Exception as exc:
         raise MatchError(f"base de pgvector no disponible: {exc}") from exc
 
 

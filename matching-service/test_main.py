@@ -7,8 +7,9 @@ cubre el contrato de la API y la logica de ranking. El numero 384 de la
 dimension del vector falso coincide con VECTOR(384) de la migracion V7.
 """
 
-import main as srv
 from fastapi.testclient import TestClient
+
+import main as srv
 
 client = TestClient(srv.app)
 
@@ -37,10 +38,16 @@ def test_match_ranking_por_similitud(monkeypatch):
     monkeypatch.setattr(srv, "_embed", fake_embedder)
     monkeypatch.setattr(srv, "_scores", fake_scores)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1", "t3"]})
+    resp = client.post(
+        "/match",
+        json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1", "t3"]},
+    )
 
     assert resp.status_code == 200
-    assert resp.json() == [{"tutor_id": "t3", "score": 0.9}, {"tutor_id": "t1", "score": 0.5}]
+    assert resp.json() == [
+        {"tutor_id": "t3", "score": 0.9},
+        {"tutor_id": "t1", "score": 0.5},
+    ]
 
 
 def test_match_sin_candidatos_no_llama_al_repo(monkeypatch):
@@ -53,7 +60,9 @@ def test_match_sin_candidatos_no_llama_al_repo(monkeypatch):
 
     monkeypatch.setattr(srv, "_scores", fake_scores)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": []})
+    resp = client.post(
+        "/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": []}
+    )
     assert resp.status_code == 200
     assert resp.json() == []
     assert llamadas == []  # el repo recibe la lista vacia tal cual llega
@@ -65,5 +74,7 @@ def test_match_503_cuando_modelo_o_base_no_disponibles(monkeypatch):
 
     monkeypatch.setattr(srv, "_embed", embed_roto)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1"]})
+    resp = client.post(
+        "/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1"]}
+    )
     assert resp.status_code == 503  # nunca fabrica un ranking falso
