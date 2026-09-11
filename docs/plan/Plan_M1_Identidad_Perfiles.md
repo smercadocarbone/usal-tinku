@@ -15,7 +15,7 @@
 | dni                          | varchar, **UNIQUE, NOT NULL**     | Aplica FR-ID-001/018/019: un DNI = una sola fila en todo el sistema, sin importar el `tipo`. |
 | nombre, apellido             | varchar                           | Extraídos por OCR y confirmados contra lo declarado.                                         |
 | fecha_nacimiento             | date                              | Usada para calcular edad (≥18 adultos, ≥6 menores).                                          |
-| email                        | varchar(255), **UNIQUE** (índice parcial `WHERE email IS NOT NULL`) | Credencial de acceso (login). Nulo en cuentas creadas antes de V12 y en perfiles de menor (no se autorregistran con email). |
+| email                        | varchar(255), **UNIQUE** (índice parcial `WHERE email IS NOT NULL`) | Credencial de acceso (login). Nulo en cuentas creadas antes de V18 (migración que lo agrega) y en perfiles de menor (no se autorregistran con email). |
 | tipo                         | enum(`adulto`, `menor`, `tutor`)  | Determina qué otras tablas/columnas aplican.                                                 |
 | capacidad_estudiante         | boolean, default false            | Solo relevante si `tipo = adulto`.                                                           |
 | capacidad_adulto_responsable | boolean, default false            | Solo relevante si `tipo = adulto`.                                                           |
