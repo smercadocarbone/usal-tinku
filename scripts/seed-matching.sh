@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Completa el pipeline de matching para los tutores del seed: aprueba la
-# credencial, activa matching y persiste embeddings reales (pgvector) con el
-# modelo del contenedor matching. Idempotente.
-# Uso: scripts/seed-matching.sh
+# M2-F: deja a los tutores del seed listos para /api/busquedas — aprueba la
+# credencial, activa matching, les carga tema_ids (PUT /api/tutores/me/temas)
+# y repuebla embeddings desde el servicio Python (/recompute-embeddings, 2c).
+# Idempotente. Requiere: app corriendo (perfil dev) + contenedor `matching`.
+# Uso: scripts/seed-matching.sh [base_url]   (default http://localhost:8080)
 set -euo pipefail
 
+BASE="${1:-http://localhost:8080}"
+MOTOR="${MOTOR:-http://localhost:8000}"
+PASSWORD="Password123!"
 COMPOSE="${COMPOSE:-docker compose}"
 
 echo "==> Aprobando credencial y activando matching (SQL sobre la BD de dev)"
@@ -18,67 +22,50 @@ UPDATE identidad.usuarios SET activo_para_matching = true
  WHERE dni IN ('30224455','30224456');
 SQL
 
-echo "==> Computando embeddings (modelo del contenedor matching) y persistiendo en pgvector"
-$COMPOSE exec -T matching python - <<'PY'
-import os
-import psycopg
-from pgvector import Vector
-from pgvector.psycopg import register_vector
-from sentence_transformers import SentenceTransformer
+# (dni, Filtro de WHERE sobre matching.trayectos → QUÉ temas le pertenecen)
+# Jorge: materias del secundario. Maria: materias de su carrera universitaria.
+for spec in \
+    "30224455|'secundario' AND tr.materia IN ('Matemática','Física','Química')" \
+    "30224456|'universitario' AND tr.anio_o_carrera='Ingeniería en Sistemas de Información'"; do
+    IFS='|' read -r dni where <<<"$spec"
 
-conn = psycopg.connect(
-    host=os.environ["TINKU_PG_HOST"],
-    port=int(os.environ.get("TINKU_PG_PORT", "5432")),
-    dbname=os.environ["TINKU_PG_DBNAME"],
-    user=os.environ["TINKU_PG_USER"],
-    password=os.environ["TINKU_PG_PASSWORD"],
-)
-register_vector(conn)
+    token=$(curl -s -X POST "$BASE/api/usuarios/login" \
+        -H 'Content-Type: application/json' \
+        -d "{\"dni\":\"$dni\",\"password\":\"$PASSWORD\"}" |
+        python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
 
-MODELO = "paraphrase-multilingual-MiniLM-L12-v2"
+    # Los ids del catálogo vigente se leen de la BD (el GET /api/catalogos es
+    # solo lectura/consulta; acá se necesita la lista plana, más simple por SQL).
+    ids=$($COMPOSE exec -T db psql -U tinku_dev -d tinku -tAc \
+        "SELECT t.id::text
+           FROM matching.temas t
+           JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+          WHERE tr.nivel = $where
+          ORDER BY tr.nivel, tr.anio_o_carrera, tr.materia, t.orden")
+    json_ids=$(python3 -c 'import sys,json;print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))' <<<"$ids")
+    n=$(python3 -c 'import sys,json;print(len(json.load(sys.stdin)))' <<<"$json_ids")
 
-# Perfil de prueba de cada tutor seed: materias del catalogo V7 + texto que
-# se va a embedder. En produccion esto vendra del alta de materias/nivel (M2).
-TUTORES = {
-    "30224455": {  # Jorge Martinez: profesor de matematica de secundario
-        "materias": ["secundario|Matemática", "secundario|Física", "secundario|Química"],
-        "texto": "Profesor particular de matemática, física y química para nivel secundario.",
-    },
-    "30224456": {  # Maria Fernandez: programacion universitaria
-        "materias": ["universitario|Programación", "universitario|Estructura de Datos", "universitario|Cálculo"],
-        "texto": "Tutora de programación, estructura de datos y cálculo para nivel universitario.",
-    },
-}
+    code=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$BASE/api/tutores/me/temas" \
+        -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+        -d "{\"tema_ids\":$json_ids}")
+    echo "  tutor $dni ($where): $n temas → HTTP $code"
+done
 
-with conn.cursor() as cur:
-    modelo = SentenceTransformer(MODELO)
-    for dni, perfil in TUTORES.items():
-        cur.execute("SELECT u.id FROM identidad.usuarios u WHERE u.dni = %s", (dni,))
-        tutor_id = cur.fetchone()[0]
-        if not tutor_id:
-            print(f"  SKIP {dni}: no existe"); continue
-        cur.execute("SELECT id FROM matching.materias_niveles WHERE nivel || '|' || materia = ANY(%s)", (perfil["materias"],))
-        ids = [r[0] for r in cur.fetchall()]
-        embedding = modelo.encode(perfil["texto"]).tolist()
-        cur.execute(
-            """
-            INSERT INTO matching.perfiles_tutor_matching (tutor_id, materias_niveles_ids, embedding, activo_para_matching)
-            VALUES (%s, %s, %s, true)
-            ON CONFLICT (tutor_id) DO UPDATE
-               SET materias_niveles_ids = EXCLUDED.materias_niveles_ids,
-                   embedding = EXCLUDED.embedding,
-                   activo_para_matching = EXCLUDED.activo_para_matching
-            """,
-            (tutor_id, ids, Vector(embedding)),
-        )
-        print(f"  upsert {dni}: {len(ids)} materias, embedding 384d")
-    conn.commit()
-conn.close()
-PY
+echo "==> Recomputed de embeddings (contrato 2c, contenedor matching)"
+recompute=$(curl -s -w '\n%{http_code}' -X POST "$MOTOR/recompute-embeddings")
+body=${recompute%$'\n'*}; http=${recompute##*$'\n'}
+if [ "$http" != "200" ]; then
+    echo "  ERROR: recompute devolvió HTTP $http — $body (¿el contenedor matching está levantado y el modelo descargado?)"
+    exit 1
+fi
+echo "  $body"
 
 echo "==> Estado final"
 $COMPOSE exec -T db psql -U tinku_dev -d tinku -c \
-  "SELECT u.dni, u.activo_para_matching, p.materias_niveles_ids IS NOT NULL AS tiene_materias, p.embedding IS NOT NULL AS tiene_embedding
+  "SELECT u.dni,
+          u.activo_para_matching,
+          CARDINALITY(p.tema_ids) AS temas,
+          p.embedding IS NOT NULL AS tiene_embedding
      FROM identidad.usuarios u
      LEFT JOIN matching.perfiles_tutor_matching p ON p.tutor_id = u.id
     WHERE u.tipo = 'TUTOR';"
