@@ -1,10 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { clearSession } from "@/lib/auth";
 import { formatearPrecio } from "@/lib/formatos";
 
 interface Preferencia {
@@ -18,7 +17,6 @@ interface ReservaInfo {
 }
 
 function PagarForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const reservaId = searchParams.get("reserva");
 
@@ -68,11 +66,6 @@ function PagarForm() {
     if (!preferencia) return;
     setEstado("finalizado");
     window.location.assign(preferencia.initPoint);
-  }
-
-  function logout() {
-    clearSession();
-    router.replace("/login");
   }
 
   return (

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { clearSession, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { formatearFechaCorta, formatearPrecio } from "@/lib/formatos";
 
 interface TutorPerfil {
@@ -131,11 +131,6 @@ function ReservarForm() {
     setHoras(lista);
   }
 
-  function logout() {
-    clearSession();
-    router.replace("/");
-  }
-
   const franjasVisibles = fechaElegida
     ? franjas.filter(
         (f) =>
@@ -212,7 +207,9 @@ function ReservarForm() {
               padding: "1rem",
             }}
           >
-            <label>Tutor</label>
+            <p style={{ margin: "0 0 0.25rem", fontSize: "0.85rem", color: "var(--color-texto-suave)" }}>
+              Tutor
+            </p>
             <span style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
               {perfil.nombre} {perfil.apellido}
             </span>

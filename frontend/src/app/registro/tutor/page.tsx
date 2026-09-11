@@ -18,8 +18,6 @@ const TIPOS_CREDENCIAL = [
 type Paso = 1 | 2;
 
 export default function RegistroTutorPage() {
-  const router = useRouter();
-
   const [paso, setPaso] = useState<Paso>(1);
 
   const [dniDeclarado, setDniDeclarado] = useState("");
