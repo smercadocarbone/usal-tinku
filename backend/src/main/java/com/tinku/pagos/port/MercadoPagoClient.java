@@ -37,6 +37,15 @@ public interface MercadoPagoClient {
      */
     void reembolsarPago(String mpPaymentId);
 
+    /**
+     * Reembolso PARCIAL (POST /v1/payments/{id}/refunds con {@code amount}
+     * explícito, Plan M5 §3.3, FR-PAG-010) — flujo MANUAL de disputa ejecutado
+     * desde M8. El monto lo decide Soporte; la diferencia de comisión la
+     * absorbe Tinku. Solo lo invoca {@code ReembolsoParcialProveedor}, nunca un
+     * listener/job automático (T-M5-08).
+     */
+    void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto);
+
     record PreferenciaRequest(UUID reservaId, BigDecimal montoBruto,
                               BigDecimal comisionPlataforma, String descripcion) {
     }

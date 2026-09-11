@@ -11,7 +11,7 @@ import java.util.UUID;
  * Perfil PÚBLICO de un Tutor (GET /api/tutores/{id}). Base = campos de
  * {@link UsuarioResponse} (nunca exportera passwordHash ni DNI) + materias y
  * nivel del catálogo de M2 + reputación pública de M7 (promedio null si count
- * < 5, FR-REP-007). Hasta que M2/M7 existan, los puertos stubs devuelven
+ * < 5, FR-REP-007). Sin materias configuradas o sin calificaciones suficientes,
  * listas vacías y promedio null.
  */
 public record TutorPerfilResponse(

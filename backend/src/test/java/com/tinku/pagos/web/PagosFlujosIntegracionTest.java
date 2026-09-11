@@ -15,8 +15,11 @@ import com.tinku.matching.ReputacionSignalProvider;
 import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaRequest;
+import com.tinku.pagos.repository.TarifaTutorRepository;
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
+import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
+import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaService;
 import com.tinku.reservas.service.ReservasZonaHoraria;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,8 +56,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,7 +71,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * (ADR-M5-01 del Plan no bloquea estos tests: no pegan contra el provider real).
  *
  * El escenario de datos replica el de ReservasFlujosIntegracionTest: tarifa 15000
- * vía TarifaProveedorStub (application-test.yml). BR-PAG-01 se verifica con
+ * vía la implementación real de M5-H (fallback de dev en application-test.yml).
+ * BR-PAG-01 se verifica con
  * ArgumentCaptor sobre la PreferenciaRequest: comisión = 15% del monto congelado.
  */
 @SpringBootTest
@@ -91,6 +97,8 @@ class PagosFlujosIntegracionTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaService reservaService;
+    @Autowired TarifaTutorRepository tarifaTutorRepository;
+    @Autowired ReservaRepository reservaRepository;
 
     @MockBean OcrService ocrService;
     @MockBean MatchingServiceClient matchingClient;
@@ -356,6 +364,81 @@ class PagosFlujosIntegracionTest {
         EscenarioPago e = escenarioPago();
         mockMvc.perform(post("/api/pagos/preferencia")
                         .header("Authorization", "Bearer " + e.tokenAr())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of())))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------------------------------------------------- US-6 (M5-H, tarifa del Tutor)
+
+    @Test
+    void us6_tutor_configuraTarifaPorSesion_yLaReservaLaCongela() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+
+        // El Tutor fija su precio por sesión (FR-PAG-006, upsert sobre tarifas_tutor).
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 22000))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tutorId").value(tutorId.toString()))
+                .andExpect(jsonPath("$.precioSesion").value(new BigDecimal("22000")));
+        assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioSesion())
+                .isEqualByComparingTo(new BigDecimal("22000"));
+
+        // Actualizar de nuevo = upsert, no una fila duplicada.
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 23000))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioSesion").value(new BigDecimal("23000")));
+        assertThat(tarifaTutorRepository.findAll()).hasSize(1);
+
+        // La Reserva congela ESE precio (FR-PAG-013): 22000+, no el stub de dev.
+        String dniEst = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        Instant horario = dentroDeFranja(fecha);
+        UUID reservaId = crearReservaDirecta(tokenEst, tutorId, null, horario);
+        Reserva reserva = reservaRepository.findById(reservaId).orElseThrow();
+        // se resuelve via carga batch más abajo
+        assertThat(reserva.getPrecio()).isEqualByComparingTo(new BigDecimal("23000"));
+
+        // y la preferencia de pago se arma sobre ese precio congelado.
+        pedirPreferencia(tokenEst, reservaId);
+        ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
+        verify(mercadopago).crearPreferencia(captor.capture());
+        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("23000"));
+    }
+
+    @Test
+    void us6_noTutor_noPuedeFijarTarifa_403() throws Exception {
+        String dniEst = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
+
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 22000))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void us6_precioInvalido_400() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 0))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of())))
                 .andExpect(status().isBadRequest());

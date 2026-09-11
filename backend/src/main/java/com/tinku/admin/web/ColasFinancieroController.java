@@ -3,6 +3,7 @@ package com.tinku.admin.web;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.model.Transaccion;
+import com.tinku.pagos.port.ReembolsoParcialProveedor;
 import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.pagos.service.LiberacionEscrowService;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,9 @@ import java.util.UUID;
  *  - {@code POST /pagos-fallidos/{id}/reintentar}: una liberación manual que
  *    reusa EL flujo de M5 ({@link LiberacionEscrowService#ejecutarLiberacion}),
  *    jamás reimplementa la llamada al proveedor.
+ *  - {@code POST /transacciones/{id}/reembolso-parcial}: reembolso PARCIAL por
+ *    disputa (FR-PAG-010) vía {@link ReembolsoParcialProveedor} — flujo manual
+ *    exclusivo de M8, nunca una regla automática de M5.
  *  - {@code POST /precios-regionales}: agrega una versión nueva por provincia
  *    (nunca sobreescribe la vigente — FR-PAG-006, FR-ADM-007).
  */
@@ -49,15 +54,18 @@ public class ColasFinancieroController {
     private final TransaccionRepository transaccionRepo;
     private final PrecioReferenciaRegionalRepository precioRepo;
     private final LiberacionEscrowService liberacionEscrow;
+    private final ReembolsoParcialProveedor reembolsoParcial;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
                                      PrecioReferenciaRegionalRepository precioRepo,
-                                     LiberacionEscrowService liberacionEscrow) {
+                                     LiberacionEscrowService liberacionEscrow,
+                                     ReembolsoParcialProveedor reembolsoParcial) {
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;
         this.liberacionEscrow = liberacionEscrow;
+        this.reembolsoParcial = reembolsoParcial;
     }
 
     @GetMapping("/pagos-fallidos")
@@ -86,6 +94,40 @@ public class ColasFinancieroController {
                     .body(Map.of("error", "La transacción no está en la cola de intervención manual."));
         }
         liberacionEscrow.ejecutarLiberacion(transaccionId);
+        return ResponseEntity.ok(PagoFallidoResponse.from(
+                transaccionRepo.findById(transaccionId).orElseThrow()));
+    }
+
+    /**
+     * Reembolso PARCIAL por disputa (FR-PAG-010, T-M5-08): devuelve una PARTE del
+     * escrow cuando una disputa en M8/M9 se resuelve así. Flujo 100% manual — que
+     * este endpoint exista no habilita ningún reembolso parcial automático
+     * (FR-PAG-009 sigue prohibiéndolo). {@code monto} lo decide Soporte: &gt; 0 y
+     * &lt; {@code montoBruto} (devolver todo o más que lo cobrado es un reembolso
+     * total, que tiene otro flujo). La diferencia de comisión de gateway la
+     * absorbe Tinku. El estado de la Transacción no se toca: el resto del escrow
+     * sigue su curso normal y MP maneja el saldo (Spec no define una transición).
+     */
+    @PostMapping("/transacciones/{transaccionId}/reembolso-parcial")
+    public ResponseEntity<?> reembolsoParcial(@PathVariable UUID transaccionId,
+                                              @Valid @RequestBody ReembolsoParcialRequest request,
+                                              Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        Transaccion transaccion = transaccionRepo.findById(transaccionId)
+                .orElse(null);
+        if (transaccion == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // Solo hay algo que parcializar si el dinero sigue en el escrow.
+        boolean escrowDisponible = transaccion.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
+                || transaccion.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA;
+        boolean montoParcial = request.monto().compareTo(transaccion.getMontoBruto()) < 0;
+        if (!escrowDisponible || !montoParcial) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error",
+                            "El reembolso parcial requiere escrow retenido y un monto menor al cobrado."));
+        }
+        reembolsoParcial.reembolsarParcial(transaccion.getMpPaymentId(), request.monto());
         return ResponseEntity.ok(PagoFallidoResponse.from(
                 transaccionRepo.findById(transaccionId).orElseThrow()));
     }

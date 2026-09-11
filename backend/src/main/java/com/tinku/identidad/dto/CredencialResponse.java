@@ -1,5 +1,6 @@
 package com.tinku.identidad.dto;
 
+import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
 import com.tinku.identidad.model.TipoCredencial;
 
@@ -16,4 +17,10 @@ public record CredencialResponse(
         int numeroIntento,
         Instant createdAt
 ) {
+
+    public static CredencialResponse from(CredencialAcademica c) {
+        return new CredencialResponse(
+                c.getId(), c.getTipoDocumento(), c.getEstado(),
+                c.getNumeroIntento(), c.getCreatedAt());
+    }
 }

@@ -1,18 +1,24 @@
 package com.tinku.pagos.service;
 
+import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.pagos.model.PrecioReferenciaRegional;
+import com.tinku.pagos.model.TarifaTutor;
 import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaRequest;
 import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
+import com.tinku.pagos.repository.TarifaTutorRepository;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
+import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -34,15 +40,18 @@ public class PagoService {
     private final MercadoPagoClient mercadopago;
     private final ComisionPlataforma comision;
     private final PrecioReferenciaRegionalRepository precioReferenciaRepo;
+    private final TarifaTutorRepository tarifaTutorRepo;
 
     public PagoService(ReservaRepository reservaRepo,
                        MercadoPagoClient mercadopago,
                        ComisionPlataforma comision,
-                       PrecioReferenciaRegionalRepository precioReferenciaRepo) {
+                       PrecioReferenciaRegionalRepository precioReferenciaRepo,
+                       TarifaTutorRepository tarifaTutorRepo) {
         this.reservaRepo = reservaRepo;
         this.mercadopago = mercadopago;
         this.comision = comision;
         this.precioReferenciaRepo = precioReferenciaRepo;
+        this.tarifaTutorRepo = tarifaTutorRepo;
     }
 
     public PreferenciaPago generarPreferencia(Usuario usuario, UUID reservaId) {
@@ -79,5 +88,30 @@ public class PagoService {
         }
         return precioReferenciaRepo.findFirstByProvinciaOrderByVersionDesc(provincia.trim())
                 .orElseThrow(() -> new ProvinciaSinPrecioReferenciaException(provincia));
+    }
+
+    // ------------------------------------------------------ US-6 (M5-H, tarifa del Tutor)
+
+    /**
+     * El Tutor fija el precio por sesión de su perfil (Spec M5 US-6, FR-PAG-006,
+     * Chunk M5-H). Upsert sobre {@code pagos.tarifas_tutor}: una fila por Tutor,
+     * se actualiza in-place cuando él cambia su precio. FR-PAG-013 garantiza que
+     * las Reservas ya creadas conservan su precio congelado — este cambio solo
+     * aplica hacia adelante.
+     */
+    @Transactional
+    public TarifaTutor actualizarTarifaTutor(Usuario tutor, BigDecimal precioSesion) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR) {
+            throw new SoloTutorException("Solo las cuentas de Tutor pueden fijar su tarifa por sesión.");
+        }
+        TarifaTutor tarifa = tarifaTutorRepo.findByTutorId(tutor.getId())
+                .orElseGet(() -> {
+                    TarifaTutor nueva = new TarifaTutor();
+                    nueva.setTutorId(tutor.getId());
+                    return nueva;
+                });
+        tarifa.setPrecioSesion(precioSesion);
+        tarifa.setUpdatedAt(Instant.now());
+        return tarifaTutorRepo.save(tarifa);
     }
 }

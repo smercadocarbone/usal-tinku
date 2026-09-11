@@ -77,8 +77,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * JPA + Flyway + PostgreSQL via Testcontainers), con el mismo patrón de
  * MatchingFlujosIntegracionTest: OCR mockeado, resto real.
  *
- * La tarifa se resuelve por el stub {@link com.tinku.reservas.port.TarifaProveedorStub}
- * con tinku.reservas.tarifa-stub=15000 (application-test.yml) — M5 no existe aún.
+ * La tarifa se resuelve por la implementación real (M5-H,
+ * {@code TarifaProveedorTutor}) leyendo pagos.tarifas_tutor; sin fila, el
+ * fallback de dev aplica tinku.reservas.tarifa-stub=15000 (application-test.yml).
  */
 @SpringBootTest
 @AutoConfigureMockMvc

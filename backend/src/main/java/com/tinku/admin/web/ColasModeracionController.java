@@ -2,20 +2,29 @@ package com.tinku.admin.web;
 
 import com.tinku.aula.model.AlertaSeguridad;
 import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.identidad.dto.CredencialResponse;
+import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
+import com.tinku.identidad.service.CredencialService;
 import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.seguridad.web.AlertaSeguridadResponse;
 import com.tinku.seguridad.web.DenunciaResponse;
 import com.tinku.shared.AdminModeracionGate;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Colas del Admin de Moderación y Seguridad (US-1/2/3, FR-ADM-001/002/003).
@@ -26,8 +35,12 @@ import java.util.List;
  *    la más vieja es la más urgente (mismo orden que {@code findByEstadoOrderByCreatedAtAsc}).
  *  - Denuncias: {@code prioridad_alta} primero, luego el SLA más cercano.
  *
- * Las RESOLUCIONES ya viven en M9 ({@code /api/admin/moderacion/denuncias/{id}/resolver},
- * {@code /api/admin/moderacion/alertas-seguridad/{id}/resolver}) — acá solo se listan.
+ * Las RESOLUCIONES de Denuncias/Alertas viven en M9
+ * ({@code /api/admin/moderacion/denuncias/{id}/resolver},
+ * {@code /api/admin/moderacion/alertas-seguridad/{id}/resolver}); acá se listan.
+ * La resolución de Credenciales (aprobar/rechazar) está en este mismo controller:
+ * M1 expone las transiciones vía {@link CredencialService} (que dispara el
+ * backoff escalado de FR-ID-012) y este panel las invoca como port (T-M8-01).
  */
 @RestController
 @RequestMapping("/api/admin/moderacion")
@@ -37,15 +50,18 @@ public class ColasModeracionController {
     private final CredencialAcademicaRepository credencialRepo;
     private final AlertaSeguridadRepository alertaRepo;
     private final DenunciaRepository denunciaRepo;
+    private final CredencialService credencialService;
 
     public ColasModeracionController(AdminModeracionGate gate,
                                      CredencialAcademicaRepository credencialRepo,
                                      AlertaSeguridadRepository alertaRepo,
-                                     DenunciaRepository denunciaRepo) {
+                                     DenunciaRepository denunciaRepo,
+                                     CredencialService credencialService) {
         this.gate = gate;
         this.credencialRepo = credencialRepo;
         this.alertaRepo = alertaRepo;
         this.denunciaRepo = denunciaRepo;
+        this.credencialService = credencialService;
     }
 
     @GetMapping("/credenciales")
@@ -53,6 +69,26 @@ public class ColasModeracionController {
         gate.requiereModeracion(authentication);
         return ResponseEntity.ok(credencialRepo.colaPendientes(EstadoCredencial.PENDIENTE)
                 .stream().map(CredencialColaResponse::from).toList());
+    }
+
+    @PostMapping("/credenciales/{credencialId}/resolver")
+    public ResponseEntity<?> resolverCredencial(@PathVariable UUID credencialId,
+                                                 @Valid @RequestBody RevisarCredencialRequest request,
+                                                 Authentication authentication) {
+        UUID adminId = gate.requiereModeracion(authentication);
+        CredencialAcademica credencial = credencialRepo.findById(credencialId).orElse(null);
+        if (credencial == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // Solo una credencial PENDIENTE se resuelve (una ya resuelta no se re-toca).
+        if (credencial.getEstado() != EstadoCredencial.PENDIENTE) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", "La credencial no está pendiente de revisión."));
+        }
+        CredencialAcademica resuelta = request.decision() == DecisionCredencial.APROBAR
+                ? credencialService.marcarAprobada(credencialId, adminId)
+                : credencialService.marcarRechazada(credencialId, adminId);
+        return ResponseEntity.ok(CredencialResponse.from(resuelta));
     }
 
     @GetMapping("/alertas")

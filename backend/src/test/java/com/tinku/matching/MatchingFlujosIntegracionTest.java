@@ -44,6 +44,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -450,5 +451,55 @@ class MatchingFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(new BusquedaRequest("filosofia"))))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.error").isNotEmpty());
+    }
+
+    // ------------------------------------------------ US-5: perfil de matching (FR-MATCH-006)
+
+    @Test
+    void us5_tutorCargaMateriaDelCatalogo_yQuedaEnSuPerfilPublico() throws Exception {
+        String tokenTutor = registrarTutorYToken("20377777", "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni("20377777").getId();
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Matemática", "Física")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.materias[0]").value("Matemática"))
+                .andExpect(jsonPath("$.materias[1]").value("Física"))
+                .andExpect(jsonPath("$.nivel").value("secundario"));
+
+        // Sin credencial aprobada el Tutor no aparece en ranking, pero su perfil
+        // público (GET /api/tutores/{id}) ya refleja el catálogo configurado.
+        mockMvc.perform(get("/api/tutores/" + tutorId)
+                        .header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.materias[0]").value("Matemática"))
+                .andExpect(jsonPath("$.nivel").value("secundario"));
+    }
+
+    @Test
+    void us5_materiaFueraDelCatalogo_422() throws Exception {
+        String tokenTutor = registrarTutorYToken("20388888", "Diego", "Mendez");
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Astrología")))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void us5_noTutor_noPuedeCargarPerfil_403() throws Exception {
+        String tokenEst = registrarAdultoYToken("20399999", "Ana", "Lopez", true, false);
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Matemática")))))
+                .andExpect(status().isForbidden());
     }
 }

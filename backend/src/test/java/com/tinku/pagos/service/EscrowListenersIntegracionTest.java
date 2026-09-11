@@ -14,7 +14,6 @@ import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.LiberacionProveedor;
-import com.tinku.pagos.port.ReembolsoParcialProveedor;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
@@ -41,7 +40,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -80,7 +78,6 @@ class EscrowListenersIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
-    @Autowired ReembolsoParcialProveedor reembolsoParcial;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -325,18 +322,5 @@ class EscrowListenersIntegracionTest {
         assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
         verify(reembolso).reembolsarTotal(any(Transaccion.class));
         verifyNoInteractions(liberacion);
-    }
-
-    @Test
-    void reembolsoParcial_failClosed_lanzaError_hastaQueM8LoReemplace() {
-        Escena e = escena();
-        confirmarReserva(e.reservaId());
-
-        // T-M5-08: el reembolso PARCIAL es flujo manual de M8; hasta entonces el
-        // port falla ruidoso — jamás un parcial registrado sin ejecutar.
-        assertThatThrownBy(() -> reembolsoParcial.reembolsarParcial(
-                e.transaccion().getMpPaymentId(), BigDecimal.valueOf(5000)))
-                .isInstanceOf(ReembolsoNoDisponibleException.class);
-        verifyNoInteractions(liberacion, reembolso);
     }
 }

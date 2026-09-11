@@ -88,6 +88,10 @@ tinku:
     backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
   credencial:
     backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
+  almacenamiento:
+    # Directorio local para credenciales de Tutor (AlmacenamientoLocal). Cuando
+    # haya storage real (ADR), se reemplaza el bean sin tocar el puerto.
+    directorio: ${ALMACENAMIENTO_DIRECTORIO:${java.io.tmpdir}/tinku}
   reservas:
     # Tarifa por sesion del Tutor. Fuente real: M5 (Spec M5 US-6, FR-PAG-006) —
     # todavia no implementado. Hasta entonces el puerto TarifaProveedor usa este

@@ -82,7 +82,9 @@ CARLOS / 1980-04-15.
   cubierto por `TesseractOcrServiceRealTest`, que requiere el binario nativo en
   el entorno de ejecución (skip honesto si no está). El pipeline aislado sigue
   cubierto por `DniParserTest` + `PreprocesadorImagenTest`.
-- `StubAlmacenamiento` no persiste archivos (ADR de storage pendiente); los tests
-  de credencial/CAP usan la URL `stub:/...` — suficiente para el flujo lógico.
+- `AlmacenamientoLocal` persiste credenciales en `tinku.almacenamiento.directorio`
+  (default `java.io.tmpdir/tinku`); los tests de credencial usan ese bean real y
+  la URL `file:` resultante — el ADR de storage real (S3/object storage) sigue
+  pendiente y reemplazará el bean sin tocar el puerto.
 - los endpoints `/api/admin/**` quedan `authenticated()` (no rol ADMIN); M8 los
   cierra con rol ADMIN (ver NOTAS de M1-F).
