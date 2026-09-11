@@ -35,3 +35,13 @@
     @apply outline-2 outline-offset-2 outline-accent;
   }
 }
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
