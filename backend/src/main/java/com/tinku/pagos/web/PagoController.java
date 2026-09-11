@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code GET /api/pagos/precio-referencia/{provincia}}: sugerencia de precio de
  * referencia regional (US-6, T-M5-09) — el Tutor la consulta al configurar su
  * perfil para no adivinar cuánto cobrar en su zona.
+ *
+ * {@code PUT /api/pagos/tarifa}: el Tutor fija el precio por sesión de su
+ * perfil (US-6, FR-PAG-006, Chunk M5-H).
  */
 @RestController
 @RequestMapping("/api/pagos")
@@ -50,5 +54,14 @@ public class PagoController {
             @PathVariable String provincia) {
         PrecioReferenciaRegional precio = pagoService.sugerirPrecioReferencia(provincia);
         return ResponseEntity.ok(PrecioReferenciaResponse.from(precio));
+    }
+
+    @PutMapping("/tarifa")
+    public ResponseEntity<TarifaTutorResponse> tarifa(
+            @Valid @RequestBody ActualizarTarifaTutorRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(TarifaTutorResponse.from(
+                pagoService.actualizarTarifaTutor(
+                        usuarioActual.obtener(authentication), request.precioSesion())));
     }
 }

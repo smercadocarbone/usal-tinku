@@ -19,6 +19,7 @@ tinku:
     # Solo de prueba — jamás usar en produccion.
     webhook-secret: test-mercadopago-webhook-secret
   reservas:
-    # Stub del puerto TarifaProveedor (M5 no implementado). Valor en centavos/pesos
-    # para poder ejercitar la creacion de Reservas en los tests de integracion.
+    # Fallback del puerto TarifaProveedor (M5-H) cuando el Tutor no configuró su
+    # tarifa en pagos.tarifas_tutor. Valor en pesos para poder ejercitar la
+    # creacion de Reservas en los tests de integracion.
     tarifa-stub: 15000

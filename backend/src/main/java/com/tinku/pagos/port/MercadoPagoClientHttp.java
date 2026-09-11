@@ -127,6 +127,27 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         }
     }
 
+    /** Reembolso PARCIAL por disputa (FR-PAG-010, T-M5-08): el cuerpo lleva el
+     * {@code amount} a devolver. Solo el flujo manual de M8 lo invoca. */
+    @Override
+    public void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto) {
+        exigirTokenConfigurado();
+        try {
+            restClient.post()
+                    .uri(PATH_PAGOS + mpPaymentId + "/refunds")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new MpReembolsoRequest(monto))
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        throw new MercadoPagoNoDisponibleException();
+                    })
+                    .toBodilessEntity();
+        } catch (RestClientException ex) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+    }
+
     private void exigirTokenConfigurado() {
         if (accessToken == null || accessToken.isBlank()) {
             throw new MercadoPagoNoConfiguradoException();

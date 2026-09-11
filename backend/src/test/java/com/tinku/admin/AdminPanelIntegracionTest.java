@@ -24,6 +24,7 @@ import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.AlertaSoporteProveedor;
 import com.tinku.pagos.port.LiberacionProveedor;
+import com.tinku.pagos.port.ReembolsoParcialProveedor;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
 import com.tinku.pagos.repository.TransaccionRepository;
@@ -58,6 +59,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -111,6 +113,7 @@ class AdminPanelIntegracionTest {
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
+    @MockBean ReembolsoParcialProveedor reembolsoParcial;
     @MockBean AlertaSoporteProveedor alertaSoporte;
 
     private static final AtomicInteger CONTADOR = new AtomicInteger();
@@ -403,6 +406,84 @@ class AdminPanelIntegracionTest {
     }
 
     @Test
+    void reembolsoParcial_manualPorDisputa_delegaEnElProveedorYNoTocaElEscrow() throws Exception {
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(usuario(TipoUsuario.TUTOR));
+        reserva.setHorario(Instant.now().plusSeconds(3600));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(reserva);
+
+        Transaccion enEscrow = new Transaccion();
+        enEscrow.setReservaId(reserva.getId());
+        String mpPaymentId = "mp-parcial-" + CONTADOR.incrementAndGet();
+        enEscrow.setMpPaymentId(mpPaymentId);
+        enEscrow.setMontoBruto(new BigDecimal("15000.00"));
+        enEscrow.setComisionPlataforma(new BigDecimal("2250.00"));
+        enEscrow.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+        transaccionRepository.save(enEscrow);
+
+        // FR-PAG-010: parcial por disputa, monto < total → delega en el proveedor
+        // (mock real) con el mpPaymentId correspondiente. El escrow sigue igual:
+        // el resto lo maneja el flujo normal de liberación (Spec no define estado).
+        mvc.perform(post("/api/admin/financiero/transacciones/"
+                        + enEscrow.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(EstadoTransaccion.RETENIDO_ESCROW.getValor()))
+                .andExpect(jsonPath("$.montoBruto").value(new BigDecimal("15000.0")));
+        verify(reembolsoParcial).reembolsarParcial(mpPaymentId, new BigDecimal("6000"));
+        assertThat(transaccionRepository.findById(enEscrow.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
+
+        // Guards: monto = total → 422 (eso es reembolso total, otro flujo),
+        // escrow ya liberado → 422, inexistente → 404, 403 cruzado.
+        mvc.perform(post("/api/admin/financiero/transacciones/"
+                        + enEscrow.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 15000))))
+                .andExpect(status().isUnprocessableEntity());
+
+        Transaccion liberada = new Transaccion();
+        liberada.setReservaId(enEscrow.getReservaId());
+        liberada.setMpPaymentId("mp-liberada-" + CONTADOR.incrementAndGet());
+        liberada.setMontoBruto(new BigDecimal("15000.00"));
+        liberada.setComisionPlataforma(new BigDecimal("2250.00"));
+        liberada.setEstado(EstadoTransaccion.LIBERADO);
+        transaccionRepository.save(liberada);
+        mvc.perform(post("/api/admin/financiero/transacciones/"
+                        + liberada.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(post("/api/admin/financiero/transacciones/" + UUID.randomUUID() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/admin/financiero/transacciones/"
+                        + enEscrow.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isForbidden());
+
+        assertThat(auditoriaDe(
+                "POST /api/admin/financiero/transacciones/" + enEscrow.getId() + "/reembolso-parcial"))
+                .hasSize(1);
+    }
+
+    @Test
     void preciosRegionales_nuncaSobrescriben_agreganVersionNuevaPorProvincia() throws Exception {
         Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
         Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
@@ -436,6 +517,59 @@ class AdminPanelIntegracionTest {
                         .content(objectMapper.writeValueAsString(
                                 Map.of("provincia", "CABA", "valorSugerido", 1))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void credenciales_resolverAprobarRechazar_404_422_403_auditado() throws Exception {
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+
+        Usuario tutorA = usuario(TipoUsuario.TUTOR);
+        CredencialAcademica aprobar = credencial(tutorA, EstadoCredencial.PENDIENTE, null);
+        Usuario tutorB = usuario(TipoUsuario.TUTOR);
+        CredencialAcademica rechazar = credencial(tutorB, EstadoCredencial.PENDIENTE, null);
+        CredencialAcademica yaResuelta = credencial(tutorA, EstadoCredencial.APROBADO, null);
+
+        // Aprobar: la credencial pasa a APROBADO y habilita el matching del Tutor.
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + aprobar.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(EstadoCredencial.APROBADO.name()));
+        assertThat(usuarioRepository.findById(tutorA.getId()).orElseThrow().isActivoParaMatching())
+                .isTrue();
+
+        // Rechazar (intento 1: no dispara backoff).
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + rechazar.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "RECHAZAR"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(EstadoCredencial.RECHAZADO.name()));
+
+        // Ya resuelta → 422; inexistente → 404; rol cruzado → 403.
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + yaResuelta.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + UUID.randomUUID() + "/resolver")
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + aprobar.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isForbidden());
+
+        // Auditoría transversal de la acción de resolución.
+        assertThat(auditoriaDe("POST /api/admin/moderacion/credenciales/" + aprobar.getId() + "/resolver"))
+                .hasSize(1);
+        assertThat(auditoriaDe("POST /api/admin/moderacion/credenciales/" + rechazar.getId() + "/resolver"))
+                .hasSize(1);
     }
 
     @Test

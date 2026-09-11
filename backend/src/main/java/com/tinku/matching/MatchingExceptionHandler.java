@@ -22,4 +22,15 @@ public class MatchingExceptionHandler {
     public ResponseEntity<Map<String, String>> handleNoEncontrada(BusquedaGuardadaNoEncontradaException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
+
+    @ExceptionHandler(PerfilMatchingTutorRequeridoException.class)
+    public ResponseEntity<Map<String, String>> handleTutorRequerido(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MateriaNivelInvalidaException.class)
+    public ResponseEntity<Map<String, String>> handleMateriaInvalida(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(Map.of("error", ex.getMessage()));
+    }
 }

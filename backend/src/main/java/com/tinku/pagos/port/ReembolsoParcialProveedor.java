@@ -16,9 +16,9 @@ import java.math.BigDecimal;
  *
  * <p><b>Contrato:</b> {@code monto} debe ser > 0 y menor que el total cobrado del
  * pago ({@code mpPaymentId}); la resolución de la disputa (quién, cuánto, motivo,
- * autorización) es responsabilidad de M8. Hasta que M8 exista, la implementación
- * es {@link ReembolsoParcialProveedorFailClosed} (falla ruidoso en lugar de
- * registrar un parcial pagado sin haberlo ejecutado).</p>
+ * autorización) es responsabilidad de M8. Implementación real:
+ * {@code com.tinku.pagos.port.ReembolsoParcialProveedorMercadoPago} — la
+ * validación de monto y estado la hace el endpoint de M8 (422), no el puerto.</p>
  */
 public interface ReembolsoParcialProveedor {
 

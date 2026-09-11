@@ -279,7 +279,7 @@ public class UsuarioService {
         }
 
         // FR-ID-014: no se puede dar de baja un menor con reservas futuras sin
-        // confirmación explícita (el puente a M4; stub por ahora devuelve 0).
+        // confirmación explícita (puente real a M4, VerificadorReservasFuturasReal).
         long reservasFuturas = verificadorReservas.contarReservasFuturas(menorId);
         if (reservasFuturas > 0 && !confirmarBaja) {
             throw new ReservasFuturasPendientesException(reservasFuturas);

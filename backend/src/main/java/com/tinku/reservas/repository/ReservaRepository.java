@@ -28,4 +28,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
 
     /** T-M7-07 (señal de re-enganche): historial completo Tutor+beneficiario. */
     List<Reserva> findByTutor_IdAndBeneficiario_Id(UUID tutorId, UUID beneficiarioId);
+
+    /** FR-ID-014 (T-M1-12): reservas futuras y activas del menor (baja de perfil). */
+    long countByEstadoInAndHorarioAfterAndBeneficiario_Id(
+            Collection<EstadoReserva> estados, Instant despuesDe, UUID beneficiarioId);
 }

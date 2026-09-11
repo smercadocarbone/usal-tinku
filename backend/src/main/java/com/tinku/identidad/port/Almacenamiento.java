@@ -4,10 +4,8 @@ package com.tinku.identidad.port;
  * Puerto hacia el almacenamiento de archivos (credenciales de Tutor, US-4).
  * Devuelve una URL usable para que el panel Admin (M8) la abra y revise.
  *
- * Hasta que exista infraestructura de storage, el
- * {@code StubAlmacenamiento} no persiste el archivo y devuelve una URL
- * derivada del nombre — solo para no bloquear el flujo (ver
- * NOTAS_VERIFICACION.md de M1-E).
+ * Implementación actual: {@code AlmacenamientoLocal} (filesystem configurable
+ * vía {@code tinku.almacenamiento.directorio}).
  */
 @FunctionalInterface
 public interface Almacenamiento {
