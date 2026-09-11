@@ -179,7 +179,7 @@ class UsuarioServiceRegistroUnitTest {
         com.tinku.identidad.dto.RegistroAdultoRequest adult =
                 new com.tinku.identidad.dto.RegistroAdultoRequest(
                         "12345678", "JUAN", "PEREZ", LocalDate.of(1990, 1, 1),
-                        "password123", true, false);
+                        "12345678@tinku.test", "password123", true, false);
 
         assertThrows(DocumentoEnBackoffException.class,
                 () -> service.registrarAdulto(adult, new byte[]{1}));

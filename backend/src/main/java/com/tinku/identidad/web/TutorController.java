@@ -7,6 +7,7 @@ import com.tinku.identidad.dto.RegistroTutorRequest;
 import com.tinku.identidad.dto.ReputacionTutor;
 import com.tinku.identidad.dto.TutorPerfilResponse;
 import com.tinku.identidad.dto.UsuarioResponse;
+import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
@@ -69,7 +70,7 @@ public class TutorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(tutor));
     }
 
-    /** Perfil público del Tutor (autenticado). No expone DNI, passwordHash ni
+/** Perfil público del Tutor (autenticado). No expone DNI, passwordHash ni
      * capacidad de pago. Materias/nivel (M2) y calificaciones (M7) vienen de
      * puertos con stubs hasta que esos módulos existan. */
     @GetMapping("/{id}")
@@ -79,6 +80,19 @@ public class TutorController {
         ReputacionTutor reputacion = reputacionPerfilProvider.reputacion(id);
         return ResponseEntity.ok(TutorPerfilResponse.of(
                 tutor, materiasNivel.orElse(null), reputacion));
+    }
+
+    /** Verificación previa del DNI del Tutor en el wizard (FR-ID-007), sin
+     * crear la cuenta — misma compuerta que /api/usuarios/verificar-dni. */
+    @PostMapping(value = "/verificar-dni", consumes = "multipart/form-data")
+    public ResponseEntity<Void> verificarDni(
+            @Valid @RequestPart("datos") VerificarDniRequest request,
+            @RequestPart("fotoDni") MultipartFile fotoDni
+    ) throws IOException {
+        usuarioService.verificarDocumentoParaRegistro(request.dniDeclarado(),
+                request.nombreDeclarado(), request.apellidoDeclarado(),
+                request.fechaNacimientoDeclarada(), fotoDni.getBytes());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/credenciales", consumes = "multipart/form-data")

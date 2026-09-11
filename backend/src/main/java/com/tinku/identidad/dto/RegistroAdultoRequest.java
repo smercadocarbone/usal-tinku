@@ -1,5 +1,6 @@
 package com.tinku.identidad.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -15,6 +16,7 @@ public record RegistroAdultoRequest(
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
+        @NotBlank @Email String email,
         @NotBlank @Size(min = 8) String password,
         boolean capacidadEstudiante,
         boolean capacidadAdultoResponsable

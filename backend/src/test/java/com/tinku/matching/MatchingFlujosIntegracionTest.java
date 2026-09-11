@@ -113,7 +113,7 @@ class MatchingFlujosIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, capEst, capAr)))
+                                dni + "@tinku.test", PASSWORD, capEst, capAr)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -125,7 +125,8 @@ class MatchingFlujosIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);

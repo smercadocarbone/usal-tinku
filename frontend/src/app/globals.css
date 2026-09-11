@@ -99,6 +99,7 @@ a {
 }
 
 .campo input[type="text"],
+.campo input[type="email"],
 .campo input[type="password"],
 .campo input[type="date"],
 .campo input[type="file"],
@@ -246,6 +247,113 @@ a {
 .cabecera nav a {
   text-decoration: none;
   font-weight: 600;
+}
+
+/* Registro — selección de rol (wizard) */
+.rol-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rol-opcion {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 10px;
+  background: var(--color-superficie);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.rol-opcion:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: #f0fdfa;
+}
+
+.rol-opcion--seleccionada {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  background: #f0fdfa;
+}
+
+.rol-opcion span {
+  color: var(--color-texto-suave);
+  font-size: 0.85rem;
+}
+
+/* Registro — barra de progreso inferior */
+.progreso {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 1.75rem;
+}
+
+.progreso-segmento {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-borde);
+}
+
+.progreso-segmento--activo {
+  background: var(--color-accent);
+}
+
+.progreso-etiqueta {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-texto-suave);
+  text-align: center;
+}
+
+.nota {
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.nota--alerta {
+  color: var(--color-aviso);
+}
+
+.campo input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-texto-suave);
+  font-size: 0.85rem;
+}
+
+.separador::before,
+.separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-borde);
+}
+
+.terminos {
+  border: 1px dashed var(--color-borde);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fafaf9;
+}
+
+.terminos p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+  line-height: 1.45;
 }
 
 /* Aula virtual */

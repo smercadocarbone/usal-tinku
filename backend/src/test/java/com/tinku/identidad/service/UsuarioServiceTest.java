@@ -54,7 +54,7 @@ class UsuarioServiceTest {
     private RegistroAdultoRequest requestValido() {
         return new RegistroAdultoRequest(
                 "00000000", "Nombre Stub", "Apellido Stub",
-                LocalDate.of(2000, 1, 1), "password123",
+                LocalDate.of(2000, 1, 1), "00000000@tinku.test", "password123",
                 true, false
         );
     }
@@ -89,7 +89,7 @@ class UsuarioServiceTest {
     void rechazaElRegistroSiNingunaCapacidadEstaActiva() {
         RegistroAdultoRequest sinCapacidades = new RegistroAdultoRequest(
                 "11111111", "Nombre Stub", "Apellido Stub",
-                LocalDate.of(2000, 1, 1), "password123",
+                LocalDate.of(2000, 1, 1), "11111111@tinku.test", "password123",
                 false, false
         );
 
@@ -106,7 +106,7 @@ class UsuarioServiceTest {
         // declarado (Plan M1 sección 2.1, paso 4b).
         RegistroAdultoRequest menor = new RegistroAdultoRequest(
                 "33333333", "Nombre Stub", "Apellido Stub",
-                LocalDate.now().minusYears(15), "password123",
+                LocalDate.now().minusYears(15), "33333333@tinku.test", "password123",
                 true, false
         );
 

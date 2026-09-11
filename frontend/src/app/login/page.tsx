@@ -120,8 +120,7 @@ export default function LoginPage() {
         </form>
 
         <p className="pie-enlace">
-          ¿No tenés cuenta?{" "}
-          <Link href="/registro">Registrate como adulto</Link>
+          ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
         </p>
       </div>
     </main>

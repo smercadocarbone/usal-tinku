@@ -58,6 +58,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +162,7 @@ class SesionesIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, true, true)))
+                                dni + "@tinku.test", PASSWORD, true, true)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -172,7 +173,8 @@ class SesionesIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -480,7 +482,11 @@ class SesionesIntegracionTest {
         SesionFinalizadaEvent evento = (SesionFinalizadaEvent) EVENTOS.get(0);
         assertThat(evento.getNombre()).isEqualTo("sesion.finalizada");
         assertThat(evento.getReservaId()).isEqualTo(reserva.getId());
-        assertThat(evento.getTimestampFin()).isEqualTo(cerrada.getFinReal());
+        // el evento lleva el Instant in-memory (nanos); la columna TIMESTAMP(6) al
+        // persistir redondea a micros. Se compara a milisegundos, estable ante el
+        // redondeo de la BD.
+        assertThat(evento.getTimestampFin().truncatedTo(ChronoUnit.MILLIS))
+                .isEqualTo(cerrada.getFinReal().truncatedTo(ChronoUnit.MILLIS));
 
         // Idempotente: repetir (botón o job que dispara después) no re-emite.
         sesionService.ejecutarCorteAutomatico(sesion.getId());
