@@ -14,7 +14,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 /**
- * Rama del catálogo cerrado de temas (V12): nivel -> anio_o_carrera (curso o
+ * Rama del catálogo cerrado de temas (V19): nivel -> anio_o_carrera (curso o
  * carrera) -> materia. Cada trayecto agrupa una lista de {@link Tema}.
  * Entidad de lectura del catálogo de M2-F; "qué se toca" vive en cada Tema.
  */
@@ -33,7 +33,7 @@ public class Trayecto {
     @Column(nullable = false)
     private NivelTrayecto nivel;
 
-    /** '4°' (texto) o 'Ingeniería' — columna TEXT en V12 (no poner length). */
+    /** '4°' (texto) o 'Ingeniería' — columna TEXT en V19 (no poner length). */
     @Column(name = "anio_o_carrera", nullable = false)
     private String anioOCarrera;
 
