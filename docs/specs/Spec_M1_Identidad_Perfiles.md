@@ -31,6 +31,8 @@ _Como_ persona adulta, _quiero_ crear una cuenta, _para_ usar la plataforma para
 - **Dado** que complete el registro y suba su DNI, **cuando** el OCR lo procese, **entonces** verifica tres cosas: (a) que la persona sea mayor de 18 años, (b) que el nombre y apellido declarados coincidan con los del documento, y (c) que el número de DNI no pertenezca ya a otra cuenta existente en el sistema (FR-ID-001). Si alguna falla, el registro no se completa.
 - **Dado** que el OCR determine que es menor de edad, **cuando** eso ocurra, **entonces** el sistema muestra una pantalla informativa ("Sos menor de edad. Un Adulto Responsable debe crearte el perfil") y frena el flujo por completo — no se crea ninguna cuenta ni sesión para esa persona.
 - **Dado** que el DNI ya esté registrado por otra cuenta, **cuando** eso se detecte, **entonces** el registro se rechaza con un mensaje claro, sin exponer a quién pertenece esa cuenta (FR-ID-018).
+- **Dado** que la persona declare sus datos, **cuando** esté por crear la cuenta, **entonces** las credenciales de acceso son **email + contraseña**, y el email queda persistido como parte de la cuenta (credencial de login). El flujo pide el email recién después de verificar el documento, no antes.
+- **Dado** que la persona suba la foto de su DNI para verificar, **cuando** el sistema procese el OCR, **entonces** esa verificación previa **no crea la cuenta**: es solo la compuerta que habilita el paso de credenciales. La cuenta se crea en el envío final (con email + contraseña incluidos).
 
 ### US-1bis — Activar/desactivar capacidades desde Configuración
 

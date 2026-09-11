@@ -65,7 +65,7 @@ Decisiones de orquestador:
   ~1.400 temas y el filtro por nombre/materia recorre la pertenencia de candidatos a temas
   por búsqueda; el índice es una línea y barato. Las queries de filtro usan
   `t.id = ANY(ptm.tema_ids)`, soportado por el GIN.
-- **El seed NO va en V12** (el encargo deja el esqueleto sin seed). Va en **V13__m2_temas_seed.sql**
+- **El seed NO va en V12** (el encargo deja el esqueleto sin seed). Va en **V20__m2_temas_seed.sql** (el esqueleto quedó en **V19__m2_temas.sql**, renumerados del V12/V13 originales por colisión con V12/V13 de main tras el merge).
   (generado desde los datos de S1 en FASE 3). Regla del repo: nunca se edita una migración
   aplicada; V12/V13 se crean sin aplicarse en este branch, en orden.
 - El seed usa `INSERT ... SELECT` resolviendo `trayecto_id` por la UNIQUE

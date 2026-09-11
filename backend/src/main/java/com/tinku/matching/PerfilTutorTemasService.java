@@ -18,10 +18,10 @@ import java.util.UUID;
 @Service
 public class PerfilTutorTemasService {
 
-    private final PerfilTutorMatchingRepository perfilRepo;
+    private final PerfilTutorTemasRepository perfilRepo;
     private final CatalogoService catalogoService;
 
-    public PerfilTutorTemasService(PerfilTutorMatchingRepository perfilRepo,
+    public PerfilTutorTemasService(PerfilTutorTemasRepository perfilRepo,
                                    CatalogoService catalogoService) {
         this.perfilRepo = perfilRepo;
         this.catalogoService = catalogoService;

@@ -67,7 +67,7 @@ class SecurityHttpTest {
         usuarioService.registrarAdulto(
                 new RegistroAdultoRequest(
                         dni, "Nombre Stub", "Apellido Stub",
-                        java.time.LocalDate.of(2000, 1, 1), password,
+                        java.time.LocalDate.of(2000, 1, 1), dni + "@tinku.test", password,
                         true, false),
                 "foto-valida".getBytes());
     }
@@ -102,7 +102,7 @@ class SecurityHttpTest {
                 "datos", "", "application/json",
                 objectMapper.writeValueAsBytes(new RegistroAdultoRequest(
                         "22222222", "Nombre Stub", "Apellido Stub",
-                        java.time.LocalDate.of(2000, 1, 1), "password123",
+                        java.time.LocalDate.of(2000, 1, 1), "22222222@tinku.test", "password123",
                         true, false)));
         MockMultipartFile foto = new MockMultipartFile(
                 "fotoDni", "foto.jpg", "image/jpeg", "foto-valida".getBytes());

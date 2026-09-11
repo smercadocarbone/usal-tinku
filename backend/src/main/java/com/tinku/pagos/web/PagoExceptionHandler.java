@@ -7,6 +7,7 @@ import com.tinku.pagos.service.PreferenciaNoDisponibleException;
 import com.tinku.pagos.service.ProvinciaSinPrecioReferenciaException;
 import com.tinku.pagos.service.SoloPagadorPreferenciaException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
+import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +22,11 @@ public class PagoExceptionHandler {
 
     @ExceptionHandler(SoloPagadorPreferenciaException.class)
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SoloTutorException.class)
+    public ResponseEntity<Map<String, String>> handleSoloTutor(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 

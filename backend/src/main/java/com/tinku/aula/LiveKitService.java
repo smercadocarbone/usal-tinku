@@ -127,17 +127,17 @@ public class LiveKitService {
                 .compact();
     }
 
+    /** URL del servidor LiveKit (wss://...) que el frontend necesita para conectarse. */
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
     private void verificarConfigurado() {
         if (secretKey == null) {
             throw new IllegalStateException(
                     "LiveKit no configurado: defini LIVEKIT_URL, LIVEKIT_API_KEY y "
                             + "LIVEKIT_API_SECRET (T-000-06, Fase 0).");
         }
-    }
-
-    /** URL del servidor LiveKit (wss://...) que el frontend necesita para conectarse. */
-    public String getBaseUrl() {
-        return baseUrl;
     }
 
     private static String jsonQuote(String valor) {

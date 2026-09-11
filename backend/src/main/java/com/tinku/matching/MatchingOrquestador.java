@@ -19,12 +19,12 @@ public class MatchingOrquestador {
     private final MatchingContextoService contextoService;
     private final MatchingServiceClient matchingClient;
     private final AjusteRankingService ajusteRanking;
-    private final PerfilTutorMatchingRepository perfilMatchingRepo;
+    private final PerfilTutorTemasRepository perfilMatchingRepo;
 
     public MatchingOrquestador(MatchingContextoService contextoService,
                                MatchingServiceClient matchingClient,
                                AjusteRankingService ajusteRanking,
-                               PerfilTutorMatchingRepository perfilMatchingRepo) {
+                               PerfilTutorTemasRepository perfilMatchingRepo) {
         this.contextoService = contextoService;
         this.matchingClient = matchingClient;
         this.ajusteRanking = ajusteRanking;

@@ -2,15 +2,24 @@ package com.tinku.aula;
 
 import com.tinku.pagos.evento.SesionEvento;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.pagos.evento.SesionInterrumpidaEvent;
+import com.tinku.pagos.evento.SesionKillswitchAdultosEvent;
+import com.tinku.pagos.evento.SesionKillswitchMenorEvent;
 import com.tinku.pagos.evento.SesionNoShowDobleEvent;
 import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
 import com.tinku.pagos.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.jobs.CrearSalaJob;
 import com.tinku.aula.jobs.NoShowJob;
+import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.aula.model.ConfirmacionKillswitch;
 import com.tinku.aula.model.SesionAprendizaje;
+import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.aula.repository.ConfirmacionKillswitchRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
@@ -64,6 +73,9 @@ public class SesionService {
 
     private final SesionAprendizajeRepository sesionRepo;
     private final ReservaRepository reservaRepo;
+    private final UsuarioRepository usuarioRepo;
+    private final AlertaSeguridadRepository alertaRepo;
+    private final ConfirmacionKillswitchRepository confirmacionRepo;
     private final FranjaService franjaService;
     private final LiveKitService liveKitService;
     private final Scheduler scheduler;
@@ -71,12 +83,18 @@ public class SesionService {
 
     public SesionService(SesionAprendizajeRepository sesionRepo,
                          ReservaRepository reservaRepo,
+                         UsuarioRepository usuarioRepo,
+                         AlertaSeguridadRepository alertaRepo,
+                         ConfirmacionKillswitchRepository confirmacionRepo,
                          FranjaService franjaService,
                          LiveKitService liveKitService,
                          Scheduler scheduler,
                          ApplicationEventPublisher events) {
         this.sesionRepo = sesionRepo;
         this.reservaRepo = reservaRepo;
+        this.usuarioRepo = usuarioRepo;
+        this.alertaRepo = alertaRepo;
+        this.confirmacionRepo = confirmacionRepo;
         this.franjaService = franjaService;
         this.liveKitService = liveKitService;
         this.scheduler = scheduler;
@@ -116,6 +134,7 @@ public class SesionService {
                 reserva.getHorario().plus(TIMEOUT_NO_SHOW));
         programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
                 reserva.getHorario().plus(duracionFranja).plus(TOLERANCIA_FIN_AUTOMATICO));
+        sesion.setDuracionAgendadaSegundos((int) duracionFranja.getSeconds());
         return sesion;
     }
 
@@ -145,6 +164,8 @@ public class SesionService {
                     reserva.getHorario().plus(TIMEOUT_NO_SHOW));
             programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
                     reserva.getHorario().plus(duracionFranja).plus(TOLERANCIA_FIN_AUTOMATICO));
+            sesion.setDuracionAgendadaSegundos((int) duracionFranja.getSeconds());
+            sesionRepo.save(sesion);
         });
     }
 
@@ -243,7 +264,7 @@ public class SesionService {
         return nuevoEstado;
     }
 
-    // ------------------------------------------------ token de acceso (T-M3-frontend)
+    // ------------------------------------------------ token de acceso (M3-frontend)
 
     /**
      * Devuelve el token de LiveKit para que el participante se conecte a la sala.
@@ -291,8 +312,25 @@ public class SesionService {
                         && reserva.getEstado() != EstadoReserva.EN_CURSO)) {
                 return; // ya cerrada: repetir no cambia nada
             }
-            marcarFinalizada(sesion, reserva);
+            if (esCorteAntesDel50(sesion)) {
+                marcarInterrumpida(sesion, reserva);
+            } else {
+                marcarFinalizada(sesion, reserva);
+            }
         });
+    }
+
+    /** US-5 (FR-AULA-005): la duración efectiva al corte es < 50% de la agendada
+     *  (la agendada se congeló al programar, {@code duracionAgendadaSegundos}). */
+    private boolean esCorteAntesDel50(SesionAprendizaje sesion) {
+        if (sesion.getDuracionAgendadaSegundos() == null
+                || sesion.getDuracionAgendadaSegundos() <= 0) {
+            return false; // sin umbral conocido, se cierra normal
+        }
+        long efectiva = sesion.getInicioReal() != null
+                ? Math.max(0, Duration.between(sesion.getInicioReal(), Instant.now()).getSeconds())
+                : 0;
+        return efectiva * 2 < sesion.getDuracionAgendadaSegundos();
     }
 
     /**
@@ -329,6 +367,210 @@ public class SesionService {
                 this, reserva.getId(), fin));
         cancelarNoShow(sesion.getId());
         return sesion;
+    }
+
+    /**
+     * US-5/FR-AULA-005 — corte del {@code CorteAutomaticoJob} antes del 50%.
+     * Emite {@code sesion.interrumpida} (M5 reembolsa, FR-PAG-004) y deja la
+     * Sesión en {@code interrumpida} (el CHECK de V8 lo permite). Idempotente
+     * por el mismo guard de {@code marcarFinalizada}: la Reserva pasada a
+     * FINALIZADA bloquea cualquier segundo cierre (finalizada o interrumpida).
+     */
+    private SesionAprendizaje marcarInterrumpida(SesionAprendizaje sesion, Reserva reserva) {
+        if (reserva.getEstado() == EstadoReserva.FINALIZADA) {
+            return sesion;
+        }
+        Instant fin = Instant.now();
+        long duracion = sesion.getInicioReal() != null
+                ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
+                : 0;
+        sesion.setEstado(SesionAprendizaje.ESTADO_INTERRUMPIDA);
+        sesion.setFinReal(fin);
+        sesion.setDuracionEfectivaSegundos((int) duracion);
+        sesionRepo.save(sesion);
+
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepo.save(reserva);
+
+        events.publishEvent(new SesionInterrumpidaEvent(this, reserva.getId()));
+        cancelarNoShow(sesion.getId());
+        return sesion;
+    }
+
+    // ------------------------------------------------ kill-switch (T-M3-07/08/09)
+
+    /**
+     * Disparo del kill-switch (T-M3-07, US-6/US-7, FR-AULA-009). El backend
+     * decide la rama con datos propios de M1: si el {@code beneficiario} de la
+     * Reserva es un MENOR → rama menor (corte directo, Artículo II); si es
+     * adulto → rama adultos (blur + pregunta al otro participante). El request
+     * NO puede forzar la rama (no la acepta). {@code detectadoId} = el usuario
+     * cuyo contenido fue clasificado como inapropiado.
+     */
+    @Transactional
+    public SesionAprendizaje ejecutarKillswitch(Usuario usuario, UUID sesionId, UUID detectadoId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        if (detectadoId == null
+                || (!reserva.getTutor().getId().equals(detectadoId)
+                    && !reserva.getBeneficiario().getId().equals(detectadoId))) {
+            throw new DetectadoInvalidoException(detectadoId);
+        }
+        // Idempotente: ya hubo kill-switch en esta sesión (rama menor → alerta,
+        // rama adultos → confirmación esperando). Repetir no corta ni re-emite.
+        if (alertaRepo.findBySesionId(sesionId).isPresent()
+                || confirmacionRepo.findBySesionId(sesionId).isPresent()) {
+            return sesion;
+        }
+        if (reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR) {
+            return ramaMenor(sesion, reserva, detectadoId);
+        }
+        return ramaAdultos(sesion, reserva, detectadoId);
+    }
+
+    /**
+     * US-6 — rama MENOR: corte directo, sin confirmación ni pregunta al menor
+     * (Artículo II). Alerta de Seguridad {@code rama=menor}, suspensión
+     * preventiva del Tutor ({@code activo_para_matching=false}, FR-SEC-004) y
+     * evento {@code sesion.killswitch_menor}.
+     */
+    private SesionAprendizaje ramaMenor(SesionAprendizaje sesion, Reserva reserva,
+                                        UUID detectadoId) {
+        Usuario tutor = reserva.getTutor();
+        tutor.setActivoParaMatching(false);
+        usuarioRepo.save(tutor);
+
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(sesion.getId());
+        alerta.setRama("menor");
+        alerta.setDetectadoId(detectadoId);
+        alertaRepo.save(alerta);
+
+        cortar(sesion, reserva);
+        events.publishEvent(new SesionKillswitchMenorEvent(this, reserva.getId(), detectadoId));
+        cancelarNoShow(sesion.getId());
+        return sesion;
+    }
+
+    /**
+     * US-7 — rama ADULTOS: NO corta. Registra la confirmación en estado
+     * "esperando" (el otro participante responde si vio algo); la sesión sigue
+     * con el video del detectado en blur (frontend). Si después responde "No"
+     * continúa normal; "Sí" corta ({@link #confirmarRamaAdultos}).
+     */
+    private SesionAprendizaje ramaAdultos(SesionAprendizaje sesion, Reserva reserva,
+                                          UUID detectadoId) {
+        ConfirmacionKillswitch confirmacion = new ConfirmacionKillswitch();
+        confirmacion.setSesionId(sesion.getId());
+        confirmacion.setDetectadoId(detectadoId);
+        confirmacionRepo.save(confirmacion);
+        return sesion;
+    }
+
+    /**
+     * Confirmación de la rama adultos (T-M3-09): la responde el participante
+     * que NO generó la detección. {@code vio=false} → la sesión continúa (solo
+     * queda el registro en la BD); {@code vio=true} → corte, bloqueo del
+     * detectado, Alerta {@code rama=adultos} y evento
+     * {@code sesion.killswitch_adultos}.
+     */
+    @Transactional
+    public SesionAprendizaje confirmarRamaAdultos(Usuario usuario, UUID sesionId, boolean vio) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        ConfirmacionKillswitch confirmacion = confirmacionRepo.findBySesionId(sesionId)
+                .orElseThrow(ConfirmacionNoPendienteException::new);
+        if (confirmacion.getRespondidoId() != null
+                || confirmacion.getDetectadoId().equals(usuario.getId())) {
+            throw new ConfirmacionNoPendienteException();
+        }
+        confirmacion.setRespondidoId(usuario.getId());
+        confirmacion.setVio(vio);
+        confirmacion.setRespondedAt(Instant.now());
+        confirmacionRepo.save(confirmacion);
+
+        if (!vio) {
+            return sesion; // "No": la sesión continúa, el evento queda logueado (fila)
+        }
+        // "Sí": corte + bloqueo del detectado + Alerta + evento.
+        Usuario detectado = usuarioRepo.findById(confirmacion.getDetectadoId()).orElse(null);
+        if (detectado != null) {
+            detectado.setActivoParaMatching(false);
+            usuarioRepo.save(detectado);
+        }
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(sesion.getId());
+        alerta.setRama("adultos");
+        alerta.setDetectadoId(confirmacion.getDetectadoId());
+        alertaRepo.save(alerta);
+
+        cortar(sesion, reserva);
+        events.publishEvent(new SesionKillswitchAdultosEvent(
+                this, reserva.getId(), confirmacion.getDetectadoId()));
+        cancelarNoShow(sesion.getId());
+        return sesion;
+    }
+
+    /**
+     * Subida de la evidencia del kill-switch (T-M3-08): solo la REFERENCIA al
+     * clip de 30s (Artículo V, BR-KS-01). Solo alcanzable tras un kill-switch
+     * ya registrado (existe la Alerta) — si no → 404 {@link
+     * AlertaNoEncontradaException}.
+     */
+    @Transactional
+    public AlertaSeguridad subirEvidencia(Usuario usuario, UUID sesionId, String clipUrl,
+                                          Integer duracionSegundos) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        if (!(clipUrl.startsWith("https://") || clipUrl.startsWith("http://"))) {
+            throw new EvidenciaInvalidaException("la URL del clip debe ser http(s).");
+        }
+        if (duracionSegundos != null && (duracionSegundos <= 0 || duracionSegundos > 30)) {
+            throw new EvidenciaInvalidaException(
+                    "el clip del buffer tiene un máximo de 30 segundos (BR-KS-01).");
+        }
+        AlertaSeguridad alerta = alertaRepo.findBySesionId(sesionId)
+                .orElseThrow(AlertaNoEncontradaException::new);
+        alerta.setClipUrl(clipUrl);
+        return alertaRepo.save(alerta);
+    }
+
+    /**
+     * Cierre de la sesión SIN emitir evento (lo emite cada rama del kill-switch
+     * con su nombre exacto). Idempotente por los guards de estado: si ya está
+     * finalizada/interrumpida, no re-marca ni permite doble evento.
+     */
+    private void cortar(SesionAprendizaje sesion, Reserva reserva) {
+        if (reserva.getEstado() == EstadoReserva.FINALIZADA
+                || SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())) {
+            return;
+        }
+        Instant fin = Instant.now();
+        long duracion = sesion.getInicioReal() != null
+                ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
+                : 0;
+        sesion.setEstado(SesionAprendizaje.ESTADO_FINALIZADA);
+        sesion.setFinReal(fin);
+        sesion.setDuracionEfectivaSegundos((int) duracion);
+        sesionRepo.save(sesion);
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepo.save(reserva);
     }
 
     private boolean esParticipante(Reserva reserva, Usuario usuario) {

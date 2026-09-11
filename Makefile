@@ -1,11 +1,15 @@
 # =============================================================================
 # Tinku — Makefile de desarrollo local
 #
-# Levanta las 4 piezas del monorepo contra la infra local:
-#   Postgres 16 (pgvector)  -> docker-compose.yml (raiz)
-#   backend Spring Boot     -> backend/ (JDK 21, perfil dev por defecto)
-#   matching-service Python -> matching-service/ (uvicorn, puerto 8000)
-#   frontend Next.js        -> frontend/ (puerto 3000)
+# Todo el stack está dockerizado (docker-compose.yml en la raiz):
+#   Postgres 16 (pgvector)  -> db       (:5432)
+#   matching-service Python -> matching (:8000)
+#   backend Spring Boot     -> backend  (:8080)
+#   frontend Next.js        -> frontend (:3000)
+#
+# Los targets `backend`/`matching`/`frontend` de host se conservan para
+# correr las piezas sueltas con hot reload real (dev de un módulo), pero el
+# flujo completo de un día de trabajo es `make up` (todo dockerizado).
 #
 # Convention: si existe `.env` en la raiz (copiado de `.env.example`), se
 # cargan sus valores; si no, se usan los defaults de desarrollo de abajo
@@ -46,19 +50,45 @@ help: ## Lista de comandos disponibles
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
 # -----------------------------------------------------------------------------
+# Stack completo (dockerizado)
+# -----------------------------------------------------------------------------
+.PHONY: up down logs ps build up-fast
+up: ## Levanta TODO el stack dockerizado (build + up) y muestra los logs
+	@docker compose up -d --build; \
+	echo ""; \
+	docker compose ps
+
+down: ## Baja todo el stack (conserva el volumen de datos)
+	@docker compose down
+
+logs: ## Logs de todos los servicios
+	@docker compose logs -f
+
+ps: ## Estado del stack
+	@docker compose ps
+
+build: ## (Re)construye las imágenes del stack
+	@docker compose build
+
+up-fast: ## Levanta el stack sin reconstruir imágenes (ya built)
+	@docker compose up -d; \
+	echo ""; \
+	docker compose ps
+
+# -----------------------------------------------------------------------------
+# Todo junto (flujo dev completo: stack dockerizado)
+# -----------------------------------------------------------------------------
+.PHONY: dev
+dev: up ## Aliass de `make up` — todo el stack dockerizado
+
+# -----------------------------------------------------------------------------
 # Setup inicial (una sola vez)
 # -----------------------------------------------------------------------------
 .PHONY: setup
-setup: ## Copia .env.example -> .env y prepara dependencias una sola vez
-	@if [ ! -d "$(JAVA_HOME)" ]; then \
-		echo "JAVA_HOME=$(JAVA_HOME) no existe. Instalá TempleJDK/temurin-21 o pasá 'make JAVA_HOME=/ruta/al/jdk'."; exit 2; \
-	fi
+setup: ## Copia .env.example -> .env y prepara dependencias una sola vez (host, para tests)
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Creado .env (revisalo y completá los valores)."; fi
-	@docker compose up -d db --wait 2>/dev/null || docker compose up -d db
-	@set -a; [ -f .env ] && . ./.env || true; set +a; \
-	cd $(BACKEND_DIR) && JAVA_HOME="$(JAVA_HOME)" ./mvnw -q -DskipTests compile
-	@pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt
-	@cd $(FRONTEND_DIR) && if [ ! -d node_modules ]; then npm install; fi
+	@[ -d "$(JAVA_HOME)" ] || echo "Aviso: JAVA_HOME=$(JAVA_HOME) no existe (solo hace falta para targets de host)."
+	@pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt 2>/dev/null || true
 	@echo "Setup listo."
 
 # -----------------------------------------------------------------------------
@@ -124,32 +154,9 @@ frontend: ## Levanta el frontend (Next.js dev server)
 	@cd $(FRONTEND_DIR) && if [ ! -d node_modules ]; then npm install; fi; \
 	npm run dev -- --port $(FRONTEND_PORT)
 
-# -----------------------------------------------------------------------------
-# Todo junto (flujo dev completo)
-# -----------------------------------------------------------------------------
-.PHONY: dev
-dev: db-up setup ## Levanta db + matching + frontend (background) y el backend (foreground)
-	@mkdir -p $(LOG_DIR); \
-	nohup sh -c "$(MAKE) -s matching" > $(LOG_DIR)/matching.log 2>&1 & echo $$! > $(LOG_DIR)/matching.pid; \
-	nohup sh -c "$(MAKE) -s frontend" > $(LOG_DIR)/frontend.log 2>&1 & echo $$! > $(LOG_DIR)/frontend.pid; \
-	echo "matching  up  -> tail -f $(LOG_DIR)/matching.log"; \
-	echo "frontend  up  -> tail -f $(LOG_DIR)/frontend.log"; \
-	echo "backend   corre acá (Ctrl+C lo detiene). Para detener todo: make stop"
-	@$(MAKE) backend
-
-.PHONY: ps
-ps: ## Estado de db y de los procesos de dev en background
-	@docker compose ps; \
-	echo "--- procesos dev (pid files en $(LOG_DIR)/) ---"; \
-	for f in $(LOG_DIR)/*.pid; do [ -f "$$f" ] && ps -p "$$(cat "$$f")" -o pid=,command= 2>/dev/null || echo "$$f: no corriendo"; done
-
 .PHONY: stop
-stop: ## Detiene background (matching/frontend) y baja la db (sin borrar datos)
-	@for f in $(LOG_DIR)/*.pid; do \
-		[ -f "$$f" ] && kill "$$(cat "$$f")" 2>/dev/null || true; rm -f "$$f"; \
-	done; \
-	docker compose down; \
-	echo "Todo detenido."
+stop: ## Baja todo el stack dockerizado (conserva el volumen de datos)
+	@docker compose down
 
 # -----------------------------------------------------------------------------
 # Test de TODO el monorepo

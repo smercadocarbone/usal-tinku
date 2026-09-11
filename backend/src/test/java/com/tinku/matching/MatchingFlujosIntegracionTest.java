@@ -4,13 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
 import com.tinku.identidad.dto.RegistroTutorRequest;
-import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
-import com.tinku.identidad.repository.CertificadoAntecedentesPenalesRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.identidad.service.CertificadoService;
+import com.tinku.identidad.service.CredencialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,8 +43,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -85,8 +83,7 @@ class MatchingFlujosIntegracionTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
-    @Autowired CertificadoAntecedentesPenalesRepository capRepo;
-    @Autowired CertificadoService certificadoService;
+    @Autowired CredencialService credencialService;
 
     @MockBean OcrService ocrService;
     @MockBean MatchingServiceClient matchingClient;
@@ -116,7 +113,7 @@ class MatchingFlujosIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, capEst, capAr)))
+                                dni + "@tinku.test", PASSWORD, capEst, capAr)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -128,7 +125,8 @@ class MatchingFlujosIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -158,25 +156,20 @@ class MatchingFlujosIntegracionTest {
         return usuarioRepository.findByDni(dni).orElseThrow();
     }
 
-    /** Carga CAP + lo aprueba: el Tutor queda activo_para_matching=true (FR-ID-025). */
-    private UUID aprobarCapDe(String token) throws Exception {
-        MvcResult cargado = mockMvc.perform(multipart("/api/tutores/antecedentes-penales")
-                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCapRequest(LocalDate.now())))
-                        .file(new MockMultipartFile("archivo", "cap.pdf",
+    /** Carga la credencial del Tutor y la aprueba: queda activo_para_matching=true
+     * (la Credencial aprobada reemplazó al CAP retirado del onboarding). */
+    private void aprobarCredencialDe(String token) throws Exception {
+        MvcResult cargada = mockMvc.perform(multipart("/api/tutores/credenciales")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
+                                com.tinku.identidad.model.TipoCredencial.TITULO)))
+                        .file(new MockMultipartFile("archivo", "credencial.pdf",
                                 MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isCreated())
                 .andReturn();
-        UUID capId = UUID.fromString(objectMapper.readTree(
-                cargado.getResponse().getContentAsString()).get("id").asText());
-        mockMvc.perform(patch("/api/admin/moderacion/antecedentes-penales/" + capId)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new com.tinku.identidad.dto.RevisarCapRequest(
-                                        com.tinku.identidad.dto.AccionRevisionCap.APROBAR, null))))
-                .andExpect(status().isOk());
-        return capId;
+        UUID credencialId = UUID.fromString(objectMapper.readTree(
+                cargada.getResponse().getContentAsString()).get("id").asText());
+        credencialService.marcarAprobada(credencialId, null);
     }
 
     private UUID registrarMenor(String dniMenor, String tokenAr) throws Exception {
@@ -224,9 +217,9 @@ class MatchingFlujosIntegracionTest {
         String tokenEstudiante = registrarAdultoYToken("20111111", "Ana", "Lopez", true, false);
 
         String tokenTutorA = registrarTutorYToken("20122222", "Pablo", "Sosa");
-        aprobarCapDe(tokenTutorA);
+        aprobarCredencialDe(tokenTutorA);
         String tokenTutorB = registrarTutorYToken("20133333", "Diego", "Mendez");
-        aprobarCapDe(tokenTutorB);
+        aprobarCredencialDe(tokenTutorB);
         UUID tutorA = usuarioPorDni("20122222").getId();
         UUID tutorB = usuarioPorDni("20133333").getId();
 
@@ -249,18 +242,16 @@ class MatchingFlujosIntegracionTest {
         String tokenEstudiante = registrarAdultoYToken("20144444", "Ana", "Lopez", true, false);
 
         String tokenActivo = registrarTutorYToken("20155555", "Pablo", "Sosa");
-        aprobarCapDe(tokenActivo);
+        aprobarCredencialDe(tokenActivo);
         String tokenSuspendido = registrarTutorYToken("20166666", "Diego", "Mendez");
-        UUID capSuspendido = aprobarCapDe(tokenSuspendido);
+        aprobarCredencialDe(tokenSuspendido);
         UUID tutorActivo = usuarioPorDni("20155555").getId();
         UUID tutorSuspendido = usuarioPorDni("20166666").getId();
 
-        // M9/M1: el CAP vence -> activo_para_matching=false (sale del matching).
-        CertificadoAntecedentesPenales capSuspendidoEntity =
-                capRepo.findById(capSuspendido).orElseThrow();
-        capSuspendidoEntity.setVenceAt(LocalDate.now().minusDays(1));
-        capRepo.save(capSuspendidoEntity);
-        assertThat(certificadoService.marcarVencidos()).isEqualTo(1);
+        // M9/killswitch: activo_para_matching=false -> sale del matching (FR-MATCH-007).
+        Usuario suspendido = usuarioPorDni("20166666");
+        suspendido.setActivoParaMatching(false);
+        usuarioRepository.save(suspendido);
         assertThat(usuarioPorDni("20166666").isActivoParaMatching()).isFalse();
 
         when(matchingClient.match(any(), anyString()))
@@ -281,7 +272,7 @@ class MatchingFlujosIntegracionTest {
         String tokenAr = registrarAdultoYToken("20177777", "Maria", "Perez", true, true);
 
         String tokenTutor = registrarTutorYToken("20188888", "Pablo", "Sosa");
-        aprobarCapDe(tokenTutor);
+        aprobarCredencialDe(tokenTutor);
         UUID tutor = usuarioPorDni("20188888").getId();
 
         registrarMenor("20199999", tokenAr);
@@ -307,9 +298,9 @@ class MatchingFlujosIntegracionTest {
         String tokenAr = registrarAdultoYToken("20211111", "Maria", "Perez", true, true);
 
         String tokenAutorizado = registrarTutorYToken("20222222", "Pablo", "Sosa");
-        aprobarCapDe(tokenAutorizado);
+        aprobarCredencialDe(tokenAutorizado);
         String tokenOtro = registrarTutorYToken("20233333", "Diego", "Mendez");
-        aprobarCapDe(tokenOtro);
+        aprobarCredencialDe(tokenOtro);
         UUID autorizado = usuarioPorDni("20222222").getId();
         UUID otro = usuarioPorDni("20233333").getId();
 
@@ -340,9 +331,9 @@ class MatchingFlujosIntegracionTest {
         String tokenEstudiante = registrarAdultoYToken("20255555", "Ana", "Lopez", true, false);
 
         String tokenA = registrarTutorYToken("20266666", "Pablo", "Sosa");
-        aprobarCapDe(tokenA);
+        aprobarCredencialDe(tokenA);
         String tokenB = registrarTutorYToken("20277777", "Diego", "Mendez");
-        aprobarCapDe(tokenB);
+        aprobarCredencialDe(tokenB);
         UUID tutorA = usuarioPorDni("20266666").getId();
         UUID tutorB = usuarioPorDni("20277777").getId();
 
@@ -367,9 +358,9 @@ class MatchingFlujosIntegracionTest {
         String tokenEstudiante = registrarAdultoYToken("20288888", "Ana", "Lopez", true, false);
 
         String tokenA = registrarTutorYToken("20299999", "Pablo", "Sosa");
-        aprobarCapDe(tokenA);
+        aprobarCredencialDe(tokenA);
         String tokenB = registrarTutorYToken("20311111", "Diego", "Mendez");
-        aprobarCapDe(tokenB);
+        aprobarCredencialDe(tokenB);
         UUID tutorA = usuarioPorDni("20299999").getId();
         UUID tutorB = usuarioPorDni("20311111").getId();
 
@@ -396,7 +387,7 @@ class MatchingFlujosIntegracionTest {
         String token = registrarAdultoYToken("20322222", "Ana", "Lopez", true, false);
 
         String tokenTutor = registrarTutorYToken("20333333", "Pablo", "Sosa");
-        aprobarCapDe(tokenTutor);
+        aprobarCredencialDe(tokenTutor);
         UUID tutor = usuarioPorDni("20333333").getId();
 
         when(matchingClient.match(any(), anyString()))
@@ -461,5 +452,55 @@ class MatchingFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(new BusquedaRequest("filosofia"))))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.error").isNotEmpty());
+    }
+
+    // ------------------------------------------------ US-5: perfil de matching (FR-MATCH-006)
+
+    @Test
+    void us5_tutorCargaMateriaDelCatalogo_yQuedaEnSuPerfilPublico() throws Exception {
+        String tokenTutor = registrarTutorYToken("20377777", "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni("20377777").getId();
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Matemática", "Física")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.materias[0]").value("Matemática"))
+                .andExpect(jsonPath("$.materias[1]").value("Física"))
+                .andExpect(jsonPath("$.nivel").value("secundario"));
+
+        // Sin credencial aprobada el Tutor no aparece en ranking, pero su perfil
+        // público (GET /api/tutores/{id}) ya refleja el catálogo configurado.
+        mockMvc.perform(get("/api/tutores/" + tutorId)
+                        .header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.materias[0]").value("Matemática"))
+                .andExpect(jsonPath("$.nivel").value("secundario"));
+    }
+
+    @Test
+    void us5_materiaFueraDelCatalogo_422() throws Exception {
+        String tokenTutor = registrarTutorYToken("20388888", "Diego", "Mendez");
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Astrología")))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void us5_noTutor_noPuedeCargarPerfil_403() throws Exception {
+        String tokenEst = registrarAdultoYToken("20399999", "Ana", "Lopez", true, false);
+
+        mockMvc.perform(put("/api/perfil-matching")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("nivel", "secundario", "materias", List.of("Matemática")))))
+                .andExpect(status().isForbidden());
     }
 }

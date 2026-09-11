@@ -7,10 +7,7 @@ import java.util.UUID;
  * antes de eliminar el perfil de un menor hay que saber si tiene sesiones
  * futuras agendadas.
  *
- * M4 implementa este puerto leyendo reservas persistidas. Hasta que exista,
- * el {@code StubVerificadorReservasFuturas} devuelve 0 y la baja nunca pide
- * confirmación adicional (ver NOTAS_VERIFICACION.md de M1-E: la verificación
- * real pendiente).
+ * Implementación real: {@code com.tinku.reservas.port.VerificadorReservasFuturasReal}.
  */
 @FunctionalInterface
 public interface VerificadorReservasFuturas {

@@ -7,10 +7,10 @@ import jakarta.validation.constraints.Size;
  * Body de POST /api/busquedas (contrato 2b): texto libre en lenguaje natural y/o
  * filtros de catálogo {@code nombre} y {@code filtro_materia}. Al menos uno de
  * los tres debe venir no vacío (422 si no) — se valida en el controller, no con
- * @NotBlank en cada campo. Los nombres de la API son snake_case
- * (texto_busqueda / filtro_materia): {@code @JsonProperty} los mapea a los
- * campos del record. El texto libre queda acotado a la columna
- * {@code texto_busqueda} (V7).
+ * @NotBlank en cada campo (un request solo con {@code nombre} es válido). Los
+ * nombres de la API son snake_case (texto_busqueda / filtro_materia):
+ * {@code @JsonProperty} los mapea a los campos del record. El texto libre queda
+ * acotado a la columna {@code texto_busqueda} (V7).
  */
 public record BusquedaRequest(
         @JsonProperty("texto_busqueda")

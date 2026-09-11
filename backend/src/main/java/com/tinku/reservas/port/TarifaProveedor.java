@@ -8,10 +8,9 @@ import java.util.UUID;
  * (Spec M5 US-6, FR-PAG-005/006). Ver Plan_M4 sección 1: {@code reservas.precio}
  * se congela al crear la Reserva con el valor que devuelve este puerto.
  *
- * M5 todavía no existe como módulo: el {@link TarifaProveedorStub} es la
- * implementación mientras tanto (misma mecánica que ReputacionSignalProvider en
- * M2-C y VerificadorReservasFuturas en M1). Cuando el Chunk M5 (configuración de
- * perfil de tarifa del Tutor) exista, la implementación real lo reemplaza.
+ * Implementación real: {@code com.tinku.pagos.service.TarifaProveedorTutor},
+ * que lee {@code pagos.tarifas_tutor} (el Tutor la fija desde su perfil) con
+ * fallback de dev a {@code tinku.reservas.tarifa-stub}.
  */
 public interface TarifaProveedor {
 

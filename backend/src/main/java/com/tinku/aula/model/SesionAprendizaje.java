@@ -33,6 +33,7 @@ public class SesionAprendizaje {
     public static final String ESTADO_EN_CURSO = "en_curso";
     public static final String ESTADO_FINALIZADA = "finalizada";
     public static final String ESTADO_FINALIZADA_ANTICIPADA = "finalizada_anticipada";
+    public static final String ESTADO_INTERRUMPIDA = "interrumpida";
 
     @Id
     @GeneratedValue
@@ -66,4 +67,12 @@ public class SesionAprendizaje {
     /** Segundos efectivos (fin_real - inicio_real); el no-show deja 0. */
     @Column(name = "duracion_efectiva_segundos")
     private Integer duracionEfectivaSegundos;
+
+    /**
+     * Duración agendada de la franja que cubre la Reserva (en segundos).
+     * Se fija al programar la Sesión (T-M3-03) y se usa en el corte automático
+     * para decidir si aplica la regla del 50% (US-5, FR-AULA-005).
+     */
+    @Column(name = "duracion_agendada_segundos")
+    private Integer duracionAgendadaSegundos;
 }

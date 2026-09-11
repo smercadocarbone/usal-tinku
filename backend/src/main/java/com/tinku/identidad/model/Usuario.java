@@ -64,6 +64,12 @@ public class Usuario {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** Email de contacto, exigido en el alta desde la migración V12.
+     * Nullable por compatibilidad con filas creadas antes; unicidad parcial
+     * (índice único solo sobre emails no nulos) en BD. */
+    @Column(length = 255)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_cuenta", nullable = false, length = 20)
     private EstadoCuenta estadoCuenta = EstadoCuenta.ACTIVA;

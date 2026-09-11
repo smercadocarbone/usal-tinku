@@ -7,8 +7,9 @@ cubre el contrato de la API y la logica de ranking. El numero 384 de la
 dimension del vector falso coincide con VECTOR(384) de la migracion V7.
 """
 
-import main as srv
 from fastapi.testclient import TestClient
+
+import main as srv
 
 client = TestClient(srv.app)
 
@@ -37,10 +38,16 @@ def test_match_ranking_por_similitud(monkeypatch):
     monkeypatch.setattr(srv, "_embed", fake_embedder)
     monkeypatch.setattr(srv, "_scores", fake_scores)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1", "t3"]})
+    resp = client.post(
+        "/match",
+        json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1", "t3"]},
+    )
 
     assert resp.status_code == 200
-    assert resp.json() == [{"tutor_id": "t3", "score": 0.9}, {"tutor_id": "t1", "score": 0.5}]
+    assert resp.json() == [
+        {"tutor_id": "t3", "score": 0.9},
+        {"tutor_id": "t1", "score": 0.5},
+    ]
 
 
 def test_match_sin_candidatos_no_llama_al_repo(monkeypatch):
@@ -53,7 +60,9 @@ def test_match_sin_candidatos_no_llama_al_repo(monkeypatch):
 
     monkeypatch.setattr(srv, "_scores", fake_scores)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": []})
+    resp = client.post(
+        "/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": []}
+    )
     assert resp.status_code == 200
     assert resp.json() == []
     assert llamadas == []  # el repo recibe la lista vacia tal cual llega
@@ -65,7 +74,9 @@ def test_match_503_cuando_modelo_o_base_no_disponibles(monkeypatch):
 
     monkeypatch.setattr(srv, "_embed", embed_roto)
 
-    resp = client.post("/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1"]})
+    resp = client.post(
+        "/match", json={"texto_busqueda": "algebra", "tutor_ids_candidatos": ["t1"]}
+    )
     assert resp.status_code == 503  # nunca fabrica un ranking falso
 
 
@@ -85,8 +96,12 @@ class FakeRecomputeRepo:
 
 def test_texto_fuente_puro():
     # "{nombre}: {descripcion}" por tema, separados por ". "
-    assert srv.texto_fuente([("Matemática", "operaciones con enteros"), ("División", "cómo dividir")]) == \
-        "Matemática: operaciones con enteros. División: cómo dividir"
+    assert (
+        srv.texto_fuente(
+            [("Matemática", "operaciones con enteros"), ("División", "cómo dividir")]
+        )
+        == "Matemática: operaciones con enteros. División: cómo dividir"
+    )
 
 
 def test_recompute_arma_el_texto_fuente_pasado_al_embedder(monkeypatch):
@@ -97,8 +112,21 @@ def test_recompute_arma_el_texto_fuente_pasado_al_embedder(monkeypatch):
         return [0.0] * 384
 
     monkeypatch.setattr(srv, "_embed", spy_embed)
-    monkeypatch.setattr(srv, "_recompute_repo", FakeRecomputeRepo(
-        [("t1", [("Matemática", "operaciones con enteros"), ("División", "cómo dividir")])]))
+    monkeypatch.setattr(
+        srv,
+        "_recompute_repo",
+        FakeRecomputeRepo(
+            [
+                (
+                    "t1",
+                    [
+                        ("Matemática", "operaciones con enteros"),
+                        ("División", "cómo dividir"),
+                    ],
+                )
+            ]
+        ),
+    )
 
     resp = client.post("/recompute-embeddings")
 
@@ -113,10 +141,12 @@ def test_recompute_embeddea_y_persiste_el_vector_de_cada_tutor_con_temas(monkeyp
         textos.append(texto)
         return fake_embedder(texto)
 
-    repo = FakeRecomputeRepo([
-        ("t1", [("Matemática", "operaciones con enteros")]),
-        ("t2", [("Física", "leyes de Newton")]),
-    ])
+    repo = FakeRecomputeRepo(
+        [
+            ("t1", [("Matemática", "operaciones con enteros")]),
+            ("t2", [("Física", "leyes de Newton")]),
+        ]
+    )
     monkeypatch.setattr(srv, "_embed", spy_embed)
     monkeypatch.setattr(srv, "_recompute_repo", repo)
 
@@ -128,10 +158,12 @@ def test_recompute_embeddea_y_persiste_el_vector_de_cada_tutor_con_temas(monkeyp
 
 
 def test_recompute_tutor_sin_temas_escribe_embedding_null(monkeypatch):
-    repo = FakeRecomputeRepo([
-        ("t1", [("Matemática", "operaciones con enteros")]),
-        ("t2", []),
-    ])
+    repo = FakeRecomputeRepo(
+        [
+            ("t1", [("Matemática", "operaciones con enteros")]),
+            ("t2", []),
+        ]
+    )
     monkeypatch.setattr(srv, "_embed", fake_embedder)
     monkeypatch.setattr(srv, "_recompute_repo", repo)
 
@@ -139,7 +171,10 @@ def test_recompute_tutor_sin_temas_escribe_embedding_null(monkeypatch):
 
     assert resp.status_code == 200
     assert resp.json() == {"actualizados": 2}
-    assert repo.escrituras == [("t1", [0.0] * 384), ("t2", None)]  # NULL borra el vector viejo
+    assert repo.escrituras == [
+        ("t1", [0.0] * 384),
+        ("t2", None),
+    ]  # NULL borra el vector viejo
 
 
 def test_recompute_idempotente_mismas_escrituras_sin_error(monkeypatch):
@@ -159,10 +194,15 @@ def test_recompute_503_cuando_modelo_no_disponible(monkeypatch):
         raise srv.MatchError("modelo de embeddings no disponible: sin red")
 
     monkeypatch.setattr(srv, "_embed", embed_roto)
-    monkeypatch.setattr(srv, "_recompute_repo", FakeRecomputeRepo(
-        [("t1", [("Matemática", "operaciones con enteros")])]))
+    monkeypatch.setattr(
+        srv,
+        "_recompute_repo",
+        FakeRecomputeRepo([("t1", [("Matemática", "operaciones con enteros")])]),
+    )
 
     resp = client.post("/recompute-embeddings")
 
-    assert resp.status_code == 503  # misma firma que /match, nunca fabrica un embedding falso
+    assert (
+        resp.status_code == 503
+    )  # misma firma que /match, nunca fabrica un embedding falso
     assert "detail" in resp.json()

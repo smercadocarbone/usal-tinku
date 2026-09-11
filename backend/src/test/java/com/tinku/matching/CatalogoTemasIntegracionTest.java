@@ -2,10 +2,13 @@ package com.tinku.matching;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
 import com.tinku.identidad.dto.RegistroTutorRequest;
+import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.service.CredencialService;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.repository.UsuarioRepository;
@@ -84,6 +87,7 @@ class CatalogoTemasIntegracionTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
+    @Autowired CredencialService credencialService;
     @Autowired TrayectoRepository trayectoRepository;
     @Autowired TemaRepository temaRepository;
     @Autowired JdbcTemplate jdbcTemplate;
@@ -160,7 +164,7 @@ class CatalogoTemasIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, "Ana", "Lopez", LocalDate.of(1990, 5, 15),
-                                PASSWORD, capEst, capAr)))
+                                dni + "@tinku.test", PASSWORD, capEst, capAr)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -171,7 +175,8 @@ class CatalogoTemasIntegracionTest {
                 .thenReturn(resultado(dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, "Pablo", "Sosa", LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -201,23 +206,19 @@ class CatalogoTemasIntegracionTest {
         return usuarioRepository.findByDni(dni).orElseThrow();
     }
 
-    private void aprobarCapDe(String token) throws Exception {
-        MvcResult cargado = mockMvc.perform(multipart("/api/tutores/antecedentes-penales")
-                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCapRequest(LocalDate.now())))
-                        .file(new MockMultipartFile("archivo", "cap.pdf",
+    /** Carga la credencial del Tutor y la aprueba: queda activo_para_matching=true
+     * (la Credencial aprobada reemplazó al CAP retirado del onboarding). */
+    private void aprobarCredencialDe(String token) throws Exception {
+        MvcResult cargada = mockMvc.perform(multipart("/api/tutores/credenciales")
+                        .file(jsonPart("datos", new CargarCredencialRequest(TipoCredencial.TITULO)))
+                        .file(new MockMultipartFile("archivo", "credencial.pdf",
                                 MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isCreated())
                 .andReturn();
-        UUID capId = UUID.fromString(objectMapper.readTree(
-                cargado.getResponse().getContentAsString()).get("id").asText());
-        mockMvc.perform(patch("/api/admin/moderacion/antecedentes-penales/" + capId)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new com.tinku.identidad.dto.RevisarCapRequest(
-                                        com.tinku.identidad.dto.AccionRevisionCap.APROBAR, null))))
-                .andExpect(status().isOk());
+        UUID credencialId = UUID.fromString(objectMapper.readTree(
+                cargada.getResponse().getContentAsString()).get("id").asText());
+        credencialService.marcarAprobada(credencialId, null);
     }
 
     private UUID registrarMenor(String dniMenor, String tokenAr) throws Exception {
@@ -246,7 +247,7 @@ class CatalogoTemasIntegracionTest {
 
     private UUID tutorConTemas(String dni, List<UUID> temaIds) throws Exception {
         String token = registrarTutorYToken(dni);
-        aprobarCapDe(token);
+        aprobarCredencialDe(token);
         putTemas(token, temaIds);
         return usuarioPorDni(dni).getId();
     }
@@ -350,7 +351,7 @@ class CatalogoTemasIntegracionTest {
     @Test
     void putTemas_tutorGuarda_yGetLosDevuelve() throws Exception {
         String token = registrarTutorYToken("30144444");
-        aprobarCapDe(token);
+        aprobarCredencialDe(token);
 
         assertThat(getTemas(token)).isEmpty();
 
@@ -375,7 +376,7 @@ class CatalogoTemasIntegracionTest {
     @Test
     void putTemas_temaInexistente_devuelve404() throws Exception {
         String token = registrarTutorYToken("30166666");
-        aprobarCapDe(token);
+        aprobarCredencialDe(token);
 
         mockMvc.perform(put("/api/tutores/me/temas")
                         .header("Authorization", "Bearer " + token)
@@ -389,7 +390,7 @@ class CatalogoTemasIntegracionTest {
     @Test
     void putTemas_idNoUuid_devuelve422() throws Exception {
         String token = registrarTutorYToken("30177777");
-        aprobarCapDe(token);
+        aprobarCredencialDe(token);
 
         mockMvc.perform(put("/api/tutores/me/temas")
                         .header("Authorization", "Bearer " + token)
@@ -402,7 +403,7 @@ class CatalogoTemasIntegracionTest {
     @Test
     void putTemas_listaVacia_limpiaLosTemas() throws Exception {
         String token = registrarTutorYToken("30188888");
-        aprobarCapDe(token);
+        aprobarCredencialDe(token);
 
         putTemas(token, List.of(divisionId));
         assertThat(getTemas(token)).containsExactly(divisionId);

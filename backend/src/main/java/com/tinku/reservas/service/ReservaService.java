@@ -250,6 +250,25 @@ public class ReservaService {
         reservaRepo.findById(reservaId).ifPresent(this::expirarSiSiguePendiente);
     }
 
+    /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor. */
+    @Transactional(readOnly = true)
+    public List<Reserva> listarDe(Usuario usuario) {
+        return reservaRepo.findByPagador_IdOrBeneficiario_IdOrTutor_IdOrderByHorario(
+                usuario.getId(), usuario.getId(), usuario.getId());
+    }
+
+    /** GET /api/reservas/{id} — detalle. Solo participantes; caso contrario 404
+     * (no se filtra si la reserva existe). */
+    @Transactional(readOnly = true)
+    public Reserva obtener(Usuario usuario, UUID reservaId) {
+        Reserva reserva = reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new ReservaNoEncontradaException();
+        }
+        return reserva;
+    }
+
     /** Barrido de recuperación (FR-RES-020): expira reservas pendientes cuyo
      * timeout ya venció — cubre el caso de un job perdido (misma mecánica que
      * {@code SolicitudService.expirarVencidas}). */
@@ -287,12 +306,18 @@ public class ReservaService {
     }
 
     /** {@code denuncia.resuelta} ← M9 (FR-SEC-008/012, Chunk M4-E): listener del
-     * evento que M9 publicará (hoy STUB en {@link DenunciaResueltaEvent}). Corre
-     * en la transacción del publicador; si falla, se aborta (fail-closed). */
+     * evento enriquecido por M9-D. Corre en la transacción del publicador; si
+     * falla, se aborta (fail-closed). Guard de FR-SEC-011: una resolución
+     * {@code infundada} NO cancela reservas futuras (no hay sanción) — solo las
+     * fundada/escalada lo hacen. Un evento del stub original (resolución null)
+     * conserva el comportamiento de cancelar. */
     @EventListener
     @Transactional
     public void onDenunciaResuelta(DenunciaResueltaEvent evento) {
-        cancelarFuturasPorSancion(evento.getUsuarioSancionadoId());
+        if (evento.getResolucion() == null
+                || evento.getResolucion() != com.tinku.shared.ResolucionDenuncia.INFUNDADA) {
+            cancelarFuturasPorSancion(evento.getUsuarioSancionadoId());
+        }
     }
 
     private Reserva cancelarPorSancion(Reserva reserva, UUID usuarioSancionadoId) {
@@ -411,5 +436,12 @@ public class ReservaService {
     private boolean esTutor(Reserva reserva, Usuario usuario) {
         return reserva.getTutor() != null
                 && reserva.getTutor().getId().equals(usuario.getId());
+    }
+
+    private boolean esParticipante(Reserva reserva, Usuario usuario) {
+        return esPagador(reserva, usuario)
+                || esTutor(reserva, usuario)
+                || (reserva.getBeneficiario() != null
+                && reserva.getBeneficiario().getId().equals(usuario.getId()));
     }
 }

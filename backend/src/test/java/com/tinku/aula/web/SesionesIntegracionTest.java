@@ -5,6 +5,7 @@ import com.tinku.aula.LiveKitService;
 import com.tinku.aula.SesionService;
 import com.tinku.pagos.evento.SesionEvento;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.pagos.evento.SesionInterrumpidaEvent;
 import com.tinku.pagos.evento.SesionNoShowDobleEvent;
 import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
 import com.tinku.pagos.evento.SesionNoShowTutorEvent;
@@ -57,6 +58,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -160,7 +162,7 @@ class SesionesIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, true, true)))
+                                dni + "@tinku.test", PASSWORD, true, true)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -171,7 +173,8 @@ class SesionesIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -479,7 +482,11 @@ class SesionesIntegracionTest {
         SesionFinalizadaEvent evento = (SesionFinalizadaEvent) EVENTOS.get(0);
         assertThat(evento.getNombre()).isEqualTo("sesion.finalizada");
         assertThat(evento.getReservaId()).isEqualTo(reserva.getId());
-        assertThat(evento.getTimestampFin()).isEqualTo(cerrada.getFinReal());
+        // el evento lleva el Instant in-memory (nanos); la columna TIMESTAMP(6) al
+        // persistir redondea a micros. Se compara a milisegundos, estable ante el
+        // redondeo de la BD.
+        assertThat(evento.getTimestampFin().truncatedTo(ChronoUnit.MILLIS))
+                .isEqualTo(cerrada.getFinReal().truncatedTo(ChronoUnit.MILLIS));
 
         // Idempotente: repetir (botón o job que dispara después) no re-emite.
         sesionService.ejecutarCorteAutomatico(sesion.getId());
@@ -525,14 +532,21 @@ class SesionesIntegracionTest {
 
         sesionService.ejecutarCorteAutomatico(sesion.getId());
 
+        // Nadie se unió (inicioReal null → duración efectiva 0 < 50% de la
+        // agendada de 60min): con la regla de US-5/FR-AULA-005 (T-M3-10) el
+        // corte automático emite sesion.interrumpida, no finalizada.
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
-                .isEqualTo("finalizada");
+                .isEqualTo("interrumpida");
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getDuracionEfectivaSegundos())
                 .isZero(); // nadie se unió → sin duración efectiva
         assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.FINALIZADA);
         assertThat(EVENTOS).hasSize(1);
-        assertThat(EVENTOS.get(0)).isInstanceOf(SesionFinalizadaEvent.class);
+        assertThat(EVENTOS.get(0)).isInstanceOf(SesionInterrumpidaEvent.class);
+        assertThat(EVENTOS.get(0).getNombre()).isEqualTo("sesion.interrumpida");
+        // Idempotente: otro disparo del corte no re-emite ni re-marca.
+        sesionService.ejecutarCorteAutomatico(sesion.getId());
+        assertThat(EVENTOS).hasSize(1);
     }
 
     @Test

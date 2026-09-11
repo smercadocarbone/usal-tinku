@@ -337,4 +337,62 @@ class MercadoPagoClientHttpTest {
             server.stop(0);
         }
     }
+
+    // ------------------------------------------- reembolso parcial (T-M5-08)
+
+    @Test
+    void reembolsoPagoParcial_posteaElMonto_conAuth_alEndpointDeRefunds() throws Exception {
+        AtomicReference<String> method = new AtomicReference<>();
+        AtomicReference<String> body = new AtomicReference<>();
+        AtomicReference<String> authHeader = new AtomicReference<>();
+        HttpServer server = serverPara("/v1/payments/pago-parcial/refunds", "201",
+                new AtomicInteger(), method, body, authHeader);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            cliente.reembolsarPagoParcial("pago-parcial", new BigDecimal("60.00"));
+
+            // FR-PAG-010: reembolso TOTAL lleva body vacío ({}); el PARCIAL es el
+            // único que manda amount explícito, y solo lo invoca el flujo manual
+            // de disputa de M8.
+            assertThat(method.get()).isEqualTo("POST");
+            assertThat(body.get()).isEqualTo("{\"amount\":60.00}");
+            assertThat(authHeader.get()).isEqualTo("Bearer mp-token");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void reembolsoPagoParcial_errorDelProvider_seTraduceANoDisponible() throws Exception {
+        HttpServer server = serverPara("/v1/payments/pago-parcial-500/refunds", "500",
+                new AtomicInteger(), null, null, null);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-500", new BigDecimal("10.00")))
+                    .isInstanceOf(MercadoPagoNoDisponibleException.class);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void reembolsoPagoParcial_sinAccessToken_noLlamaAlProvider_yFallaConMensajeClaro() throws Exception {
+        AtomicInteger hits = new AtomicInteger();
+        HttpServer server = serverPara("/v1/payments/pago-parcial-2/refunds", "201",
+                hits, null, null, null);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
+
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-2", new BigDecimal("10.00")))
+                    .isInstanceOf(MercadoPagoNoConfiguradoException.class);
+            assertThat(hits.get()).isZero();
+        } finally {
+            server.stop(0);
+        }
+    }
 }

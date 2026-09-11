@@ -1,0 +1,76 @@
+package com.tinku.shared;
+
+import com.tinku.admin.model.Admin;
+import com.tinku.admin.model.RolAdmin;
+import com.tinku.admin.repository.AdminRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
+import java.util.UUID;
+
+/**
+ * Gate de autorización por rol de Admin para endpoints del panel de
+ * administración (los consumen M7 — calificaciones ocultas —, M9 — resolución
+ * de Denuncias/Alertas — y M8 — colas y Soporte Financiero).
+ *
+ * T-M8-06: reemplaza el allowlist de DNI ({@code tinku.admin.moderacion.ids})
+ * por la tabla {@code admin.admins} (V16). El principal del JWT lleva el DNI
+ * (UsuarioDetailsService), así que el gate busca la fila de {@code admins}
+ * cruzando por {@code identidad.usuarios.dni} y FILTRA por rol + {@code activo}.
+ * La allowlist queda solo como semilla de dev (CommandLineRunner, perfil dev);
+ * en runtime ya no se lee.
+ *
+ * Fail-closed: sin fila (o desactivada, o rol incorrecto) → 403 con
+ * {@link AccesoModeracionDenegadoException}. Devuelve el UUID del USUARIO
+ * asociado (no el id de {@code admins}) porque los consumidores lo persisten en
+ * columnas FK a {@code identidad.usuarios} (p.ej. {@code sanciones.admin_id},
+ * {@code denuncias.admin_resolutor_id}).
+ */
+@Component
+public class AdminModeracionGate {
+
+    private final AdminRepository adminRepository;
+
+    public AdminModeracionGate(AdminRepository adminRepository) {
+        this.adminRepository = adminRepository;
+    }
+
+    /**
+     * API histórica de M7/M9 (sin cambios): Admin de Moderación y Seguridad →
+     * UUID del {@code Usuario}, o 403.
+     */
+    public UUID requiereModeracion(Authentication authentication) {
+        return requiereAdmin(authentication, RolAdmin.MODERACION_SEGURIDAD).getUsuario().getId();
+    }
+
+    /** Admin de Soporte Financiero → UUID del {@code Usuario}, o 403. */
+    public UUID requiereSoporteFinanciero(Authentication authentication) {
+        return requiereAdmin(authentication, RolAdmin.SOPORTE_FINANCIERO).getUsuario().getId();
+    }
+
+    /** Chequeo de rol genérico para los endpoints de M8. */
+    public UUID requiereRol(Authentication authentication, RolAdmin rol) {
+        return requiereAdmin(authentication, rol).getUsuario().getId();
+    }
+
+    /**
+     * Admin activo del rol pedido → la fila de {@code admin.admins} (necesaria
+     * para atribuir auditoría por {@code admins.id}) o 403.
+     */
+    public Admin requiereAdmin(Authentication authentication, RolAdmin rol) {
+        String dni = authentication == null ? null : authentication.getName();
+        return adminRepository.findByUsuario_DniAndRolAndActivoTrue(dni, rol)
+                .orElseThrow(AccesoModeracionDenegadoException::new);
+    }
+
+    /**
+     * Admin activo de CUALQUIER rol → la fila de {@code admin.admins}, o 403.
+     * Lo usa la auditoría (T-M8-02) y la cola de tickets (transversal a ambos
+     * roles, filtrada después por el rol propio del Admin).
+     */
+    public Admin adminAutenticado(Authentication authentication) {
+        String dni = authentication == null ? null : authentication.getName();
+        return adminRepository.findByUsuario_DniAndActivoTrue(dni)
+                .orElseThrow(AccesoModeracionDenegadoException::new);
+    }
+}

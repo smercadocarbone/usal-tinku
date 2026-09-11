@@ -89,8 +89,9 @@ public class SecurityConfig {
                 // (autorregistro con DNI, FR-ID-007) y login. El alta de
                 // menor NO es pública: la hace el Adulto Responsable
                 // autenticado (FR-ID-020, Artículo II).
-                .requestMatchers("/api/usuarios/registro", "/api/usuarios/login",
-                        "/api/tutores/registro").permitAll()
+                .requestMatchers("/api/usuarios/registro", "/api/usuarios/verificar-dni",
+                        "/api/usuarios/login", "/api/tutores/registro",
+                        "/api/tutores/verificar-dni").permitAll()
                 // Webhook de LiveKit: la autenticación ES su firma HS256 sobre
                 // el body (T-M3-02), no el JWT de Tinku — mismo patrón que el
                 // webhook de MercadoPago (T-M5-03): la autenticación ES la firma

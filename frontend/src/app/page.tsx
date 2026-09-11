@@ -9,8 +9,8 @@ export default function HomePage() {
         </div>
         <h1>Tutorías en línea</h1>
         <p>
-          Clases particulares con Tutores verificados, en un entorno seguro y
-          supervisado para menores.
+          Clases particulares con tutores verificados para estudiantes y
+          menores, en un entorno seguro y supervisado.
         </p>
         <div
           style={{

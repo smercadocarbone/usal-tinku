@@ -78,27 +78,9 @@ public class UsuarioService {
 
     @Transactional
     public Usuario registrarAdulto(RegistroAdultoRequest request, byte[] fotoDni) {
-        // Paso 0: respetar el backoff de OCR (FR-ID-011) del DNI declarado.
-        ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
-
-        // Pasos 2/4a: OCR, legibilidad y coincidencia nombre/apellido (FR-ID-019),
-        // compartidos por los tres flujos de registro (ver validarDocumento).
-        ResultadoOcr ocr = validarDocumento(request.dniDeclarado(), request.nombreDeclarado(),
-                request.apellidoDeclarado(), request.fechaNacimientoDeclarada(), fotoDni);
-
-        // Paso 4b: edad >= 18, calculada sobre la fecha EXTRAÍDA del
-        // documento, nunca sobre la declarada (evita que alguien declare
-        // una fecha distinta a la de su propio DNI).
-        int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
-        if (edad < EDAD_MINIMA_ADULTO) {
-            throw new EdadInsuficienteException("Tenés que ser mayor de 18 años para registrarte.");
-        }
-
-        // Paso 4c: unicidad del DNI en todo el sistema (FR-ID-001/018),
-        // usando el DNI EXTRAÍDO del documento, no el declarado.
-        if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
-            throw new DniYaRegistradoException();
-        }
+        ResultadoOcr ocr = compuertaRegistroAdulto(request.dniDeclarado(),
+                request.nombreDeclarado(), request.apellidoDeclarado(),
+                request.fechaNacimientoDeclarada(), fotoDni);
 
         // FR-ID-001 (constraint de aplicación además de la de BD): al
         // menos una capacidad debe estar activa.
@@ -115,6 +97,7 @@ public class UsuarioService {
         usuario.setCapacidadEstudiante(request.capacidadEstudiante());
         usuario.setCapacidadAdultoResponsable(request.capacidadAdultoResponsable());
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
+        usuario.setEmail(request.email());
         usuario.setEstadoCuenta(EstadoCuenta.ACTIVA);
 
         return usuarioRepository.save(usuario);
@@ -193,20 +176,9 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario registrarTutor(RegistroTutorRequest request, byte[] fotoDni) {
-        ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado()); // FR-ID-011
-
-        ResultadoOcr ocr = validarDocumento(request.dniDeclarado(), request.nombreDeclarado(),
-                request.apellidoDeclarado(), request.fechaNacimientoDeclarada(), fotoDni);
-
-        int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
-        if (edad < EDAD_MINIMA_ADULTO) {
-            // FR-ID-007: bloqueo de registro de Tutor menor, sin excepciones.
-            throw new EdadInsuficienteException("Tenés que ser mayor de 18 años para registrarte como Tutor.");
-        }
-
-        if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
-            throw new DniYaRegistradoException();
-        }
+        ResultadoOcr ocr = compuertaRegistroAdulto(request.dniDeclarado(),
+                request.nombreDeclarado(), request.apellidoDeclarado(),
+                request.fechaNacimientoDeclarada(), fotoDni);
 
         Usuario tutor = new Usuario();
         tutor.setDni(ocr.dniExtraido());
@@ -217,6 +189,7 @@ public class UsuarioService {
         tutor.setCapacidadEstudiante(false);
         tutor.setCapacidadAdultoResponsable(false);
         tutor.setPasswordHash(passwordEncoder.encode(request.password()));
+        tutor.setEmail(request.email());
         tutor.setEstadoCuenta(EstadoCuenta.ACTIVA);
 
         return usuarioRepository.save(tutor);
@@ -279,7 +252,7 @@ public class UsuarioService {
         }
 
         // FR-ID-014: no se puede dar de baja un menor con reservas futuras sin
-        // confirmación explícita (el puente a M4; stub por ahora devuelve 0).
+        // confirmación explícita (puente real a M4, VerificadorReservasFuturasReal).
         long reservasFuturas = verificadorReservas.contarReservasFuturas(menorId);
         if (reservasFuturas > 0 && !confirmarBaja) {
             throw new ReservasFuturasPendientesException(reservasFuturas);
@@ -291,11 +264,68 @@ public class UsuarioService {
     }
 
     /**
-     * Pasos compartidos de los tres flujos de registro (FR-ID-019): lectura OCR
+* Perfil del Tutor por id (GET /api/tutores/{id}). Solo perfiles TUTOR;
+     * cualquier otro tipo (o inexistente) responde 404.
+     */
+    @Transactional
+    public Usuario obtenerTutor(UUID id) {
+        return usuarioRepository.findById(id)
+                .filter(u -> u.getTipo() == TipoUsuario.TUTOR)
+                .orElseThrow(TutorNoEncontradoException::new);
+    }
+
+    /**
+     * Verificación PREVIA del documento en el wizard de registro
+     * (POST /api/usuarios/verificar-dni y /api/tutores/verificar-dni): corre
+     * los mismos pasos del alta (FR-ID-011 backoff, FR-ID-019 OCR +
+     * coincidencia, edad ≥ 18 y unicidad de DNI) pero NO crea la cuenta —
+     * email y contraseña todavía no se pidieron. El alta final re-valida en
+     * su transacción, así que este paso es una compuerta de UX, no una
+     * garantía de estado persistido.
+     */
+    public void verificarDocumentoParaRegistro(String dniDeclarado, String nombreDeclarado,
+                                               String apellidoDeclarado,
+                                               LocalDate fechaNacimientoDeclarada,
+                                               byte[] fotoDni) {
+        compuertaRegistroAdulto(dniDeclarado, nombreDeclarado, apellidoDeclarado,
+                fechaNacimientoDeclarada, fotoDni);
+    }
+
+    /**
+     * Compuerta común de registro adulto/Tutor y de verificación previa del
+     * wizard: backoff (FR-ID-011), OCR + coincidencia nombre/apellido/DNI
+     * (FR-ID-019), edad >= 18 — calculada sobre la fecha EXTRAÍDA del
+     * documento, nunca sobre la declarada — y unicidad de DNI (FR-ID-001/018).
+     * Los tres flujos corren exactamente las mismas validaciones en el mismo
+     * orden; el menor (registrarMenor) difiere en edad y checks previos.
+     */
+    private ResultadoOcr compuertaRegistroAdulto(String dniDeclarado, String nombreDeclarado,
+                                                 String apellidoDeclarado,
+                                                 LocalDate fechaNacimientoDeclarada,
+                                                 byte[] fotoDni) {
+        ocrBackoffService.chequearPuedeIntentar(dniDeclarado); // FR-ID-011
+
+        ResultadoOcr ocr = validarDocumento(dniDeclarado, nombreDeclarado,
+                apellidoDeclarado, fechaNacimientoDeclarada, fotoDni);
+
+        int edad = Period.between(ocr.fechaNacimientoExtraida(), LocalDate.now()).getYears();
+        if (edad < EDAD_MINIMA_ADULTO) {
+            throw new EdadInsuficienteException("Tenés que ser mayor de 18 años para registrarte.");
+        }
+
+        if (usuarioRepository.existsByDni(ocr.dniExtraido())) {
+            throw new DniYaRegistradoException();
+        }
+
+        return ocr;
+    }
+
+    /**
+     * Pasos compartidos de los flujos de registro (FR-ID-019): lectura OCR (chunk register-flow-redesign: wizard de registro en 4 pasos (rol -> datos -> verificacion DNI -> credenciales con email) + email como credencial en backend + endpoints verificar-dni sin creacion de cuenta)
      * del documento, distinción ilegible/no-coincide y devolución del resultado.
-     * El backoff previo (FR-ID-011), el check de edad y la unicidad del DNI
-     * quedan en cada flujo: su orden relativo es intencional y difiere entre
-     * adulto/Tutor y menor (ver javadoc de la clase).
+     * El backoff (FR-ID-011), el check de edad y la unicidad del DNI se
+     * orquestan en la compuerta común adulto/Tutor (compuertaRegistroAdulto);
+     * el flujo de menor los aplica en un orden propio (ver javadoc de la clase).
      */
     private ResultadoOcr validarDocumento(String dniDeclarado, String nombreDeclarado,
                                           String apellidoDeclarado, LocalDate fechaNacimientoDeclarada,

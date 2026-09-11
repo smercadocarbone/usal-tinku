@@ -77,8 +77,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * JPA + Flyway + PostgreSQL via Testcontainers), con el mismo patrón de
  * MatchingFlujosIntegracionTest: OCR mockeado, resto real.
  *
- * La tarifa se resuelve por el stub {@link com.tinku.reservas.port.TarifaProveedorStub}
- * con tinku.reservas.tarifa-stub=15000 (application-test.yml) — M5 no existe aún.
+ * La tarifa se resuelve por la implementación real (M5-H,
+ * {@code TarifaProveedorTutor}) leyendo pagos.tarifas_tutor; sin fila, el
+ * fallback de dev aplica tinku.reservas.tarifa-stub=15000 (application-test.yml).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -148,7 +149,7 @@ class ReservasFlujosIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, capEst, capAr)))
+                                dni + "@tinku.test", PASSWORD, capEst, capAr)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -159,7 +160,8 @@ class ReservasFlujosIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -1091,5 +1093,71 @@ class ReservasFlujosIntegracionTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    // ------------------------------------------------ Endpoints para el front (T-M4-GET)
+
+    @Test
+    void getReservas_visibilidadPorRol_pagadorTutorYCiertoParticipanteCadaUno() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        UUID r1 = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        // El pagador (estudiante) ve su reserva en el listado y por id.
+        mockMvc.perform(get("/api/reservas").header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(r1.toString()))
+                .andExpect(jsonPath("$[0].pagadorId").value(e.estudianteId().toString()));
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(r1.toString()));
+
+        // El tutor de esa reserva también es participante y puede verla.
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(r1.toString()));
+
+        // Un tercero autenticado sin relación con la reserva: no la lista ni la ve.
+        String tokenOtro = registrarAdultoYToken(dniUnico(), "Sofia", "Gomez", true, false);
+        mockMvc.perform(get("/api/reservas").header("Authorization", "Bearer " + tokenOtro))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mockMvc.perform(get("/api/reservas/" + r1).header("Authorization", "Bearer " + tokenOtro))
+                .andExpect(status().isNotFound());
+
+        // Sin autenticación: nada de esto es público (403, ver SecurityHttpTest).
+        mockMvc.perform(get("/api/reservas")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getTutores_perfilPublicoYfranjasActivas_ocultanDatosSensiblesHastaM2M7() throws Exception {
+        EscenarioAdulto e = escenarioAdulto(); // franja puntual publicada en e.fecha()
+
+        // Perfil público del tutor: sin passwordHash ni DNI; M2/M7 ausentes → materias
+        // vacías y calificación oculta (FR-REP-007: promedio null si count < 5).
+        mockMvc.perform(get("/api/tutores/" + e.tutorId()).header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(e.tutorId().toString()))
+                .andExpect(jsonPath("$.nombre").value("Pablo"))
+                .andExpect(jsonPath("$.tipo").value("TUTOR"))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                .andExpect(jsonPath("$.dni").doesNotExist())
+                .andExpect(jsonPath("$.materias").isEmpty())
+                .andExpect(jsonPath("$.nivel").isEmpty())
+                .andExpect(jsonPath("$.calificacionPromedio").isEmpty())
+                .andExpect(jsonPath("$.cantidadCalificaciones").value(0));
+
+        // Franjas activas publicadas, visibles para un participante autenticado.
+        mockMvc.perform(get("/api/tutores/" + e.tutorId() + "/franjas")
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].fechaEspecifica").value(e.fecha().toString()))
+                .andExpect(jsonPath("$[0].horaInicio").value("15:00:00"))
+                .andExpect(jsonPath("$[0].activa").value(true));
+
+        // Tutor inexistente → 404.
+        mockMvc.perform(get("/api/tutores/" + UUID.randomUUID())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isNotFound());
     }
 }

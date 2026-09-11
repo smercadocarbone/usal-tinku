@@ -88,11 +88,24 @@ tinku:
     backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
   credencial:
     backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
+  almacenamiento:
+    # Directorio local para credenciales de Tutor (AlmacenamientoLocal). Cuando
+    # haya storage real (ADR), se reemplaza el bean sin tocar el puerto.
+    directorio: ${ALMACENAMIENTO_DIRECTORIO:${java.io.tmpdir}/tinku}
   reservas:
     # Tarifa por sesion del Tutor. Fuente real: M5 (Spec M5 US-6, FR-PAG-006) —
     # todavia no implementado. Hasta entonces el puerto TarifaProveedor usa este
     # valor para desarrollo/pruebas; si queda vacio, crear una Reserva falla con
     # mensaje claro (mismo enfoque que livekit sin credenciales, T-000-06).
     tarifa-stub: ${RESERVAS_TARIFA_STUB:}
+  # M6 — resumen automatico. ADR del proveedor LLM PENDIENTE (Constitucion,
+  # "LLM (resumen y transcripcion): GPT-4o vs Gemini 2.0 Flash — Pendiente, ADR",
+  # flag T-FIN-03). Hasta no cerrarlo, el puerto ResumenProveedor es fail-closed:
+  # sin proveedor configurado NO sale nada hacia ningun modelo. Estos placeholders
+  # solo existen para que la decision final sea config y no codigo.
+  resumen:
+    llm:
+      proveedor: ${LLM_PROVEEDOR:}   # gpt-4o | gemini-2.0-flash — vacio = fail-closed
+      api-key: ${LLM_API_KEY:}       # clave del proveedor elegido por el ADR
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}

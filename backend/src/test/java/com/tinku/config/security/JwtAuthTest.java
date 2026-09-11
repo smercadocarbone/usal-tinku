@@ -58,7 +58,7 @@ class JwtAuthTest {
     private RegistroAdultoRequest requestValido() {
         return new RegistroAdultoRequest(
                 "00000000", "Nombre Stub", "Apellido Stub",
-                LocalDate.of(2000, 1, 1), "password123",
+                LocalDate.of(2000, 1, 1), "00000000@tinku.test", "password123",
                 true, false
         );
     }

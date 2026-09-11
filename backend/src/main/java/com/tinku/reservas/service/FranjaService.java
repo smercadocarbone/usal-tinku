@@ -64,6 +64,11 @@ public class FranjaService {
         return franjaQueCubre(tutorId, horario).isPresent();
     }
 
+    /** Franjas activas publicadas por el Tutor (GET /api/tutores/{id}/franjas). */
+    public List<FranjaDisponibilidad> franjasActivas(UUID tutorId) {
+        return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId);
+    }
+
     /**
      * Devuelve la franja activa que cubre {@code horario}, si existe. La
      * reutilizan ReservaService/SolicitudService (decisión booleana) y M3

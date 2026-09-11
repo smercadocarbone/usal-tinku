@@ -197,6 +197,7 @@ export default function TemasTutor() {
                                       {materia.temas.map((tema) => (
                                         <label
                                           key={tema.id}
+                                          aria-label={tema.nombre}
                                           className="opcion arbol-tema-linea"
                                         >
                                           <input

@@ -6,6 +6,7 @@ backend/target/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+frontend/tsconfig.tsbuildinfo
 
 # matching-service (Python)
 matching-service/__pycache__/

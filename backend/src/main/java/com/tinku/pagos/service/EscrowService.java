@@ -15,10 +15,12 @@ import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
+import com.tinku.reservas.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaService;
+import com.tinku.shared.ResolucionDenuncia;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -234,6 +236,42 @@ public class EscrowService {
                 t.setLiberarAt(null);
                 transaccionRepo.save(t);
                 liberacionEscrow.cancelarLiberacion(t.getId());
+            }
+        });
+    }
+
+    /** {@code denuncia.resuelta} (Spec_M5 §2, T-M9-04): cierra la pausa del
+     * escrow de ESA sesión puntual (FR-SEC-011 — cada denuncia libera su propio
+     * escrow, sin esperar a denuncias cruzadas). Todas las ramas vuelven
+     * {@code pausado_denuncia} → {@code retenido_escrow} para reusar las rutas
+     * existentes (guard de estado en {@code ejecutarLiberacion}/{@code
+     * reembolsarSiRetenida}): infundada → re-cuenta la liberación estándar de
+     * 24hs (FR-SEC-011); fundada → se paga el trabajo ya realizado al Tutor
+     * (FR-PAG-011); escalada → reembolso total al Estudiante (FR-PAG-009). Un
+     * evento sin {@code reservaId} (denuncia de perfil) o sin resolución
+     * (contrato mínimo del stub) no mueve dinero. */
+    @EventListener
+    @Transactional
+    public void onDenunciaResuelta(DenunciaResueltaEvent evento) {
+        UUID reservaId = evento.getReservaId();
+        ResolucionDenuncia resolucion = evento.getResolucion();
+        if (reservaId == null || resolucion == null) {
+            return;
+        }
+        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+            if (t.getEstado() != EstadoTransaccion.PAUSADO_DENUNCIA) {
+                return; // ya resuelta por otra vía → no-op
+            }
+            t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+            transaccionRepo.save(t);
+            switch (resolucion) {
+                case INFUNDADA -> {
+                    t.setLiberarAt(Instant.now().plus(VENTANA_LIBERACION));
+                    transaccionRepo.save(t);
+                    liberacionEscrow.programarLiberacion(t.getId(), t.getLiberarAt());
+                }
+                case FUNDADA -> liberacionEscrow.ejecutarLiberacion(t.getId());
+                case ESCALADA -> reembolsarSiRetenida(reservaId);
             }
         });
     }

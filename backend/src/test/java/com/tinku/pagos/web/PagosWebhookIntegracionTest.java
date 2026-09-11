@@ -198,7 +198,7 @@ class PagosWebhookIntegracionTest {
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
                                 dni, nombre, apellido, LocalDate.of(1990, 5, 15),
-                                PASSWORD, true, true)))
+                                dni + "@tinku.test", PASSWORD, true, true)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);
@@ -209,7 +209,8 @@ class PagosWebhookIntegracionTest {
                 .thenReturn(resultado(dni, nombre, apellido, LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/tutores/registro")
                         .file(jsonPart("datos", new RegistroTutorRequest(
-                                dni, nombre, apellido, LocalDate.of(1990, 5, 15), PASSWORD)))
+                                dni, nombre, apellido, LocalDate.of(1990, 5, 15),
+                                dni + "@tinku.test", PASSWORD)))
                         .file(foto()))
                 .andExpect(status().isCreated());
         return login(dni);

@@ -22,6 +22,7 @@ export default function LoginPage() {
   const query = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const expirado = query?.get("expirado") === "1";
   const registrado = query?.get("registrado") === "1";
+  const tutorRegistrado = query?.get("tutorRegistrado") === "1";
 
   function destinoSiguiente(): string {
     const siguiente = query?.get("siguiente");
@@ -74,6 +75,12 @@ export default function LoginPage() {
           </div>
         )}
 
+        {tutorRegistrado && (
+          <div className="alerta alerta--exito" role="status">
+            Cuenta de tutor creada. Iniciá sesión con tu DNI y contraseña.
+          </div>
+        )}
+
         <form className="formulario" onSubmit={onSubmit}>
           <div className="campo">
             <label htmlFor="dni">DNI</label>
@@ -113,8 +120,7 @@ export default function LoginPage() {
         </form>
 
         <p className="pie-enlace">
-          ¿No tenés cuenta?{" "}
-          <Link href="/registro">Registrate como adulto</Link>
+          ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
         </p>
       </div>
     </main>
