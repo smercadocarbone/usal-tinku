@@ -58,6 +58,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -481,7 +482,10 @@ class SesionesIntegracionTest {
         SesionFinalizadaEvent evento = (SesionFinalizadaEvent) EVENTOS.get(0);
         assertThat(evento.getNombre()).isEqualTo("sesion.finalizada");
         assertThat(evento.getReservaId()).isEqualTo(reserva.getId());
-        assertThat(evento.getTimestampFin()).isEqualTo(cerrada.getFinReal());
+        // el evento lleva el Instant en nanos; la columna TIMESTAMP(6) trunca a
+        // micros al persistir, así que la comparación se hace a micros.
+        assertThat(evento.getTimestampFin().truncatedTo(ChronoUnit.MICROS))
+                .isEqualTo(cerrada.getFinReal());
 
         // Idempotente: repetir (botón o job que dispara después) no re-emite.
         sesionService.ejecutarCorteAutomatico(sesion.getId());
