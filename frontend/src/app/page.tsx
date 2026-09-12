@@ -2,9 +2,14 @@ import Link from "next/link";
 import {
   Atom,
   BookOpen,
+  Building2,
   Calculator,
   FlaskConical,
+  GraduationCap,
+  HeartHandshake,
   Languages,
+  School,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import TarjetasSeguridad from "@/components/TarjetasSeguridad";
@@ -188,6 +193,62 @@ export default function HomePage() {
 
         <TarjetasSeguridad />
       </section>
+
+      {/* ============ PARTNERS: COMUNIDAD EDUCATIVA ============ */}
+      <section className="border-y border-borde bg-superficie py-16">
+        <div className="mx-auto max-w-6xl px-5">
+          <p className="text-center text-sm font-semibold uppercase tracking-widest text-texto-suave">
+            En alianza con la comunidad educativa de toda Argentina
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            {[
+              { icono: School, nombre: "Colegios y escuelas" },
+              { icono: GraduationCap, nombre: "Universidades y CBC" },
+              { icono: Building2, nombre: "Instituciones públicas" },
+              { icono: Users, nombre: "Centros de estudiantes" },
+              { icono: HeartHandshake, nombre: "ONGs educativas" },
+              { icono: Languages, nombre: "Comunidades de idiomas" },
+            ].map((p) => (
+              <span
+                key={p.nombre}
+                className="inline-flex items-center gap-2 rounded-full border border-borde bg-fondo px-4 py-2 text-sm font-semibold text-texto-suave"
+              >
+                <p.icono className="h-4 w-4 text-accent" />
+                {p.nombre}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FOOTER ============ */}
+      <footer className="bg-slate-50">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-12 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xl font-extrabold text-texto">
+              Tinku<span className="text-accent">.</span>
+            </p>
+            <p className="mt-2 max-w-sm text-sm text-texto-suave">
+              Tutorías en línea con Tutores verificados, pagos protegidos y
+              aulas seguras para menores.
+            </p>
+          </div>
+          <nav className="flex flex-col gap-2 text-sm">
+            <Link href="/buscar" className="font-semibold text-texto transition-colors hover:text-accent">
+              Encontrar un Tutor
+            </Link>
+            <Link href="/registro" className="font-semibold text-texto transition-colors hover:text-accent">
+              Crear mi cuenta
+            </Link>
+            <Link href="/registro/tutor" className="font-semibold text-texto transition-colors hover:text-accent">
+              Quiero enseñar
+            </Link>
+          </nav>
+        </div>
+        <p className="border-t border-borde py-5 text-center text-xs text-texto-suave">
+          © 2026 Tinku · Tutorías en línea para toda Argentina
+        </p>
+      </footer>
     </main>
   );
 }
