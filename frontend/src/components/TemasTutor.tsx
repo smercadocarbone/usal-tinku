@@ -8,6 +8,9 @@ import {
   mensajeDeError,
   type NivelCatalogo,
 } from "@/lib/api";
+import { AlertCircle, CloudCheck, Loader2 } from "lucide-react";
+
+const GUARDADO_OK = "Cambios guardados.";
 
 const NOMBRE_NIVEL: Record<string, string> = {
   primario: "Primario",
@@ -65,7 +68,7 @@ export default function TemasTutor() {
     const id = setTimeout(() => {
       setEstado("Guardando…");
       setMisTemas(Array.from(seleccion))
-        .then(() => setEstado("Cambios guardados."))
+        .then(() => setEstado(GUARDADO_OK))
         .catch((err) =>
           setEstado(
             mensajeDeError(err, "No se pudieron guardar los cambios. Intentá de nuevo.")
@@ -224,15 +227,22 @@ export default function TemasTutor() {
       {estado && (
         <p
           className={
-            estado === "Cambios guardados."
-              ? "mt-2 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
+            estado === GUARDADO_OK
+              ? "mt-2 flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
               : estado.startsWith("Guardando")
-                ? "mt-2 text-[0.9rem] text-texto-suave"
-                : "mt-2 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
+                ? "mt-2 flex items-center gap-1 text-[0.9rem] text-texto-suave"
+                : "mt-2 flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
           }
           role={estado.startsWith("No se pudieron") ? "alert" : "status"}
         >
-          {estado}
+          {estado.startsWith("Guardando") ? (
+            <Loader2 className="animate-spin" size={16} />
+          ) : estado === GUARDADO_OK ? (
+            <CloudCheck className="text-exito" size={16} />
+          ) : (
+            <AlertCircle size={16} />
+          )}
+          {estado === GUARDADO_OK ? "Guardado automático" : estado}
         </p>
       )}
     </section>

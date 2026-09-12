@@ -4,17 +4,16 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
-import { formatearFechaCorta } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
-import TemasTutor from "@/components/TemasTutor";
+import TabHorarios from "@/components/tutor/TabHorarios";
+import TabMaterias from "@/components/tutor/TabMaterias";
+import TabPrecio from "@/components/tutor/TabPrecio";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
   MENOR: "Menor",
   TUTOR: "Tutor",
 };
-
-const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 
 const LABEL_ESTADO_SOLICITUD: Record<string, string> = {
   pendiente: "Pendiente",
@@ -23,15 +22,13 @@ const LABEL_ESTADO_SOLICITUD: Record<string, string> = {
   rechazada: "Rechazada",
 };
 
-interface Franja {
-  id: string;
-  tutorId: string;
-  diaSemana: number | null;
-  fechaEspecifica: string | null;
-  horaInicio: string;
-  horaFin: string;
-  activa: boolean;
-}
+const TABS = [
+  { id: "horarios", label: "Mis Horarios" },
+  { id: "materias", label: "Mis Materias" },
+  { id: "precio", label: "Configuración de Precio" },
+] as const;
+
+type IdTab = (typeof TABS)[number]["id"];
 
 interface Solicitud {
   id: string;
@@ -51,11 +48,6 @@ interface ReservaResponse {
   [key: string]: unknown;
 }
 
-function parseMinutos(hora: string): number {
-  const [h, m] = hora.split(":").map(Number);
-  return h * 60 + m;
-}
-
 function formatFechaHoraEsAr(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("es-AR", {
@@ -68,223 +60,80 @@ function formatFechaHoraEsAr(iso: string): string {
 }
 
 function PanelTutor({ tutorId }: { tutorId: string }) {
-  const [tipoFranja, setTipoFranja] = useState<"semanal" | "puntual">("semanal");
-  const [diaSemana, setDiaSemana] = useState<string>("1");
-  const [fechaEspecifica, setFechaEspecifica] = useState("");
-  const [horaInicio, setHoraInicio] = useState("10:00");
-  const [horaFin, setHoraFin] = useState("11:00");
-  const [franjas, setFranjas] = useState<Franja[]>([]);
-  const [error, setError] = useState("");
-  const [exito, setExito] = useState("");
-  const [procesando, setProcesando] = useState(false);
-  const [cargandoLista, setCargandoLista] = useState(true);
-  const [listaPendiente, setListaPendiente] = useState(false);
-
-  function cargarFranjas() {
-    setCargandoLista(true);
-    setListaPendiente(false);
-    api
-      .get<Franja[]>(`/api/tutores/${tutorId}/franjas`)
-      .then(setFranjas)
-      .catch(() => {
-        setListaPendiente(true);
-      })
-      .finally(() => setCargandoLista(false));
-  }
-
-  useEffect(() => {
-    cargarFranjas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function publicar(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setExito("");
-
-    if (tipoFranja === "puntual" && !fechaEspecifica) {
-      setError("Elegí una fecha para la franja puntual.");
-      return;
-    }
-
-    const minsInicio = parseMinutos(horaInicio);
-    const minsFin = parseMinutos(horaFin);
-    const duracion = minsFin - minsInicio;
-    if (duracion < 30 || duracion > 180) {
-      setError("La duración de la franja debe ser entre 30 y 180 minutos.");
-      return;
-    }
-
-    const datos = {
-      diaSemana: tipoFranja === "semanal" ? Number(diaSemana) : null,
-      fechaEspecifica: tipoFranja === "puntual" ? fechaEspecifica : null,
-      horaInicio,
-      horaFin,
-    };
-
-    setProcesando(true);
-    api
-      .post("/api/tutores/franjas", datos)
-      .then(() => {
-        setExito("Franja publicada.");
-        setHoraInicio("10:00");
-        setHoraFin("11:00");
-        setFechaEspecifica("");
-        cargarFranjas();
-      })
-      .catch((err) => {
-        if (err instanceof ApiError) setError(err.message);
-        else setError("Error inesperado.");
-      })
-      .finally(() => setProcesando(false));
-  }
+  const [tab, setTab] = useState<IdTab>("horarios");
 
   return (
     <section className="mt-8">
-      <h2>Panel del tutor</h2>
       <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
         Tus credenciales estan en revision por el equipo de Tinku.
       </div>
 
-      <div className="mt-4 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
-        <form className="flex flex-col gap-4" onSubmit={publicar}>
-          <p className="mb-2 font-semibold">Tipo de franja</p>
-          <div className="flex flex-col gap-2 rounded-lg border border-borde bg-stone-50 p-3" role="group" aria-label="Tipo de franja">
-            <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
-              <input
-                type="radio"
-                name="tipoFranja"
-                value="semanal"
-                className="mt-[0.2rem] accent-accent"
-                checked={tipoFranja === "semanal"}
-                onChange={() => setTipoFranja("semanal")}
-              />
-              Semanal
-            </label>
-            <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
-              <input
-                type="radio"
-                name="tipoFranja"
-                value="puntual"
-                className="mt-[0.2rem] accent-accent"
-                checked={tipoFranja === "puntual"}
-                onChange={() => setTipoFranja("puntual")}
-              />
-              Puntual
-            </label>
-          </div>
-
-          {tipoFranja === "semanal" ? (
-            <div className="flex flex-col gap-[0.35rem]">
-              <label htmlFor="diaSemana" className="text-[0.85rem] font-semibold">Dia de la semana</label>
-              <select
-                id="diaSemana"
-                value={diaSemana}
-                onChange={(e) => setDiaSemana(e.target.value)}
-                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {DIAS.map((d, i) => (
-                  <option key={d} value={i}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-[0.35rem]">
-              <label htmlFor="fechaEspecifica" className="text-[0.85rem] font-semibold">Fecha</label>
-              <input
-                id="fechaEspecifica"
-                type="date"
-                value={fechaEspecifica}
-                onChange={(e) => setFechaEspecifica(e.target.value)}
-                required
-                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </div>
-          )}
-
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="horaInicio" className="text-[0.85rem] font-semibold">Hora de inicio</label>
-            <input
-              id="horaInicio"
-              type="time"
-              value={horaInicio}
-              onChange={(e) => setHoraInicio(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="horaFin" className="text-[0.85rem] font-semibold">Hora de fin</label>
-            <input
-              id="horaFin"
-              type="time"
-              value={horaFin}
-              onChange={(e) => setHoraFin(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
-              {error}
-            </div>
-          )}
-          {exito && (
-            <div className="rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
-              {exito}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={procesando}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+        {/* Sidebar */}
+        <aside className="w-full shrink-0 lg:w-52">
+          <nav
+            className="no-scrollbar flex gap-2 overflow-x-auto border-b border-borde pb-3 lg:flex-col lg:gap-1 lg:border-0 lg:pb-0"
+            aria-label="Navegación del panel del tutor"
           >
-            {procesando ? "Publicando..." : "Publicar franja"}
-          </button>
-        </form>
-      </div>
-
-      <h3 className="mt-6">Mis franjas</h3>
-      {cargandoLista ? (
-        <p className="text-texto-suave">Cargando...</p>
-      ) : listaPendiente ? (
-        <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
-          El listado de franjas esta pendiente en backend.
-        </div>
-      ) : franjas.length === 0 ? (
-        <p className="text-texto-suave">
-          No publicaste franjas todavia.
-        </p>
-      ) : (
-        <ul className="mt-2 list-none p-0">
-          {franjas.map((f) => (
-            <li
-              key={f.id}
-              className="flex justify-between gap-4 border-b border-borde py-3"
-            >
-              <span>
-                {f.diaSemana !== null
-                  ? `${DIAS[f.diaSemana]} de ${f.horaInicio} a ${f.horaFin}`
-                  : `${formatearFechaCorta(f.fechaEspecifica!)} de ${f.horaInicio} a ${f.horaFin}`}
-              </span>
-              <span
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                aria-pressed={tab === t.id}
                 className={
-                  f.activa
-                    ? "text-[0.85rem] font-medium text-accent"
-                    : "text-[0.85rem] font-medium text-texto-suave"
+                  tab === t.id
+                    ? "cursor-pointer whitespace-nowrap rounded-lg bg-teal-600 px-3.5 py-2 text-left text-[0.9rem] font-semibold text-white transition-all duration-200"
+                    : "cursor-pointer whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
                 }
               >
-                {f.activa ? "Activa" : "Inactiva"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+                {t.label}
+              </button>
+            ))}
+            <Link
+              href="/cuenta/reservas"
+              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
+            >
+              Mis reservas
+            </Link>
+            <Link
+              href="/buscar"
+              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
+            >
+              Buscar tutores
+            </Link>
+          </nav>
+        </aside>
+
+        {/* Área principal */}
+        <div className="min-w-0 flex-1 rounded-xl bg-slate-50 p-4 sm:p-6">
+          <div className="border-b border-gray-200">
+            <nav className="flex gap-6" aria-label="Secciones del panel del tutor">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  aria-pressed={tab === t.id}
+                  className={
+                    tab === t.id
+                      ? "cursor-pointer border-b-2 border-accent pb-3 text-[0.95rem] font-semibold text-accent transition-all duration-200"
+                      : "cursor-pointer border-b-2 border-transparent pb-3 text-[0.95rem] font-medium text-texto-suave transition-all duration-200 hover:text-texto"
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="mt-6 w-full rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta">
+            {tab === "horarios" && <TabHorarios tutorId={tutorId} />}
+            {tab === "materias" && <TabMaterias />}
+            {tab === "precio" && <TabPrecio />}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -636,7 +485,7 @@ export default function CuentaPage() {
     <>
       <Cabecera />
 
-      <main className="mx-auto max-w-[44rem] px-5 py-8">
+      <main className="mx-auto max-w-[64rem] px-5 py-8">
         <h1>Mi cuenta</h1>
         <p>
           Tu espacio en Tinku. Busca un tutor, reserva una clase y segui tus
@@ -684,7 +533,6 @@ export default function CuentaPage() {
         </dl>
 
         {payload?.tipo === "TUTOR" && <PanelTutor tutorId={String(payload.sub)} />}
-        {payload?.tipo === "TUTOR" && <TemasTutor />}
         {payload?.cap_ar === true && <PanelAdulto />}
       </main>
     </>
