@@ -160,7 +160,7 @@ class IdentidadFlujosIntegracionTest {
     @Test
     void us1_adultoSeRegistra_yLoguea_yQuedaActivo() throws Exception {
         when(ocrService.procesarDocumento(any(), any()))
-                .thenReturn(resultado("12345678", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
+                .thenReturn(resultado("12345678", "Ana", "Gomez", LocalDate.of(1990, 5, 15)));
 
         registrarAdulto("12345678", "Ana", "Gomez", true, false);
 
@@ -185,18 +185,19 @@ class IdentidadFlujosIntegracionTest {
     void us1_rechazaRegistroPorDniDuplicado_cuandoElOcrExtraeUnDniYaRegistrado() throws Exception {
         // Primer adulto: el OCR extrae 87654321.
         when(ocrService.procesarDocumento(any(), any()))
-                .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
+                .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1990, 5, 15)));
         registrarAdulto("87654321", "Ana", "Gomez", true, false);
 
-        // Segundo intento con DNI declarado distinto, pero el OCR vuelve a
-        // extraer el mismo 87654321 (documento real del mismo titular):
-        // la unicidad es contra el DNI EXTRAÍDO (FR-ID-001/018) -> 409.
+        // Segundo intento con el MISMO DNI que el documento real (87654321), que
+        // ya está registrado: la unicidad es contra el DNI EXTRAÍDO
+        // (FR-ID-001/018) -> 409. Declara el mismo número, si declarara uno
+        // distinto al del documento caería antes en "datos no coinciden" (422).
         when(ocrService.procesarDocumento(any(), any()))
-                .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
+                .thenReturn(resultado("87654321", "Ana", "Gomez", LocalDate.of(1990, 5, 15)));
         mockMvc.perform(multipart("/api/usuarios/registro")
                         .file(jsonPart("datos", new RegistroAdultoRequest(
-                                "99999999", "Ana", "Gomez", LocalDate.of(1985, 3, 10),
-                                "99999999@tinku.test", PASSWORD, true, false)))
+                                "87654321", "Ana", "Gomez", LocalDate.of(1990, 5, 15),
+                                "87654321@tinku.test", PASSWORD, true, false)))
                         .file(foto()))
                 .andExpect(status().isConflict());
     }
@@ -245,14 +246,61 @@ class IdentidadFlujosIntegracionTest {
     }
 
     @Test
+    void verificarDni_422_cuandoLaFechaDeclaradaNoCoincideConLaDelDocumento() throws Exception {
+        // El OCR leyó el documento y su fecha de nacimiento es otra: el
+        // rechazo es "datos no coinciden" (422), NUNCA "menor de edad" (403)
+        // aunque la fecha del documento corresponda a un menor.
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("45555555", "Tomas", "Lopez", LocalDate.of(2012, 6, 1)));
+
+        mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                        .file(jsonPart("datos", new VerificarDniRequest(
+                                "45555555", "Tomas", "Lopez", LocalDate.of(1985, 3, 10))))
+                        .file(foto()))
+                .andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                        .file(jsonPart("datos", new VerificarDniRequest(
+                                "45555555", "Tomas", "Lopez", LocalDate.of(2012, 6, 1))))
+                        .file(foto()))
+                .andExpect(status().isForbidden()); // con la fecha correcta, sí es menor
+        assertThat(usuarioRepository.findByDni("45555555")).isEmpty();
+    }
+
+    @Test
+    void verificarDni_422_cuandoElDniDeclaradoNoCoincideConElDelDocumento() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("46666666", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
+
+        mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                        .file(jsonPart("datos", new VerificarDniRequest(
+                                "12345678", "Ana", "Gomez", LocalDate.of(1985, 3, 10))))
+                        .file(foto()))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(usuarioRepository.findByDni("46666666")).isEmpty();
+    }
+
+    @Test
+    void verificarDni_503_cuandoElOcrNoEstaDisponible_yNoConsumeReintentos() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenThrow(new com.tinku.identidad.service.OcrNoDisponibleException());
+
+        mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                        .file(jsonPart("datos", new VerificarDniRequest(
+                                "47777777", "Ana", "Gomez", LocalDate.of(1985, 3, 10))))
+                        .file(foto()))
+                .andExpect(status().isServiceUnavailable());
+        assertThat(usuarioRepository.findByDni("47777777")).isEmpty();
+    }
+
+    @Test
     void verificarDni_409_cuandoElDniYaTieneCuenta() throws Exception {
         when(ocrService.procesarDocumento(any(), any()))
-                .thenReturn(resultado("45454545", "Ana", "Gomez", LocalDate.of(1985, 3, 10)));
+                .thenReturn(resultado("45454545", "Ana", "Gomez", LocalDate.of(1990, 5, 15)));
         registrarAdulto("45454545", "Ana", "Gomez", true, false);
 
         mockMvc.perform(multipart("/api/usuarios/verificar-dni")
                         .file(jsonPart("datos", new VerificarDniRequest(
-                                "45454545", "Ana", "Gomez", LocalDate.of(1985, 3, 10))))
+                                "45454545", "Ana", "Gomez", LocalDate.of(1990, 5, 15))))
                         .file(foto()))
                 .andExpect(status().isConflict());
     }

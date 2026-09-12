@@ -321,11 +321,18 @@ public class UsuarioService {
     }
 
     /**
-     * Pasos compartidos de los flujos de registro (FR-ID-019): lectura OCR (chunk register-flow-redesign: wizard de registro en 4 pasos (rol -> datos -> verificacion DNI -> credenciales con email) + email como credencial en backend + endpoints verificar-dni sin creacion de cuenta)
-     * del documento, distinción ilegible/no-coincide y devolución del resultado.
-     * El backoff (FR-ID-011), el check de edad y la unicidad del DNI se
-     * orquestan en la compuerta común adulto/Tutor (compuertaRegistroAdulto);
-     * el flujo de menor los aplica en un orden propio (ver javadoc de la clase).
+     * Pasos compartidos de los flujos de registro (FR-ID-019): lectura OCR
+     * del documento, distinción ilegible/no-coincide/servicio-caído y
+     * devolución del resultado.
+     *
+     * <p>Orden de fallos, intencional: si el OCR no está disponible, el
+     * usuario no puede hacer nada — se rechaza ANTES de consumir la foto; si
+     * la foto no se lee, es ilegible (consume backoff FR-ID-011); si se leyó
+     * pero los datos declarados no coinciden con los del documento (nombre,
+     * apellido, fecha de nacimiento o número de DNI), es "no coincide".
+     * Recién después se evalúa la edad, siempre sobre lo EXTRAÍDO (nunca lo
+     * declarado) — por eso un DNI con fecha que no coincide jamás cae en
+     * "menor de edad": primero se rechaza el dato que no coincide.
      */
     private ResultadoOcr validarDocumento(String dniDeclarado, String nombreDeclarado,
                                           String apellidoDeclarado, LocalDate fechaNacimientoDeclarada,
@@ -333,15 +340,38 @@ public class UsuarioService {
         ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
                 new DatosDniDeclarados(dniDeclarado, nombreDeclarado,
                         apellidoDeclarado, fechaNacimientoDeclarada));
+        // OcrNoDisponibleException propaga tal cual: no es falta del usuario,
+        // no consume reintentos y se traduce a 503 en el handler.
         if (!ocr.documentoLegible()) {
             ocrBackoffService.registrarIntentoFallido(dniDeclarado);
             throw new DocumentoIlegibleException();
         }
-        if (!coincideAproximado(nombreDeclarado, ocr.nombreExtraido())
-                || !coincideAproximado(apellidoDeclarado, ocr.apellidoExtraido())) {
+        if (!mismaIdentidad(dniDeclarado, nombreDeclarado, apellidoDeclarado,
+                fechaNacimientoDeclarada, ocr)) {
             throw new DocumentoNoCoincideException();
         }
         return ocr;
+    }
+
+    /**
+     * Todo lo que el usuario declaró en el formulario debe coincidir con lo
+     * que el OCR leyó del documento: número de DNI, nombre, apellido y fecha
+     * de nacimiento. Nombre/apellido comparan sin acentos y sin distinguir
+     * mayúsculas/minúsculas (el documento suele venir en MAYÚSCULAS); el DNI
+     * ignora separadores de miles; la fecha se compara exacta.
+     */
+    private boolean mismaIdentidad(String dniDeclarado, String nombreDeclarado,
+                                   String apellidoDeclarado, LocalDate fechaNacimientoDeclarada,
+                                   ResultadoOcr ocr) {
+        return soloDigitos(dniDeclarado).equals(soloDigitos(ocr.dniExtraido()))
+                && coincideAproximado(nombreDeclarado, ocr.nombreExtraido())
+                && coincideAproximado(apellidoDeclarado, ocr.apellidoExtraido())
+                && fechaNacimientoDeclarada != null
+                && fechaNacimientoDeclarada.equals(ocr.fechaNacimientoExtraida());
+    }
+
+    private String soloDigitos(String s) {
+        return s == null ? "" : s.replaceAll("\\D", "");
     }
 
     private boolean coincideAproximado(String declarado, String extraido) {

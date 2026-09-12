@@ -9,6 +9,6 @@ package com.tinku.identidad.service;
  */
 public class DocumentoIlegibleException extends RuntimeException {
     public DocumentoIlegibleException() {
-        super("No pudimos leer tu documento. Probá con otra foto.");
+        super("No pudimos leer tu documento en la foto. Intentá de nuevo con más luz, sin reflejos y bien encuadrado.");
     }
 }

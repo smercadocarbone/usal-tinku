@@ -27,6 +27,13 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(OcrNoDisponibleException.class)
+    public ResponseEntity<Map<String, String>> handleOcrNoDisponible(OcrNoDisponibleException ex) {
+        // 503: el proveedor de OCR falló en sí mismo (no es culpa del usuario
+        // ni de la foto) — no consume los reintentos del ciclo FR-ID-011.
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(EdadInsuficienteException.class)
     public ResponseEntity<Map<String, String>> handleEdadInsuficiente(EdadInsuficienteException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));

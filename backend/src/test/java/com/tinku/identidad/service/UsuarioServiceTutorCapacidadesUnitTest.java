@@ -61,7 +61,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
     void registrarTutorExitoso() {
         when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
-                        LocalDate.now().minusYears(25)));
+                        LocalDate.of(1990, 1, 1))); // coincide con la declarada en tutorRequest()
         when(passwordEncoder.encode("password123")).thenReturn("hash");
         when(usuarioRepo.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -76,12 +76,15 @@ class UsuarioServiceTutorCapacidadesUnitTest {
 
     @Test
     void registrarTutorMenorDe18RechazaSinExcepciones() {
+        RegistroTutorRequest menor = new RegistroTutorRequest(
+                "12345678", "JUAN", "PEREZ", LocalDate.now().minusYears(15),
+                "12345678@tinku.test", "password123");
         when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
-                        LocalDate.now().minusYears(15))); // 15 años
+                        LocalDate.now().minusYears(15))); // 15 años, coherente con lo declarado
 
         assertThrows(EdadInsuficienteException.class,
-                () -> service.registrarTutor(tutorRequest(), new byte[]{1}));
+                () -> service.registrarTutor(menor, new byte[]{1}));
         verify(usuarioRepo, never()).save(any());
     }
 
@@ -98,7 +101,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
     void registrarTutorNombreNoCoincideRechaza() {
         when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "OTRO", "PEREZ",
-                        LocalDate.now().minusYears(25)));
+                        LocalDate.of(1990, 1, 1)));
 
         assertThrows(DocumentoNoCoincideException.class,
                 () -> service.registrarTutor(tutorRequest(), new byte[]{1}));
@@ -108,7 +111,7 @@ class UsuarioServiceTutorCapacidadesUnitTest {
     void registrarTutorDniDuplicadoRechaza() {
         when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
                 .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
-                        LocalDate.now().minusYears(25)));
+                        LocalDate.of(1990, 1, 1)));
         when(usuarioRepo.existsByDni("12345678")).thenReturn(true);
 
         assertThrows(DniYaRegistradoException.class,
