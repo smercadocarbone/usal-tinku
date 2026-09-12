@@ -1,5 +1,6 @@
 package com.tinku.identidad.ocr;
 
+import com.tinku.identidad.service.OcrNoDisponibleException;
 import net.sourceforge.tess4j.ITessAPI;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
@@ -81,11 +82,14 @@ public class TesseractOcrService implements OcrService {
                 return ResultadoOcr.ilegible();
             }
             return dniParser.parse(lineas);
-        } catch (Exception e) {
-            // Falla de lectura de OCR → se trata como documento ilegible
-            // (reintentos + backoff FR-ID-011), no como rechazo de identidad.
-            log.warn("Falló el OCR de documento: {}", e.getMessage());
-            return ResultadoOcr.ilegible();
+        } catch (Exception | UnsatisfiedLinkError e) {
+            // Falla del PROVEEDOR en sí (binario nativo faltante, data de
+            // idioma, Tesseract caído): es distinto de "leyó y no encontró
+            // datos" (inelegible -> reintentos FR-ID-011). Este caso es
+            // falta del servicio, no del usuario: NO consume reintentos y el
+            // handler lo traduce a 503 ("intentá en unos minutos").
+            log.warn("El lector de documentos no está disponible (¿Tesseract instalado?): {}", e.getMessage());
+            throw new OcrNoDisponibleException();
         }
     }
 

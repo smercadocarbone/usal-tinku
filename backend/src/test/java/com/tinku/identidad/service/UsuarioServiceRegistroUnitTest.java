@@ -66,6 +66,12 @@ class UsuarioServiceRegistroUnitTest {
                 "password123", true, "v1");
     }
 
+    private RegistroMenorRequest requestConFecha(LocalDate fecha) {
+        return new RegistroMenorRequest(
+                "12345678", "JUAN", "PEREZ", fecha,
+                "password123", true, "v1");
+    }
+
     @Test
     void registrarMenorExitosoCreaMenorYConsentimiento() {
         when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
@@ -97,7 +103,7 @@ class UsuarioServiceRegistroUnitTest {
                 .thenReturn(0L);
 
         assertThrows(EdadInsuficienteException.class,
-                () -> service.registrarMenor(request(), new byte[]{1}, adulto()));
+                () -> service.registrarMenor(requestConFecha(LocalDate.now().minusYears(5)), new byte[]{1}, adulto()));
         verify(consentimientoRepo, never()).save(any());
     }
 
@@ -110,7 +116,7 @@ class UsuarioServiceRegistroUnitTest {
                 .thenReturn(0L);
 
         assertThrows(EdadInsuficienteException.class,
-                () -> service.registrarMenor(request(), new byte[]{1}, adulto()));
+                () -> service.registrarMenor(requestConFecha(LocalDate.now().minusYears(19)), new byte[]{1}, adulto()));
     }
 
     @Test
@@ -184,5 +190,65 @@ class UsuarioServiceRegistroUnitTest {
         assertThrows(DocumentoEnBackoffException.class,
                 () -> service.registrarAdulto(adult, new byte[]{1}));
         verify(ocrService, never()).procesarDocumento(any(), any());
+    }
+
+    @Test
+    void registrarMenorFechaNacimientoNoCoincideRechaza() {
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
+                .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
+                        LocalDate.of(2013, 1, 1))); // distinta a la declarada (2014-05-05)
+        when(usuarioRepo.countByAdultoResponsableIdAndTipo(any(), eq(TipoUsuario.MENOR)))
+                .thenReturn(0L);
+
+        assertThrows(DocumentoNoCoincideException.class,
+                () -> service.registrarMenor(request(), new byte[]{1}, adulto()));
+    }
+
+    @Test
+    void registrarAdultoDniDeclaradoNoCoincideRechaza() {
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
+                .thenReturn(new ResultadoOcr(true, "99999999", "JUAN", "PEREZ",
+                        LocalDate.of(1990, 1, 1))); // el documento tiene otro número
+        com.tinku.identidad.dto.RegistroAdultoRequest adult =
+                new com.tinku.identidad.dto.RegistroAdultoRequest(
+                        "12345678", "JUAN", "PEREZ", LocalDate.of(1990, 1, 1),
+                        "12345678@tinku.test", "password123", true, false);
+
+        assertThrows(DocumentoNoCoincideException.class,
+                () -> service.registrarAdulto(adult, new byte[]{1}));
+        verify(ocrBackoffService, never()).registrarIntentoFallido("12345678");
+    }
+
+    @Test
+    void registroConOcrNoDisponiblePropagaSinConsumirBackoff() {
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
+                .thenThrow(new OcrNoDisponibleException());
+        com.tinku.identidad.dto.RegistroAdultoRequest adult =
+                new com.tinku.identidad.dto.RegistroAdultoRequest(
+                        "12345678", "JUAN", "PEREZ", LocalDate.of(1990, 1, 1),
+                        "12345678@tinku.test", "password123", true, false);
+
+        assertThrows(OcrNoDisponibleException.class,
+                () -> service.registrarAdulto(adult, new byte[]{1}));
+        // No es culpa del usuario: no consume el ciclo de reintentos (FR-ID-011).
+        verify(ocrBackoffService, never()).registrarIntentoFallido("12345678");
+    }
+
+    @Test
+    void registrarAdultoCoincideAunqueElDocumentoEsteEnMayusculas() {
+        when(ocrService.procesarDocumento(eq(new byte[]{1}), any()))
+                .thenReturn(new ResultadoOcr(true, "12345678", "JUAN", "PEREZ",
+                        LocalDate.of(1990, 1, 1))); // documento en MAYÚSCULAS
+        com.tinku.identidad.dto.RegistroAdultoRequest adult =
+                new com.tinku.identidad.dto.RegistroAdultoRequest(
+                        "12345678", "juan", "Perez", LocalDate.of(1990, 1, 1),
+                        "12345678@tinku.test", "password123", true, false);
+        when(passwordEncoder.encode("password123")).thenReturn("hash");
+        when(usuarioRepo.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario creado = service.registrarAdulto(adult, new byte[]{1});
+
+        assertEquals(TipoUsuario.ADULTO, creado.getTipo());
+        assertEquals("12345678", creado.getDni());
     }
 }

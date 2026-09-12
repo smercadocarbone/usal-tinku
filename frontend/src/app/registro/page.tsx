@@ -60,6 +60,12 @@ export default function RegistroPage() {
   const [error, setError] = useState<string | null>(null);
   const [menorDeEdad, setMenorDeEdad] = useState(false);
 
+  function irAPaso(n: number) {
+    setError(null);
+    setMenorDeEdad(false);
+    setPaso(n);
+  }
+
   function verificarDni() {
     if (!fotoDni) {
       setError("Subí la foto de tu DNI para verificarlo.");
@@ -221,7 +227,7 @@ export default function RegistroPage() {
                 type="button"
                 className={btnPrimario}
                 disabled={!rol}
-                onClick={() => setPaso(1)}
+                onClick={() => irAPaso(1)}
               >
                 Continuar
               </button>
@@ -240,7 +246,7 @@ export default function RegistroPage() {
               className="flex flex-col gap-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                setPaso(2);
+                irAPaso(2);
               }}
             >
               <div className="grid grid-cols-2 gap-4">
@@ -327,7 +333,7 @@ export default function RegistroPage() {
               )}
 
               <footer className="flex items-center justify-between gap-3">
-                <button type="button" className={btnFantasma} onClick={() => setPaso(0)}>
+                <button type="button" className={btnFantasma} onClick={() => irAPaso(0)}>
                   Volver
                 </button>
                 <button
@@ -394,7 +400,7 @@ export default function RegistroPage() {
               </div>
 
               <footer className="flex items-center justify-between gap-3">
-                <button type="button" className={btnFantasma} onClick={() => setPaso(1)}>
+                <button type="button" className={btnFantasma} onClick={() => irAPaso(1)}>
                   Volver
                 </button>
                 <button
@@ -478,7 +484,7 @@ export default function RegistroPage() {
               </div>
 
               <footer className="flex items-center justify-between gap-3">
-                <button type="button" className={btnFantasma} onClick={() => setPaso(2)}>
+                <button type="button" className={btnFantasma} onClick={() => irAPaso(2)}>
                   Volver
                 </button>
                 <button
