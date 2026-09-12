@@ -3,15 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { formatearFechaCorta } from "@/lib/formatos";
-import { Loader2 } from "lucide-react";
-import GrillaHoraria, {
+import WeeklyAvailabilityGrid, {
   INICIO_DIA,
-  FIN_DIA,
-  MAX_FRANJA_FILAS,
-  filaEnRango,
+  ULTIMA_FILA,
+  rangosDe,
   type Ocupada,
   type Seleccion,
-} from "./GrillaHoraria";
+} from "./WeeklyAvailabilityGrid";
 
 export interface Franja {
   id: string;
@@ -88,21 +86,6 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
     cargarFranjas();
   }, [cargarFranjas]);
 
-  function manejarCelda(columna: string, fila: number) {
-    setSeleccion((prev) => {
-      const cur = prev[columna] ?? null;
-      if (!cur) return { ...prev, [columna]: { anchor: fila, hasta: fila } };
-      if (fila === cur.anchor) {
-        const next = { ...prev };
-        delete next[columna];
-        return next;
-      }
-      const rango = filaEnRango({ anchor: cur.anchor, hasta: fila });
-      if (rango && rango[1] - rango[0] + 1 > MAX_FRANJA_FILAS) return prev;
-      return { ...prev, [columna]: { anchor: cur.anchor, hasta: fila } };
-    });
-  }
-
   /** Franjas ya publicadas, mapeadas a bloques de la grilla del modo activo. */
   function ocupadas(): Ocupada[] {
     return franjas
@@ -110,8 +93,8 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
       .flatMap<Ocupada>((f) => {
         const desde = Number(f.horaInicio.slice(0, 2));
         const hasta = Number(f.horaFin.slice(0, 2)) - 1;
-        if (desde < INICIO_DIA || desde > FIN_DIA) return [];
-        const filaHasta = Math.min(hasta, FIN_DIA);
+        if (desde < INICIO_DIA || desde > ULTIMA_FILA) return [];
+        const filaHasta = Math.min(hasta, ULTIMA_FILA);
         if (f.diaSemana !== null) {
           // columna del grid = (diaSemana + 6) % 7 (Lunes=1 → col 0).
           const columna = `s${(f.diaSemana + 6) % 7}`;
@@ -127,14 +110,14 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
   function peticionesDeSeleccion(): PeticionFranja[] {
     const peticiones: PeticionFranja[] = [];
     const completar = (columna: string, diaSemana: number | null, fechaEspecifica: string | null) => {
-      const rango = filaEnRango(seleccion[columna]);
-      if (!rango) return;
-      peticiones.push({
-        diaSemana,
-        fechaEspecifica,
-        horaInicio: horaDeFila(rango[0]),
-        horaFin: horaDeFila(rango[1] + 1),
-      });
+      for (const [inicio, fin] of rangosDe(seleccion[columna] ?? [])) {
+        peticiones.push({
+          diaSemana,
+          fechaEspecifica,
+          horaInicio: horaDeFila(inicio),
+          horaFin: horaDeFila(fin + 1),
+        });
+      }
     };
 
     if (modo === "semanal") {
@@ -183,15 +166,12 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
       .finally(() => setPublicando(false));
   }
 
-  const haySeleccion =
-    Object.values(seleccion).some((s) => s !== null && s !== undefined);
-
   return (
     <section aria-label="Mis horarios">
       <h2 className="text-lg font-bold text-texto">Mis horarios</h2>
       <p className="text-[0.9rem] text-texto-suave">
-        Publicá cuándo estás disponible. Tocá un horario y extendé hacia abajo
-        para armar una franja de 1 a {MAX_FRANJA_FILAS} horas.
+        Publicá cuándo estás disponible. Tocá o arrastrá sobre los bloques para
+        pintar franjas de 1 a 3 horas (60min por bloque).
       </p>
 
       {/* Toggle semanal / puntual */}
@@ -246,7 +226,7 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
 
       {/* Grilla */}
       <div className="mt-4">
-        <GrillaHoraria
+        <WeeklyAvailabilityGrid
           columnas={
             modo === "semanal"
               ? COLUMNAS_SEMANAL.map((c) => ({ clave: c.clave, etiqueta: c.etiqueta }))
@@ -256,7 +236,9 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
           }
           ocupadas={ocupadas()}
           seleccion={seleccion}
-          onCelda={manejarCelda}
+          onCambioSeleccion={setSeleccion}
+          onGuardar={publicar}
+          guardando={publicando}
         />
       </div>
 
@@ -265,29 +247,6 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
           Elegí una fecha para ver y cargar tu horario puntual.
         </p>
       )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={publicar}
-          disabled={publicando || !haySeleccion}
-          className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white transition-all duration-200 enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {publicando ? (
-            <>
-              <Loader2 className="mr-1 inline animate-spin" size={16} />
-              Publicando…
-            </>
-          ) : (
-            "Publicar franjas"
-          )}
-        </button>
-        {haySeleccion && (
-          <span className="text-[0.8rem] text-texto-suave">
-            Se publicará una franja por día seleccionado.
-          </span>
-        )}
-      </div>
 
       {error && (
         <div
