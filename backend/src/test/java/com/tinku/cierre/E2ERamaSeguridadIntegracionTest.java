@@ -143,7 +143,7 @@ class E2ERamaSeguridadIntegracionTest {
         when(almacenamiento.guardar(any(), any()))
                 .thenReturn("https://cdn.test/" + UUID.randomUUID() + ".png");
         when(mercadopago.crearPreferencia(any()))
-                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock"));
+                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
     }
 
     // ---------------------------------------------------------------- helpers

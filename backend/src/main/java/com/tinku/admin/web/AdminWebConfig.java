@@ -22,6 +22,11 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(auditoriaInterceptor).addPathPatterns("/api/admin/**");
+        // /api/admin/salud queda EXCLUIDA: sondear infraestructura es lectura, no
+        // una acción de Admin — auditarla inundaría log_auditoria_admin a cada
+        // refresco del panel.
+        registry.addInterceptor(auditoriaInterceptor)
+                .addPathPatterns("/api/admin/**")
+                .excludePathPatterns("/api/admin/salud");
     }
 }

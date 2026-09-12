@@ -82,7 +82,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         if (respuesta == null || respuesta.id() == null || respuesta.initPoint() == null) {
             throw new MercadoPagoNoDisponibleException();
         }
-        return new PreferenciaPago(respuesta.id(), respuesta.initPoint());
+        return new PreferenciaPago(respuesta.id(), respuesta.initPoint(), false);
     }
 
     @Override

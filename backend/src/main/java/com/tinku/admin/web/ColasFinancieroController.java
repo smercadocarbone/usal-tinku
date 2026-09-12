@@ -7,6 +7,7 @@ import com.tinku.pagos.port.ReembolsoParcialProveedor;
 import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.pagos.service.LiberacionEscrowService;
+import com.tinku.pagos.service.PasarelaService;
 import com.tinku.pagos.web.PrecioReferenciaResponse;
 import com.tinku.shared.AdminModeracionGate;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,17 +57,20 @@ public class ColasFinancieroController {
     private final PrecioReferenciaRegionalRepository precioRepo;
     private final LiberacionEscrowService liberacionEscrow;
     private final ReembolsoParcialProveedor reembolsoParcial;
+    private final PasarelaService pasarela;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
                                      PrecioReferenciaRegionalRepository precioRepo,
                                      LiberacionEscrowService liberacionEscrow,
-                                     ReembolsoParcialProveedor reembolsoParcial) {
+                                     ReembolsoParcialProveedor reembolsoParcial,
+                                     PasarelaService pasarela) {
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;
         this.liberacionEscrow = liberacionEscrow;
         this.reembolsoParcial = reembolsoParcial;
+        this.pasarela = pasarela;
     }
 
     @GetMapping("/pagos-fallidos")
@@ -127,9 +132,42 @@ public class ColasFinancieroController {
                     .body(Map.of("error",
                             "El reembolso parcial requiere escrow retenido y un monto menor al cobrado."));
         }
+        // V22 — transacción en modo Bypass: no hay dinero real que devolver.
+        // El reembolso parcial es una operación contra MercadoPago; reembolsar un
+        // id falso sería inventar una transacción con dinero que nunca existió.
+        if (transaccion.isEnBypass()) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error",
+                            "Transacción simulada (modo Bypass): no hay dinero real que reembolsar."));
+        }
         reembolsoParcial.reembolsarParcial(transaccion.getMpPaymentId(), request.monto());
         return ResponseEntity.ok(PagoFallidoResponse.from(
                 transaccionRepo.findById(transaccionId).orElseThrow()));
+    }
+
+    /**
+     * Estado actual de la pasarela de pagos (V22): {@code habilitada=true} →
+     * cobro real; {@code false} → modo Bypass. Lectura del flag real en base,
+     * nunca cacheado (ver {@link PasarelaService}).
+     */
+    @GetMapping("/pasarela")
+    public ResponseEntity<PasarelaEstadoResponse> pasarela(Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(PasarelaEstadoResponse.from(pasarela.estaHabilitada()));
+    }
+
+    /**
+     * Alternar el modo Bypass de la pasarela. Efecto inmediato en toda llamada
+     * posterior de M5 al proveedor (generarPreferencia, liberación, reembolsos).
+     * Solo Soporte Financiero; la auditoría la registra el interceptor de M8.
+     */
+    @PatchMapping("/pasarela")
+    public ResponseEntity<PasarelaEstadoResponse> actualizarPasarela(
+            @Valid @RequestBody ActualizarPasarelaRequest request,
+            Authentication authentication) {
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(PasarelaEstadoResponse.from(
+                pasarela.establecerHabilitada(request.habilitada(), adminUsuarioId)));
     }
 
     @PostMapping("/precios-regionales")

@@ -205,3 +205,40 @@ export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]
 export function mensajeDeError(err: unknown, fallback: string): string {
   return err instanceof ApiError && err.message ? err.message : fallback;
 }
+
+/* ---- M8 — Panel de administración: salud de infraestructura + pasarela ---- */
+
+export type EstadoServicio = "operational" | "degraded" | "offline";
+
+export interface ServiceStatus {
+  name: string;
+  status: EstadoServicio;
+  latencyMs?: number;
+  lastChecked: string;
+}
+
+export interface SystemHealthDTO {
+  isTestMode: boolean;
+  hasSeedData: boolean;
+  ocrEngine: ServiceStatus;
+  mercadoPago: ServiceStatus;
+  liveKit: ServiceStatus;
+  iaMatching: ServiceStatus;
+  database: ServiceStatus;
+}
+
+export interface PasarelaEstado {
+  habilitada: boolean;
+}
+
+export function getSaludSistema(): Promise<SystemHealthDTO> {
+  return api.get<SystemHealthDTO>("/api/admin/salud");
+}
+
+export function getPasarelaEstado(): Promise<PasarelaEstado> {
+  return api.get<PasarelaEstado>("/api/admin/financiero/pasarela");
+}
+
+export function setPasarelaEstado(habilitada: boolean): Promise<PasarelaEstado> {
+  return api.patch<PasarelaEstado>("/api/admin/financiero/pasarela", { habilitada });
+}

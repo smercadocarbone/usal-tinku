@@ -50,7 +50,10 @@ public interface MercadoPagoClient {
                               BigDecimal comisionPlataforma, String descripcion) {
     }
 
-    record PreferenciaPago(String preferenceId, String initPoint) {
+    /** {@code bypass=true} cuando la preferencia se generó en modo Bypass (V22):
+     * no hay {@code initPoint} porque nunca se le pidió un pago a MercadoPago —
+     * el frontend lo muestra como pago simulado. */
+    record PreferenciaPago(String preferenceId, String initPoint, boolean bypass) {
     }
 
     record PagoMercadoPago(String mpPaymentId, String status, String externalReference,
