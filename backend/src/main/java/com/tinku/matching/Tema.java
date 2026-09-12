@@ -15,7 +15,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 /**
- * Unidad atómica del catálogo (V12, contrato 2a): el TEMA es lo que un Tutor
+ * Unidad atómica del catálogo (V19, contrato 2a): el TEMA es lo que un Tutor
  * elige en su perfil y lo que la descripción alimenta al embedding del motor.
  * "Buscar 'cómo dividir' hace match semántico con el tema 'División', no con
  * 'Matemática 4°'" (Plan_M2_Temas.md sección 1).

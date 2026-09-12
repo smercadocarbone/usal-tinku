@@ -16,7 +16,7 @@ import java.util.UUID;
  * sola lectura (Tema + Trayecto en un join) arma el árbol de
  * {@code GET /api/catalogos}, con filtros opcionales nivel/curso/materia
  * (valores exactos) y valida pertenencia al catálogo vigente para el PUT de
- * temas del Tutor. El seed real entra en V13 (FASE 3); acá solo se lee.
+ * temas del Tutor. El seed real entra en V20 (FASE 3); acá solo se lee.
  */
 @Service
 public class CatalogoService {
