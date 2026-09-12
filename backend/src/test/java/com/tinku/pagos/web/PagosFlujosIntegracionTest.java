@@ -121,7 +121,7 @@ class PagosFlujosIntegracionTest {
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
         when(reputacionBloqueo.tutoresConCalificacionPendiente()).thenReturn(Set.of());
         when(mercadopago.crearPreferencia(any()))
-                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock"));
+                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
     }
 
     // ------------------------------------------------ helpers

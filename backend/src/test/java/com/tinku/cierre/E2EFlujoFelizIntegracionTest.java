@@ -145,7 +145,7 @@ class E2EFlujoFelizIntegracionTest {
         when(almacenamiento.guardar(any(), any()))
                 .thenReturn("https://cdn.test/" + UUID.randomUUID() + ".png");
         when(mercadopago.crearPreferencia(any()))
-                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock"));
+                .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
         when(transcript.transcript(any(UUID.class))).thenReturn(TRANSCRIPT_CON_DATOS);
         when(resumenProveedor.generarResumen(any()))
                 .thenReturn(new ResumenProveedor.ResumenResultado("Resumen de la clase."));

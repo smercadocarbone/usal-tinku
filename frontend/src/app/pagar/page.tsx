@@ -9,6 +9,7 @@ import { formatearPrecio } from "@/lib/formatos";
 interface Preferencia {
   preferenciaId: string;
   initPoint: string;
+  bypass: boolean;
 }
 
 interface ReservaInfo {
@@ -65,7 +66,12 @@ function PagarForm() {
   function irAPagar() {
     if (!preferencia) return;
     setEstado("finalizado");
+    if (preferencia.bypass) return;
     window.location.assign(preferencia.initPoint);
+  }
+
+  function esBypass() {
+    return preferencia?.bypass ?? false;
   }
 
   return (
@@ -94,26 +100,44 @@ function PagarForm() {
               )}
               <div className="flex justify-between gap-4 border-b border-borde py-3">
                 <dt className="font-semibold">Metodo</dt>
-                <dd className="m-0 text-right">MercadoPago</dd>
+                <dd className="m-0 text-right">
+                  {esBypass() ? "Pago simulado" : "MercadoPago"}
+                </dd>
               </div>
             </dl>
           </div>
+          {esBypass() && (
+            <div
+              className="mb-4 w-full rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
+              role="alert"
+            >
+              La pasarela de pagos está deshabilitada: tu reserva se confirmará
+              sin procesar un cobro real. No se debitará ningún monto.
+            </div>
+          )}
           <button
             type="button"
             className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
             onClick={irAPagar}
           >
-            Pagar con MercadoPago
+            {esBypass() ? "Confirmar reserva (simulado)" : "Pagar con MercadoPago"}
           </button>
-          <p className="text-[0.8rem] text-texto-suave">
-            Vas a salir de Tinku y continuar en el sitio de MercadoPago.
-          </p>
+          {!esBypass() && (
+            <p className="text-[0.8rem] text-texto-suave">
+              Vas a salir de Tinku y continuar en el sitio de MercadoPago.
+            </p>
+          )}
         </>
       )}
 
       {estado === "finalizado" && (
-        <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
-          Redirigiendo a MercadoPago...
+        <div
+          className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
+          role="status"
+        >
+          {esBypass()
+            ? "Reserva confirmada en modo simulado. Volvé a mis reservas."
+            : "Redirigiendo a MercadoPago..."}
         </div>
       )}
 

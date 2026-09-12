@@ -62,4 +62,12 @@ public class Transaccion {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    /**
+     * True cuando la transacción nació en modo Bypass (V22): NO hay dinero real
+     * en MercadoPago. Liberación y reembolsos son no-op locales — jamás llamar
+     * al proveedor con un {@code mp_payment_id} falso.
+     */
+    @Column(name = "en_bypass", nullable = false)
+    private boolean enBypass = false;
 }

@@ -280,8 +280,12 @@ public class EscrowService {
         transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 // Única vía de reembolso (Plan §3.3, FR-PAG-009): el port real de
-                // M5-D llama a MP con body vacío. Nunca reimplementado acá.
-                reembolso.reembolsarTotal(t);
+                // M5-D llama a MP con body vacío. En bypass (V22) no hay dinero
+                // real → el reembolso es solo el cambio de estado local, sin
+                // llamar al proveedor con un id falso.
+                if (!t.isEnBypass()) {
+                    reembolso.reembolsarTotal(t);
+                }
                 t.setEstado(EstadoTransaccion.REEMBOLSADO);
                 t.setLiberarAt(null);
                 transaccionRepo.save(t);

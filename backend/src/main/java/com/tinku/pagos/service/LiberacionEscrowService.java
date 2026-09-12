@@ -138,7 +138,11 @@ public class LiberacionEscrowService {
             return; // pausado_denuncia / liberado / reembolsado o inexistente → no-op
         }
         try {
-            liberacion.liberarAlTutor(transaccion);
+            // Bypass (V22): la transacción nació sin dinero real — la liberación
+            // es solo el cambio de estado local, jamás una llamada al proveedor.
+            if (!transaccion.isEnBypass()) {
+                liberacion.liberarAlTutor(transaccion);
+            }
         } catch (RuntimeException e) {
             reintentarOAgotar(transaccion);
             return;

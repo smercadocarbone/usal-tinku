@@ -4,15 +4,18 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.model.TarifaTutor;
+import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaRequest;
 import com.tinku.pagos.repository.PrecioReferenciaRegionalRepository;
 import com.tinku.pagos.repository.TarifaTutorRepository;
+import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
+import com.tinku.reservas.service.ReservaService;
 import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,19 +44,29 @@ public class PagoService {
     private final ComisionPlataforma comision;
     private final PrecioReferenciaRegionalRepository precioReferenciaRepo;
     private final TarifaTutorRepository tarifaTutorRepo;
+    private final TransaccionRepository transaccionRepo;
+    private final ReservaService reservaService;
+    private final PasarelaService pasarela;
 
     public PagoService(ReservaRepository reservaRepo,
                        MercadoPagoClient mercadopago,
                        ComisionPlataforma comision,
                        PrecioReferenciaRegionalRepository precioReferenciaRepo,
-                       TarifaTutorRepository tarifaTutorRepo) {
+                       TarifaTutorRepository tarifaTutorRepo,
+                       TransaccionRepository transaccionRepo,
+                       ReservaService reservaService,
+                       PasarelaService pasarela) {
         this.reservaRepo = reservaRepo;
         this.mercadopago = mercadopago;
         this.comision = comision;
         this.precioReferenciaRepo = precioReferenciaRepo;
         this.tarifaTutorRepo = tarifaTutorRepo;
+        this.transaccionRepo = transaccionRepo;
+        this.reservaService = reservaService;
+        this.pasarela = pasarela;
     }
 
+    @Transactional
     public PreferenciaPago generarPreferencia(Usuario usuario, UUID reservaId) {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
@@ -69,8 +82,34 @@ public class PagoService {
         // FR-PAG-013: el monto es el precio congelado al crear la Reserva (M4).
         // BR-PAG-01: comisión compartida con EscrowService vía ComisionPlataforma.
         BigDecimal comision = this.comision.calcular(reserva.getPrecio());
+        if (!pasarela.estaHabilitada()) {
+            return confirmarEnBypass(reserva, comision);
+        }
         return mercadopago.crearPreferencia(new PreferenciaRequest(
                 reserva.getId(), reserva.getPrecio(), comision, DESCRIPCION_ITEM));
+    }
+
+    /**
+     * Modo Bypass (V22): la pasarela está deshabilitada → NO se llama a
+     * MercadoPago. Se crea la {@code Transaccion} en escrow marcada
+     * {@code en_bypass=true} (sin dinero real) y se confirma la Reserva con el
+     * MISMO flujo que el webhook ({@code confirmarPagoSimulado} → M3 crea la
+     * Sesión). El {@code initPoint} queda {@code null} y {@code bypass=true}: el
+     * frontend lo interpreta como "pago simulado". Idempotente: si la Reserva ya
+     * tiene escrow, no se duplica la transacción.
+     */
+    private PreferenciaPago confirmarEnBypass(Reserva reserva, BigDecimal comision) {
+        if (!transaccionRepo.existsByReservaId(reserva.getId())) {
+            Transaccion transaccion = new Transaccion();
+            transaccion.setReservaId(reserva.getId());
+            transaccion.setMpPaymentId("bypass-" + reserva.getId());
+            transaccion.setMontoBruto(reserva.getPrecio());
+            transaccion.setComisionPlataforma(comision);
+            transaccion.setEnBypass(true);
+            transaccionRepo.save(transaccion);
+        }
+        reservaService.confirmarPagoSimulado(reserva.getId());
+        return new PreferenciaPago("bypass-" + reserva.getId(), null, true);
     }
 
     // ------------------------------------------------------ US-6 (T-M5-09)
