@@ -2,14 +2,17 @@ import Link from "next/link";
 import {
   Atom,
   BookOpen,
+  Building2,
   Calculator,
-  CreditCard,
   FlaskConical,
-  IdCard,
+  GraduationCap,
+  HeartHandshake,
   Languages,
-  Video,
+  School,
+  Users,
   type LucideIcon,
 } from "lucide-react";
+import TarjetasSeguridad from "@/components/TarjetasSeguridad";
 
 const MATERIAS: { nombre: string; descripcion: string; icono: LucideIcon }[] = [
   {
@@ -55,32 +58,44 @@ export default function HomePage() {
 
         <div className="mx-auto grid min-h-[80vh] max-w-6xl grid-cols-1 items-center gap-14 px-5 py-16 lg:grid-cols-2 lg:gap-12">
           <div>
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-borde bg-superficie px-3.5 py-1.5 text-[0.8rem] font-semibold text-texto-suave">
+            <p
+              className="mb-5 inline-flex items-center gap-2 animate-fade-in-up rounded-full border border-borde bg-superficie px-3.5 py-1.5 text-[0.8rem] font-semibold text-texto-suave"
+              style={{ animationDelay: "0ms" }}
+            >
               <span className="h-2 w-2 rounded-full bg-accent" />
               Tutorías en línea para toda Argentina
             </p>
 
-            <h1 className="text-5xl font-extrabold tracking-tight text-texto md:text-7xl">
+            <h1
+              className="animate-fade-in-up text-5xl font-extrabold tracking-tight text-texto md:text-7xl"
+              style={{ animationDelay: "100ms" }}
+            >
               El apoyo escolar que necesitás,{" "}
               <span className="text-accent">sin barreras geográficas</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg text-texto-suave">
+            <p
+              className="animate-fade-in-up mt-6 max-w-xl text-lg text-texto-suave"
+              style={{ animationDelay: "200ms" }}
+            >
               Conectamos alumnos con Tutores verificados para clases en un aula
               virtual segura: se paga al terminar, la clase queda resumida por
               IA y las identidades están validadas desde el primer día.
             </p>
 
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+            <div
+              className="animate-fade-in-up mt-9 flex flex-col gap-4 sm:flex-row"
+              style={{ animationDelay: "300ms" }}
+            >
               <Link
                 href="/buscar"
-                className="rounded-xl bg-accent px-6 py-3 text-center text-base font-semibold text-white transition-all hover:scale-105 hover:bg-accent-hover"
+                className="rounded-xl bg-accent px-6 py-3 text-center text-base font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(13,148,136,0.4)] active:scale-95"
               >
                 Encontrar un Tutor
               </Link>
               <Link
                 href="/registro/tutor"
-                className="rounded-xl border border-borde bg-superficie px-6 py-3 text-center text-base font-semibold text-accent transition-all hover:border-accent hover:scale-105 hover:bg-teal-50"
+                className="rounded-xl border border-borde bg-superficie px-6 py-3 text-center text-base font-semibold text-accent transition-all duration-300 hover:scale-105 hover:border-accent hover:bg-teal-50 active:scale-95"
               >
                 Quiero Enseñar
               </Link>
@@ -89,7 +104,7 @@ export default function HomePage() {
 
           {/* Mockup del aula virtual */}
           <div className="relative mx-auto w-full max-w-md">
-            <div className="rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
+            <div className="animate-float rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta motion-reduce:animate-none">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 font-bold text-accent">
@@ -148,7 +163,7 @@ export default function HomePage() {
               <Link
                 key={m.nombre}
                 href="/buscar"
-                className="group w-72 shrink-0 snap-start rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta transition-all hover:-translate-y-1 hover:shadow-tarjeta"
+                className="group w-72 shrink-0 snap-center rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
                   <m.icono className="h-6 w-6" />
@@ -176,43 +191,64 @@ export default function HomePage() {
           estas son las garantías que ya vienen incluidas.
         </p>
 
-        <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <CreditCard className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">Pagos protegidos</h3>
-            <p className="mt-2 text-texto-suave">
-              El pago se procesa con MercadoPago y queda en escrow: el dinero
-              solo se libera al finalizar la clase.
-            </p>
-          </article>
+        <TarjetasSeguridad />
+      </section>
 
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <Video className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">Aulas seguras</h3>
-            <p className="mt-2 text-texto-suave">
-              Videollamada integrada con supervisión y resumen automático por
-              IA: la clase queda documentada para el adulto responsable.
-            </p>
-          </article>
-
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <IdCard className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">
-              Identidades verificadas
-            </h3>
-            <p className="mt-2 text-texto-suave">
-              Cada Tutor valida su DNI y sus antecedentes antes de publicar su
-              perfil. Sabés con quién habla tu hijo.
-            </p>
-          </article>
+      {/* ============ PARTNERS: COMUNIDAD EDUCATIVA ============ */}
+      <section className="border-y border-borde bg-superficie py-16">
+        <div className="mx-auto max-w-6xl px-5">
+          <p className="text-center text-sm font-semibold uppercase tracking-widest text-texto-suave">
+            En alianza con la comunidad educativa de toda Argentina
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            {[
+              { icono: School, nombre: "Colegios y escuelas" },
+              { icono: GraduationCap, nombre: "Universidades y CBC" },
+              { icono: Building2, nombre: "Instituciones públicas" },
+              { icono: Users, nombre: "Centros de estudiantes" },
+              { icono: HeartHandshake, nombre: "ONGs educativas" },
+              { icono: Languages, nombre: "Comunidades de idiomas" },
+            ].map((p) => (
+              <span
+                key={p.nombre}
+                className="inline-flex items-center gap-2 rounded-full border border-borde bg-fondo px-4 py-2 text-sm font-semibold text-texto-suave"
+              >
+                <p.icono className="h-4 w-4 text-accent" />
+                {p.nombre}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* ============ FOOTER ============ */}
+      <footer className="bg-slate-50">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-12 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xl font-extrabold text-texto">
+              Tinku<span className="text-accent">.</span>
+            </p>
+            <p className="mt-2 max-w-sm text-sm text-texto-suave">
+              Tutorías en línea con Tutores verificados, pagos protegidos y
+              aulas seguras para menores.
+            </p>
+          </div>
+          <nav className="flex flex-col gap-2 text-sm">
+            <Link href="/buscar" className="font-semibold text-texto transition-colors hover:text-accent">
+              Encontrar un Tutor
+            </Link>
+            <Link href="/registro" className="font-semibold text-texto transition-colors hover:text-accent">
+              Crear mi cuenta
+            </Link>
+            <Link href="/registro/tutor" className="font-semibold text-texto transition-colors hover:text-accent">
+              Quiero enseñar
+            </Link>
+          </nav>
+        </div>
+        <p className="border-t border-borde py-5 text-center text-xs text-texto-suave">
+          © 2026 Tinku · Tutorías en línea para toda Argentina
+        </p>
+      </footer>
     </main>
   );
 }
