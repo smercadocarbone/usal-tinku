@@ -45,8 +45,9 @@ spring:
             # Obligatorio para PostgreSQL: el default (StdJDBCDelegate) lee
             # JOB_DATA via getBlob() esperando un large object (OID), pero las
             # tablas QRTZ_* de V3 usan BYTEA -> "Bad value for type long".
-            # Sin esto, cualquier JobDetail persistido (ej. capVencimiento, M1-F)
-            # falla al almacenarse/recuperarse.
+            # Sin esto, cualquier JobDetail persistido falla al
+            # almacenarse/recuperarse (el capVencimiento del M1-F ya se retiró;
+            # la limpieza de sus filas QRTZ_* huérfanas quedó en V21).
             driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 server:

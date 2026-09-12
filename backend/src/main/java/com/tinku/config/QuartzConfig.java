@@ -23,6 +23,11 @@ import org.springframework.context.annotation.Configuration;
  * (El job diario de vencimiento del CAP — T-M1-17 — se retiro junto con la
  * funcion de CAP: ya no hay certificados que venzan. La Credencial aprobada
  * habilita matching de una sola vez, sin vencimiento.)
+ *
+ * REGLA: al RETIRAR un job con JobStore persistido, hay que agregar una
+ * migracion nueva que elimine sus filas QRTZ_* huerfanas (ver V21). Si quedan,
+ * el recovery de misfires del arranque intenta cargar la clase eliminada ->
+ * ClassNotFoundException -> el scheduler no arranca y cae toda la app.
  */
 @Configuration
 public class QuartzConfig {
