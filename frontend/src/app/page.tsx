@@ -3,13 +3,11 @@ import {
   Atom,
   BookOpen,
   Calculator,
-  CreditCard,
   FlaskConical,
-  IdCard,
   Languages,
-  Video,
   type LucideIcon,
 } from "lucide-react";
+import TarjetasSeguridad from "@/components/TarjetasSeguridad";
 
 const MATERIAS: { nombre: string; descripcion: string; icono: LucideIcon }[] = [
   {
@@ -55,32 +53,44 @@ export default function HomePage() {
 
         <div className="mx-auto grid min-h-[80vh] max-w-6xl grid-cols-1 items-center gap-14 px-5 py-16 lg:grid-cols-2 lg:gap-12">
           <div>
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-borde bg-superficie px-3.5 py-1.5 text-[0.8rem] font-semibold text-texto-suave">
+            <p
+              className="mb-5 inline-flex items-center gap-2 animate-fade-in-up rounded-full border border-borde bg-superficie px-3.5 py-1.5 text-[0.8rem] font-semibold text-texto-suave"
+              style={{ animationDelay: "0ms" }}
+            >
               <span className="h-2 w-2 rounded-full bg-accent" />
               Tutorías en línea para toda Argentina
             </p>
 
-            <h1 className="text-5xl font-extrabold tracking-tight text-texto md:text-7xl">
+            <h1
+              className="animate-fade-in-up text-5xl font-extrabold tracking-tight text-texto md:text-7xl"
+              style={{ animationDelay: "100ms" }}
+            >
               El apoyo escolar que necesitás,{" "}
               <span className="text-accent">sin barreras geográficas</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg text-texto-suave">
+            <p
+              className="animate-fade-in-up mt-6 max-w-xl text-lg text-texto-suave"
+              style={{ animationDelay: "200ms" }}
+            >
               Conectamos alumnos con Tutores verificados para clases en un aula
               virtual segura: se paga al terminar, la clase queda resumida por
               IA y las identidades están validadas desde el primer día.
             </p>
 
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+            <div
+              className="animate-fade-in-up mt-9 flex flex-col gap-4 sm:flex-row"
+              style={{ animationDelay: "300ms" }}
+            >
               <Link
                 href="/buscar"
-                className="rounded-xl bg-accent px-6 py-3 text-center text-base font-semibold text-white transition-all hover:scale-105 hover:bg-accent-hover"
+                className="rounded-xl bg-accent px-6 py-3 text-center text-base font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(13,148,136,0.4)] active:scale-95"
               >
                 Encontrar un Tutor
               </Link>
               <Link
                 href="/registro/tutor"
-                className="rounded-xl border border-borde bg-superficie px-6 py-3 text-center text-base font-semibold text-accent transition-all hover:border-accent hover:scale-105 hover:bg-teal-50"
+                className="rounded-xl border border-borde bg-superficie px-6 py-3 text-center text-base font-semibold text-accent transition-all duration-300 hover:scale-105 hover:border-accent hover:bg-teal-50 active:scale-95"
               >
                 Quiero Enseñar
               </Link>
@@ -89,7 +99,7 @@ export default function HomePage() {
 
           {/* Mockup del aula virtual */}
           <div className="relative mx-auto w-full max-w-md">
-            <div className="rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
+            <div className="animate-float rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta motion-reduce:animate-none">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 font-bold text-accent">
@@ -148,7 +158,7 @@ export default function HomePage() {
               <Link
                 key={m.nombre}
                 href="/buscar"
-                className="group w-72 shrink-0 snap-start rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta transition-all hover:-translate-y-1 hover:shadow-tarjeta"
+                className="group w-72 shrink-0 snap-center rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
                   <m.icono className="h-6 w-6" />
@@ -176,42 +186,7 @@ export default function HomePage() {
           estas son las garantías que ya vienen incluidas.
         </p>
 
-        <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <CreditCard className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">Pagos protegidos</h3>
-            <p className="mt-2 text-texto-suave">
-              El pago se procesa con MercadoPago y queda en escrow: el dinero
-              solo se libera al finalizar la clase.
-            </p>
-          </article>
-
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <Video className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">Aulas seguras</h3>
-            <p className="mt-2 text-texto-suave">
-              Videollamada integrada con supervisión y resumen automático por
-              IA: la clase queda documentada para el adulto responsable.
-            </p>
-          </article>
-
-          <article className="rounded-tarjeta border border-borde bg-superficie p-7 shadow-tarjeta">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <IdCard className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-texto">
-              Identidades verificadas
-            </h3>
-            <p className="mt-2 text-texto-suave">
-              Cada Tutor valida su DNI y sus antecedentes antes de publicar su
-              perfil. Sabés con quién habla tu hijo.
-            </p>
-          </article>
-        </div>
+        <TarjetasSeguridad />
       </section>
     </main>
   );
