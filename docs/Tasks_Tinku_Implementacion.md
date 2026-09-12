@@ -36,6 +36,14 @@
 
 ---
 
+## FRONTEND — F6: Dashboard del Tutor (`/cuenta`)
+
+> Panel de operaciones del educador en `/cuenta`: publica disponibilidad visual, árbol de temas con autoguardado y precio con sugerencia regional. Consume endpoints ya verdes: `GET|POST /api/tutores/franjas` (T-M4-02), `GET /api/pagos/precio-referencia/{provincia}` (T-M5-09), `PUT /api/pagos/tarifa` (T-M5-11). Verificación: build + lint del frontend.
+
+- [x] F-06: Dashboard del Tutor en `/cuenta` — tres pestañas en una sola vista: (1) **Mis Horarios** `TabHorarios.tsx` + `GrillaHoraria.tsx` — grilla semanal visual (Lun→Dom, filas 08:00→21:00) con selección por rango (click = ancla, segundo click extiende, máx 3hs/180min FR-RES-012), toggle "Disponibilidad semanal fija / puntual" (fecha + misma grilla de un día), franjas ya publicadas pintadas como bloques fijos, publicación de una franja por día vía `POST /api/tutores/franjas`, lista de franjas existentes; (2) **Mis Materias** `TabMaterias.tsx` — reusa el árbol `TemasTutor` existente (autoguardado 300ms → `PUT /api/tutores/me/temas`) con indicador de estado con íconos (spinner → nube con check verde); (3) **Configuración de Precio** `TabPrecio.tsx` — input grande con autoguardado (debounce 500ms → `PUT /api/pagos/tarifa`, indicador "Guardando…/Guardado automático"; prefil en `localStorage` porque el backend no expone GET de tarifa), selector de provincia y panel informativo azul con la sugerencia regional en rango `$X–$Y` (`GET /api/pagos/precio-referencia/{provincia}`, 404 = aviso no bloqueante); 404 de referencia → texto informativo. Layout tipo dashboard: sidebar minimal (tabs verticales + Mis reservas + Buscar tutores) y área de contenido con `bg-slate-50` y tabs horizontales en la parte superior. `PanelAdulto` intacto (Artículo II). — _`src/components/tutor/{GrillaHoraria,TabHorarios,TabMaterias,TabPrecio}.tsx` + rework de `src/app/cuenta/page.tsx` (el viejo `PanelTutor` de formulario desaparece) + insignias con íconos en `src/components/TemasTutor.tsx`. Verificado: build + lint verdes. Pendiente: E2E manual contra el backend dev (publicar franja semanal/puntual, guardar temas, fijar precio); sin branch propio (se trabajó sobre `sync-latest-main`)._
+
+---
+
 ## M1 — Gestión de Identidad y Perfiles
 
 - [x] T-M1-01: Migración: tabla `usuarios` con constraint `UNIQUE` en `dni`. — _pre-existente, no creada en esta sesión: `V2__m1_identidad.sql` (commit `0616a05`) ya contenía esta migración y fue verificada contra el Plan de M1 durante Chunk 000-B sin requerir migración correctiva. Incluye `UNIQUE` en `dni` y el CHECK `chk_adulto_tiene_capacidad` (adulto con ≥1 capacidad, elegido como CHECK de BD, no validación de app). Reconfirmado por regresión (`./mvnw verify`, 16 tests OK) y por `\d identidad.usuarios`. No se editó V2 (AGENTS.md §7, ya aplicada)._
