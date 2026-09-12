@@ -5,8 +5,12 @@
  * El tutor pinta sus horarios: clic pinta/despinta un bloque, clic y arrastre
  * pinta o borra un rango contiguo. Cada columna es un día (o una fecha
  * puntual) y cada fila es un bloque de una hora (08:00→22:00). Las franjas ya
- * publicadas se pintan como bloques fijos no interactivos. Máximo 3 filas por
- * franja (180min, FR-RES-024).
+ * publicadas se pintan como bloques fijos no interactivos.
+ *
+ * ponytail: ceiling del modelo — la selección es libre (un día entero se
+ * puede pintar de una); al guardar los rangos contiguos se parten en franjas
+ * de ≤3h (FR-RES-024) con `partirFranja`. Revisar si el producto quiere
+ * franjas más largas o escritura tipo upsert en el backend.
  */
 
 import { useEffect, useState } from "react";
@@ -37,6 +41,26 @@ export function rangosDe(filas: number[]): [number, number][] {
     else rangos.push([fila, fila]);
   }
   return rangos;
+}
+
+/**
+ * Parte una franja contigua en sub-rangos de a lo sumo {@code max} filas:
+ * el pintado es libre, y la partición en franjas de ≤180min (FR-RES-024) se
+ * resuelve al guardar.
+ */
+export function partirFranja(
+  inicio: number,
+  fin: number,
+  max = MAX_FRANJA_FILAS
+): [number, number][] {
+  const partes: [number, number][] = [];
+  let a = inicio;
+  while (a <= fin) {
+    const b = Math.min(a + max - 1, fin);
+    partes.push([a, b]);
+    a = b + 1;
+  }
+  return partes;
 }
 
 interface Columna {
@@ -97,21 +121,14 @@ export default function WeeklyAvailabilityGrid({
     pintar: boolean
   ) {
     onCambioSeleccion((prev) => {
-      let a = Math.min(desde, hasta);
-      let b = Math.max(desde, hasta);
+      const a = Math.min(desde, hasta);
+      const b = Math.max(desde, hasta);
       const filas = new Set(prev[columna] ?? []);
       if (pintar) {
-        if (b - a + 1 > MAX_FRANJA_FILAS) {
-          // Mantener el ancla fija y recortar del lado hacia donde arrastra.
-          if (hasta >= desde) {
-            a = desde;
-            b = desde + MAX_FRANJA_FILAS - 1;
-          } else {
-            b = desde;
-            a = desde - MAX_FRANJA_FILAS + 1;
-          }
+        for (let f = a; f <= b; f++) {
+          if (estaOcupada(columna, f)) continue; // no pisar bloques ya publicados
+          filas.add(f);
         }
-        for (let f = a; f <= b; f++) filas.add(f);
       } else {
         for (let f = a; f <= b; f++) filas.delete(f);
       }
@@ -128,6 +145,7 @@ export default function WeeklyAvailabilityGrid({
     pintar: boolean,
     e: React.MouseEvent
   ) {
+    if (e.button !== 0) return; // solo botón primario
     e.preventDefault();
     setArrastrando({ columna, desde: fila, pintar });
     aplicarRango(columna, fila, fila, pintar);
@@ -175,14 +193,12 @@ export default function WeeklyAvailabilityGrid({
                   {hora}
                 </div>
                 {columnas.map((c) => {
+                  const rangos = rangosDe(seleccion[c.clave] ?? []);
+                  const iniciosDeRango = new Set(rangos.map(([inicio]) => inicio));
                   const ocupada = estaOcupada(c.clave, fila);
                   const pintada = estaPintada(c.clave, fila);
-                  const iniciosDeRango = new Set(
-                    rangosDe(seleccion[c.clave] ?? []).map(([inicio]) => inicio)
-                  );
-                  const muestraRango =
-                    pintada && iniciosDeRango.has(fila);
-                  const rango = rangosDe(seleccion[c.clave] ?? []).find(
+                  const muestraRango = pintada && iniciosDeRango.has(fila);
+                  const rango = rangos.find(
                     ([inicio, fin]) => fila >= inicio && fila <= fin
                   );
                   const etiquetaRango =
@@ -192,7 +208,7 @@ export default function WeeklyAvailabilityGrid({
                     ? "cursor-default bg-teal-100 border-l-4 border-l-teal-500"
                     : pintada
                       ? "border-l-4 border-l-teal-600 bg-teal-100 text-teal-800"
-                      : "border-l border-gray-100 hover:bg-gray-50";
+                      : "cursor-pointer border-l border-gray-100 hover:bg-gray-50";
                   return (
                     <button
                       key={`${c.clave}-${fila}`}
@@ -240,7 +256,10 @@ export default function WeeklyAvailabilityGrid({
       </div>
 
       {/* Resumen dinámico */}
-      <p className="mt-3 text-[0.9rem] font-medium text-texto-suave">
+      <p
+        className="mt-3 text-[0.9rem] font-medium text-texto-suave"
+        aria-live="polite"
+      >
         {textoResumen}
       </p>
 

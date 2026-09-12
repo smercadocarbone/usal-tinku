@@ -6,7 +6,9 @@ import { formatearFechaCorta } from "@/lib/formatos";
 import WeeklyAvailabilityGrid, {
   INICIO_DIA,
   ULTIMA_FILA,
+  MAX_FRANJA_FILAS,
   rangosDe,
+  partirFranja,
   type Ocupada,
   type Seleccion,
 } from "./WeeklyAvailabilityGrid";
@@ -111,12 +113,15 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
     const peticiones: PeticionFranja[] = [];
     const completar = (columna: string, diaSemana: number | null, fechaEspecifica: string | null) => {
       for (const [inicio, fin] of rangosDe(seleccion[columna] ?? [])) {
-        peticiones.push({
-          diaSemana,
-          fechaEspecifica,
-          horaInicio: horaDeFila(inicio),
-          horaFin: horaDeFila(fin + 1),
-        });
+        // Pintado libre: se parten las franjas contiguas en ≤3h (FR-RES-024).
+        for (const [ini, ultimo] of partirFranja(inicio, fin, MAX_FRANJA_FILAS)) {
+          peticiones.push({
+            diaSemana,
+            fechaEspecifica,
+            horaInicio: horaDeFila(ini),
+            horaFin: horaDeFila(ultimo + 1),
+          });
+        }
       }
     };
 
@@ -170,8 +175,8 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
     <section aria-label="Mis horarios">
       <h2 className="text-lg font-bold text-texto">Mis horarios</h2>
       <p className="text-[0.9rem] text-texto-suave">
-        Publicá cuándo estás disponible. Tocá o arrastrá sobre los bloques para
-        pintar franjas de 1 a 3 horas (60min por bloque).
+        Publicá cuándo estás disponible. Pintá los bloques (clic o clic y
+        arrastre); al guardar se parte en franjas de hasta 3 horas.
       </p>
 
       {/* Toggle semanal / puntual */}
