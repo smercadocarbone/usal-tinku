@@ -7,6 +7,7 @@ import com.tinku.aula.EvidenciaInvalidaException;
 import com.tinku.aula.SesionNoEncontradaException;
 import com.tinku.aula.SesionSinSalaException;
 import com.tinku.aula.SoloParticipanteException;
+import com.tinku.reservas.service.ReservaNoEncontradaException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,6 +29,18 @@ public class AulaExceptionHandler {
 
     @ExceptionHandler(AlertaNoEncontradaException.class)
     public ResponseEntity<Map<String, String>> handleAlertaNoEncontrada(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    /**
+     * Ya se usaba dentro del módulo (obtenerToken/finalizar resuelven la Reserva
+     * de la Sesión) sin tener handler propio acá — un 500 en vez de 404 en el
+     * caso borde de una Reserva inexistente. GET /sesiones/por-reserva la
+     * dispara desde el otro sentido (reservaId como input directo del cliente),
+     * así que el caso deja de ser borde y hay que responderlo bien.
+     */
+    @ExceptionHandler(ReservaNoEncontradaException.class)
+    public ResponseEntity<Map<String, String>> handleReservaNoEncontrada(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 

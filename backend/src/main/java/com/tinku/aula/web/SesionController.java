@@ -10,6 +10,7 @@ import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +41,22 @@ public class SesionController {
         this.sesionService = sesionService;
         this.liveKitService = liveKitService;
         this.usuarioActual = usuarioActual;
+    }
+
+    /**
+     * Resuelve la Sesión de una Reserva — lo que el frontend necesita para
+     * armar el botón "Entrar a la clase" (link a {@code /aula/{sesionId}}) o
+     * "Calificar" desde la pantalla de la Reserva, sin conocer de antemano el
+     * id de la Sesión. 404 si la Reserva no existe o si todavía no se programó
+     * la Sesión (ej. la Reserva no llegó a confirmarse); 403 para quien no sea
+     * tutor, beneficiario o pagador de esa Reserva.
+     */
+    @GetMapping("/por-reserva/{reservaId}")
+    public ResponseEntity<SesionResponse> porReserva(@PathVariable UUID reservaId,
+                                                     Authentication authentication) {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        SesionAprendizaje sesion = sesionService.obtenerPorReserva(usuario, reservaId);
+        return ResponseEntity.ok(SesionResponse.from(sesion));
     }
 
     /** Token de acceso a la sala LiveKit — solo participantes de la reserva. */

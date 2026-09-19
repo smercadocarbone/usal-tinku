@@ -74,6 +74,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -602,6 +603,67 @@ class SesionesIntegracionTest {
                         .header("Authorization", "Bearer " + e.tokenTutor()))
                 .andExpect(status().isUnprocessableEntity());
         verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString());
+    }
+
+    // ------------------------------------------------ GET /sesiones/por-reserva (frontend M4/M3)
+
+    @Test
+    void tM3PorReserva_participante_devuelveLaSesion() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        MvcResult res = mockMvc.perform(get("/api/sesiones/por-reserva/{reservaId}", reserva.getId())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var body = objectMapper.readTree(res.getResponse().getContentAsString());
+        assertThat(body.get("id").asText()).isEqualTo(sesion.getId().toString());
+        assertThat(body.get("reservaId").asText()).isEqualTo(reserva.getId().toString());
+        assertThat(body.get("estado").asText()).isEqualTo("no_iniciada");
+    }
+
+    @Test
+    void tM3PorReserva_terceroNoParticipante_403() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        programarYCargar(reserva);
+        String tokenTercero = registrarAdultoYToken(dniUnico(), "Pepe", "Garcia");
+
+        mockMvc.perform(get("/api/sesiones/por-reserva/{reservaId}", reserva.getId())
+                        .header("Authorization", "Bearer " + tokenTercero))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void tM3PorReserva_reservaSinSesionTodavia_404() throws Exception {
+        // Una Reserva que nunca se confirmó (pendiente_pago) no tiene Sesión
+        // programada — el 404 tiene que distinguirse de una Reserva inexistente
+        // solo en el mensaje, nunca en el código (ambos casos son "no hay nada
+        // que mostrar todavía", ninguno es un error del cliente).
+        Escenario e = escenarioBase();
+        Reserva reserva = new Reserva();
+        reserva.setPagador(usuarioRepository.findByDni(e.dniAr()).orElseThrow());
+        reserva.setBeneficiario(usuarioRepository.findByDni(e.dniMenor()).orElseThrow());
+        reserva.setTutor(usuarioRepository.findByDni(e.dniTutor()).orElseThrow());
+        reserva.setHorario(e.horario());
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        reservaRepository.save(reserva);
+
+        mockMvc.perform(get("/api/sesiones/por-reserva/{reservaId}", reserva.getId())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void tM3PorReserva_reservaInexistente_404() throws Exception {
+        Escenario e = escenarioBase();
+
+        mockMvc.perform(get("/api/sesiones/por-reserva/{reservaId}", UUID.randomUUID())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isNotFound());
     }
 
     // ------------------------------------------------ helper

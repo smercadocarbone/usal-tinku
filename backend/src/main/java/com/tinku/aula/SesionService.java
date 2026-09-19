@@ -287,6 +287,29 @@ public class SesionService {
         return new String[]{token, sesion.getLivekitRoomId()};
     }
 
+    /**
+     * Resuelve la Sesión a partir de su Reserva — el sentido inverso de
+     * {@link #obtenerToken}, que necesita el frontend para poder armar un botón
+     * "Entrar a la clase"/"Calificar" desde la pantalla de una Reserva sin ya
+     * conocer el id de la Sesión de antemano (antes no existía ningún camino
+     * para esto: {@code ReservaResponse} no trae {@code sesionId} y no había
+     * endpoint que resolviera la relación 1:1 que sí existe en el modelo,
+     * {@code sesion_aprendizaje.reserva_id UNIQUE}).
+     *
+     * Se autoriza ANTES de revelar si la Sesión existe — un tercero no
+     * participante recibe 403 sin importar si ya se programó la Sesión o no,
+     * para no filtrar ese dato a quien no tiene por qué verlo.
+     */
+    public SesionAprendizaje obtenerPorReserva(Usuario usuario, UUID reservaId) {
+        Reserva reserva = reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        return sesionRepo.findByReservaId(reservaId)
+                .orElseThrow(SesionNoEncontradaException::new);
+    }
+
     // ------------------------------------------------ finalización (T-M3-05)
 
     /** US-8: el botón «Finalizar» — solo tutor, beneficiario o pagador (403 si no). */
