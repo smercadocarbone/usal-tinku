@@ -45,3 +45,28 @@ exacto (Artículo III — sin desglose de comisión) antes de salir a MercadoPag
 - No hace click en "Pagar con MercadoPago": el click real navega a un
   dominio externo (`window.location.assign`), fuera del alcance de un test
   aislado del frontend.
+
+---
+
+## Test Case: `PAGAR-E2E-003` - Contactar a soporte si falla el pago
+
+**Priority:** `medium`
+
+**Tags:** @e2e, @pago
+
+**Description/Objective:** Cuando `POST /api/pagos/preferencia` falla, la persona puede
+avisarle a Soporte Financiero sin salir de la pantalla (`FormularioSoporte`,
+origen `M5.pago_fallido` — el único origen de soporte ya registrado para este caso
+en `admin.mapeo_origen_rol`).
+
+### Flow Steps:
+1. Entrar a `/pagar?reserva=r-1` con `POST /api/pagos/preferencia` devolviendo 422.
+2. Abrir "Contactar a soporte" y confirmar "Enviar a soporte".
+
+### Expected Result:
+- El textarea viene prellenado mencionando el número de reserva.
+- Tras enviar, aparece "Le avisamos a soporte."
+
+### Notes:
+- `origenModulo` va fijo en `M5.pago_fallido`: es el único valor que no
+  devuelve 422 por la FK de `mapeo_origen_rol` (ver `FormularioSoporte.tsx`).

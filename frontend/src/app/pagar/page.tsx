@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { formatearPrecioConMoneda } from "@/lib/formatos";
 import { Alerta, Boton, Cargando, Tarjeta } from "@/components/ui";
+import FormularioSoporte from "@/components/FormularioSoporte";
 
 interface Preferencia {
   preferenciaId: string;
@@ -139,6 +140,13 @@ function PagarForm() {
           >
             Reintentar
           </Boton>
+          {reservaId && (
+            <FormularioSoporte
+              origenModulo="M5.pago_fallido"
+              asunto={`No se pudo generar el pago de la reserva ${reservaId}`}
+              detalleInicial={`Reserva ${reservaId}: ${error ?? "no se pudo generar el pago."}`}
+            />
+          )}
         </Alerta>
       )}
 

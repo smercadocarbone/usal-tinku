@@ -67,4 +67,45 @@ test.describe("Pago de una reserva", () => {
       // No se hace click: llevaría a un dominio externo real.
     }
   );
+
+  test(
+    "si falla la generación del pago, se puede avisar a soporte (M5.pago_fallido)",
+    { tag: ["@e2e", "@pago", "@PAGAR-E2E-003"] },
+    async ({ page }) => {
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, {
+          id: RESERVA_ID,
+          precio: 5000,
+        }),
+        "POST /api/pagos/preferencia": jsonRoute(422, {
+          error: "No se pudo generar la preferencia de pago.",
+        }),
+        "POST /api/soporte/tickets": jsonRoute(201, {
+          id: "ticket-1",
+          usuarioId: "u-1",
+          origenModulo: "M5.pago_fallido",
+          asunto: `No se pudo generar el pago de la reserva ${RESERVA_ID}`,
+          detalle: "detalle",
+          estado: "abierto",
+          rolAsignado: "soporte_financiero",
+          creadoEn: "2026-01-01T00:00:00Z",
+          resueltoEn: null,
+        }),
+      });
+
+      const pagar = new PagarPage(page);
+      await pagar.goto(RESERVA_ID);
+
+      await expect(page.getByText("No se pudo generar la preferencia de pago.")).toBeVisible();
+      await expect(pagar.botonReintentar).toBeVisible();
+      await expect(pagar.botonContactarSoporte).toBeVisible();
+
+      await pagar.botonContactarSoporte.click();
+      // El detalle viene prellenado con el número de reserva y el error.
+      await expect(pagar.campoDetalleSoporte).toHaveValue(new RegExp(RESERVA_ID));
+      await pagar.botonEnviarSoporte.click();
+
+      await expect(page.getByText("Le avisamos a soporte.")).toBeVisible();
+    }
+  );
 });

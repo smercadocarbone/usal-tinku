@@ -46,6 +46,7 @@ export default function RegistroPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const [verificando, setVerificando] = useState(false);
@@ -83,9 +84,15 @@ export default function RegistroPage() {
 
   async function crearCuenta(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setEnviando(true);
     setError(null);
     setMenorDeEdad(false);
+
+    if (password !== confirmarPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setEnviando(true);
 
     const datos = {
       dniDeclarado: dni,
@@ -430,6 +437,22 @@ export default function RegistroPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
 
+              <Campo
+                id="confirmarPassword"
+                etiqueta="Repetí la contraseña"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={confirmarPassword}
+                onChange={(e) => setConfirmarPassword(e.target.value)}
+                error={
+                  confirmarPassword && password !== confirmarPassword
+                    ? "No coincide con la contraseña anterior."
+                    : undefined
+                }
+              />
+
               <div className="flex items-center gap-3 text-sm text-slate-500 before:flex-1 before:h-px before:bg-slate-200 before:content-[''] after:flex-1 after:h-px after:bg-slate-200 after:content-['']">
                 o
               </div>
@@ -463,6 +486,7 @@ export default function RegistroPage() {
                 <Boton
                   type="submit"
                   className="min-w-[120px]"
+                  disabled={!confirmarPassword || password !== confirmarPassword}
                   cargando={enviando}
                   textoCargando="Creando cuenta…"
                 >

@@ -57,7 +57,10 @@ export class RegistroPage extends BasePage {
 
   async crearAcceso(email: string, password: string): Promise<void> {
     await this.page.getByLabel("Email").fill(email);
-    await this.page.getByLabel("Contraseña").fill(password);
+    // "Contraseña" es substring de "Repetí la contraseña" — exact evita el
+    // choque entre los dos campos.
+    await this.page.getByLabel("Contraseña", { exact: true }).fill(password);
+    await this.page.getByLabel("Repetí la contraseña").fill(password);
     await this.page.getByLabel("Acepto los Términos y Condiciones").check();
     await this.botonCrearCuenta.click();
   }

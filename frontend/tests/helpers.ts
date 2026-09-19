@@ -60,3 +60,20 @@ export async function setFakeSession(context: BrowserContext, baseURL: string): 
     window.localStorage.setItem("tinku_jwt", "fake-session-token");
   });
 }
+
+/**
+ * Sesión con un payload de JWT real (decodificable por `getSession()`), para
+ * los casos donde el rol importa: Menor, Adulto Responsable, Tutor, etc.
+ * `header.payload.signature` con base64url — no valida firma, el middleware
+ * y `getSession()` no la chequean del lado del cliente.
+ */
+export async function setFakeSessionConPayload(
+  context: BrowserContext,
+  baseURL: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const token = `header.${payloadB64}.signature`;
+  await context.addCookies([{ name: "tinku_jwt", value: token, url: baseURL }]);
+  await context.addInitScript((t) => window.localStorage.setItem("tinku_jwt", t), token);
+}

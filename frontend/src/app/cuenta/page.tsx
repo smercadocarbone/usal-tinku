@@ -3,12 +3,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import Cabecera from "@/components/Cabecera";
 import TabHorarios from "@/components/tutor/TabHorarios";
 import TabMaterias from "@/components/tutor/TabMaterias";
 import TabPrecio from "@/components/tutor/TabPrecio";
-import { Alerta, Boton, Campo, Cargando, PanelTab, Tabs, Tarjeta, clasesBoton } from "@/components/ui";
+import {
+  Alerta,
+  Boton,
+  Campo,
+  CampoSelect,
+  Cargando,
+  PanelTab,
+  Tabs,
+  Tarjeta,
+  clasesBoton,
+} from "@/components/ui";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
@@ -150,9 +160,25 @@ function PanelAdulto() {
   const [exito, setExito] = useState("");
   const [procesando, setProcesando] = useState(false);
 
-  const [menorAlta, setMenorAlta] = useState<{ id: string; nombre: string; apellido: string } | null>(null);
+  const [menores, setMenores] = useState<Menor[] | null>(null);
+  const [errorMenores, setErrorMenores] = useState<string | null>(null);
+  const [menorBajaId, setMenorBajaId] = useState("");
   const [bajaPaso, setBajaPaso] = useState<"idle" | "advertencia">("idle");
   const [bajaProcesando, setBajaProcesando] = useState(false);
+
+  const cargarMenores = useCallback(() => {
+    setErrorMenores(null);
+    getMenores()
+      .then((lista) => {
+        setMenores(lista);
+        setMenorBajaId((actual) => actual || lista[0]?.id || "");
+      })
+      .catch((err) => setErrorMenores(mensajeDeError(err, "No se pudo cargar tu listado de menores.")));
+  }, []);
+
+  useEffect(() => {
+    cargarMenores();
+  }, [cargarMenores]);
 
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [cargandoSolicitudes, setCargandoSolicitudes] = useState(true);
@@ -208,9 +234,9 @@ function PanelAdulto() {
     setProcesando(true);
     api
       .post<UsuarioResponse>("/api/usuarios/menores", form)
-      .then((res) => {
+      .then(() => {
         setExito("Menor dado de alta.");
-        setMenorAlta({ id: res.id, nombre, apellido });
+        cargarMenores();
         setDni("");
         setNombre("");
         setApellido("");
@@ -243,14 +269,15 @@ function PanelAdulto() {
   }
 
   function bajaMenorSinConfirmar() {
-    if (!menorAlta) return;
+    if (!menorBajaId) return;
     setBajaProcesando(true);
     api
-      .delete(`/api/usuarios/menores/${menorAlta.id}`)
+      .delete(`/api/usuarios/menores/${menorBajaId}`)
       .then(() => {
         setExito("Menor dado de baja.");
-        setMenorAlta(null);
         setBajaPaso("idle");
+        setMenorBajaId("");
+        cargarMenores();
       })
       .catch((err) => {
         if (err instanceof ApiError && (err.status === 409 || err.status === 422)) {
@@ -263,14 +290,15 @@ function PanelAdulto() {
   }
 
   function bajaMenorConfirmar() {
-    if (!menorAlta) return;
+    if (!menorBajaId) return;
     setBajaProcesando(true);
     api
-      .delete(`/api/usuarios/menores/${menorAlta.id}?confirmar=true`)
+      .delete(`/api/usuarios/menores/${menorBajaId}?confirmar=true`)
       .then(() => {
         setExito("Menor dado de baja.");
-        setMenorAlta(null);
         setBajaPaso("idle");
+        setMenorBajaId("");
+        cargarMenores();
       })
       .catch((err) => {
         setError(err instanceof ApiError ? err.message : "Error inesperado.");
@@ -403,11 +431,16 @@ function PanelAdulto() {
       )}
 
       <h3 className="mt-6 text-base font-semibold text-slate-800">Baja de menor</h3>
-      <Alerta tono="aviso" className="w-fit">
-        El listado de menores esta pendiente en backend.
-      </Alerta>
 
-      {menorAlta && (
+      {errorMenores && <Alerta tono="error">{errorMenores}</Alerta>}
+
+      {!errorMenores && menores === null && <Cargando>Cargando tus menores…</Cargando>}
+
+      {menores !== null && menores.length === 0 && (
+        <p className="text-sm text-slate-500">No tenés menores a cargo todavía.</p>
+      )}
+
+      {menores !== null && menores.length > 0 && (
         <Tarjeta className="mt-3 w-full max-w-sm p-4">
           {bajaPaso === "advertencia" ? (
             <>
@@ -429,14 +462,29 @@ function PanelAdulto() {
               </div>
             </>
           ) : (
-            <Boton
-              variante="secundario"
-              cargando={bajaProcesando}
-              textoCargando="Procesando..."
-              onClick={bajaMenorSinConfirmar}
-            >
-              {`Dar de baja a ${menorAlta.nombre} ${menorAlta.apellido}`}
-            </Boton>
+            <div className="flex flex-col gap-3">
+              <CampoSelect
+                id="menorBaja"
+                etiqueta="Menor"
+                value={menorBajaId}
+                onChange={(e) => setMenorBajaId(e.target.value)}
+              >
+                {menores.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre} {m.apellido}
+                  </option>
+                ))}
+              </CampoSelect>
+              <Boton
+                variante="secundario"
+                className="w-fit"
+                cargando={bajaProcesando}
+                textoCargando="Procesando..."
+                onClick={bajaMenorSinConfirmar}
+              >
+                Dar de baja
+              </Boton>
+            </div>
           )}
         </Tarjeta>
       )}

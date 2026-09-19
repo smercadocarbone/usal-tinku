@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, autorizarTutor, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
+import FormularioDenuncia from "@/components/FormularioDenuncia";
 import {
   Alerta,
   Boton,
+  CampoSelect,
   Cargando,
   Insignia,
   Tarjeta,
@@ -46,6 +48,12 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
   const [enviandoNoConfiable, setEnviandoNoConfiable] = useState(false);
   const [mensajeNoConfiable, setMensajeNoConfiable] = useState<string | null>(null);
 
+  const [menores, setMenores] = useState<Menor[] | null>(null);
+  const [errorMenores, setErrorMenores] = useState<string | null>(null);
+  const [menorElegido, setMenorElegido] = useState("");
+  const [autorizando, setAutorizando] = useState(false);
+  const [mensajeAutorizacion, setMensajeAutorizacion] = useState<string | null>(null);
+
   function cargar() {
     setCargando(true);
     setError(null);
@@ -74,6 +82,37 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
   const esMenor = payload?.tipo === "MENOR";
   const puedeReservar = !esMenor;
   const esAdultoConAR = !esMenor && payload?.cap_ar === true;
+
+  useEffect(() => {
+    if (!esAdultoConAR) return;
+    getMenores()
+      .then((lista) => {
+        setMenores(lista);
+        if (lista[0]) setMenorElegido(lista[0].id);
+      })
+      .catch((err) => setErrorMenores(mensajeDeError(err, "No se pudo cargar tu listado de menores.")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esAdultoConAR]);
+
+  async function autorizar() {
+    if (!menorElegido) return;
+    setAutorizando(true);
+    setMensajeAutorizacion(null);
+    setError(null);
+    try {
+      await autorizarTutor(menorElegido, params.id);
+      const nombreMenor = menores?.find((m) => m.id === menorElegido);
+      setMensajeAutorizacion(
+        nombreMenor
+          ? `Autorizaste a este tutor para ${nombreMenor.nombre}.`
+          : "Tutor autorizado."
+      );
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo autorizar al tutor."));
+    } finally {
+      setAutorizando(false);
+    }
+  }
 
   async function toggleNoConfiable(nuevoValor: boolean) {
     setEnviandoNoConfiable(true);
@@ -170,18 +209,22 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
               </dl>
             </Tarjeta>
 
-            {puedeReservar ? (
-              <Link
-                href={`/reservar?tutor=${perfil.id}`}
-                className={clasesBoton("primario")}
-              >
-                Reservar clase
-              </Link>
-            ) : (
-              <Alerta tono="aviso" className="w-fit">
-                Pedile a tu adulto responsable que te autorice a esta tutora/o.
-              </Alerta>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {puedeReservar ? (
+                <Link
+                  href={`/reservar?tutor=${perfil.id}`}
+                  className={clasesBoton("primario")}
+                >
+                  Reservar clase
+                </Link>
+              ) : (
+                <Alerta tono="aviso" className="w-fit">
+                  Pedile a tu adulto responsable que te autorice a esta tutora/o.
+                </Alerta>
+              )}
+
+              {!esMenor && <FormularioDenuncia denunciadoId={perfil.id} />}
+            </div>
 
             {esAdultoConAR && (
               <div className="mt-6">
@@ -190,14 +233,49 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                 </h2>
 
                 <div className="mb-4">
-                  <Boton onClick={() => {}} disabled>
-                    Autorizar para mi menor
-                  </Boton>
-                  <Alerta tono="aviso" className="mt-2 w-fit">
-                    El listado de tus menores esta pendiente en backend. Cuando
-                    este disponible, vas a poder autorizar tutores para cada
-                    menor.
-                  </Alerta>
+                  {errorMenores && <Alerta tono="error">{errorMenores}</Alerta>}
+
+                  {!errorMenores && menores === null && (
+                    <Cargando>Cargando tus menores…</Cargando>
+                  )}
+
+                  {menores !== null && menores.length === 0 && (
+                    <Alerta tono="info" className="w-fit">
+                      Todavía no diste de alta a ningún menor. Podés hacerlo desde tu cuenta.
+                    </Alerta>
+                  )}
+
+                  {menores !== null && menores.length > 0 && (
+                    <div className="flex flex-wrap items-end gap-3">
+                      <CampoSelect
+                        id="menorAAutorizar"
+                        etiqueta="Menor"
+                        etiquetaOculta
+                        value={menorElegido}
+                        onChange={(e) => setMenorElegido(e.target.value)}
+                      >
+                        {menores.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.nombre} {m.apellido}
+                          </option>
+                        ))}
+                      </CampoSelect>
+                      <Boton
+                        tamano="sm"
+                        cargando={autorizando}
+                        textoCargando="Autorizando…"
+                        onClick={autorizar}
+                      >
+                        Autorizar para este menor
+                      </Boton>
+                    </div>
+                  )}
+
+                  {mensajeAutorizacion && (
+                    <Alerta tono="exito" className="mt-2 w-fit">
+                      {mensajeAutorizacion}
+                    </Alerta>
+                  )}
                 </div>
 
                 <div

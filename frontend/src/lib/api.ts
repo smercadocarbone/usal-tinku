@@ -399,3 +399,64 @@ export interface TicketAdmin {
 export function getTicketsAdmin(): Promise<TicketAdmin[]> {
   return api.get("/api/admin/tickets");
 }
+
+/* ---- M1 — Menores a cargo y autorizaciones (auditoría 2026-09-18/19) ---- */
+
+export interface Menor {
+  id: string;
+  nombre: string;
+  apellido: string;
+}
+
+/** Antes solo había alta y baja por id, sin forma de volver a listarlos. */
+export function getMenores(): Promise<Menor[]> {
+  return api.get("/api/usuarios/menores");
+}
+
+export function autorizarTutor(menorId: string, tutorId: string): Promise<{ id: string }> {
+  return api.post("/api/autorizaciones", { menorId, tutorId });
+}
+
+/** Crea un ticket de soporte (US-7) — lo usa cualquier usuario autenticado,
+ *  no solo el Admin. El enrutamiento por `origenModulo` lo resuelve el server. */
+export function crearTicketSoporte(body: {
+  origenModulo: string;
+  asunto: string;
+  detalle: string;
+}): Promise<TicketAdmin> {
+  return api.post("/api/soporte/tickets", body);
+}
+
+/* ---- M9 — Denuncias (US-1), del lado de quien denuncia ---- */
+
+export type MotivoDenuncia =
+  | "comportamiento_inapropiado"
+  | "incumplimiento"
+  | "fraude"
+  | "contenido_ilegal"
+  | "acoso";
+
+export interface DenunciaCreada {
+  id: string;
+  denunciadoId: string;
+  estado: string;
+  motivo: MotivoDenuncia;
+  sesionId: string | null;
+  createdAt: string;
+}
+
+/** `sesionId` es opcional — una denuncia de perfil (sin sesión puntual) es
+ *  un caso válido y así lo modela el backend. */
+export function presentarDenuncia(body: {
+  denunciadoId: string;
+  sesionId?: string | null;
+  motivo: MotivoDenuncia;
+  evidenciaUrl?: string;
+}): Promise<DenunciaCreada> {
+  return api.post("/api/denuncias", {
+    denunciadoId: body.denunciadoId,
+    sesionId: body.sesionId ?? null,
+    motivo: body.motivo,
+    evidenciaUrl: body.evidenciaUrl,
+  });
+}
