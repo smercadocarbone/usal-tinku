@@ -460,3 +460,52 @@ export function presentarDenuncia(body: {
     evidenciaUrl: body.evidenciaUrl,
   });
 }
+
+/* ---- M3 — Sesión de una Reserva (backend: auditoría 2026-09-19) ---- */
+
+export type EstadoSesion =
+  | "no_iniciada"
+  | "en_curso"
+  | "finalizada"
+  | "finalizada_anticipada"
+  | "interrumpida";
+
+export interface SesionInfo {
+  id: string;
+  reservaId: string;
+  estado: EstadoSesion;
+  livekitRoomId: string | null;
+  inicioReal: string | null;
+  finReal: string | null;
+  duracionEfectivaSegundos: number | null;
+}
+
+/**
+ * 404 si la Reserva nunca llegó a confirmarse (no hay Sesión programada) o si
+ * la Reserva no existe — el llamador lo trata como "no hay nada que mostrar
+ * todavía" (chequear `err.status === 404`), no como un error real.
+ */
+export function getSesionPorReserva(reservaId: string): Promise<SesionInfo> {
+  return api.get(`/api/sesiones/por-reserva/${reservaId}`);
+}
+
+/* ---- M7 — Calificación de una sesión ---- */
+
+export interface CalificacionCreada {
+  id: string;
+  sesionId: string;
+  direccion: string;
+  estrellas: number;
+  comentario: string | null;
+  editableHasta: string;
+  createdAt: string;
+}
+
+/** La dirección (a quién califica quién) la deriva el backend del rol del
+ *  autor — nunca es un campo que el cliente pueda mandar. */
+export function calificarSesion(
+  sesionId: string,
+  body: { estrellas: number; comentario?: string }
+): Promise<CalificacionCreada> {
+  return api.post(`/api/sesiones/${sesionId}/calificacion`, body);
+}

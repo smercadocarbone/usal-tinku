@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import Link from "next/link";
+import { api, ApiError, getSesionPorReserva, type SesionInfo } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
-import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta } from "@/components/ui";
+import FormularioCalificacion from "@/components/FormularioCalificacion";
+import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 
@@ -24,6 +26,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sesion, setSesion] = useState<SesionInfo | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [nuevoHorario, setNuevoHorario] = useState("");
   const [editandoHorario, setEditandoHorario] = useState(false);
@@ -52,8 +55,17 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
       } else {
         setError("No se pudo cargar la reserva.");
       }
+      return;
     } finally {
       setCargando(false);
+    }
+
+    // Un 404 acá es el caso normal (la Reserva nunca se confirmó, o el
+    // job de T-5 no creó la Sesión todavía) — no es un error para mostrar.
+    try {
+      setSesion(await getSesionPorReserva(params.id));
+    } catch {
+      setSesion(null);
     }
   }
 
@@ -180,6 +192,12 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   const puedeCancelar =
     reserva?.estado === "pendiente_pago" || reserva?.estado === "confirmada";
   const puedeReprogramar = reserva?.estado === "confirmada";
+  const puedeEntrarAClase =
+    sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
+  // Solo el cierre limpio (`finalizada`) habilita calificar — un no-show doble
+  // o un corte interrumpido antes del 50% no son una clase que se pueda
+  // evaluar, y el backend tampoco lo esperaría como caso de uso normal.
+  const puedeCalificar = sesion !== null && sesion.estado === "finalizada";
   const faltanMenosDe24hs =
     reserva !== null &&
     Date.now() >= new Date(reserva.horario).getTime() - 24 * 60 * 60 * 1000;
@@ -252,6 +270,12 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
             <div className="flex flex-col gap-2">
               {puedePagar && <Boton onClick={pagar}>Pagar ahora</Boton>}
+
+              {puedeEntrarAClase && sesion && (
+                <Link href={`/aula/${sesion.id}`} className={clasesBoton("primario")}>
+                  Entrar a la clase
+                </Link>
+              )}
 
               {puedeReprogramar && (
                 <Boton variante="secundario" onClick={abrirReprogramar}>
@@ -386,6 +410,12 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                   Confirmar nuevo horario
                 </Boton>
               </form>
+            )}
+
+            {puedeCalificar && sesion && (
+              <div className="mt-6">
+                <FormularioCalificacion sesionId={sesion.id} />
+              </div>
             )}
           </>
         )}
