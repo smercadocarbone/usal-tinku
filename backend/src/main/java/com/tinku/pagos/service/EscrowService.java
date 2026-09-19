@@ -331,7 +331,9 @@ public class EscrowService {
      * tuvo escrow, se registra una {@code Transaccion} {@code reembolsado} como
      * ancla (idempotencia del reenvío del webhook + auditoría); si ya tuvo escrow
      * (Reserva confirmada que recién canceló), NO se crea una fila duplicada —
-     * se preserva la unicidad de {@code findByReservaId}. */
+     * se preserva la unicidad de {@code findByReservaId} (Optional, usado en 6
+     * puntos más de esta clase y en DenunciaService — dos filas por reserva_id
+     * los rompería a todos con IncorrectResultSizeDataAccessException). */
     private void reembolsarPagoTardio(PagoMercadoPago pago, Reserva reserva) {
         Transaccion tardia = new Transaccion();
         tardia.setReservaId(reserva.getId());
@@ -342,6 +344,27 @@ public class EscrowService {
             tardia.setEstado(EstadoTransaccion.REEMBOLSADO);
             transaccionRepo.save(tardia);
         }
-        reembolso.reembolsarTotal(tardia);
+        // Auditoría 2026-09-18: cuando la fila de arriba NO se persiste (ya
+        // existía otra Transaccion para esta reserva), el guard de
+        // findByMpPaymentId del inicio de procesarPagoAprobado nunca va a
+        // encontrar esta operación en un reintento del webhook — MercadoPago
+        // SÍ reintenta envíos sin 2xx (javadoc de la clase). Sin este catch,
+        // reembolsar un pago que el intento anterior ya reembolsó tira
+        // MercadoPagoNoDisponibleException sin capturar → 5xx → MP reintenta
+        // de nuevo, en loop. No hay pérdida de dinero (MP no duplica un
+        // refund ya aplicado), pero sí ruido de webhooks fallidos invisible
+        // para Soporte Financiero. Idempotencia real (ancla persistida para
+        // TODO reintento, sin la limitación de una fila por reserva) queda
+        // pendiente de una migración dedicada — este fix corta el síntoma
+        // más dañino (el loop) sin tocar el esquema.
+        try {
+            reembolso.reembolsarTotal(tardia);
+        } catch (RuntimeException e) {
+            LOG.warn("Reembolso de pago tardío falló para mpPaymentId={} (reservaId={}) — "
+                    + "puede ser un reintento de un pago que un intento previo ya reembolsó; "
+                    + "no se relanza para no generar un loop de reintentos del webhook de MP. "
+                    + "Verificar manualmente en el dashboard de MercadoPago si el motivo no es "
+                    + "un duplicado.", pago.mpPaymentId(), reserva.getId(), e);
+        }
     }
 }
