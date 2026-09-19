@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -89,6 +90,17 @@ public class FranjaService {
     public Optional<Duration> duracionFranjaQueCubre(UUID tutorId, Instant horario) {
         return franjaQueCubre(tutorId, horario)
                 .map(f -> Duration.between(f.getHoraInicio(), f.getHoraFin()));
+    }
+
+    /** T-M4-12: franjas activas del Tutor que aplican a una fecha del calendario
+     *  (semanal por {@code diaSemana}, o puntual por {@code fechaEspecifica}). */
+    public List<FranjaDisponibilidad> franjasQueAplicanA(UUID tutorId, LocalDate fecha) {
+        short diaDomingoCero = toDomingoCero(fecha.getDayOfWeek().getValue());
+        return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
+                .filter(f -> f.getFechaEspecifica() != null
+                        ? f.getFechaEspecifica().equals(fecha)
+                        : f.getDiaSemana() != null && f.getDiaSemana() == diaDomingoCero)
+                .toList();
     }
 
     private boolean cubre(FranjaDisponibilidad f, int diaSemana, LocalDateTime punto) {

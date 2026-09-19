@@ -32,4 +32,10 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
     /** FR-ID-014 (T-M1-12): reservas futuras y activas del menor (baja de perfil). */
     long countByEstadoInAndHorarioAfterAndBeneficiario_Id(
             Collection<EstadoReserva> estados, Instant despuesDe, UUID beneficiarioId);
+
+    /** T-M4-12: reservas NO canceladas de un Tutor en un rango horario (para
+     *  marcar bloques ocupados) — mismo criterio de exclusión que la EXCLUDE
+     *  constraint de FR-RES-007 (V9): {@code estado <> 'cancelada'}. */
+    List<Reserva> findByTutor_IdAndEstadoNotAndHorarioBetween(
+            UUID tutorId, EstadoReserva estadoExcluido, Instant desde, Instant hasta);
 }

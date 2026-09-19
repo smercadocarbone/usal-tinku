@@ -3,6 +3,7 @@ package com.tinku.reservas.web;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.reservas.model.FranjaDisponibilidad;
 import com.tinku.reservas.service.FranjaService;
+import com.tinku.reservas.service.HorariosDisponiblesService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -13,8 +14,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,10 +31,13 @@ import java.util.UUID;
 public class FranjaController {
 
     private final FranjaService franjaService;
+    private final HorariosDisponiblesService horariosService;
     private final UsuarioActual usuarioActual;
 
-    public FranjaController(FranjaService franjaService, UsuarioActual usuarioActual) {
+    public FranjaController(FranjaService franjaService, HorariosDisponiblesService horariosService,
+                            UsuarioActual usuarioActual) {
         this.franjaService = franjaService;
+        this.horariosService = horariosService;
         this.usuarioActual = usuarioActual;
     }
 
@@ -51,5 +57,18 @@ public class FranjaController {
                 .map(FranjaResponse::from)
                 .toList();
         return ResponseEntity.ok(franjas);
+    }
+
+    /**
+     * T-M4-12: bloques de un día para el {@code DynamicTimeSlotPicker} del
+     * frontend. {@code duracionMinutos} la decide el llamador (el Spec no fija
+     * un valor de producto — ver NOTA de T-M4-12 en Tasks_Tinku_Implementacion.md).
+     */
+    @GetMapping("/{tutorId}/horarios")
+    public ResponseEntity<List<TimeSlotResponse>> horarios(
+            @PathVariable UUID tutorId,
+            @RequestParam LocalDate fecha,
+            @RequestParam int duracionMinutos) {
+        return ResponseEntity.ok(horariosService.horariosDelDia(tutorId, fecha, duracionMinutos));
     }
 }

@@ -3,6 +3,7 @@ package com.tinku.reservas.web;
 import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
+import com.tinku.reservas.service.DuracionMinutosInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
 import com.tinku.reservas.service.NoPuedeCancelarReservaException;
 import com.tinku.reservas.service.ReservaNoCancelableException;
@@ -48,8 +49,8 @@ public class ReservasExceptionHandler {
     }
 
     @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class,
-            DuracionFranjaInvalidaException.class, ReservaNoReprogramableException.class,
-            ReservaNoCancelableException.class})
+            DuracionFranjaInvalidaException.class, DuracionMinutosInvalidaException.class,
+            ReservaNoReprogramableException.class, ReservaNoCancelableException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));

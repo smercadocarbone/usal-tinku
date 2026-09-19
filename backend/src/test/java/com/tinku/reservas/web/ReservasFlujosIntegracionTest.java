@@ -566,6 +566,44 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
+    void tM412_horariosDelDia_bloqueLibreDisponible_yOcupadoTrasReservar() throws Exception {
+        // Auditoría 2026-09-18 (gap del frontend, T-M4-12): la franja puntual
+        // de escenarioAdulto() es 15:00-16:00 — un solo bloque de 60 min.
+        EscenarioAdulto e = escenarioAdulto();
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", e.fecha().toString())
+                        .param("duracionMinutos", "60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].isAvailable").value(true))
+                .andExpect(jsonPath("$[0].startTime").exists())
+                .andExpect(jsonPath("$[0].endTime").exists());
+
+        crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", e.fecha().toString())
+                        .param("duracionMinutos", "60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].isAvailable").value(false));
+    }
+
+    @Test
+    void tM412_horarios_duracionInvalida_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", e.fecha().toString())
+                        .param("duracionMinutos", "0"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
     void frRes001_estudianteAdulto_reservaParaSiMismo() throws Exception {
         EscenarioAdulto e = escenarioAdulto();
 
