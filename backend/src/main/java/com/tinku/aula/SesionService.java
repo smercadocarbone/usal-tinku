@@ -421,10 +421,19 @@ public class SesionService {
                     && !reserva.getBeneficiario().getId().equals(detectadoId))) {
             throw new DetectadoInvalidoException(detectadoId);
         }
-        // Idempotente: ya hubo kill-switch en esta sesión (rama menor → alerta,
-        // rama adultos → confirmación esperando). Repetir no corta ni re-emite.
-        if (alertaRepo.findBySesionId(sesionId).isPresent()
-                || confirmacionRepo.findBySesionId(sesionId).isPresent()) {
+        // Idempotente solo mientras hay un ciclo SIN resolver: rama menor ya
+        // generó Alerta (sesión cortada, no hay nada que re-disparar), o rama
+        // adultos con una confirmación todavía esperando respuesta (evita
+        // duplicar la pregunta mientras está pendiente). Auditoría 2026-09-18:
+        // antes este guard también bloqueaba tras una confirmación YA resuelta
+        // con vio=false (falso positivo) — dejaba el kill-switch inutilizado
+        // para el resto de la sesión, violando Spec_M3 US-7 ("No" → continúa
+        // el monitoreo normal). Una detección real posterior en la misma
+        // sesión nunca volvía a generar nada.
+        boolean confirmacionPendiente = confirmacionRepo.findBySesionId(sesionId)
+                .map(c -> c.getRespondidoId() == null)
+                .orElse(false);
+        if (alertaRepo.findBySesionId(sesionId).isPresent() || confirmacionPendiente) {
             return sesion;
         }
         if (reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR) {
@@ -465,9 +474,16 @@ public class SesionService {
      */
     private SesionAprendizaje ramaAdultos(SesionAprendizaje sesion, Reserva reserva,
                                           UUID detectadoId) {
-        ConfirmacionKillswitch confirmacion = new ConfirmacionKillswitch();
+        // sesion_id es UNIQUE en BD (V12): un segundo disparo tras un falso
+        // positivo ya resuelto (vio=false) reutiliza y resetea la misma fila
+        // en vez de intentar un segundo INSERT — ver nota de ejecutarKillswitch.
+        ConfirmacionKillswitch confirmacion = confirmacionRepo.findBySesionId(sesion.getId())
+                .orElseGet(ConfirmacionKillswitch::new);
         confirmacion.setSesionId(sesion.getId());
         confirmacion.setDetectadoId(detectadoId);
+        confirmacion.setRespondidoId(null);
+        confirmacion.setVio(null);
+        confirmacion.setRespondedAt(null);
         confirmacionRepo.save(confirmacion);
         return sesion;
     }

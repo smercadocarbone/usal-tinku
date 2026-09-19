@@ -375,6 +375,50 @@ class KillswitchIntegracionTest {
     }
 
     @Test
+    void tM309_dosAdultos_falsoPositivoResuelto_segundoDisparoRealVuelveAGenerarConfirmacion()
+            throws Exception {
+        // Auditoría 2026-09-18: regresión del bug donde ejecutarKillswitch
+        // quedaba inutilizado para el resto de la sesión tras un primer
+        // disparo resuelto como falso positivo (vio=false) — Spec_M3 US-7
+        // exige que la sesión "continúe el monitoreo normal".
+        Usuario pagador = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario estudiante = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        Reserva reserva = reservaConfirmada(pagador, estudiante, tutor);
+        SesionAprendizaje sesion = sesionDirecta(reserva, 3600);
+
+        // Primer disparo: falso positivo, resuelto con "No".
+        postKillswitch(sesion.getId(), tokenDe(estudiante),
+                Map.of("detectadoId", tutor.getId().toString()));
+        mockMvc.perform(post("/api/sesiones/{id}/killswitch/confirmacion", sesion.getId())
+                        .header("Authorization", "Bearer " + tokenDe(estudiante))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("vio", false))))
+                .andExpect(status().isOk());
+        assertThat(EVENTOS).isEmpty();
+
+        // Segundo disparo, más tarde en la misma sesión: debe volver a
+        // registrar una confirmación pendiente, no ser ignorado.
+        postKillswitch(sesion.getId(), tokenDe(estudiante),
+                Map.of("detectadoId", tutor.getId().toString()));
+        ConfirmacionKillswitch conf =
+                confirmacionRepository.findBySesionId(sesion.getId()).orElseThrow();
+        assertThat(conf.getRespondidoId()).isNull();
+        assertThat(conf.getVio()).isNull();
+
+        // Y esa segunda confirmación pendiente sí puede resolverse con corte real.
+        mockMvc.perform(post("/api/sesiones/{id}/killswitch/confirmacion", sesion.getId())
+                        .header("Authorization", "Bearer " + tokenDe(estudiante))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("vio", true))))
+                .andExpect(status().isOk());
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("finalizada");
+        assertThat(EVENTOS).hasSize(1);
+        assertThat(EVENTOS.get(0)).isInstanceOf(SesionKillswitchAdultosEvent.class);
+    }
+
+    @Test
     void tM309_elDetectadoNoPuedeConfirmarseASiMismo_422() throws Exception {
         Usuario pagador = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
         Usuario estudiante = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
