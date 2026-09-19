@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -363,6 +364,68 @@ class AdminPanelIntegracionTest {
     }
 
     @Test
+    void tickets_actualizarEstado_soloElRolAsignado_yFijaResueltoEnUnaVezSola() throws Exception {
+        // Auditoría 2026-09-18 (gap del frontend): antes no existía ningún
+        // endpoint de escritura de estado — el ticket nacía y quedaba ahí.
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+
+        String creado = mvc.perform(post("/api/soporte/tickets")
+                        .header("Authorization", "Bearer " + token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "origenModulo", "M1.credencial_agotada",
+                                "asunto", "Mi credencial se venció",
+                                "detalle", "Quiero subirla de nuevo."))))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String ticketId = objectMapper.readTree(creado).get("id").asText();
+
+        // Rol asignado = Moderación (mapeo de M1.credencial_agotada). Soporte
+        // Financiero, aunque sea un Admin válido, no puede tocar este ticket.
+        mvc.perform(patch("/api/admin/tickets/" + ticketId)
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("estado", "en_proceso"))))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(patch("/api/admin/tickets/" + ticketId)
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("estado", "en_proceso"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("en_proceso"))
+                .andExpect(jsonPath("$.resueltoEn").doesNotExist());
+
+        String resuelto = mvc.perform(patch("/api/admin/tickets/" + ticketId)
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("estado", "resuelto"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("resuelto"))
+                .andExpect(jsonPath("$.resueltoEn").exists())
+                .andReturn().getResponse().getContentAsString();
+        String resueltoEnPrimeraVez = objectMapper.readTree(resuelto).get("resueltoEn").asText();
+
+        // Cerrado después: resueltoEn NO se pisa (se fijó la primera vez).
+        String cerrado = mvc.perform(patch("/api/admin/tickets/" + ticketId)
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("estado", "cerrado"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("cerrado"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(objectMapper.readTree(cerrado).get("resueltoEn").asText())
+                .isEqualTo(resueltoEnPrimeraVez);
+
+        mvc.perform(patch("/api/admin/tickets/" + UUID.randomUUID())
+                        .header("Authorization", "Bearer " + token(moderador))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("estado", "cerrado"))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void pagosFallidos_soloEscrowsAgotados_reintentarReutilizaElFlujoDeM5() throws Exception {
         Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
         Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
@@ -516,6 +579,43 @@ class AdminPanelIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 Map.of("provincia", "CABA", "valorSugerido", 1))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void preciosRegionales_listado_devuelveSoloLaVersionVigentePorProvincia() throws Exception {
+        // Auditoría 2026-09-18 (gap del frontend): antes solo había POST a
+        // ciegas, sin forma de ver la tabla vigente antes de tocarla.
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+
+        mvc.perform(post("/api/admin/financiero/precios-regionales")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("provincia", "Cordoba", "valorSugerido", 18000))))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/admin/financiero/precios-regionales")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("provincia", "Cordoba", "valorSugerido", 21000))))
+                .andExpect(status().isOk());
+
+        String json = mvc.perform(get("/api/admin/financiero/precios-regionales")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<com.fasterxml.jackson.databind.JsonNode> filas = new java.util.ArrayList<>();
+        objectMapper.readTree(json).forEach(filas::add);
+        List<com.fasterxml.jackson.databind.JsonNode> cordoba = filas.stream()
+                .filter(f -> f.get("provincia").asText().equals("Cordoba")).toList();
+        // Solo la fila VIGENTE (version 2), nunca la version 1 ya superada.
+        assertThat(cordoba).hasSize(1);
+        assertThat(cordoba.get(0).get("version").asInt()).isEqualTo(2);
+        assertThat(cordoba.get(0).get("valorSugerido").asInt()).isEqualTo(21000);
+
+        mvc.perform(get("/api/admin/financiero/precios-regionales")
+                        .header("Authorization", "Bearer " + token(moderador)))
                 .andExpect(status().isForbidden());
     }
 

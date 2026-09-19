@@ -1,6 +1,7 @@
 package com.tinku.admin.web;
 
 import com.tinku.admin.service.OrigenMapNoDefinidoException;
+import com.tinku.admin.service.TicketNoEncontradoException;
 import com.tinku.shared.AccesoModeracionDenegadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,11 @@ public class AdminExceptionHandler {
     @ExceptionHandler(OrigenMapNoDefinidoException.class)
     public ResponseEntity<Map<String, String>> origenSinMapeo(OrigenMapNoDefinidoException e) {
         return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(TicketNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> ticketNoEncontrado(TicketNoEncontradoException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

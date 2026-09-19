@@ -9,12 +9,15 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Canal de soporte (US-7, FR-ADM-006, T-M8-05):
@@ -57,5 +60,19 @@ public class TicketsController {
         Admin admin = gate.adminAutenticado(authentication);
         return ResponseEntity.ok(ticketService.listarPorRol(admin.getRol())
                 .stream().map(TicketResponse::from).toList());
+    }
+
+    /** Auditoría 2026-09-18 (gap del frontend): transición de estado del
+     *  ticket ({@code abierto → en_proceso → resuelto → cerrado}) — antes no
+     *  existía ningún endpoint de escritura más allá del alta. Solo el Admin
+     *  del mismo rol asignado al ticket puede tocarlo (FR-ADM-008). */
+    @PatchMapping("/api/admin/tickets/{ticketId}")
+    public ResponseEntity<TicketResponse> actualizarEstado(
+            @PathVariable UUID ticketId,
+            @Valid @RequestBody ActualizarEstadoTicketRequest request,
+            Authentication authentication) {
+        Admin admin = gate.adminAutenticado(authentication);
+        TicketSoporte ticket = ticketService.actualizarEstado(admin, ticketId, request.estado());
+        return ResponseEntity.ok(TicketResponse.from(ticket));
     }
 }

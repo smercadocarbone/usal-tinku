@@ -170,6 +170,17 @@ public class ColasFinancieroController {
                 pasarela.establecerHabilitada(request.habilitada(), adminUsuarioId)));
     }
 
+    /** Auditoría 2026-09-18 (gap del frontend): la tabla vigente completa, una
+     *  fila por provincia (mayor versión) — antes solo había POST a ciegas. */
+    @GetMapping("/precios-regionales")
+    public ResponseEntity<List<PrecioReferenciaResponse>> preciosRegionales(
+            Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(precioRepo.vigentesPorProvincia().stream()
+                .map(PrecioReferenciaResponse::from)
+                .toList());
+    }
+
     @PostMapping("/precios-regionales")
     public ResponseEntity<?> actualizarPrecioRegional(
             @Valid @RequestBody ActualizarPrecioRegionalRequest request,
