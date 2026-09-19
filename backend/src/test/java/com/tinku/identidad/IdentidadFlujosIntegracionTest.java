@@ -41,6 +41,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -179,6 +180,26 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(res.getResponse().getContentAsString()).contains("token");
+    }
+
+    @Test
+    void us1_cuentaSuspendida_loginRechazado_403() throws Exception {
+        // Auditoría 2026-09-18: regresión del bug donde AuthService.login no
+        // chequeaba estadoCuenta — una cuenta SUSPENDIDA por sanción de M9
+        // (kill-switch, denuncia fundada) podía loguearse con normalidad.
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("11223344", "Ana", "Gomez", LocalDate.of(1990, 5, 15)));
+        registrarAdulto("11223344", "Ana", "Gomez", true, false);
+
+        Usuario u = usuarioPorDni("11223344");
+        u.setEstadoCuenta(EstadoCuenta.SUSPENDIDA);
+        usuarioRepository.save(u);
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.LoginRequest("11223344", PASSWORD))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -358,6 +379,41 @@ class IdentidadFlujosIntegracionTest {
         assertThat(menor.getTipo()).isEqualTo(TipoUsuario.MENOR);
         assertThat(menor.getAdultoResponsable().getDni()).isEqualTo("33333333");
         assertThat(menor.isCapacidadAdultoResponsable()).isFalse();
+    }
+
+    @Test
+    void us3_listarMenores_soloLosDelPropioAdultoResponsable() throws Exception {
+        // Auditoría 2026-09-18 (gap del frontend): antes solo había alta (POST)
+        // y baja por id (DELETE), sin forma de listar los menores ya cargados.
+        String tokenAr1 = registrarAdultoYToken("60000001", "Marta", "Ruiz", true);
+        String tokenAr2 = registrarAdultoYToken("60000002", "Nora", "Diaz", true);
+
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("60000011", "Tomas", "Ruiz", LocalDate.of(2016, 3, 10)));
+        mockMvc.perform(multipart("/api/usuarios/menores")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroMenorRequest(
+                                "60000011", "Tomas", "Ruiz", LocalDate.of(2016, 3, 10),
+                                PASSWORD, true, "v1")))
+                        .file(foto())
+                        .header("Authorization", "Bearer " + tokenAr1))
+                .andExpect(status().isCreated());
+
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("60000012", "Iara", "Diaz", LocalDate.of(2017, 8, 2)));
+        mockMvc.perform(multipart("/api/usuarios/menores")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroMenorRequest(
+                                "60000012", "Iara", "Diaz", LocalDate.of(2017, 8, 2),
+                                PASSWORD, true, "v1")))
+                        .file(foto())
+                        .header("Authorization", "Bearer " + tokenAr2))
+                .andExpect(status().isCreated());
+
+        // AR1 solo ve a Tomás, nunca a Iara (que es de AR2).
+        mockMvc.perform(get("/api/usuarios/menores")
+                        .header("Authorization", "Bearer " + tokenAr1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].nombre").value("Tomas"));
     }
 
     // ------------------------------------------------ US-4: credencial + backoff escalado

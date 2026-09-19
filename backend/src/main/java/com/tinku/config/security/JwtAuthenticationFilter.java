@@ -8,6 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -39,13 +40,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtUtil.isTokenValid(token)) {
                 String dni = jwtUtil.extractDni(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(dni);
+                try {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(dni);
 
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } catch (UsernameNotFoundException e) {
+                    // Auditoría 2026-09-18: JWT firmado válido pero la cuenta
+                    // fue suspendida (M9) o eliminada después de emitirse —
+                    // UsuarioDetailsService ya lo detecta, pero antes de este
+                    // fix la excepción llegaba sin capturar hasta acá, antes
+                    // de ExceptionTranslationFilter, y volaba como 500. Sin
+                    // setear el SecurityContext, la request sigue como no
+                    // autenticada y el resto de la cadena la rechaza con 401.
+                }
             }
         }
 

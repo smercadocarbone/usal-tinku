@@ -123,4 +123,12 @@ public class IdentidadExceptionHandler {
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Credenciales inválidas"));
     }
+
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<Map<String, String>> handleCuentaSuspendida() {
+        // Auditoría 2026-09-18 (AuthService.login): 403, no 401 — las
+        // credenciales SON correctas, lo que falta es la cuenta activa.
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Cuenta suspendida. Contactá a soporte para más información."));
+    }
 }
