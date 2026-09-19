@@ -64,15 +64,18 @@ public class SenalesImplicitasService {
     private final ReservaRepository reservaRepo;
     private final SesionAprendizajeRepository sesionRepo;
     private final Scheduler scheduler;
+    private final SenalesImplicitasGuard guard;
 
     public SenalesImplicitasService(SenalesImplicitasTutorRepository senalesRepo,
                                     ReservaRepository reservaRepo,
                                     SesionAprendizajeRepository sesionRepo,
-                                    Scheduler scheduler) {
+                                    Scheduler scheduler,
+                                    SenalesImplicitasGuard guard) {
         this.senalesRepo = senalesRepo;
         this.reservaRepo = reservaRepo;
         this.sesionRepo = sesionRepo;
         this.scheduler = scheduler;
+        this.guard = guard;
     }
 
     /**
@@ -86,10 +89,12 @@ public class SenalesImplicitasService {
     public void onSesionFinalizada(SesionFinalizadaEvent event) {
         UUID tutorId = tutorDe(event.getReservaId());
         if (tutorId != null) {
-            SenalesImplicitasTutor s = obtenerOCrear(tutorId);
-            s.setPuntualidadPromedio(promediarHaciaUno(s.getPuntualidadPromedio()));
-            s.setSesionesDictadasTotal(s.getSesionesDictadasTotal() + 1);
-            senalesRepo.save(s);
+            actualizarSenalesSeguro(tutorId, () -> {
+                SenalesImplicitasTutor s = obtenerOCrear(tutorId);
+                s.setPuntualidadPromedio(promediarHaciaUno(s.getPuntualidadPromedio()));
+                s.setSesionesDictadasTotal(s.getSesionesDictadasTotal() + 1);
+                senalesRepo.save(s);
+            });
         }
         programarRecordatorio(event);
     }
@@ -101,9 +106,11 @@ public class SenalesImplicitasService {
     public void onSesionNoShowEstudiante(SesionNoShowEstudianteEvent event) {
         UUID tutorId = tutorDe(event.getReservaId());
         if (tutorId == null) return;
-        SenalesImplicitasTutor s = obtenerOCrear(tutorId);
-        s.setPuntualidadPromedio(promediarHaciaUno(s.getPuntualidadPromedio()));
-        senalesRepo.save(s);
+        actualizarSenalesSeguro(tutorId, () -> {
+            SenalesImplicitasTutor s = obtenerOCrear(tutorId);
+            s.setPuntualidadPromedio(promediarHaciaUno(s.getPuntualidadPromedio()));
+            senalesRepo.save(s);
+        });
     }
 
     /** {@code sesion.no_show_tutor}: el Tutor no se presento → impuntual y
@@ -113,10 +120,12 @@ public class SenalesImplicitasService {
     public void onSesionNoShowTutor(SesionNoShowTutorEvent event) {
         UUID tutorId = tutorDe(event.getReservaId());
         if (tutorId == null) return;
-        SenalesImplicitasTutor s = obtenerOCrear(tutorId);
-        s.setPuntualidadPromedio(promediarHaciaCero(s.getPuntualidadPromedio()));
-        s.setTasaCancelacionNoshow(promediarHaciaUno(s.getTasaCancelacionNoshow()));
-        senalesRepo.save(s);
+        actualizarSenalesSeguro(tutorId, () -> {
+            SenalesImplicitasTutor s = obtenerOCrear(tutorId);
+            s.setPuntualidadPromedio(promediarHaciaCero(s.getPuntualidadPromedio()));
+            s.setTasaCancelacionNoshow(promediarHaciaUno(s.getTasaCancelacionNoshow()));
+            senalesRepo.save(s);
+        });
     }
 
     /** {@code reserva.cancelada}: si quien cancela es el propio Tutor, es
@@ -127,9 +136,11 @@ public class SenalesImplicitasService {
     public void onReservaCancelada(ReservaCanceladaEvent event) {
         UUID tutorId = tutorDe(event.getReservaId());
         if (tutorId == null || !tutorId.equals(event.getCanceladaPorUsuarioId())) return;
-        SenalesImplicitasTutor s = obtenerOCrear(tutorId);
-        s.setTasaCancelacionNoshow(promediarHaciaUno(s.getTasaCancelacionNoshow()));
-        senalesRepo.save(s);
+        actualizarSenalesSeguro(tutorId, () -> {
+            SenalesImplicitasTutor s = obtenerOCrear(tutorId);
+            s.setTasaCancelacionNoshow(promediarHaciaUno(s.getTasaCancelacionNoshow()));
+            senalesRepo.save(s);
+        });
     }
 
     /** {@code reserva.confirmada}: si el estudiante ya tenia una reserva con
@@ -144,10 +155,33 @@ public class SenalesImplicitasService {
                 .findByTutor_IdAndBeneficiario_Id(tutorId, reserva.getBeneficiario().getId())
                 .size();
         if (historial >= 2) {
-            SenalesImplicitasTutor s = obtenerOCrear(tutorId);
-            s.setTasaRecontratacion(promediarHaciaUno(s.getTasaRecontratacion()));
-            senalesRepo.save(s);
+            actualizarSenalesSeguro(tutorId, () -> {
+                SenalesImplicitasTutor s = obtenerOCrear(tutorId);
+                s.setTasaRecontratacion(promediarHaciaUno(s.getTasaRecontratacion()));
+                senalesRepo.save(s);
+            });
         }
+    }
+
+    /**
+     * Auditoría 2026-09-18: dos sesiones del mismo Tutor finalizando casi al
+     * mismo instante disparan dos transacciones concurrentes de
+     * {@code obtenerOCrear} → {@code findById} vacío en ambas → dos INSERT con
+     * el mismo PK ({@code tutor_id}, sin fila previa) → una de las dos revienta
+     * con {@link DataAccessException}. Sin este guard, esa excepción viajaba
+     * sin capturar hasta la transacción de {@code SesionService.finalizar()}
+     * (el listener corre síncrono, misma transacción, Artículo IX) y la hacía
+     * rollback completa: la Sesión no quedaba {@code finalizada}, no se emitía
+     * el evento, y el timer de liberación de escrow de M5 nunca arrancaba — un
+     * bug de reputación (señal blanda, no expuesta al usuario) bloqueando un
+     * flujo de dinero real. Delegado a {@link SenalesImplicitasGuard}
+     * (bean separado, no auto-invocación) para que
+     * {@code Propagation.NESTED} pase realmente por el proxy transaccional de
+     * Spring y acote el rollback a un SAVEPOINT de esta sola operación — la
+     * transacción de {@code finalizar()} sigue su curso normal.
+     */
+    private void actualizarSenalesSeguro(UUID tutorId, Runnable accion) {
+        guard.ejecutarEnSavepoint(tutorId, accion);
     }
 
     private void programarRecordatorio(SesionFinalizadaEvent event) {
