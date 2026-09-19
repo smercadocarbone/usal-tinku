@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
+import { Alerta, Boton, Cargando, EstadoVacio, Tarjeta, clasesBoton } from "@/components/ui";
 
 export default function ReservasPage() {
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
@@ -35,47 +36,47 @@ export default function ReservasPage() {
     <>
       <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }, { href: "/cuenta", label: "Mi cuenta" }]} />
 
-      <main className="mx-auto max-w-[44rem] px-5 py-8">
-        <h1 className="text-[1.3rem] tracking-[-0.01em]">
+      <main className="mx-auto max-w-2xl px-5 py-8">
+        <h1 className="text-xl tracking-tight">
           Mis reservas
         </h1>
 
-        {cargando && (
-          <p className="text-texto-suave">Cargando...</p>
-        )}
+        {cargando && <Cargando>Cargando...</Cargando>}
 
         {!cargando && reservas === null && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
+          <Alerta tono="error">
             No se pudieron cargar tus reservas en este momento.
-            <button
-              type="button"
-              className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+            <Boton
+              variante="secundario"
+              tamano="sm"
+              className="mt-3 flex"
               onClick={cargar}
             >
               Reintentar
-            </button>
-          </div>
+            </Boton>
+          </Alerta>
         )}
 
         {reservas && reservas.length === 0 && (
-          <p className="text-texto-suave">
+          <EstadoVacio>
             No tenes reservas todavia.{" "}
             <Link href="/buscar">Busca un tutor</Link> para empezar.
-          </p>
+          </EstadoVacio>
         )}
 
         {reservas && reservas.length > 0 && (
           <ul className="m-0 list-none p-0">
             {reservas.map((r) => (
-              <li
+              <Tarjeta
+                as="li"
                 key={r.id}
-                className="mb-2 flex items-center justify-between rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta"
+                className="mb-2 flex items-center justify-between p-4"
               >
                 <div>
                   <div className="font-semibold">
                     {formatearFecha(r.horario)} {formatearHora(r.horario)}
                   </div>
-                  <div className="mt-[0.15rem] text-[0.85rem] text-texto-suave">
+                  <div className="mt-0.5 text-sm text-slate-500">
                     {ESTADO_ETIQUETA[r.estado] ?? r.estado}
                     {r.precio !== null &&
                       ` — ${formatearPrecio(r.precio)}`}
@@ -83,11 +84,11 @@ export default function ReservasPage() {
                 </div>
                 <Link
                   href={`/cuenta/reservas/${r.id}`}
-                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+                  className={clasesBoton("secundario", "sm")}
                 >
                   Detalle
                 </Link>
-              </li>
+              </Tarjeta>
             ))}
           </ul>
         )}

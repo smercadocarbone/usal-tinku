@@ -190,17 +190,17 @@ export default function AulaPage({ params }: { params: { id: string } }) {
     <main className="flex min-h-screen flex-col p-0">
       <div className="flex min-h-screen flex-col bg-gray-900 text-gray-50">
         <header className="flex items-center justify-between bg-gray-800 px-5 py-3">
-          <div className="text-[1.05rem] font-bold text-gray-50">
-            Tinku<span className="text-accent">.</span>
+          <div className="text-lg font-bold text-gray-50">
+            Tinku<span className="text-teal-700">.</span>
           </div>
-          <span className="text-[0.8rem] capitalize text-gray-400">{MENSAJES_ESTADO[estado]}</span>
+          <span className="text-xs capitalize text-gray-400">{MENSAJES_ESTADO[estado]}</span>
         </header>
 
         <div className="relative flex min-h-0 flex-1">
           <div className="relative flex flex-1 items-center justify-center bg-black">
             <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
             {!remoteActivo && (
-              <div className="text-[0.95rem] text-gray-500">
+              <div className="text-sm text-gray-500">
                 {estado === "conectado" || estado === "esperando"
                   ? "Esperando al otro participante"
                   : MENSAJES_ESTADO[estado]}
@@ -215,7 +215,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
 
         {error && (
           <div
-            className="mx-4 my-2 self-center rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
+            className="mx-4 my-2 self-center rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
             role="alert"
           >
             {error}
@@ -227,7 +227,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-[0.85rem] font-semibold text-gray-50 ${camActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
+                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-50 ${camActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
                 onClick={alternarCam}
                 aria-label={camActiva ? "Apagar camara" : "Prender camara"}
                 title={camActiva ? "Apagar camara" : "Prender camara"}
@@ -236,7 +236,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
               </button>
               <button
                 type="button"
-                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-[0.85rem] font-semibold text-gray-50 ${micActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
+                className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-50 ${micActiva ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
                 onClick={alternarMic}
                 aria-label={micActiva ? "Silenciar" : "Activar microfono"}
                 title={micActiva ? "Silenciar" : "Activar microfono"}
@@ -250,7 +250,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
           {estado === "sala_no_disponible" && (
             <button
               type="button"
-              className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
+              className="cursor-pointer rounded-lg bg-teal-700 px-4 py-2.5 font-semibold text-white enabled:hover:bg-teal-800"
               onClick={conectar}
             >
               Volver a intentar
@@ -262,7 +262,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
             estado === "sala_no_disponible") && (
             <button
               type="button"
-              className="cursor-pointer rounded-full bg-red-600 px-5 py-2.5 text-[0.9rem] font-semibold text-white enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="cursor-pointer rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={finalizar}
               disabled={finalizando}
             >

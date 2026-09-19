@@ -7,6 +7,14 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { formatearFechaCorta, formatearPrecio } from "@/lib/formatos";
+import {
+  Alerta,
+  Boton,
+  Campo,
+  CampoSelect,
+  Cargando,
+  Tarjeta,
+} from "@/components/ui";
 
 interface TutorPerfil {
   id: string;
@@ -166,85 +174,78 @@ function ReservarForm() {
   }
 
   return (
-    <main className="mx-auto max-w-[44rem] px-5 py-8">
-      <h1 className="text-[1.3rem] tracking-[-0.01em]">
+    <main className="mx-auto max-w-2xl px-5 py-8">
+      <h1 className="text-xl tracking-tight">
         Reservar una clase
       </h1>
 
-      {cargando && (
-        <p className="text-texto-suave">Cargando...</p>
-      )}
+      {cargando && <Cargando>Cargando...</Cargando>}
 
       {error && !cargando && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
+        <Alerta tono="error" className="mb-4">
           {error}
-          <button
-            type="button"
-            className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            className="mt-3 flex"
             onClick={cargar}
           >
             Reintentar
-          </button>
-        </div>
+          </Boton>
+        </Alerta>
       )}
 
       {esMenor && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
+        <Alerta tono="aviso" className="mb-4">
           Tu Adulto Responsable debe reservar por vos.
-        </div>
+        </Alerta>
       )}
 
       {perfil && !esMenor && (
         <form onSubmit={reservar} className="flex flex-col gap-4">
-          <div
-            className="flex flex-col gap-[0.35rem] rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta"
-          >
-            <p className="mb-1 text-[0.85rem] text-texto-suave">
+          <Tarjeta className="flex flex-col gap-1.5 p-4">
+            <p className="mb-1 text-sm text-slate-500">
               Tutor
             </p>
             <span className="mb-1 font-semibold">
               {perfil.nombre} {perfil.apellido}
             </span>
             {typeof perfil.precioHora === "number" && (
-              <span className="text-[0.9rem] text-texto-suave">
+              <span className="text-sm text-slate-500">
                 {formatearPrecio(perfil.precioHora)} por hora
               </span>
             )}
-          </div>
+          </Tarjeta>
 
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="fecha" className="text-[0.85rem] font-semibold">Fecha</label>
-            <input
-              id="fecha"
-              type="date"
-              required
-              value={fechaElegida}
-              onChange={elegirFecha}
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
+          <Campo
+            id="fecha"
+            etiqueta="Fecha"
+            type="date"
+            required
+            value={fechaElegida}
+            onChange={elegirFecha}
+          />
 
           {cargandoFranjas ? (
-            <p className="text-[0.9rem] text-texto-suave">
-              Cargando franjas...
-            </p>
+            <Cargando>Cargando franjas...</Cargando>
           ) : franjasVisibles.length > 0 ? (
             <div>
-              <p className="mb-2 text-[0.9rem] font-semibold">
+              <p className="mb-2 text-sm font-semibold">
                 Franjas de disponibilidad
               </p>
               <ul className="m-0 list-none p-0">
                 {franjasVisibles.map((f) => (
-                  <li key={f.id} className="mb-[0.35rem]">
-                    <button
-                      type="button"
-                      className="w-full cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-left text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+                  <li key={f.id} className="mb-1.5">
+                    <Boton
+                      variante="secundario"
+                      tamano="sm"
+                      className="w-full justify-start text-left"
                       onClick={() => verHoras(f)}
                     >
                       {f.diaSemana !== null
                         ? `${NOMBRE_DIA[f.diaSemana]} de ${f.horaInicio} a ${f.horaFin}`
                         : `${formatearFechaCorta(`${f.fechaEspecifica}T12:00:00`)} de ${f.horaInicio} a ${f.horaFin}`}
-                    </button>
+                    </Boton>
                   </li>
                 ))}
               </ul>
@@ -252,43 +253,41 @@ function ReservarForm() {
           ) : (
             <p
               role="status"
-              className="text-[0.9rem] text-texto-suave"
+              className="text-sm text-slate-500"
             >
               Este tutor no publico disponibilidad todavia.
             </p>
           )}
 
           {horas.length > 0 && (
-            <div className="flex flex-col gap-[0.35rem]">
-              <label htmlFor="hora" className="text-[0.85rem] font-semibold">Horario</label>
-              <select
-                id="hora"
-                value={horaElegida}
-                onChange={(e) => setHoraElegida(e.target.value)}
-                required
-                className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="">Elegi un horario</option>
-                {horas.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CampoSelect
+              id="hora"
+              etiqueta="Horario"
+              value={horaElegida}
+              onChange={(e) => setHoraElegida(e.target.value)}
+              required
+            >
+              <option value="">Elegi un horario</option>
+              {horas.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </CampoSelect>
           )}
 
-          <button
+          <Boton
             type="submit"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={enviando || !fechaElegida || !horaElegida}
+            cargando={enviando}
+            textoCargando="Creando reserva..."
+            disabled={!fechaElegida || !horaElegida}
           >
-            {enviando ? "Creando reserva..." : "Reservar y pagar"}
-          </button>
+            Reservar y pagar
+          </Boton>
         </form>
       )}
 
-      <p className="mt-8 text-center text-[0.9rem] text-texto-suave">
+      <p className="mt-8 text-center text-sm text-slate-500">
         <Link href="/buscar">Volver a buscar</Link>
       </p>
     </main>
@@ -297,7 +296,7 @@ function ReservarForm() {
 
 export default function ReservarPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-[44rem] px-5 py-8">Cargando...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-2xl px-5 py-8">Cargando...</div>}>
       <ReservarForm />
     </Suspense>
   );

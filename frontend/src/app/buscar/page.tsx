@@ -11,6 +11,7 @@ import {
   type NivelCatalogo,
 } from "@/lib/api";
 import { formatearPrecio } from "@/lib/formatos";
+import { Alerta, Boton, Chip, EstadoVacio, Insignia, Skeleton, Tarjeta } from "@/components/ui";
 
 /* ---- Contratos ---- */
 
@@ -66,14 +67,15 @@ const ETIQUETA_TRUST: Record<TrustLevel, string> = {
 
 const COLOR_TRUST: Record<TrustLevel, string> = {
   bronce: "bg-orange-50 text-orange-700",
-  plata: "bg-gray-100 text-gray-600",
+  plata: "bg-slate-100 text-slate-600",
   oro: "bg-amber-50 text-amber-700",
 };
 
 function TrustLevelBadge({ nivel }: { nivel: TrustLevel }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${COLOR_TRUST[nivel]}`}
+    <Insignia
+      tono="neutro"
+      className={COLOR_TRUST[nivel]}
       title={`Nivel de confianza: ${ETIQUETA_TRUST[nivel]}`}
     >
       <svg
@@ -91,7 +93,7 @@ function TrustLevelBadge({ nivel }: { nivel: TrustLevel }) {
         <path d="m9 11.5 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       {ETIQUETA_TRUST[nivel]}
-    </span>
+    </Insignia>
   );
 }
 
@@ -117,7 +119,7 @@ function TutorCard({
     .toUpperCase();
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-tarjeta border border-borde bg-superficie shadow-tarjeta transition hover:-translate-y-0.5 hover:shadow-lg">
+    <Tarjeta as="article" interactiva className="flex flex-col overflow-hidden p-0">
       <Link href={`/tutores/${tutor.id}`} className="block flex-1 p-5">
         <div className="flex items-center gap-3">
           {tutor.avatarUrl ? (
@@ -127,14 +129,14 @@ function TutorCard({
               className="h-12 w-12 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-accent">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-teal-700">
               {iniciales}
             </span>
           )}
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate font-semibold text-texto">
+              <h2 className="truncate font-semibold text-slate-800">
                 {tutor.nombre}
               </h2>
               {tutor.trustLevel && <TrustLevelBadge nivel={tutor.trustLevel} />}
@@ -142,17 +144,14 @@ function TutorCard({
             {tutor.materias.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {tutor.materias.slice(0, 2).map((m) => (
-                  <span
-                    key={m}
-                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                  >
+                  <Insignia key={m} tono="neutro" className="px-2 py-0.5 font-normal">
                     {m}
-                  </span>
+                  </Insignia>
                 ))}
                 {tutor.materias.length > 2 && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                  <Insignia tono="neutro" className="px-2 py-0.5 font-normal text-slate-500">
                     +{tutor.materias.length - 2}
-                  </span>
+                  </Insignia>
                 )}
               </div>
             )}
@@ -161,31 +160,31 @@ function TutorCard({
 
         <div className="mt-5 flex items-end justify-between">
           <div>
-            <div className="text-xl font-bold text-texto">
+            <div className="text-xl font-bold text-slate-800">
               {tutor.precioProrateado !== null
                 ? formatearPrecio(tutor.precioProrateado)
                 : "A consultar"}
             </div>
             {tutor.precioProrateado !== null && (
-              <div className="text-xs text-texto-suave">por hora</div>
+              <div className="text-xs text-slate-500">por hora</div>
             )}
           </div>
-          <span className="text-sm font-semibold text-accent">Ver perfil →</span>
+          <span className="text-sm font-semibold text-teal-700">Ver perfil →</span>
         </div>
       </Link>
 
       {noAutorizado && (
-        <div className="border-t border-borde bg-fondo px-5 py-3">
-          <button
-            type="button"
-            className="cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+        <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => onSolicitarAutorizacion(tutor.id)}
           >
             Solicitar autorización
-          </button>
+          </Boton>
           {avisoActivo && (
             <p
-              className="mt-2 text-xs text-texto-suave"
+              className="mt-2 text-xs text-slate-500"
               role="status"
             >
               Tu adulto a cargo debe autorizar a este tutor para poder
@@ -194,7 +193,7 @@ function TutorCard({
           )}
         </div>
       )}
-    </article>
+    </Tarjeta>
   );
 }
 
@@ -210,17 +209,17 @@ function SearchResultsSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         // ponytail: grilla estática de carga — índice como key está bien
         // eslint-disable-next-line react/no-array-index-key
-        <div key={i} className="animate-pulse rounded-tarjeta border border-borde bg-superficie p-5">
+        <Tarjeta key={i} className="animate-pulse p-5">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-gray-200" />
+            <Skeleton className="h-12 w-12 rounded-full" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-2/3 rounded bg-gray-200" />
-              <div className="h-3 w-1/3 rounded bg-gray-200" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
             </div>
           </div>
-          <div className="mt-4 h-3 w-1/2 rounded bg-gray-200" />
-          <div className="mt-3 h-3 w-1/3 rounded bg-gray-200" />
-        </div>
+          <Skeleton className="mt-4 h-3 w-1/2" />
+          <Skeleton className="mt-3 h-3 w-1/3" />
+        </Tarjeta>
       ))}
     </div>
   );
@@ -230,23 +229,24 @@ function SearchResultsSkeleton() {
 
 function SearchEmpty() {
   return (
-    <div className="mx-auto max-w-md py-12 text-center" role="status">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        className="mx-auto h-12 w-12 text-gray-300"
-        aria-hidden="true"
-      >
-        <circle cx="11" cy="11" r="7" />
-        <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-      </svg>
-      <p className="mt-4 text-texto-suave">
-        No encontramos tutores exactos para esta búsqueda. Intenta usar
-        palabras m&aacute;s generales o navega por las categorías.
-      </p>
-    </div>
+    <EstadoVacio
+      icono={
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          className="mx-auto h-12 w-12"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+        </svg>
+      }
+    >
+      No encontramos tutores exactos para esta búsqueda. Intenta usar
+      palabras m&aacute;s generales o navega por las categorías.
+    </EstadoVacio>
   );
 }
 
@@ -294,11 +294,6 @@ const ROTULO_NIVEL: Record<string, string> = {
 function rotuloNivel(n: string): string {
   return ROTULO_NIVEL[n] ?? n.charAt(0).toUpperCase() + n.slice(1);
 }
-
-const CHIP_INACTIVO =
-  "shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200";
-const CHIP_ACTIVO =
-  "shrink-0 cursor-pointer rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition";
 
 export default function BuscarPage() {
   const [catalogos, setCatalogos] = useState<NivelCatalogo[] | null>(null);
@@ -447,10 +442,10 @@ export default function BuscarPage() {
 
       <main className="mx-auto max-w-6xl px-5 pb-16">
         <section className="mx-auto max-w-2xl pb-4 pt-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-texto">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-800">
             Encontr&aacute; al tutor ideal
           </h1>
-          <p className="mt-2 text-texto-suave">
+          <p className="mt-2 text-slate-500">
             Describí lo que necesit&aacute;s y te acercamos a los mejores
             tutores.
           </p>
@@ -460,7 +455,7 @@ export default function BuscarPage() {
             role="search"
             className="relative mt-6"
           >
-            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-accent">
+            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-teal-700">
               <svg
                 viewBox="0 0 24 24"
                 fill="currentColor"
@@ -477,18 +472,19 @@ export default function BuscarPage() {
               placeholder="Ej: repasar división para el secundario"
               maxLength={500}
               aria-label="Buscar tutores"
-              className="w-full rounded-full border border-borde bg-superficie py-3.5 pl-12 pr-32 text-base shadow-tarjeta transition placeholder:text-texto-suave focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full rounded-full border border-slate-200 bg-white py-3.5 pl-12 pr-32 text-base shadow-sm transition placeholder:text-slate-500 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
-            <button
+            <Boton
               type="submit"
-              disabled={buscando}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              cargando={buscando}
+              textoCargando="Buscando…"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-5 text-sm"
             >
-              {buscando ? "Buscando…" : "Buscar"}
-            </button>
+              Buscar
+            </Boton>
           </form>
 
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-texto-suave">
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-500">
             <svg
               viewBox="0 0 24 24"
               fill="currentColor"
@@ -503,47 +499,37 @@ export default function BuscarPage() {
 
         <section className="mt-6">
           {errorCat && (
-            <div
-              className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-peligro"
-              role="alert"
-            >
+            <Alerta tono="error" className="mb-4">
               {errorCat}{" "}
-              <button
-                type="button"
-                className="ml-2 cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-1 text-xs font-semibold text-accent enabled:hover:border-accent"
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                className="ml-2"
                 onClick={cargarCatalogos}
               >
                 Reintentar
-              </button>
-            </div>
+              </Boton>
+            </Alerta>
           )}
 
           <div className="no-scrollbar flex gap-2 overflow-x-auto py-1">
             {(catalogos ?? []).map((n) => (
-              <button
+              <Chip
                 key={n.nivel}
-                type="button"
+                activo={nivel === n.nivel}
                 onClick={() => toggleNivel(n.nivel)}
-                aria-pressed={nivel === n.nivel}
-                className={nivel === n.nivel ? CHIP_ACTIVO : CHIP_INACTIVO}
               >
                 {rotuloNivel(n.nivel)}
-              </button>
+              </Chip>
             ))}
           </div>
 
           {nivelSel && materiasNivel.length > 0 && (
             <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto py-1">
               {materiasNivel.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => toggleMateria(m)}
-                  aria-pressed={materia === m}
-                  className={materia === m ? CHIP_ACTIVO : CHIP_INACTIVO}
-                >
+                <Chip key={m} activo={materia === m} onClick={() => toggleMateria(m)}>
                   {m}
-                </button>
+                </Chip>
               ))}
             </div>
           )}
@@ -551,12 +537,9 @@ export default function BuscarPage() {
 
         <section className="mt-8">
           {error && (
-            <div
-              className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-peligro"
-              role="alert"
-            >
+            <Alerta tono="error" className="mb-4">
               {error}
-            </div>
+            </Alerta>
           )}
 
           {buscando || haBuscado ? (

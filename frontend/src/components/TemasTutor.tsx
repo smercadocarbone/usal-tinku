@@ -8,7 +8,7 @@ import {
   mensajeDeError,
   type NivelCatalogo,
 } from "@/lib/api";
-import { AlertCircle, CloudCheck, Loader2 } from "lucide-react";
+import { Alerta, IndicadorGuardado } from "@/components/ui";
 
 const GUARDADO_OK = "Cambios guardados.";
 
@@ -100,8 +100,8 @@ export default function TemasTutor() {
   if (cargando) {
     return (
       <section aria-label="Mis temas">
-        <h2>Mis temas</h2>
-        <p>Cargando el catálogo…</p>
+        <h2 className="text-lg font-semibold text-slate-800">Mis temas</h2>
+        <p className="mt-1 text-sm text-slate-500">Cargando el catálogo…</p>
       </section>
     );
   }
@@ -109,29 +109,21 @@ export default function TemasTutor() {
   if (!catalogos) {
     return (
       <section aria-label="Mis temas">
-        <h2>Mis temas</h2>
-        {errorPrecarga && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
-            {errorPrecarga}
-          </div>
-        )}
+        <h2 className="text-lg font-semibold text-slate-800">Mis temas</h2>
+        {errorPrecarga && <Alerta tono="error">{errorPrecarga}</Alerta>}
       </section>
     );
   }
 
   return (
     <section aria-label="Mis temas">
-      <h2>Mis temas</h2>
-      <p>
+      <h2 className="text-lg font-semibold text-slate-800">Mis temas</h2>
+      <p className="mt-1 text-sm text-slate-500">
         Elegí los temas que cubrís en tus tutorías. Se guardan solos y se usan
         para que tu perfil aparezca en las búsquedas.
       </p>
 
-      {errorPrecarga && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
-          {errorPrecarga}
-        </div>
-      )}
+      {errorPrecarga && <Alerta tono="error">{errorPrecarga}</Alerta>}
 
       <div>
         {catalogos.map((nivel) => {
@@ -141,7 +133,7 @@ export default function TemasTutor() {
             <div key={claveNivel}>
               <button
                 type="button"
-                className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
+                className="flex w-full cursor-pointer items-center gap-1.5 border-0 bg-transparent py-2 pl-0 pr-0 text-left text-base font-semibold text-slate-800 hover:text-teal-700"
                 aria-expanded={abiertoNivel}
                 onClick={() => alternarBloque(claveNivel)}
               >
@@ -150,7 +142,7 @@ export default function TemasTutor() {
               </button>
 
               {abiertoNivel && (
-                <div className="ml-4 border-l border-borde pl-[0.6rem]">
+                <div className="ml-4 border-l border-slate-200 pl-[0.6rem]">
                   {nivel.cursos.map((curso) => {
                     const claveCurso = `${claveNivel}|${curso.nombre}`;
                     const abiertoCurso = abiertos.has(claveCurso);
@@ -158,7 +150,7 @@ export default function TemasTutor() {
                       <div key={claveCurso}>
                         <button
                           type="button"
-                          className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
+                          className="flex w-full cursor-pointer items-center gap-1.5 border-0 bg-transparent py-2 pl-0 pr-0 text-left text-base font-semibold text-slate-800 hover:text-teal-700"
                           aria-expanded={abiertoCurso}
                           onClick={() => alternarBloque(claveCurso)}
                         >
@@ -167,7 +159,7 @@ export default function TemasTutor() {
                         </button>
 
                         {abiertoCurso && (
-                          <div className="ml-4 border-l border-borde pl-[0.6rem]">
+                          <div className="ml-4 border-l border-slate-200 pl-[0.6rem]">
                             {curso.materias.map((materia) => {
                               const claveMateria = `${claveCurso}|${materia.nombre}`;
                               const abiertaMateria = abiertos.has(claveMateria);
@@ -175,7 +167,7 @@ export default function TemasTutor() {
                                 <div key={claveMateria}>
                                   <button
                                     type="button"
-                                    className="flex w-full cursor-pointer items-center gap-[0.4rem] border-0 bg-transparent py-[0.45rem] pl-0 pr-0 text-left text-base font-semibold text-texto hover:text-accent"
+                                    className="flex w-full cursor-pointer items-center gap-1.5 border-0 bg-transparent py-2 pl-0 pr-0 text-left text-base font-semibold text-slate-800 hover:text-teal-700"
                                     aria-expanded={abiertaMateria}
                                     onClick={() => alternarBloque(claveMateria)}
                                   >
@@ -186,22 +178,22 @@ export default function TemasTutor() {
                                   </button>
 
                                   {abiertaMateria && (
-                                    <div className="ml-4 border-l border-borde pl-[0.6rem]">
+                                    <div className="ml-4 border-l border-slate-200 pl-[0.6rem]">
                                       {materia.temas.map((tema) => (
                                         <label
                                           key={tema.id}
                                           aria-label={tema.nombre}
-                                          className="flex cursor-pointer items-start gap-2 text-[0.9rem]"
+                                          className="flex cursor-pointer items-start gap-2 text-sm"
                                         >
                                           <input
                                             type="checkbox"
-                                            className="mt-[0.2rem] accent-accent"
+                                            className="mt-1 accent-teal-600"
                                             checked={seleccion.has(tema.id)}
                                             onChange={() => alternarTema(tema.id)}
                                           />
                                           <span className="flex flex-col">
                                             <strong>{tema.nombre}</strong>
-                                            <span className="text-[0.8rem] text-texto-suave">
+                                            <span className="text-xs text-slate-500">
                                               {tema.descripcion}
                                             </span>
                                           </span>
@@ -225,25 +217,17 @@ export default function TemasTutor() {
       </div>
 
       {estado && (
-        <p
-          className={
+        <IndicadorGuardado
+          className="mt-2"
+          estado={
             estado === GUARDADO_OK
-              ? "mt-2 flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
+              ? "ok"
               : estado.startsWith("Guardando")
-                ? "mt-2 flex items-center gap-1 text-[0.9rem] text-texto-suave"
-                : "mt-2 flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
+                ? "guardando"
+                : "error"
           }
-          role={estado.startsWith("No se pudieron") ? "alert" : "status"}
-        >
-          {estado.startsWith("Guardando") ? (
-            <Loader2 className="animate-spin" size={16} />
-          ) : estado === GUARDADO_OK ? (
-            <CloudCheck className="text-exito" size={16} />
-          ) : (
-            <AlertCircle size={16} />
-          )}
-          {estado === GUARDADO_OK ? "Guardado automático" : estado}
-        </p>
+          mensajeError={estado}
+        />
       )}
     </section>
   );

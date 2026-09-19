@@ -1,21 +1,25 @@
 @import "tailwindcss";
 
+/*
+ * Sistema de diseño de Tinku.
+ *
+ * Paleta: slate (neutros) + teal (marca), ambas de la escala nativa de
+ * Tailwind — no hay tokens propios de color. Elegidas por: (1) teal-600
+ * es un verde-azulado "de confianza" sin ser corporativo-frío, apropiado
+ * para una plataforma que maneja pagos y menores; (2) slate tiene
+ * subtono frío que combina con teal sin choque de matiz (a diferencia de
+ * gray/stone, neutros más cálidos usados antes en algunas pantallas);
+ * (3) al ser paleta estándar de Tailwind, cualquier pantalla nueva hereda
+ * consistencia sin tener que aprender nombres propios del proyecto.
+ *
+ * Radios: rounded-lg (controles: botones, inputs, chips) / rounded-2xl
+ * (contenedores: tarjetas, paneles). Dos escalones, no más.
+ *
+ * Sombra de tarjeta en reposo: shadow-sm; al hover, shadow-lg (ver
+ * TutorCard en /buscar) — nunca shadow-md suelto, para no sumar un tercer
+ * escalón de elevación.
+ */
 @theme {
-  --color-fondo: #f7f7f5;
-  --color-superficie: #ffffff;
-  --color-texto: #1f2933;
-  --color-texto-suave: #5f6b7a;
-  --color-borde: #e5e7eb;
-  --color-accent: #0d9488;
-  --color-accent-hover: #0f766e;
-  --color-peligro: #b91c1c;
-  --color-aviso: #c2540b;
-  --color-exito: #0f766e;
-
-  --radius-tarjeta: 12px;
-
-  --shadow-tarjeta: 0 1px 3px rgb(0 0 0 / 0.08), 0 4px 14px rgb(0 0 0 / 0.05);
-
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
@@ -67,16 +71,31 @@
 
 @layer base {
   body {
-    @apply bg-fondo font-sans text-texto antialiased;
+    @apply bg-slate-50 font-sans text-slate-800 antialiased;
     line-height: 1.5;
   }
 
+  /* teal-700 y no teal-600: sobre blanco, teal-600 da 3.75:1 y WCAG AA pide
+     4.5:1 para texto normal. El subrayado es el otro requisito (axe:
+     `link-in-text-block`): un enlace dentro de un párrafo no puede
+     distinguirse SOLO por color, porque quien no percibe ese contraste de
+     matiz no ve que hay un enlace. Los enlaces que visualmente son botones
+     lo desactivan con `no-underline` (ver `clasesBoton`). */
   a {
-    @apply text-accent;
+    @apply text-teal-700;
   }
 
+  /* Solo dentro de prosa: ahí un enlace no puede distinguirse SOLO por color
+     (axe: `link-in-text-block`). Las tarjetas y la navegación quedan afuera a
+     propósito — ahí la posición y la forma ya dicen que son navegables, y
+     subrayarlas ensucia sin sumar. */
+  p a {
+    @apply underline;
+  }
+
+  /* El foco es un componente de interfaz, no texto: le alcanza con 3:1. */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent;
+    @apply outline-2 outline-offset-2 outline-teal-600;
   }
 }
 

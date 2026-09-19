@@ -1,6 +1,7 @@
 "use client";
 
 import { formatearHora } from "@/lib/formatos";
+import { Alerta, Boton } from "@/components/ui";
 
 export interface TimeSlot {
   id: string;
@@ -47,13 +48,13 @@ function agrupar(slots: TimeSlot[]): { id: Periodo; etiqueta: string; slots: Tim
 function pillClasses(slot: TimeSlot, seleccionado: boolean, enConflicto: boolean): string {
   const base = "flex min-h-[44px] items-center justify-center gap-1 rounded-full px-3 text-sm font-semibold";
   if (!slot.isAvailable) {
-    return `${base} cursor-not-allowed border border-borde bg-fondo text-texto-suave opacity-50 line-through`;
+    return `${base} cursor-not-allowed border border-slate-200 bg-slate-50 text-slate-500 opacity-50 line-through`;
   }
   if (seleccionado) {
-    const conflicto = enConflicto ? "animate-shake border-peligro text-peligro" : "border-accent bg-teal-50 text-accent";
-    return `${base} cursor-pointer border-2 shadow-tarjeta ${conflicto}`;
+    const conflicto = enConflicto ? "animate-shake border-red-700 text-red-700" : "border-teal-600 bg-teal-50 text-teal-700";
+    return `${base} cursor-pointer border-2 shadow-sm ${conflicto}`;
   }
-  return `${base} cursor-pointer border border-borde bg-superficie text-texto transition-colors enabled:hover:border-accent enabled:hover:bg-teal-50`;
+  return `${base} cursor-pointer border border-slate-200 bg-white text-slate-800 transition-colors enabled:hover:border-teal-700 enabled:hover:bg-teal-50`;
 }
 
 function CheckIcon() {
@@ -75,21 +76,21 @@ function EstadoVacio() {
   return (
     <div
       role="status"
-      className="flex flex-col items-center gap-2 rounded-tarjeta border border-dashed border-borde bg-superficie px-6 py-8 text-center"
+      className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-8 text-center"
     >
       <svg
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth={1.5}
-        className="h-10 w-10 text-texto-suave"
+        className="h-10 w-10 text-slate-500"
         aria-hidden="true"
       >
         <rect x="3" y="4" width="18" height="18" rx="2" />
         <path d="M8 2v4M16 2v4M3 10h18" />
       </svg>
-      <p className="font-semibold text-texto">No hay horarios disponibles este día</p>
-      <p className="text-[0.9rem] text-texto-suave">
+      <p className="font-semibold text-slate-800">No hay horarios disponibles este día</p>
+      <p className="text-sm text-slate-500">
         Usá las flechas para buscar otro día.
       </p>
     </div>
@@ -127,7 +128,7 @@ export default function DynamicTimeSlotPicker({
   }
 
   const botonNav =
-    "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-borde bg-superficie text-xl text-texto transition-colors enabled:hover:border-accent enabled:hover:text-accent";
+    "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-xl text-slate-800 transition-colors enabled:hover:border-teal-700 enabled:hover:text-teal-700";
 
   return (
     <div>
@@ -141,8 +142,8 @@ export default function DynamicTimeSlotPicker({
           ‹
         </button>
         <div className="text-center">
-          <p className="text-[1.05rem] font-semibold capitalize">{etiquetaFecha}</p>
-          <p className="text-[0.85rem] text-texto-suave">
+          <p className="text-lg font-semibold capitalize">{etiquetaFecha}</p>
+          <p className="text-sm text-slate-500">
             Clase de {durationMinutes} minutos
           </p>
         </div>
@@ -157,7 +158,7 @@ export default function DynamicTimeSlotPicker({
       </div>
 
       {isLoading ? (
-        <p role="status" className="py-6 text-center text-[0.9rem] text-texto-suave">
+        <p role="status" className="py-6 text-center text-sm text-slate-500">
           Cargando horarios disponibles...
         </p>
       ) : grupos.length === 0 ? (
@@ -167,7 +168,7 @@ export default function DynamicTimeSlotPicker({
           <div className="flex flex-col gap-5">
             {grupos.map((g) => (
               <section key={g.id} aria-label={g.etiqueta}>
-                <h3 className="mb-2 text-[0.8rem] font-semibold tracking-wide text-texto-suave uppercase">
+                <h3 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   {g.etiqueta}
                 </h3>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -193,29 +194,22 @@ export default function DynamicTimeSlotPicker({
           </div>
 
           {isConflictError && (
-            <div
-              role="alert"
-              className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
-            >
+            <Alerta tono="error" className="mt-4 flex items-center gap-2">
               Este horario acaba de ser tomado. Por favor, elige otro.
-            </div>
+            </Alerta>
           )}
         </>
       )}
 
       {selectedSlotId && slotElegido && (
-        <div className="sticky bottom-0 mt-6 border-t border-borde bg-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-          <p className="mb-2 text-[0.85rem] text-texto-suave">
+        <div className="sticky bottom-0 mt-6 border-t border-slate-200 bg-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+          <p className="mb-2 text-sm text-slate-500">
             {etiquetaFecha} &middot; {formatearHora(slotElegido.startTime)} –{" "}
             {formatearHora(slotElegido.endTime)}
           </p>
-          <button
-            type="submit"
-            disabled={isConflictError}
-            className="w-full cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Boton type="submit" disabled={isConflictError} className="w-full">
             {isMinorRole ? "Enviar Solicitud de Aprobación" : "Confirmar y Pagar"}
-          </button>
+          </Boton>
         </div>
       )}
     </div>

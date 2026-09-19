@@ -8,6 +8,7 @@ import Cabecera from "@/components/Cabecera";
 import TabHorarios from "@/components/tutor/TabHorarios";
 import TabMaterias from "@/components/tutor/TabMaterias";
 import TabPrecio from "@/components/tutor/TabPrecio";
+import { Alerta, Boton, Campo, Cargando, PanelTab, Tabs, Tarjeta, clasesBoton } from "@/components/ui";
 
 const NOMBRE_TIPO: Record<string, string> = {
   ADULTO: "Adulto",
@@ -64,15 +65,15 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
 
   return (
     <section className="mt-8">
-      <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
+      <Alerta tono="aviso" className="w-fit">
         Tus credenciales estan en revision por el equipo de Tinku.
-      </div>
+      </Alerta>
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         {/* Sidebar */}
         <aside className="w-full shrink-0 lg:w-52">
           <nav
-            className="no-scrollbar flex gap-2 overflow-x-auto border-b border-borde pb-3 lg:flex-col lg:gap-1 lg:border-0 lg:pb-0"
+            className="no-scrollbar flex gap-2 overflow-x-auto border-b border-slate-200 pb-3 lg:flex-col lg:gap-1 lg:border-0 lg:pb-0"
             aria-label="Navegación del panel del tutor"
           >
             {TABS.map((t) => (
@@ -83,8 +84,8 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
                 aria-pressed={tab === t.id}
                 className={
                   tab === t.id
-                    ? "cursor-pointer whitespace-nowrap rounded-lg bg-teal-600 px-3.5 py-2 text-left text-[0.9rem] font-semibold text-white transition-all duration-200"
-                    : "cursor-pointer whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
+                    ? "cursor-pointer whitespace-nowrap rounded-lg bg-teal-700 px-3.5 py-2 text-left text-sm font-semibold text-white transition-all duration-200"
+                    : "cursor-pointer whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-800"
                 }
               >
                 {t.label}
@@ -92,13 +93,13 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
             ))}
             <Link
               href="/cuenta/reservas"
-              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
+              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-800"
             >
               Mis reservas
             </Link>
             <Link
               href="/buscar"
-              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-[0.9rem] font-medium text-texto-suave transition-all duration-200 hover:bg-stone-100 hover:text-texto"
+              className="whitespace-nowrap rounded-lg px-3.5 py-2 text-left text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-800"
             >
               Buscar tutores
             </Link>
@@ -107,31 +108,30 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
 
         {/* Área principal */}
         <div className="min-w-0 flex-1 rounded-xl bg-slate-50 p-4 sm:p-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex gap-6" aria-label="Secciones del panel del tutor">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id)}
-                  aria-pressed={tab === t.id}
-                  className={
-                    tab === t.id
-                      ? "cursor-pointer border-b-2 border-accent pb-3 text-[0.95rem] font-semibold text-accent transition-all duration-200"
-                      : "cursor-pointer border-b-2 border-transparent pb-3 text-[0.95rem] font-medium text-texto-suave transition-all duration-200 hover:text-texto"
-                  }
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-          </div>
+          <Tabs
+            opciones={TABS}
+            activo={tab}
+            onCambio={setTab}
+            etiqueta="Secciones del panel del tutor"
+          />
 
-          <div className="mt-6 w-full rounded-tarjeta border border-borde bg-superficie p-6 shadow-tarjeta">
-            {tab === "horarios" && <TabHorarios tutorId={tutorId} />}
-            {tab === "materias" && <TabMaterias />}
-            {tab === "precio" && <TabPrecio />}
-          </div>
+          <Tarjeta className="mt-6 w-full">
+            {tab === "horarios" && (
+              <PanelTab id="horarios">
+                <TabHorarios tutorId={tutorId} />
+              </PanelTab>
+            )}
+            {tab === "materias" && (
+              <PanelTab id="materias">
+                <TabMaterias />
+              </PanelTab>
+            )}
+            {tab === "precio" && (
+              <PanelTab id="precio">
+                <TabPrecio />
+              </PanelTab>
+            )}
+          </Tarjeta>
         </div>
       </div>
     </section>
@@ -280,82 +280,64 @@ function PanelAdulto() {
 
   return (
     <section className="mt-8">
-      <h2>Menores a cargo</h2>
+      <h2 className="text-lg font-semibold text-slate-800">Menores a cargo</h2>
 
-      <div className="mt-4 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
+      <Tarjeta className="mt-4 w-full max-w-sm p-8">
         <form className="flex flex-col gap-4" onSubmit={altaMenor}>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="dniMenor" className="text-[0.85rem] font-semibold">DNI del menor</label>
-            <input
-              id="dniMenor"
-              type="text"
-              inputMode="numeric"
-              value={dni}
-              onChange={(e) => setDni(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="nombreMenor" className="text-[0.85rem] font-semibold">Nombre</label>
-            <input
-              id="nombreMenor"
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="apellidoMenor" className="text-[0.85rem] font-semibold">Apellido</label>
-            <input
-              id="apellidoMenor"
-              type="text"
-              value={apellido}
-              onChange={(e) => setApellido(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="fechaNacMenor" className="text-[0.85rem] font-semibold">Fecha de nacimiento</label>
-            <input
-              id="fechaNacMenor"
-              type="date"
-              value={fechaNac}
-              onChange={(e) => setFechaNac(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="passMenor" className="text-[0.85rem] font-semibold">Contrasena</label>
-            <input
-              id="passMenor"
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="fotoDniMenor" className="text-[0.85rem] font-semibold">Foto del DNI</label>
-            <input
-              id="fotoDniMenor"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setFotoDni(e.target.files?.[0] ?? null)}
-              required
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-          <label className="flex cursor-pointer items-start gap-2 text-[0.9rem]">
+          <Campo
+            id="dniMenor"
+            etiqueta="DNI del menor"
+            type="text"
+            inputMode="numeric"
+            value={dni}
+            onChange={(e) => setDni(e.target.value)}
+            required
+          />
+          <Campo
+            id="nombreMenor"
+            etiqueta="Nombre"
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
+          <Campo
+            id="apellidoMenor"
+            etiqueta="Apellido"
+            type="text"
+            value={apellido}
+            onChange={(e) => setApellido(e.target.value)}
+            required
+          />
+          <Campo
+            id="fechaNacMenor"
+            etiqueta="Fecha de nacimiento"
+            type="date"
+            value={fechaNac}
+            onChange={(e) => setFechaNac(e.target.value)}
+            required
+          />
+          <Campo
+            id="passMenor"
+            etiqueta="Contrasena"
+            type="password"
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <Campo
+            id="fotoDniMenor"
+            etiqueta="Foto del DNI"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFotoDni(e.target.files?.[0] ?? null)}
+            required
+          />
+          <label className="flex cursor-pointer items-start gap-2 text-sm">
             <input
               type="checkbox"
-              className="mt-[0.2rem] accent-accent"
+              className="mt-1 accent-teal-600"
               checked={consentimiento}
               onChange={(e) => setConsentimiento(e.target.checked)}
               required
@@ -363,115 +345,100 @@ function PanelAdulto() {
             Confirmo que soy el Adulto Responsable del menor y doy mi consentimiento explicito para crear su cuenta
           </label>
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
-              {error}
-            </div>
-          )}
-          {exito && (
-            <div className="rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
-              {exito}
-            </div>
-          )}
+          {error && <Alerta tono="error">{error}</Alerta>}
+          {exito && <Alerta tono="exito">{exito}</Alerta>}
 
-          <button
-            type="submit"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={procesando}
-          >
-            {procesando ? "Cargando..." : "Dar de alta"}
-          </button>
+          <Boton type="submit" cargando={procesando} textoCargando="Cargando...">
+            Dar de alta
+          </Boton>
         </form>
-      </div>
+      </Tarjeta>
 
-      <h3 className="mt-6">Solicitudes pendientes</h3>
+      <h3 className="mt-6 text-base font-semibold text-slate-800">Solicitudes pendientes</h3>
       {cargandoSolicitudes ? (
-        <p className="text-texto-suave">Cargando...</p>
+        <Cargando>Cargando...</Cargando>
       ) : solicitudesError ? (
-        <div className="w-fit rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
+        <Alerta tono="error" className="w-fit">
           No se pudieron cargar las solicitudes.
-          <button
-            type="button"
-            className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            className="mt-3 flex"
             onClick={cargarSolicitudes}
           >
             Reintentar
-          </button>
-        </div>
+          </Boton>
+        </Alerta>
       ) : solicitudes.length === 0 ? (
-        <p className="text-texto-suave">No hay solicitudes pendientes.</p>
+        <p className="text-slate-500">No hay solicitudes pendientes.</p>
       ) : (
         <ul className="mt-2 list-none p-0">
           {solicitudes.map((s) => (
-            <li key={s.id} className="mb-3 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
+            <Tarjeta as="li" key={s.id} className="mb-3 w-full max-w-sm p-4">
               <strong>Solicitud #{s.id.slice(0, 8)}</strong>
-              <p className="my-1 text-[0.9rem] text-texto-suave">
+              <p className="my-1 text-sm text-slate-500">
                 {formatFechaHoraEsAr(s.horarioPropuesto)}
               </p>
-              <p className="my-1 text-[0.85rem]">
+              <p className="my-1 text-sm">
                 Estado: {LABEL_ESTADO_SOLICITUD[s.estado] ?? s.estado}
               </p>
               {s.expiraAt && (
-                <p className="my-1 text-[0.85rem] text-texto-suave">
+                <p className="my-1 text-sm text-slate-500">
                   Expira: {formatFechaHoraEsAr(s.expiraAt)}
                 </p>
               )}
               {s.estado === "pendiente" && (
-                <button
-                  type="button"
-                  className="mt-2 cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={aprobandoId === s.id}
+                <Boton
+                  className="mt-2"
+                  cargando={aprobandoId === s.id}
+                  textoCargando="Procesando..."
                   onClick={() => aprobarSolicitud(s.id)}
                 >
-                  {aprobandoId === s.id ? "Procesando..." : "Aprobar"}
-                </button>
+                  Aprobar
+                </Boton>
               )}
-            </li>
+            </Tarjeta>
           ))}
         </ul>
       )}
 
-      <h3 className="mt-6">Baja de menor</h3>
-      <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
+      <h3 className="mt-6 text-base font-semibold text-slate-800">Baja de menor</h3>
+      <Alerta tono="aviso" className="w-fit">
         El listado de menores esta pendiente en backend.
-      </div>
+      </Alerta>
 
       {menorAlta && (
-        <div className="mt-3 w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-4 shadow-tarjeta">
+        <Tarjeta className="mt-3 w-full max-w-sm p-4">
           {bajaPaso === "advertencia" ? (
             <>
-              <p role="alert" className="mb-2 text-aviso">
+              <p role="alert" className="mb-2 text-amber-800">
                 Este menor tiene reservas futuras. Se cancelaran.
               </p>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="cursor-pointer rounded-lg bg-peligro px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={bajaProcesando}
+                <Boton
+                  className="bg-red-700 enabled:hover:bg-red-800"
+                  cargando={bajaProcesando}
+                  textoCargando="Procesando..."
                   onClick={bajaMenorConfirmar}
                 >
-                  {bajaProcesando ? "Procesando..." : "Confirmar baja"}
-                </button>
-                <button
-                  type="button"
-                  className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
-                  onClick={() => setBajaPaso("idle")}
-                >
+                  Confirmar baja
+                </Boton>
+                <Boton variante="secundario" onClick={() => setBajaPaso("idle")}>
                   Cancelar
-                </button>
+                </Boton>
               </div>
             </>
           ) : (
-            <button
-              type="button"
-              className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={bajaProcesando}
+            <Boton
+              variante="secundario"
+              cargando={bajaProcesando}
+              textoCargando="Procesando..."
               onClick={bajaMenorSinConfirmar}
             >
-              {bajaProcesando ? "Procesando..." : `Dar de baja a ${menorAlta.nombre} ${menorAlta.apellido}`}
-            </button>
+              {`Dar de baja a ${menorAlta.nombre} ${menorAlta.apellido}`}
+            </Boton>
           )}
-        </div>
+        </Tarjeta>
       )}
     </section>
   );
@@ -485,48 +452,48 @@ export default function CuentaPage() {
     <>
       <Cabecera />
 
-      <main className="mx-auto max-w-[64rem] px-5 py-8">
-        <h1>Mi cuenta</h1>
-        <p>
-          Tu espacio en Tinku. Busca un tutor, reserva una clase y segui tus
+      <main className="mx-auto max-w-5xl px-5 py-8">
+        <h1 className="text-xl tracking-tight text-slate-800">Mi cuenta</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Tu espacio en Tinku. Buscá un tutor, reservá una clase y seguí tus
           reservas.
         </p>
 
-        <div className="my-6 grid gap-3">
+        <div className="my-6 grid gap-3 sm:grid-cols-2">
           <Link
             href="/buscar"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] text-center font-semibold text-white enabled:hover:bg-accent-hover"
+            className={clasesBoton("primario", "md", "rounded-2xl px-5 py-4")}
           >
             Buscar tutores
           </Link>
           <Link
             href="/cuenta/reservas"
-            className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] text-center font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+            className={clasesBoton("secundario", "md", "rounded-2xl bg-white px-5 py-4 shadow-sm")}
           >
             Mis reservas
           </Link>
         </div>
 
-        <dl>
-          <div className="flex justify-between gap-4 border-b border-borde py-3">
-            <dt className="font-semibold">DNI</dt>
-            <dd className="m-0 text-right capitalize">{payload?.sub ?? "—"}</dd>
+        <dl className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
+            <dt className="text-sm font-semibold text-slate-800">DNI</dt>
+            <dd className="m-0 text-right text-sm text-slate-600 capitalize">{payload?.sub ?? "—"}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-borde py-3">
-            <dt className="font-semibold">Tipo de cuenta</dt>
-            <dd className="m-0 text-right capitalize">
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
+            <dt className="text-sm font-semibold text-slate-800">Tipo de cuenta</dt>
+            <dd className="m-0 text-right text-sm text-slate-600 capitalize">
               {payload?.tipo ? NOMBRE_TIPO[payload.tipo] ?? payload.tipo : "—"}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-borde py-3">
-            <dt className="font-semibold">Capacidad Estudiante</dt>
-            <dd className="m-0 text-right capitalize">
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
+            <dt className="text-sm font-semibold text-slate-800">Capacidad Estudiante</dt>
+            <dd className="m-0 text-right text-sm text-slate-600 capitalize">
               {payload?.cap_est ? "Activa" : "Inactiva"}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-borde py-3">
-            <dt className="font-semibold">Adulto Responsable</dt>
-            <dd className="m-0 text-right capitalize">
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
+            <dt className="text-sm font-semibold text-slate-800">Adulto Responsable</dt>
+            <dd className="m-0 text-right text-sm text-slate-600 capitalize">
               {payload?.cap_ar ? "Activa" : "Inactiva"}
             </dd>
           </div>

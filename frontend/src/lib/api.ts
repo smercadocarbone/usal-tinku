@@ -242,3 +242,160 @@ export function getPasarelaEstado(): Promise<PasarelaEstado> {
 export function setPasarelaEstado(habilitada: boolean): Promise<PasarelaEstado> {
   return api.patch<PasarelaEstado>("/api/admin/financiero/pasarela", { habilitada });
 }
+
+/* ---- M8 — Colas del Admin de Moderación y Seguridad (US-1/2/3) ---- */
+
+export type EstadoCredencial = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+export type TipoCredencial = "TITULO" | "CERTIFICADO_ANALITICO" | "MATRICULA";
+export type DecisionCredencial = "APROBAR" | "RECHAZAR";
+
+export interface CredencialCola {
+  id: string;
+  tutorId: string;
+  tutorNombre: string;
+  tutorApellido: string;
+  tipoDocumento: TipoCredencial;
+  estado: EstadoCredencial;
+  numeroIntento: number;
+  cicloEsperaHasta: string | null;
+  createdAt: string;
+}
+
+export function getColaCredenciales(): Promise<CredencialCola[]> {
+  return api.get("/api/admin/moderacion/credenciales");
+}
+
+export function resolverCredencial(
+  id: string,
+  decision: DecisionCredencial
+): Promise<CredencialCola> {
+  return api.post(`/api/admin/moderacion/credenciales/${id}/resolver`, { decision });
+}
+
+export type DecisionAlerta = "reactivar" | "sancionar";
+export type TipoSancion =
+  | "advertencia"
+  | "suspension_temporal"
+  | "suspension_definitiva"
+  | "baneo_autoridades";
+
+export interface AlertaSeguridadCola {
+  id: string;
+  sesionId: string;
+  rama: string;
+  detectadoId: string;
+  estado: string;
+  descargoTexto: string | null;
+  descargoRecibidoAt: string | null;
+  clipRetencionHasta: string | null;
+  createdAt: string;
+}
+
+export interface ResolverAlertaBody {
+  decision: DecisionAlerta;
+  tipoSancion?: TipoSancion;
+  diasSuspension?: number;
+}
+
+export function getColaAlertas(): Promise<AlertaSeguridadCola[]> {
+  return api.get("/api/admin/moderacion/alertas");
+}
+
+export function resolverAlerta(
+  id: string,
+  body: ResolverAlertaBody
+): Promise<AlertaSeguridadCola> {
+  return api.post(`/api/admin/moderacion/alertas-seguridad/${id}/resolver`, body);
+}
+
+export type ResolucionDenuncia = "infundada" | "fundada" | "escalada";
+
+export interface DenunciaCola {
+  id: string;
+  denunciadoId: string;
+  estado: string;
+  motivo: string;
+  sesionId: string | null;
+  descargoTexto: string | null;
+  descargoVenceAt: string | null;
+  slaResolucionVenceAt: string | null;
+  prioridadAlta: boolean;
+  resueltaAt: string | null;
+  createdAt: string;
+}
+
+export interface ResolverDenunciaBody {
+  resolucion: ResolucionDenuncia;
+  tipoSancion?: TipoSancion;
+  diasSuspension?: number;
+}
+
+export function getColaDenuncias(): Promise<DenunciaCola[]> {
+  return api.get("/api/admin/moderacion/denuncias");
+}
+
+export function resolverDenuncia(
+  id: string,
+  body: ResolverDenunciaBody
+): Promise<DenunciaCola> {
+  return api.post(`/api/admin/moderacion/denuncias/${id}/resolver`, body);
+}
+
+/* ---- M8 — Colas del Admin de Soporte Financiero (US-5/US-8) ---- */
+
+export interface PagoFallido {
+  id: string;
+  reservaId: string;
+  montoBruto: number;
+  estado: string;
+  intentosLiberacion: number;
+  liberarAt: string | null;
+  createdAt: string;
+}
+
+export function getColaPagosFallidos(): Promise<PagoFallido[]> {
+  return api.get("/api/admin/financiero/pagos-fallidos");
+}
+
+export function reintentarLiberacion(id: string): Promise<PagoFallido> {
+  return api.post(`/api/admin/financiero/pagos-fallidos/${id}/reintentar`);
+}
+
+export function reembolsarParcial(id: string, monto: number): Promise<PagoFallido> {
+  return api.post(`/api/admin/financiero/transacciones/${id}/reembolso-parcial`, { monto });
+}
+
+export interface PrecioRegional {
+  provincia: string;
+  valorSugerido: number;
+  version: number;
+  vigenteDesde: string;
+}
+
+export function actualizarPrecioRegional(
+  provincia: string,
+  valorSugerido: number
+): Promise<PrecioRegional> {
+  return api.post("/api/admin/financiero/precios-regionales", { provincia, valorSugerido });
+}
+
+/* ---- M8 — Canal de soporte (US-7) ---- */
+
+export type RolAdmin = "moderacion_seguridad" | "soporte_financiero";
+export type EstadoTicket = "abierto" | "en_proceso" | "resuelto" | "cerrado";
+
+export interface TicketAdmin {
+  id: string;
+  usuarioId: string;
+  origenModulo: string;
+  asunto: string;
+  detalle: string;
+  estado: EstadoTicket;
+  rolAsignado: RolAdmin;
+  creadoEn: string;
+  resueltoEn: string | null;
+}
+
+export function getTicketsAdmin(): Promise<TicketAdmin[]> {
+  return api.get("/api/admin/tickets");
+}

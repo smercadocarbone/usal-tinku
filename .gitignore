@@ -7,6 +7,9 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 frontend/tsconfig.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
 
 # matching-service (Python)
 matching-service/__pycache__/

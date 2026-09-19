@@ -29,7 +29,6 @@ export const config = {
     "/reservar/:path*",
     "/pagar/:path*",
     "/aula/:path*",
-    "/busqueda/:path*",
     "/admin/:path*",
   ],
 };

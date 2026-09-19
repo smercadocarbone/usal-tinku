@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { setSession } from "@/lib/auth";
+import { Alerta, Boton, Campo, Tarjeta } from "@/components/ui";
 
 interface TokenResponse {
   token: string;
@@ -56,79 +57,65 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-[26rem] rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
-        <div className="mb-6 text-[1.05rem] font-bold text-texto">
-          Tinku<span className="text-accent">.</span>
+      <Tarjeta className="w-full max-w-sm p-8">
+        <div className="mb-6 text-lg font-bold text-slate-800">
+          Tinku<span className="text-teal-700">.</span>
         </div>
-        <h1 className="mb-1 text-[1.4rem] tracking-[-0.01em]">Iniciar sesión</h1>
-        <p className="mb-6 text-texto-suave">Ingresá con tu DNI para acceder a tu cuenta.</p>
+        <h1 className="mb-1 text-xl tracking-tight">Iniciar sesión</h1>
+        <p className="mb-6 text-slate-500">Ingresá con tu DNI para acceder a tu cuenta.</p>
 
         {expirado && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
-            Tu sesión expiró. Inicio sesión de nuevo para continuar.
-          </div>
+          <Alerta tono="aviso" className="mb-4">
+            Tu sesión expiró. Iniciá sesión de nuevo para continuar.
+          </Alerta>
         )}
 
         {registrado && (
-          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
+          <Alerta tono="exito" className="mb-4">
             Cuenta creada. Ya podés iniciar sesión.
-          </div>
+          </Alerta>
         )}
 
         {tutorRegistrado && (
-          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito" role="status">
+          <Alerta tono="exito" className="mb-4">
             Cuenta de tutor creada. Iniciá sesión con tu DNI y contraseña.
-          </div>
+          </Alerta>
         )}
 
         <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="dni" className="text-[0.85rem] font-semibold">DNI</label>
-            <input
-              id="dni"
-              type="text"
-              inputMode="numeric"
-              autoComplete="username"
-              required
-              value={dni}
-              onChange={(e) => setDni(e.target.value)}
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
+          <Campo
+            id="dni"
+            etiqueta="DNI"
+            type="text"
+            inputMode="numeric"
+            autoComplete="username"
+            required
+            value={dni}
+            onChange={(e) => setDni(e.target.value)}
+          />
 
-          <div className="flex flex-col gap-[0.35rem]">
-            <label htmlFor="password" className="text-[0.85rem] font-semibold">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
+          <Campo
+            id="password"
+            etiqueta="Contraseña"
+            type="password"
+            autoComplete="current-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
-              {error}
-            </div>
-          )}
+          {error && <Alerta tono="error">{error}</Alerta>}
 
-          <button
-            type="submit"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={enviando}
-          >
-            {enviando ? "Ingresando…" : "Ingresar"}
-          </button>
+          <Boton type="submit" cargando={enviando} textoCargando="Ingresando…">
+            Ingresar
+          </Boton>
         </form>
 
-        <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
+        <p className="mt-5 text-center text-sm text-slate-500">
           ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
         </p>
-      </div>
+      </Tarjeta>
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { formatearFechaCorta } from "@/lib/formatos";
+import { Alerta, Tabs } from "@/components/ui";
 import WeeklyAvailabilityGrid, {
   INICIO_DIA,
   ULTIMA_FILA,
@@ -173,44 +174,27 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
 
   return (
     <section aria-label="Mis horarios">
-      <h2 className="text-lg font-bold text-texto">Mis horarios</h2>
-      <p className="text-[0.9rem] text-texto-suave">
+      <h2 className="text-lg font-bold text-slate-800">Mis horarios</h2>
+      <p className="text-sm text-slate-500">
         Publicá cuándo estás disponible. Pintá los bloques (clic o clic y
         arrastre); al guardar se parte en franjas de hasta 3 horas.
       </p>
 
       {/* Toggle semanal / puntual */}
-      <div
-        className="mt-4 inline-flex rounded-lg border border-borde bg-superficie p-1"
-        role="group"
-        aria-label="Tipo de disponibilidad"
-      >
-        <button
-          type="button"
-          className={
-            modo === "semanal"
-              ? "rounded-md bg-teal-600 px-4 py-[0.4rem] text-[0.85rem] font-semibold text-white transition-all duration-200"
-              : "rounded-md px-4 py-[0.4rem] text-[0.85rem] font-semibold text-texto transition-all duration-200 hover:bg-stone-100"
-          }
-          onClick={() => setModo("semanal")}
-        >
-          Disponibilidad semanal fija
-        </button>
-        <button
-          type="button"
-          className={
-            modo === "puntual"
-              ? "rounded-md bg-teal-600 px-4 py-[0.4rem] text-[0.85rem] font-semibold text-white transition-all duration-200"
-              : "rounded-md px-4 py-[0.4rem] text-[0.85rem] font-semibold text-texto transition-all duration-200 hover:bg-stone-100"
-          }
-          onClick={() => setModo("puntual")}
-        >
-          Disponibilidad puntual
-        </button>
-      </div>
+      <Tabs
+        variante="segmentado"
+        className="mt-4"
+        etiqueta="Tipo de disponibilidad"
+        activo={modo}
+        onCambio={setModo}
+        opciones={[
+          { id: "semanal", label: "Disponibilidad semanal fija" },
+          { id: "puntual", label: "Disponibilidad puntual" },
+        ]}
+      />
 
       {modo === "puntual" && (
-        <label className="mt-4 flex flex-col gap-1 text-[0.85rem] font-semibold text-texto">
+        <label className="mt-4 flex flex-col gap-1 text-sm font-semibold text-slate-800">
           Fecha específica
           <input
             type="date"
@@ -224,7 +208,7 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
                 return next;
               });
             }}
-            className="w-56 rounded-lg border border-borde bg-superficie px-3 py-[0.6rem] text-base text-texto focus:border-transparent focus:outline-2 focus:outline-accent focus:outline-offset-1"
+            className="w-56 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
           />
         </label>
       )}
@@ -248,44 +232,38 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
       </div>
 
       {modo === "puntual" && !fechaPuntual && (
-        <p className="mt-2 text-[0.85rem] text-texto-suave">
+        <p className="mt-2 text-sm text-slate-500">
           Elegí una fecha para ver y cargar tu horario puntual.
         </p>
       )}
 
       {error && (
-        <div
-          className="mt-3 rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro"
-          role="alert"
-        >
+        <Alerta tono="error" className="mt-3">
           {error}
-        </div>
+        </Alerta>
       )}
       {exito && (
-        <div
-          className="mt-3 rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
-          role="status"
-        >
+        <Alerta tono="exito" className="mt-3">
           {exito}
-        </div>
+        </Alerta>
       )}
 
       {/* Lista de franjas publicadas */}
-      <h3 className="mt-6 text-[0.95rem] font-bold text-texto">Mis franjas publicadas</h3>
+      <h3 className="mt-6 text-sm font-bold text-slate-800">Mis franjas publicadas</h3>
       {cargandoLista ? (
-        <p className="mt-2 text-texto-suave">Cargando…</p>
+        <p className="mt-2 text-slate-500">Cargando…</p>
       ) : listaPendiente ? (
-        <p className="mt-2 w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
+        <Alerta tono="aviso" className="mt-2 w-fit">
           El listado de franjas está pendiente en backend.
-        </p>
+        </Alerta>
       ) : franjas.length === 0 ? (
-        <p className="mt-2 text-texto-suave">No publicaste franjas todavía.</p>
+        <p className="mt-2 text-slate-500">No publicaste franjas todavía.</p>
       ) : (
         <ul className="mt-2 list-none p-0">
           {[...franjas].sort(ordenarFranjas).map((f) => (
             <li
               key={f.id}
-              className="flex justify-between gap-4 border-b border-borde py-3 text-[0.9rem]"
+              className="flex justify-between gap-4 border-b border-slate-200 py-3 text-sm"
             >
               <span>
                 {f.diaSemana !== null
@@ -295,8 +273,8 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
               <span
                 className={
                   f.activa
-                    ? "text-[0.85rem] font-medium text-accent"
-                    : "text-[0.85rem] font-medium text-texto-suave"
+                    ? "text-sm font-medium text-teal-700"
+                    : "text-sm font-medium text-slate-500"
                 }
               >
                 {f.activa ? "Activa" : "Inactiva"}

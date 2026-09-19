@@ -6,6 +6,14 @@ import { api, ApiError } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
+import {
+  Alerta,
+  Boton,
+  Cargando,
+  Insignia,
+  Tarjeta,
+  clasesBoton,
+} from "@/components/ui";
 
 interface TutorPerfil {
   id: string;
@@ -97,60 +105,60 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
     <>
       <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }]} />
 
-      <main className="mx-auto max-w-[44rem] px-5 py-8">
-        {cargando && (
-          <p className="text-texto-suave">Cargando perfil...</p>
-        )}
+      <main className="mx-auto max-w-2xl px-5 py-8">
+        {cargando && <Cargando>Cargando perfil...</Cargando>}
 
         {error && !cargando && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
+          <Alerta tono="error">
             {error}
-            <button
-              type="button"
-              className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+            <Boton
+              variante="secundario"
+              tamano="sm"
+              className="mt-3 flex"
               onClick={cargar}
             >
               Reintentar
-            </button>
-          </div>
+            </Boton>
+          </Alerta>
         )}
 
         {perfil && (
           <div>
-            <div className="mb-4 w-full max-w-none rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta">
-              <h1 className="mb-2 text-[1.6rem]">
+            <Tarjeta className="mb-4 w-full max-w-none p-8">
+              <h1 className="mb-2 text-2xl">
                 {perfil.nombre} {perfil.apellido}
               </h1>
 
               {perfil.materias.length > 0 && (
                 <div className="mb-4">
                   {perfil.materias.map((m) => (
-                    <span
+                    <Insignia
                       key={m}
-                      className="mb-[0.35rem] mr-[0.35rem] inline-block rounded-full bg-teal-50 px-2.5 py-1 text-[0.8rem] font-semibold text-accent"
+                      tono="exito"
+                      className="mb-1.5 mr-1.5 px-2.5"
                     >
                       {m}
-                    </span>
+                    </Insignia>
                   ))}
                 </div>
               )}
 
               <dl className="m-0">
                 {perfil.nivel && (
-                  <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                     <dt className="font-semibold">Nivel</dt>
                     <dd className="m-0 text-right">{perfil.nivel}</dd>
                   </div>
                 )}
                 {typeof perfil.precioHora === "number" && (
-                  <div className="flex justify-between gap-4 border-b border-borde py-3">
+                  <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                     <dt className="font-semibold">Precio por hora</dt>
                     <dd className="m-0 text-right">
                       {formatearPrecio(perfil.precioHora)}
                     </dd>
                   </div>
                 )}
-                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                   <dt className="font-semibold">Calificacion</dt>
                   <dd className="m-0 text-right">
                     {perfil.calificacionPromedio !== null &&
@@ -160,44 +168,36 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   </dd>
                 </div>
               </dl>
-            </div>
+            </Tarjeta>
 
             {puedeReservar ? (
               <Link
                 href={`/reservar?tutor=${perfil.id}`}
-                className="inline-block cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
+                className={clasesBoton("primario")}
               >
                 Reservar clase
               </Link>
             ) : (
-              <div className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso" role="status">
+              <Alerta tono="aviso" className="w-fit">
                 Pedile a tu adulto responsable que te autorice a esta tutora/o.
-              </div>
+              </Alerta>
             )}
 
             {esAdultoConAR && (
               <div className="mt-6">
-                <h2 className="mb-3 text-[1.1rem]">
+                <h2 className="mb-3 text-lg">
                   Autorizacion
                 </h2>
 
                 <div className="mb-4">
-                  <button
-                    type="button"
-                    className="cursor-not-allowed rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white opacity-60"
-                    onClick={() => {}}
-                    disabled
-                  >
+                  <Boton onClick={() => {}} disabled>
                     Autorizar para mi menor
-                  </button>
-                  <div
-                    className="mt-2 w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
-                    role="status"
-                  >
+                  </Boton>
+                  <Alerta tono="aviso" className="mt-2 w-fit">
                     El listado de tus menores esta pendiente en backend. Cuando
                     este disponible, vas a poder autorizar tutores para cada
                     menor.
-                  </div>
+                  </Alerta>
                 </div>
 
                 <div
@@ -211,7 +211,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                     <input
                       id="no-confiable"
                       type="checkbox"
-                      className="h-[1.1rem] w-[1.1rem] accent-accent disabled:cursor-not-allowed"
+                      className="h-[1.1rem] w-[1.1rem] accent-teal-600 disabled:cursor-not-allowed"
                       checked={noConfiable}
                       disabled={enviandoNoConfiable}
                       onChange={(e) => toggleNoConfiable(e.target.checked)}
@@ -220,24 +220,21 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   </label>
                 </div>
                 <p
-                  className="mb-2 text-[0.85rem] text-texto-suave"
+                  className="mb-2 text-sm text-slate-500"
                 >
                   Sacarlo de tus resultados de busqueda.
                 </p>
 
                 {mensajeNoConfiable && (
-                  <div
-                    className="mt-2 w-fit rounded-lg border border-teal-200 bg-teal-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-exito"
-                    role="status"
-                  >
+                  <Alerta tono="exito" className="mt-2 w-fit">
                     {mensajeNoConfiable}
-                  </div>
+                  </Alerta>
                 )}
               </div>
             )}
 
             {payload && (
-              <p className="text-[0.8rem] text-texto-suave">
+              <p className="text-xs text-slate-500">
                 Sesion de {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
               </p>
             )}

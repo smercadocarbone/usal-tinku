@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Boton } from "@/components/ui";
 
 export const INICIO_DIA = 8;
 export const FILAS_DIA = 14; // 08:00..21:00 (la última celda termina 22:00)
@@ -173,11 +174,11 @@ export default function WeeklyAvailabilityGrid({
           }}
         >
           {/* Encabezados de días */}
-          <div className="sticky left-0 z-10 bg-superficie" />
+          <div className="sticky left-0 z-10 bg-white" />
           {columnas.map((c) => (
             <div
               key={c.clave}
-              className="border-b border-gray-100 pb-2 text-center text-xs font-semibold text-texto"
+              className="border-b border-slate-100 pb-2 text-center text-xs font-semibold text-slate-800"
             >
               {c.etiqueta}
             </div>
@@ -189,7 +190,7 @@ export default function WeeklyAvailabilityGrid({
             const hora = horaLabel(fila);
             return (
               <div key={fila} className="contents">
-                <div className="sticky left-0 z-10 flex items-center justify-end border-b border-gray-100 bg-superficie pr-2 text-xs text-gray-400">
+                <div className="sticky left-0 z-10 flex items-center justify-end border-b border-slate-100 bg-white pr-2 text-xs text-slate-400">
                   {hora}
                 </div>
                 {columnas.map((c) => {
@@ -208,7 +209,7 @@ export default function WeeklyAvailabilityGrid({
                     ? "cursor-default bg-teal-100 border-l-4 border-l-teal-500"
                     : pintada
                       ? "border-l-4 border-l-teal-600 bg-teal-100 text-teal-800"
-                      : "cursor-pointer border-l border-gray-100 hover:bg-gray-50";
+                      : "cursor-pointer border-l border-slate-100 hover:bg-slate-50";
                   return (
                     <button
                       key={`${c.clave}-${fila}`}
@@ -241,7 +242,7 @@ export default function WeeklyAvailabilityGrid({
                           aplicarRango(c.clave, fila, fila, !pintada);
                         }
                       }}
-                      className={`h-9 w-full overflow-hidden border-b border-gray-100 text-left text-[0.6rem] leading-tight transition-colors duration-100 ${clases}`}
+                      className={`h-9 w-full overflow-hidden border-b border-slate-100 text-left text-xs leading-tight transition-colors duration-100 ${clases}`}
                     >
                       {muestraRango && (
                         <span className="px-1 font-medium">{etiquetaRango}</span>
@@ -257,25 +258,27 @@ export default function WeeklyAvailabilityGrid({
 
       {/* Resumen dinámico */}
       <p
-        className="mt-3 text-[0.9rem] font-medium text-texto-suave"
+        className="mt-3 text-sm font-medium text-slate-500"
         aria-live="polite"
       >
         {textoResumen}
       </p>
 
       {/* Botón flotante de guardado */}
-      <footer className="sticky bottom-0 z-10 -mx-1 mt-3 flex justify-end bg-gradient-to-t from-superficie via-superficie/95 to-transparent px-1 pb-2 pt-3">
-        <button
-          type="button"
+      <footer className="sticky bottom-0 z-10 -mx-1 mt-3 flex justify-end bg-gradient-to-t from-white via-white/95 to-transparent px-1 pb-2 pt-3">
+        <Boton
           onClick={onGuardar}
           disabled={guardando || totalHoras === 0}
-          className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white transition-all duration-200 enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          cargando={guardando}
+          textoCargando={
+            <>
+              <Loader2 className="inline animate-spin" size={16} />
+              Guardando…
+            </>
+          }
         >
-          {guardando && (
-            <Loader2 className="mr-1 inline animate-spin" size={16} />
-          )}
-          {guardando ? "Guardando…" : "Guardar disponibilidad"}
-        </button>
+          Guardar disponibilidad
+        </Boton>
       </footer>
     </div>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clearSession } from "@/lib/auth";
+import { Boton } from "@/components/ui";
 
 interface CabeceraProps {
   enlaces?: { href: string; label: string }[];
@@ -19,27 +20,23 @@ export default function Cabecera({ enlaces = SIN_ENLACES }: CabeceraProps) {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-borde bg-superficie px-5 py-[0.9rem]">
-      <div className="text-[1.05rem] font-bold text-texto">
-        Tinku<span className="text-accent">.</span>
+    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5">
+      <div className="text-lg font-bold text-slate-800">
+        Tinku<span className="text-teal-700">.</span>
       </div>
       <nav className="flex items-center gap-4">
         {enlaces.map((e) => (
           <Link
             key={e.href}
             href={e.href}
-            className="text-[0.9rem] font-semibold"
+            className="text-sm font-semibold"
           >
             {e.label}
           </Link>
         ))}
-        <button
-          type="button"
-          className="cursor-pointer rounded-lg border border-borde bg-transparent px-4 py-[0.65rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
-          onClick={logout}
-        >
+        <Boton variante="secundario" onClick={logout}>
           Cerrar sesion
-        </button>
+        </Boton>
       </nav>
     </header>
   );

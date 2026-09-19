@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { formatearPrecio } from "@/lib/formatos";
+import { formatearPrecioConMoneda } from "@/lib/formatos";
+import { Alerta, Boton, Cargando, Tarjeta } from "@/components/ui";
 
 interface Preferencia {
   preferenciaId: string;
@@ -75,55 +76,44 @@ function PagarForm() {
   }
 
   return (
-    <main className="mx-auto max-w-[44rem] px-5 py-8">
-      <h1 className="text-[1.3rem] tracking-[-0.01em]">
+    <main className="mx-auto max-w-2xl px-5 py-8">
+      <h1 className="text-xl tracking-tight">
         Pago de la reserva
       </h1>
 
-      {estado === "cargando" && (
-        <p className="text-texto-suave">Generando pago...</p>
-      )}
+      {estado === "cargando" && <Cargando>Generando pago...</Cargando>}
 
       {estado === "listo" && preferencia && (
         <>
-          <div
-            className="mb-4 w-full max-w-none rounded-tarjeta border border-borde bg-superficie p-8 shadow-tarjeta"
-          >
+          <Tarjeta className="mb-4 w-full max-w-none p-8">
             <dl className="m-0">
               {reserva && reserva.precio !== null && (
-                <div className="flex justify-between gap-4 border-b border-borde py-3">
+                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                   <dt className="font-semibold">Monto</dt>
                   <dd className="m-0 text-right">
-                    {formatearPrecio(reserva.precio)}
+                    {formatearPrecioConMoneda(reserva.precio)}
                   </dd>
                 </div>
               )}
-              <div className="flex justify-between gap-4 border-b border-borde py-3">
+              <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                 <dt className="font-semibold">Metodo</dt>
                 <dd className="m-0 text-right">
                   {esBypass() ? "Pago simulado" : "MercadoPago"}
                 </dd>
               </div>
             </dl>
-          </div>
+          </Tarjeta>
           {esBypass() && (
-            <div
-              className="mb-4 w-full rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
-              role="alert"
-            >
+            <Alerta tono="aviso" rol="alert" className="mb-4 w-full">
               La pasarela de pagos está deshabilitada: tu reserva se confirmará
               sin procesar un cobro real. No se debitará ningún monto.
-            </div>
+            </Alerta>
           )}
-          <button
-            type="button"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-[0.65rem] font-semibold text-white enabled:hover:bg-accent-hover"
-            onClick={irAPagar}
-          >
+          <Boton onClick={irAPagar}>
             {esBypass() ? "Confirmar reserva (simulado)" : "Pagar con MercadoPago"}
-          </button>
+          </Boton>
           {!esBypass() && (
-            <p className="text-[0.8rem] text-texto-suave">
+            <p className="text-xs text-slate-500">
               Vas a salir de Tinku y continuar en el sitio de MercadoPago.
             </p>
           )}
@@ -131,30 +121,28 @@ function PagarForm() {
       )}
 
       {estado === "finalizado" && (
-        <div
-          className="w-fit rounded-lg border border-amber-200 bg-amber-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-aviso"
-          role="status"
-        >
+        <Alerta tono="aviso" className="w-fit">
           {esBypass()
             ? "Reserva confirmada en modo simulado. Volvé a mis reservas."
             : "Redirigiendo a MercadoPago..."}
-        </div>
+        </Alerta>
       )}
 
       {estado === "error" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-[0.9rem] py-[0.7rem] text-[0.9rem] text-peligro" role="alert">
+        <Alerta tono="error">
           {error}
-          <button
-            type="button"
-            className="mt-3 block cursor-pointer rounded-lg border border-borde bg-transparent px-3 py-[0.4rem] text-[0.85rem] font-semibold text-accent enabled:hover:border-accent enabled:hover:bg-teal-50"
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            className="mt-3 flex"
             onClick={cargar}
           >
             Reintentar
-          </button>
-        </div>
+          </Boton>
+        </Alerta>
       )}
 
-      <p className="mt-5 text-center text-[0.9rem] text-texto-suave">
+      <p className="mt-5 text-center text-sm text-slate-500">
         <Link href="/cuenta/reservas">Volver a mis reservas</Link>
       </p>
     </main>
@@ -163,7 +151,7 @@ function PagarForm() {
 
 export default function PagarPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-[44rem] px-5 py-8">Cargando...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-2xl px-5 py-8">Cargando...</div>}>
       <PagarForm />
     </Suspense>
   );
