@@ -233,6 +233,14 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    /** Menores a cargo del Adulto Responsable autenticado (auditoría 2026-09-18,
+     *  ver darDeBajaMenor arriba). Nunca de OTRO Adulto Responsable — el filtro
+     *  de pertenencia es el propio parámetro de la consulta, no un chequeo aparte. */
+    public java.util.List<Usuario> listarMenores(Usuario adultoResponsable) {
+        return usuarioRepository.findByAdultoResponsableIdAndTipoOrderByNombre(
+                adultoResponsable.getId(), TipoUsuario.MENOR);
+    }
+
     /**
      * Baja definitiva de un perfil de MENOR, solo por su Adulto Responsable
      * (FR-ID-014, T-M1-12). Si el menor tiene reservas futuras, exige

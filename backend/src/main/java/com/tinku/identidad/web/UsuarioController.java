@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -69,6 +70,17 @@ public class UsuarioController {
 
         Usuario menor = usuarioService.registrarMenor(request, fotoDni.getBytes(), adulto);
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(menor));
+    }
+
+    /** Menores a cargo del Adulto Responsable autenticado (auditoría 2026-09-18:
+     *  antes solo había alta y baja por id, sin forma de volver a listarlos). */
+    @GetMapping("/menores")
+    public ResponseEntity<List<UsuarioResponse>> listarMenores(Authentication authentication) {
+        Usuario adultoResponsable = usuarioActual.obtener(authentication);
+        List<UsuarioResponse> menores = usuarioService.listarMenores(adultoResponsable).stream()
+                .map(UsuarioResponse::from)
+                .toList();
+        return ResponseEntity.ok(menores);
     }
 
     @PatchMapping("/me/capacidades")

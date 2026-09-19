@@ -18,6 +18,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     /** FR-ID-013: perfiles de menor a cargo de un Adulto Responsable. */
     long countByAdultoResponsableIdAndTipo(UUID adultoResponsableId, TipoUsuario tipo);
 
+    /** T-M1-13bis (auditoría 2026-09-18): listado de esos mismos perfiles —
+     *  antes solo existía el alta (POST) y la baja por id (DELETE), sin forma
+     *  de volver a listarlos tras cerrar la sesión del navegador. */
+    List<Usuario> findByAdultoResponsableIdAndTipoOrderByNombre(UUID adultoResponsableId, TipoUsuario tipo);
+
     /**
      * FR-MATCH-007 / Plan_M2 paso 4: universo de candidatos para búsqueda sin
      * restricción = Tutores con matching habilitado (CAP aprobado en M1) y
