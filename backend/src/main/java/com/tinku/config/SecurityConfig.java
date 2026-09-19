@@ -1,6 +1,8 @@
 package com.tinku.config;
 
+import com.tinku.config.security.AdminActivoAuthorizationManager;
 import com.tinku.config.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -41,12 +44,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AdminActivoAuthorizationManager adminActivoAuthorizationManager;
 
     @Value("${cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                           AdminActivoAuthorizationManager adminActivoAuthorizationManager) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.adminActivoAuthorizationManager = adminActivoAuthorizationManager;
     }
 
     /**
@@ -98,9 +104,33 @@ public class SecurityConfig {
                 // x-signature (HMAC-SHA256). Sin firma válida → 401.
                 .requestMatchers("/api/webhooks/livekit",
                         "/api/webhooks/mercadopago").permitAll()
+                // Defensa en profundidad (auditoría 2026-09-18): antes solo
+                // `authenticated()` cubría /api/admin/**, dejando la autorización
+                // real 100% en manos de que cada controller nuevo recuerde llamar
+                // a AdminModeracionGate. Esto no reemplaza ese gate granular por
+                // rol — sigue siendo necesario para distinguir Moderación de
+                // Soporte Financiero — pero cierra el filter chain contra un
+                // endpoint admin nuevo que se agregue sin el gate.
+                .requestMatchers("/api/admin/**").access(adminActivoAuthorizationManager)
                 .anyRequest().authenticated()
-            );
+            )
+            .exceptionHandling(ex -> ex.accessDeniedHandler(adminAccesoDenegadoHandler()));
 
         return http.build();
+    }
+
+    /**
+     * Mismo cuerpo/formato que {@code AdminExceptionHandler.accesoDenegado()}
+     * (403, {@code {"error": "..."}}) para cuando la denegación ocurre en el
+     * filter chain (AdminActivoAuthorizationManager) y nunca llega al
+     * @RestControllerAdvice de cada módulo — evita que el contrato de la API
+     * difiera según en qué capa se cortó la request.
+     */
+    private AccessDeniedHandler adminAccesoDenegadoHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"No autorizado para esta acción de administración.\"}");
+        };
     }
 }
