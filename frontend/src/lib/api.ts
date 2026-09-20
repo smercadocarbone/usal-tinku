@@ -245,7 +245,13 @@ export function setPasarelaEstado(habilitada: boolean): Promise<PasarelaEstado> 
 
 /* ---- M8 — Colas del Admin de Moderación y Seguridad (US-1/2/3) ---- */
 
-export type EstadoCredencial = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+/** Auditoría 2026-09-19: tenía "APROBADA"/"RECHAZADA" (femenino) pero el
+ *  enum Java (sin `@JsonValue`, serializa por nombre de constante) es
+ *  "APROBADO"/"RECHAZADO" — ningún estado resuelto matcheaba nunca. Inocuo
+ *  hasta ahora porque `ColaCredenciales` no compara contra `estado` (la
+ *  cola de {@code colaPendientes()} solo trae PENDIENTE), pero el tipo
+ *  mentía sobre el contrato real. */
+export type EstadoCredencial = "PENDIENTE" | "APROBADO" | "RECHAZADO";
 export type TipoCredencial = "TITULO" | "CERTIFICADO_ANALITICO" | "MATRICULA";
 export type DecisionCredencial = "APROBAR" | "RECHAZAR";
 
@@ -548,15 +554,10 @@ export function resetearPassword(token: string, passwordNueva: string): Promise<
 
 /* ---- M1 — Estado real de la credencial propia del Tutor ---- */
 
-/** OJO: distinto de {@link EstadoCredencial} (cola del Admin, arriba) — ese
- *  tipo tiene "APROBADA"/"RECHAZADA" (no coincide con lo que serializa el
- *  enum real del backend); acá se usan los valores reales del enum Java. */
-export type EstadoCredencialPropia = "PENDIENTE" | "APROBADO" | "RECHAZADO";
-
 export interface CredencialPropia {
   id: string;
   tipoDocumento: TipoCredencial;
-  estado: EstadoCredencialPropia;
+  estado: EstadoCredencial;
   numeroIntento: number;
   createdAt: string;
 }
