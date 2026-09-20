@@ -124,6 +124,11 @@ public class IdentidadExceptionHandler {
                         "reservas_futuras", String.valueOf(ex.getCantidadReservas())));
     }
 
+    @ExceptionHandler(PasswordActualIncorrectaException.class)
+    public ResponseEntity<Map<String, String>> handlePasswordActualIncorrecta(PasswordActualIncorrectaException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(TokenResetInvalidoException.class)
     public ResponseEntity<Map<String, String>> handleTokenResetInvalido(TokenResetInvalidoException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));

@@ -553,7 +553,7 @@ class IdentidadFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new com.tinku.identidad.dto.CambiarPasswordRequest("passwordMala", "nuevaPassword1"))))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(patch("/api/usuarios/me/password")
                         .header("Authorization", "Bearer " + token)

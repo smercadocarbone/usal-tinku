@@ -254,7 +254,7 @@ public class UsuarioService {
     @Transactional
     public void cambiarPassword(Usuario usuario, String passwordActual, String passwordNueva) {
         if (!passwordEncoder.matches(passwordActual, usuario.getPasswordHash())) {
-            throw new org.springframework.security.authentication.BadCredentialsException("Credenciales inválidas");
+            throw new PasswordActualIncorrectaException();
         }
         usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
         usuarioRepository.save(usuario);
