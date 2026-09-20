@@ -48,6 +48,14 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, UUID
      *  (la unicidad la garantizan tambien la BD, uq_calificacion_por_sesion...). */
     Optional<Calificacion> findBySesionIdAndAutorIdAndDireccion(UUID sesionId, UUID autorId, String direccion);
 
+    /** Auditoría 2026-09-20: "la propia" del autor autenticado para una sesión —
+     *  antes no existía forma de recuperarla al volver a cargar la pantalla, así
+     *  que ni se podía mostrar lo ya calificado ni recuperar el id para editar
+     *  o borrar (PATCH/DELETE /api/calificaciones/{id} ya existían, pero sin
+     *  este GET el cliente nunca sabía qué id usar). Sin `direccion`: cada
+     *  sesión tiene a lo sumo una calificación por autor. */
+    Optional<Calificacion> findBySesionIdAndAutorId(UUID sesionId, UUID autorId);
+
     /** T-M7-06: calificacion publica de una sesion (para decidir el recordatorio). */
     Optional<Calificacion> findBySesionIdAndDireccion(UUID sesionId, String direccion);
 

@@ -76,6 +76,17 @@ public class CalificacionService {
         return CalificacionResponse.from(calificacionRepo.save(c));
     }
 
+    /**
+     * Auditoría 2026-09-20: la propia calificación del autor autenticado para
+     * una sesión, si la cargó — sin esto el cliente no tenía forma de saber
+     * qué {@code id} usar para {@link #editar}/{@link #eliminar} al volver a
+     * cargar la pantalla, ni de mostrar lo que ya calificó.
+     */
+    public java.util.Optional<CalificacionResponse> propia(Usuario autor, UUID sesionId) {
+        return calificacionRepo.findBySesionIdAndAutorId(sesionId, autor.getId())
+                .map(CalificacionResponse::from);
+    }
+
     /** T-M7-06 / FR-REP-005: editar estrellas/comentario publicos dentro de 48hs. */
     @Transactional
     public CalificacionResponse editar(Usuario autor, UUID id, CalificarRequest request) {

@@ -646,4 +646,72 @@ class CalificacionesFlujosIntegracionTest {
                 .andExpect(jsonPath("$.calificacionPromedio").isEmpty())
                 .andExpect(jsonPath("$.cantidadCalificaciones").value(0));
     }
+
+    // ------------------------- auditoría 2026-09-20: "propia" (GET)
+
+    @Test
+    void propia_sinCalificarTodavia_204() throws Exception {
+        String dniEst = dniUnico();
+        registrarAdulto(dniEst, "Lucia", true, false);
+        String tokenEst = login(dniEst);
+        String dniTutor = dniUnico();
+        registrarTutor(dniTutor, "Marcos");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        UUID estudianteId = usuarioPorDni(dniEst).getId();
+        UUID sesion = escenaFinalizada(tutorId, estudianteId, estudianteId, 2);
+
+        mockMvc.perform(get("/api/sesiones/{id}/calificacion", sesion)
+                        .header("Authorization", "Bearer " + tokenEst))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void propia_yaCalificada_devuelveElIdParaEditarYBorrar() throws Exception {
+        String dniEst = dniUnico();
+        registrarAdulto(dniEst, "Julieta", true, false);
+        String tokenEst = login(dniEst);
+        String dniTutor = dniUnico();
+        registrarTutor(dniTutor, "Ramiro");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        UUID estudianteId = usuarioPorDni(dniEst).getId();
+        UUID sesion = escenaFinalizada(tutorId, estudianteId, estudianteId, 3);
+
+        String id = calificarYDevolverId(tokenEst, sesion, 4, "Muy claro explicando.");
+
+        mockMvc.perform(get("/api/sesiones/{id}/calificacion", sesion)
+                        .header("Authorization", "Bearer " + tokenEst))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.estrellas").value(4))
+                .andExpect(jsonPath("$.comentario").value("Muy claro explicando."));
+
+        // El id que devolvió GET es el mismo que aceptan PATCH/DELETE.
+        mockMvc.perform(patch("/api/calificaciones/{id}", id)
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(cuerpoCalificacion(5, "Mejor aún."))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estrellas").value(5));
+    }
+
+    @Test
+    void propia_esPorAutor_elTutorNoVeLaDelEstudianteComoSuya() throws Exception {
+        String dniEst = dniUnico();
+        registrarAdulto(dniEst, "Bruno", true, false);
+        String tokenEst = login(dniEst);
+        String dniTutor = dniUnico();
+        registrarTutor(dniTutor, "Carla");
+        String tokenTutor = login(dniTutor);
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        UUID estudianteId = usuarioPorDni(dniEst).getId();
+        UUID sesion = escenaFinalizada(tutorId, estudianteId, estudianteId, 4);
+
+        calificarYDevolverId(tokenEst, sesion, 5, null);
+
+        // El Tutor todavía no calificó (oculta) — su "propia" sigue en 204,
+        // aunque el estudiante ya haya calificado la misma sesión.
+        mockMvc.perform(get("/api/sesiones/{id}/calificacion", sesion)
+                        .header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isNoContent());
+    }
 }

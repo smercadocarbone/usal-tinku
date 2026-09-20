@@ -52,6 +52,17 @@ public class CalificacionController {
                 .body(calificacionService.calificar(autor, sesionId, request));
     }
 
+    /** Auditoría 2026-09-20: la propia calificación del autor autenticado para
+     *  la sesión, si existe — 204 si todavía no calificó. */
+    @GetMapping("/sesiones/{sesionId}/calificacion")
+    public ResponseEntity<CalificacionResponse> propia(@PathVariable UUID sesionId,
+                                                        Authentication authentication) {
+        Usuario autor = usuarioActual.obtener(authentication);
+        return calificacionService.propia(autor, sesionId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     /** T-M7-06 / FR-REP-005: editar la propia calificacion publica (<= 48hs). */
     @PatchMapping("/calificaciones/{id}")
     public ResponseEntity<CalificacionResponse> editar(
