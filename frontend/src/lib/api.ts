@@ -509,3 +509,67 @@ export function calificarSesion(
 ): Promise<CalificacionCreada> {
   return api.post(`/api/sesiones/${sesionId}/calificacion`, body);
 }
+
+/* ---- M1 — "Editar cuenta" y "olvidé mi contraseña" (auditoría 2026-09-19) ---- */
+
+export interface PerfilPropio {
+  id: string;
+  nombre: string;
+  apellido: string;
+  tipo: string;
+  capacidadEstudiante: boolean;
+  capacidadAdultoResponsable: boolean;
+  email: string | null;
+}
+
+/** El JWT no lleva el email en el payload — hace falta este endpoint para
+ *  mostrarlo en la pantalla de cuenta. */
+export function getPerfilPropio(): Promise<PerfilPropio> {
+  return api.get("/api/usuarios/me");
+}
+
+export function actualizarEmail(email: string): Promise<PerfilPropio> {
+  return api.patch("/api/usuarios/me/email", { email });
+}
+
+export function cambiarPassword(passwordActual: string, passwordNueva: string): Promise<void> {
+  return api.patch("/api/usuarios/me/password", { passwordActual, passwordNueva });
+}
+
+/** Responde 204 siempre, exista o no el DNI (no confirma ni niega su
+ *  existencia — ver PasswordResetService en el backend). */
+export function solicitarResetPassword(dni: string): Promise<void> {
+  return api.post("/api/usuarios/recuperar-password", { dni });
+}
+
+export function resetearPassword(token: string, passwordNueva: string): Promise<void> {
+  return api.post("/api/usuarios/resetear-password", { token, passwordNueva });
+}
+
+/* ---- M1 — Estado real de la credencial propia del Tutor ---- */
+
+/** OJO: distinto de {@link EstadoCredencial} (cola del Admin, arriba) — ese
+ *  tipo tiene "APROBADA"/"RECHAZADA" (no coincide con lo que serializa el
+ *  enum real del backend); acá se usan los valores reales del enum Java. */
+export type EstadoCredencialPropia = "PENDIENTE" | "APROBADO" | "RECHAZADO";
+
+export interface CredencialPropia {
+  id: string;
+  tipoDocumento: TipoCredencial;
+  estado: EstadoCredencialPropia;
+  numeroIntento: number;
+  createdAt: string;
+}
+
+/** null = todavía no cargó ninguna credencial (204 del backend). */
+export async function getMiCredencial(): Promise<CredencialPropia | null> {
+  const res = await api.get<CredencialPropia | undefined>("/api/tutores/me/credencial");
+  return res ?? null;
+}
+
+export function subirCredencial(tipo: TipoCredencial, archivo: File): Promise<CredencialPropia> {
+  const form = new FormData();
+  form.append("datos", new Blob([JSON.stringify({ tipoDocumento: tipo })], { type: "application/json" }));
+  form.append("archivo", archivo);
+  return api.post("/api/tutores/credenciales", form);
+}

@@ -112,7 +112,11 @@ export default function LoginPage() {
           </Boton>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-slate-500">
+          <Link href="/recuperar-password">¿Olvidaste tu contraseña?</Link>
+        </p>
+
+        <p className="mt-2 text-center text-sm text-slate-500">
           ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
         </p>
       </Tarjeta>

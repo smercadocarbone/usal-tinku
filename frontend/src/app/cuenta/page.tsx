@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
+import BannerCredencial from "@/components/BannerCredencial";
 import Cabecera from "@/components/Cabecera";
+import EditarCuenta from "@/components/EditarCuenta";
 import TabHorarios from "@/components/tutor/TabHorarios";
 import TabMaterias from "@/components/tutor/TabMaterias";
 import TabPrecio from "@/components/tutor/TabPrecio";
@@ -75,9 +77,7 @@ function PanelTutor({ tutorId }: { tutorId: string }) {
 
   return (
     <section className="mt-8">
-      <Alerta tono="aviso" className="w-fit">
-        Tus credenciales estan en revision por el equipo de Tinku.
-      </Alerta>
+      <BannerCredencial />
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         {/* Sidebar */}
@@ -549,6 +549,8 @@ export default function CuentaPage() {
 
         {payload?.tipo === "TUTOR" && <PanelTutor tutorId={String(payload.sub)} />}
         {payload?.cap_ar === true && <PanelAdulto />}
+
+        <EditarCuenta />
       </main>
     </>
   );
