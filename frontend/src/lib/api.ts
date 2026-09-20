@@ -611,6 +611,18 @@ export function cambiarPassword(passwordActual: string, passwordNueva: string): 
   return api.patch("/api/usuarios/me/password", { passwordActual, passwordNueva });
 }
 
+/** Auditoría 2026-09-20: el backend soporta activar/desactivar capacidades
+ *  desde el alta (PATCH /api/usuarios/me/capacidades) pero no había ningún
+ *  llamador en el frontend — un Adulto que se registró solo como Estudiante
+ *  no tenía forma de convertirse en Adulto Responsable más adelante (y
+ *  viceversa) sin soporte. */
+export function actualizarCapacidades(
+  capacidadEstudiante: boolean,
+  capacidadAdultoResponsable: boolean
+): Promise<PerfilPropio> {
+  return api.patch("/api/usuarios/me/capacidades", { capacidadEstudiante, capacidadAdultoResponsable });
+}
+
 /** Responde 204 siempre, exista o no el DNI (no confirma ni niega su
  *  existencia — ver PasswordResetService en el backend). */
 export function solicitarResetPassword(dni: string): Promise<void> {
