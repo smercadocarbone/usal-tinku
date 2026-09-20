@@ -11,6 +11,10 @@ public interface AlertaSeguridadRepository extends JpaRepository<AlertaSeguridad
 
     Optional<AlertaSeguridad> findBySesionId(UUID sesionId);
 
+    /** Auditoría 2026-09-20: propias del Tutor detectado, para que pueda verlas
+     * y presentar su descargo (US-2) — antes no existía forma de listarlas. */
+    List<AlertaSeguridad> findByDetectadoIdOrderByCreatedAtDesc(UUID detectadoId);
+
     /** Cola de M8: alertas pendientes de resolución (ventana 12hs, prioridad alta). */
     List<AlertaSeguridad> findByEstadoOrderByCreatedAtAsc(String estado);
 

@@ -56,6 +56,16 @@ public class AlertaSeguridadService {
     }
 
     /**
+     * Alertas propias del Tutor detectado (auditoría 2026-09-20): antes no
+     * había forma de que él mismo las viera para saber que existían y poder
+     * presentar su descargo — la vía de apelación de FR-SEC-004 dependía de
+     * un endpoint que nadie podía descubrir.
+     */
+    public java.util.List<AlertaSeguridad> misAlertas(Usuario usuario) {
+        return alertaRepo.findByDetectadoIdOrderByCreatedAtDesc(usuario.getId());
+    }
+
+    /**
      * Descargo del Tutor detectado ({@code detectado_id}) como apelación —
      * nunca bloquea la resolución dentro de las 12hs (FR-SEC-004).
      */

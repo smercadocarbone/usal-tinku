@@ -57,7 +57,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -457,5 +459,81 @@ class DenunciasModeracionIntegracionTest {
         Usuario tutorSancionado = usuarioRepository.findById(tutor.getId()).orElseThrow();
         assertThat(tutorSancionado.getEstadoCuenta()).isEqualTo(EstadoCuenta.SUSPENDIDA);
         assertThat(tutorSancionado.isActivoParaMatching()).isFalse();
+    }
+
+    // ------------------------- auditoría 2026-09-20: "mías"/"recibidas" + descargo
+
+    @Test
+    void denunciado_veSusPropiasDenunciasRecibidas_yPresentaDescargo() throws Exception {
+        Usuario denunciante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Cupo cupo = cupoConEscrow(denunciante, tutor, Instant.now().plusSeconds(3600));
+        UUID denunciaId = presentar(token(denunciante), tutor.getId(), cupo.sesionId(), "acoso");
+
+        mvc.perform(get("/api/denuncias/recibidas")
+                        .header("Authorization", "Bearer " + token(tutor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(denunciaId.toString()))
+                // FR-SEC-006: la identidad del denunciante nunca viaja en la respuesta.
+                .andExpect(jsonPath("$[0].denuncianteId").doesNotExist());
+
+        mvc.perform(post("/api/denuncias/" + denunciaId + "/descargo")
+                        .header("Authorization", "Bearer " + token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("descargo", "Mi versión de los hechos."))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.descargoTexto").value("Mi versión de los hechos."));
+    }
+
+    @Test
+    void terceroSinDenunciasRecibidas_listaVacia() throws Exception {
+        Usuario nadie = usuario(TipoUsuario.ADULTO, false);
+
+        mvc.perform(get("/api/denuncias/recibidas")
+                        .header("Authorization", "Bearer " + token(nadie)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void otroUsuario_noPuedePresentarDescargoDeUnaDenunciaAjena() throws Exception {
+        Usuario denunciante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Usuario otro = usuario(TipoUsuario.ADULTO, false);
+        Cupo cupo = cupoConEscrow(denunciante, tutor, Instant.now().plusSeconds(3600));
+        UUID denunciaId = presentar(token(denunciante), tutor.getId(), cupo.sesionId(), "acoso");
+
+        mvc.perform(post("/api/denuncias/" + denunciaId + "/descargo")
+                        .header("Authorization", "Bearer " + token(otro))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("descargo", "No es mío"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void tutorDetectado_veSusPropiasAlertas_yPresentaDescargo() throws Exception {
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(cupo.sesionId());
+        alerta.setRama("menor");
+        alerta.setDetectadoId(tutor.getId());
+        alertaRepository.save(alerta);
+
+        mvc.perform(get("/api/alertas-seguridad/mias")
+                        .header("Authorization", "Bearer " + token(tutor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(alerta.getId().toString()));
+
+        mvc.perform(post("/api/alertas-seguridad/" + alerta.getId() + "/descargo")
+                        .header("Authorization", "Bearer " + token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("descargo", "No era lo que parecía."))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.descargoTexto").value("No era lo que parecía."));
     }
 }

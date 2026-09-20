@@ -145,6 +145,16 @@ public class DenunciaService {
      * denunciante permanece anónimo). Disponible en cualquier momento, incluso
      * post-resolución (apelación registrada, US-3) — nunca bloquea la decisión.
      */
+    /**
+     * Denuncias recibidas por el propio denunciado (auditoría 2026-09-20):
+     * antes no había forma de que él mismo las viera — el plazo de
+     * {@code descargoVenceAt} (FR-SEC-010) corría en silencio hasta escalar,
+     * sin que nadie hubiera tenido la chance real de responder a tiempo.
+     */
+    public java.util.List<Denuncia> misDenunciasRecibidas(Usuario usuario) {
+        return denunciaRepo.findByDenunciadoIdOrderByCreatedAtDesc(usuario.getId());
+    }
+
     @Transactional
     public Denuncia descargar(UUID denunciaId, Usuario usuario, String texto) {
         Denuncia denuncia = buscar(denunciaId);

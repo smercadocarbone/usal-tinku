@@ -14,6 +14,11 @@ public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
     List<Denuncia> findAllByEstadoInOrderByPrioridadAltaDescCreatedAtAsc(
             List<EstadoDenuncia> estados);
 
+    /** Auditoría 2026-09-20: recibidas por el propio denunciado, para que pueda
+     * verlas y presentar su descargo antes de que venza (US-3, FR-SEC-010) —
+     * antes no existía forma de listarlas y el plazo corría en silencio. */
+    List<Denuncia> findByDenunciadoIdOrderByCreatedAtDesc(UUID denunciadoId);
+
 /** Denuncia ACTIVA sobre una sesión puntual (T-M6-03): M6 pausa la generación
      *  del resumen si existe {@code registrada}/{@code en_revision} (FR-SUM-008). */
     boolean existsBySesionIdAndEstadoIn(UUID sesionId, Collection<EstadoDenuncia> estados);
