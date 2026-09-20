@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, ApiError, getSesionPorReserva, type SesionInfo } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  getResumenSesion,
+  getSesionPorReserva,
+  type ResumenSesionInfo,
+  type SesionInfo,
+} from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
@@ -27,6 +34,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sesion, setSesion] = useState<SesionInfo | null>(null);
+  const [resumen, setResumen] = useState<ResumenSesionInfo | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [nuevoHorario, setNuevoHorario] = useState("");
   const [editandoHorario, setEditandoHorario] = useState(false);
@@ -62,10 +70,20 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
     // Un 404 acá es el caso normal (la Reserva nunca se confirmó, o el
     // job de T-5 no creó la Sesión todavía) — no es un error para mostrar.
+    let sesionActual: SesionInfo | null = null;
     try {
-      setSesion(await getSesionPorReserva(params.id));
+      sesionActual = await getSesionPorReserva(params.id);
+      setSesion(sesionActual);
     } catch {
       setSesion(null);
+    }
+
+    if (sesionActual) {
+      try {
+        setResumen(await getResumenSesion(sesionActual.id));
+      } catch {
+        setResumen(null);
+      }
     }
   }
 
@@ -410,6 +428,13 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                   Confirmar nuevo horario
                 </Boton>
               </form>
+            )}
+
+            {resumen?.disponible && (
+              <Tarjeta className="mt-6 w-full max-w-none p-6">
+                <h2 className="mb-2 text-base font-semibold text-slate-800">Resumen de la clase</h2>
+                <p className="whitespace-pre-line text-sm text-slate-700">{resumen.resumenFinal}</p>
+              </Tarjeta>
             )}
 
             {puedeCalificar && sesion && (

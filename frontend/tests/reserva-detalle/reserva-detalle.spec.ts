@@ -82,6 +82,47 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
   );
 
   test(
+    "una sesión finalizada con resumen disponible lo muestra",
+    { tag: ["@e2e", "@RESERVA-DETALLE-E2E-004"] },
+    async ({ page }) => {
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/resumen`]: jsonRoute(200, {
+          disponible: true,
+          resumenFinal: "Repasamos ecuaciones de primer grado.",
+        }),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(page.getByText("Resumen de la clase")).toBeVisible();
+      await expect(page.getByText("Repasamos ecuaciones de primer grado.")).toBeVisible();
+    }
+  );
+
+  test(
+    "sin resumen disponible, no se muestra ninguna tarjeta de resumen",
+    { tag: ["@e2e", "@RESERVA-DETALLE-E2E-005"] },
+    async ({ page }) => {
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/resumen`]: jsonRoute(200, {
+          disponible: false,
+          resumenFinal: null,
+        }),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(page.getByText("Resumen de la clase")).toHaveCount(0);
+    }
+  );
+
+  test(
     "una reserva sin sesión programada todavía no ofrece ni entrar ni calificar",
     { tag: ["@e2e", "@RESERVA-DETALLE-E2E-003"] },
     async ({ page }) => {

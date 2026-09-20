@@ -1,8 +1,9 @@
 ### E2E Tests: Detalle de reserva — entrar a la clase y calificar
 
 **Suite ID:** `RESERVA-DETALLE-E2E`
-**Feature:** `/cuenta/reservas/[id]` — botón "Entrar a la clase" y calificación
-post-sesión (M7), habilitados por `GET /api/sesiones/por-reserva/{id}`.
+**Feature:** `/cuenta/reservas/[id]` — botón "Entrar a la clase", calificación
+post-sesión (M7) y resumen automático (M6), habilitados por
+`GET /api/sesiones/por-reserva/{id}` y `GET /api/sesiones/{id}/resumen`.
 
 ---
 
@@ -35,6 +36,30 @@ formulario de calificación (no el botón de entrar) y enviarlo confirma.
 
 ### Expected Result:
 - Mensaje de confirmación tras enviar.
+
+---
+
+## Test Case: `RESERVA-DETALLE-E2E-004` - Resumen disponible se muestra
+
+**Priority:** `medium`
+
+**Tags:** @e2e
+
+**Description/Objective:** Antes de este cambio el módulo M6 generaba el
+resumen automático de la sesión pero no había ningún endpoint ni pantalla
+para leerlo — la funcionalidad completa era inalcanzable.
+
+---
+
+## Test Case: `RESERVA-DETALLE-E2E-005` - Sin resumen disponible, no se muestra nada
+
+**Priority:** `medium`
+
+**Tags:** @e2e
+
+**Description/Objective:** `disponible: false` colapsa todos los estados
+no-generado (pendiente/fallido/suspendido por seguridad/etc.) — la pantalla
+simplemente no ofrece la tarjeta, sin distinguir el motivo.
 
 ---
 

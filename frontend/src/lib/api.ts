@@ -495,6 +495,20 @@ export function getSesionPorReserva(reservaId: string): Promise<SesionInfo> {
   return api.get(`/api/sesiones/por-reserva/${reservaId}`);
 }
 
+/* ---- M6 — Resumen automático de una sesión (backend: auditoría 2026-09-20) ---- */
+
+export interface ResumenSesionInfo {
+  disponible: boolean;
+  resumenFinal: string | null;
+}
+
+/** `disponible: false` cubre tanto "todavía no hay resumen" como "no se va a
+ *  generar" (sesión corta, sin proveedor, suspendido por seguridad, etc.) —
+ *  el backend no distingue esos casos acá a propósito. */
+export function getResumenSesion(sesionId: string): Promise<ResumenSesionInfo> {
+  return api.get(`/api/sesiones/${sesionId}/resumen`);
+}
+
 /* ---- M7 — Calificación de una sesión ---- */
 
 export interface CalificacionCreada {
