@@ -59,14 +59,15 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
       await mockApi(page, {
         [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
         [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/calificacion`]: (route) => route.fulfill({ status: 204, body: "" }),
         [`POST /api/sesiones/${SESION_ID}/calificacion`]: jsonRoute(201, {
           id: "cal-1",
           sesionId: SESION_ID,
           direccion: "estudiante_a_tutor",
           estrellas: 5,
           comentario: null,
-          editableHasta: "2026-01-03T00:00:00Z",
-          createdAt: "2026-01-01T00:00:00Z",
+          editableHasta: new Date(Date.now() + 48 * 3600_000).toISOString(),
+          createdAt: new Date().toISOString(),
         }),
       });
 
@@ -77,7 +78,8 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
       await detalle.estrella(5).click();
       await detalle.botonEnviarCalificacion.click();
 
-      await expect(page.getByText("¡Gracias! Tu calificación quedó registrada.")).toBeVisible();
+      await expect(page.getByText("Tu calificación")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Editar" })).toBeVisible();
     }
   );
 
@@ -119,6 +121,105 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
       await detalle.goto(RESERVA_ID);
 
       await expect(page.getByText("Resumen de la clase")).toHaveCount(0);
+    }
+  );
+
+  test(
+    "una calificación ya cargada se muestra, y se puede editar dentro de la ventana",
+    { tag: ["@critical", "@e2e", "@RESERVA-DETALLE-E2E-006"] },
+    async ({ page }) => {
+      const enUnaHora = new Date(Date.now() + 3600_000).toISOString();
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/calificacion`]: jsonRoute(200, {
+          id: "cal-1",
+          sesionId: SESION_ID,
+          direccion: "estudiante_a_tutor",
+          estrellas: 3,
+          comentario: "Estuvo bien.",
+          editableHasta: enUnaHora,
+          createdAt: "2026-01-01T00:00:00Z",
+        }),
+        [`PATCH /api/calificaciones/cal-1`]: jsonRoute(200, {
+          id: "cal-1",
+          sesionId: SESION_ID,
+          direccion: "estudiante_a_tutor",
+          estrellas: 5,
+          comentario: "Mejor de lo que pensé.",
+          editableHasta: enUnaHora,
+          createdAt: "2026-01-01T00:00:00Z",
+        }),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(page.getByText("Estuvo bien.")).toBeVisible();
+      await page.getByRole("button", { name: "Editar" }).click();
+      await detalle.estrella(5).click();
+      await page.getByRole("button", { name: "Guardar cambios" }).click();
+
+      await expect(page.getByText("Mejor de lo que pensé.")).toBeVisible();
+    }
+  );
+
+  test(
+    "vencida la ventana de 48hs, la calificación no ofrece editar ni borrar",
+    { tag: ["@e2e", "@RESERVA-DETALLE-E2E-007"] },
+    async ({ page }) => {
+      const haceUnaHora = new Date(Date.now() - 3600_000).toISOString();
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/calificacion`]: jsonRoute(200, {
+          id: "cal-1",
+          sesionId: SESION_ID,
+          direccion: "estudiante_a_tutor",
+          estrellas: 4,
+          comentario: null,
+          editableHasta: haceUnaHora,
+          createdAt: "2025-12-30T00:00:00Z",
+        }),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(page.getByText("Tu calificación")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Editar" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Borrar" })).toHaveCount(0);
+    }
+  );
+
+  test(
+    "borrar la propia calificación vuelve a ofrecer el formulario de alta",
+    { tag: ["@e2e", "@RESERVA-DETALLE-E2E-008"] },
+    async ({ page }) => {
+      const enUnaHora = new Date(Date.now() + 3600_000).toISOString();
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva("finalizada")),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("finalizada")),
+        [`GET /api/sesiones/${SESION_ID}/calificacion`]: jsonRoute(200, {
+          id: "cal-1",
+          sesionId: SESION_ID,
+          direccion: "estudiante_a_tutor",
+          estrellas: 2,
+          comentario: null,
+          editableHasta: enUnaHora,
+          createdAt: "2026-01-01T00:00:00Z",
+        }),
+        [`DELETE /api/calificaciones/cal-1`]: (route) => route.fulfill({ status: 204, body: "" }),
+      });
+
+      page.once("dialog", (dialog) => dialog.accept());
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await page.getByRole("button", { name: "Borrar" }).click();
+
+      await expect(page.getByText("¿Cómo estuvo la clase?")).toBeVisible();
     }
   );
 

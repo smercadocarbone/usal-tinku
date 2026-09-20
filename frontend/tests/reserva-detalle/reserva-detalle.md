@@ -63,6 +63,34 @@ simplemente no ofrece la tarjeta, sin distinguir el motivo.
 
 ---
 
+## Test Case: `RESERVA-DETALLE-E2E-006` - Calificación ya cargada, editar dentro de la ventana
+
+**Priority:** `critical`
+
+**Tags:** @e2e
+
+**Description/Objective:** Antes de este cambio no había forma de recuperar
+la propia calificación al volver a cargar la pantalla — GET
+`/api/sesiones/{id}/calificacion` la habilita.
+
+---
+
+## Test Case: `RESERVA-DETALLE-E2E-007` - Vencida la ventana de 48hs, sin editar/borrar
+
+**Priority:** `medium`
+
+**Tags:** @e2e
+
+---
+
+## Test Case: `RESERVA-DETALLE-E2E-008` - Borrar la propia calificación
+
+**Priority:** `medium`
+
+**Tags:** @e2e
+
+---
+
 ## Test Case: `RESERVA-DETALLE-E2E-003` - Sin sesión todavía, ninguno de los dos
 
 **Priority:** `medium`

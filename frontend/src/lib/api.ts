@@ -592,6 +592,25 @@ export function calificarSesion(
   return api.post(`/api/sesiones/${sesionId}/calificacion`, body);
 }
 
+/** Auditoría 2026-09-20: antes no había forma de recuperar el id de la propia
+ *  calificación al volver a cargar la pantalla — sin esto, ni se podía
+ *  mostrar lo ya calificado ni editarlo/borrarlo. null = todavía no calificó. */
+export async function getMiCalificacion(sesionId: string): Promise<CalificacionCreada | null> {
+  const res = await api.get<CalificacionCreada | undefined>(`/api/sesiones/${sesionId}/calificacion`);
+  return res ?? null;
+}
+
+export function editarCalificacion(
+  id: string,
+  body: { estrellas: number; comentario?: string }
+): Promise<CalificacionCreada> {
+  return api.patch(`/api/calificaciones/${id}`, body);
+}
+
+export function eliminarCalificacion(id: string): Promise<void> {
+  return api.delete(`/api/calificaciones/${id}`);
+}
+
 /* ---- M1 — "Editar cuenta" y "olvidé mi contraseña" (auditoría 2026-09-19) ---- */
 
 export interface PerfilPropio {
