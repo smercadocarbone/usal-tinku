@@ -201,6 +201,33 @@ export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]
   });
 }
 
+/* ---- M2 — Búsquedas guardadas (US-6, FR-MATCH-008; auditoría 2026-09-20) ----
+ * El backend tenía guardar/listar/re-ejecutar completos, sin ningún llamador
+ * en el frontend. */
+
+export interface BusquedaGuardada {
+  id: string;
+  textoBusqueda: string;
+  createdAt: string;
+}
+
+export function guardarBusqueda(body: CuerpoBusqueda): Promise<BusquedaGuardada> {
+  return api.post("/api/busquedas/guardadas", {
+    texto_busqueda: body.textoBusqueda || undefined,
+    nombre: body.nombre || undefined,
+    filtro_materia: body.filtroMateria || undefined,
+  });
+}
+
+export function getBusquedasGuardadas(): Promise<BusquedaGuardada[]> {
+  return api.get("/api/busquedas/guardadas");
+}
+
+/** Re-ejecuta contra el índice vigente — resultados frescos, no congelados. */
+export function ejecutarBusquedaGuardada(id: string): Promise<ResultadoBusqueda[]> {
+  return api.post(`/api/busquedas/guardadas/${id}/ejecutar`);
+}
+
 /** Mensaje legible desde un error de red o un ApiError del backend ({error}). */
 export function mensajeDeError(err: unknown, fallback: string): string {
   return err instanceof ApiError && err.message ? err.message : fallback;

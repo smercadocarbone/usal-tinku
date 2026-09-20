@@ -6,9 +6,14 @@ import Cabecera from "@/components/Cabecera";
 import {
   api,
   buscarTutores,
+  ejecutarBusquedaGuardada,
+  getBusquedasGuardadas,
   getCatalogos,
+  guardarBusqueda,
   mensajeDeError,
+  type BusquedaGuardada,
   type NivelCatalogo,
+  type ResultadoBusqueda,
 } from "@/lib/api";
 import { formatearPrecio } from "@/lib/formatos";
 import { Alerta, Boton, Chip, EstadoVacio, Insignia, Skeleton, Tarjeta } from "@/components/ui";
@@ -312,6 +317,16 @@ export default function BuscarPage() {
   const [error, setError] = useState<string | null>(null);
   const [solicitadas, setSolicitadas] = useState<Set<string>>(new Set());
 
+  const [guardadas, setGuardadas] = useState<BusquedaGuardada[] | null>(null);
+  const [guardandoBusqueda, setGuardandoBusqueda] = useState(false);
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+
+  useEffect(() => {
+    getBusquedasGuardadas()
+      .then(setGuardadas)
+      .catch(() => setGuardadas([]));
+  }, []);
+
   function cargarCatalogos() {
     setErrorCat(null);
     getCatalogos()
@@ -334,6 +349,48 @@ export default function BuscarPage() {
     ];
   }, [nivelSel]);
 
+  /** Compartida entre una búsqueda nueva y la re-ejecución de una guardada:
+   *  ambas devuelven la misma forma cruda y necesitan el mismo hidratado
+   *  de perfiles. */
+  async function hidratarYMostrar(lista: ResultadoBusqueda[]) {
+    const perfiles = await Promise.allSettled(
+      lista.map((r) => api.get<TutorPerfil>(`/api/tutores/${r.tutorId}`))
+    );
+
+    const tutorResults: TutorResult[] = lista.map((r, i) => {
+      const perfil =
+        perfiles[i].status === "fulfilled" ? perfiles[i].value : null;
+      if (!perfil) {
+        return {
+          id: r.tutorId,
+          nombre: `Tutor #${r.tutorId}`,
+          materias: [],
+          precioProrateado: null,
+          trustLevel: null,
+          avatarUrl: "",
+        };
+      }
+      return {
+        id: perfil.id,
+        nombre: perfil.apellido
+          ? `${perfil.nombre} ${perfil.apellido}`
+          : perfil.nombre,
+        materias: perfil.materias,
+        precioProrateado: perfil.precioHora ?? null,
+        trustLevel: nivelConfianza(
+          perfil.calificacionPromedio,
+          perfil.cantidadCalificaciones
+        ),
+        avatarUrl: "",
+      };
+    });
+
+    setNoAutorizados(
+      Object.fromEntries(lista.map((r) => [r.tutorId, r.noAutorizado]))
+    );
+    setResultados(tutorResults);
+  }
+
   async function ejecutarBusqueda(filtros: BusquedaFiltros = {}) {
     const query = texto.trim();
     const filtroMateria = filtros.materia ?? materia;
@@ -351,45 +408,42 @@ export default function BuscarPage() {
         textoBusqueda: query || undefined,
         filtroMateria: filtroMateria || undefined,
       });
-
-      const perfiles = await Promise.allSettled(
-        lista.map((r) => api.get<TutorPerfil>(`/api/tutores/${r.tutorId}`))
-      );
-
-      const tutorResults: TutorResult[] = lista.map((r, i) => {
-        const perfil =
-          perfiles[i].status === "fulfilled" ? perfiles[i].value : null;
-        if (!perfil) {
-          return {
-            id: r.tutorId,
-            nombre: `Tutor #${r.tutorId}`,
-            materias: [],
-            precioProrateado: null,
-            trustLevel: null,
-            avatarUrl: "",
-          };
-        }
-        return {
-          id: perfil.id,
-          nombre: perfil.apellido
-            ? `${perfil.nombre} ${perfil.apellido}`
-            : perfil.nombre,
-          materias: perfil.materias,
-          precioProrateado: perfil.precioHora ?? null,
-          trustLevel: nivelConfianza(
-            perfil.calificacionPromedio,
-            perfil.cantidadCalificaciones
-          ),
-          avatarUrl: "",
-        };
-      });
-
-      setNoAutorizados(
-        Object.fromEntries(lista.map((r) => [r.tutorId, r.noAutorizado]))
-      );
-      setResultados(tutorResults);
+      await hidratarYMostrar(lista);
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo completar la búsqueda."));
+    } finally {
+      setBuscando(false);
+    }
+  }
+
+  async function guardarBusquedaActual() {
+    const query = texto.trim();
+    if (!query && !materia) return;
+    setGuardandoBusqueda(true);
+    setErrorGuardar(null);
+    try {
+      const nueva = await guardarBusqueda({
+        textoBusqueda: query || undefined,
+        filtroMateria: materia || undefined,
+      });
+      setGuardadas((prev) => [nueva, ...(prev ?? [])]);
+    } catch (err) {
+      setErrorGuardar(mensajeDeError(err, "No se pudo guardar la búsqueda."));
+    } finally {
+      setGuardandoBusqueda(false);
+    }
+  }
+
+  async function ejecutarGuardada(id: string) {
+    setBuscando(true);
+    setError(null);
+    setResultados(null);
+    setHaBuscado(true);
+    try {
+      const lista = await ejecutarBusquedaGuardada(id);
+      await hidratarYMostrar(lista);
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo ejecutar la búsqueda guardada."));
     } finally {
       setBuscando(false);
     }
@@ -533,6 +587,25 @@ export default function BuscarPage() {
               ))}
             </div>
           )}
+
+          {guardadas !== null && guardadas.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-slate-500">Tus búsquedas guardadas</p>
+              <div className="no-scrollbar mt-1.5 flex gap-2 overflow-x-auto py-1">
+                {guardadas.map((g) => (
+                  <Boton
+                    key={g.id}
+                    variante="secundario"
+                    tamano="sm"
+                    className="shrink-0 rounded-full"
+                    onClick={() => ejecutarGuardada(g.id)}
+                  >
+                    {g.textoBusqueda}
+                  </Boton>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="mt-8">
@@ -540,6 +613,21 @@ export default function BuscarPage() {
             <Alerta tono="error" className="mb-4">
               {error}
             </Alerta>
+          )}
+
+          {haBuscado && !buscando && (texto.trim() || materia) && (
+            <div className="mb-4 flex items-center gap-2">
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                cargando={guardandoBusqueda}
+                textoCargando="Guardando…"
+                onClick={guardarBusquedaActual}
+              >
+                Guardar esta búsqueda
+              </Boton>
+              {errorGuardar && <span className="text-sm text-red-700">{errorGuardar}</span>}
+            </div>
           )}
 
           {buscando || haBuscado ? (
