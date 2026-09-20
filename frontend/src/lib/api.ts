@@ -402,6 +402,13 @@ export interface TicketAdmin {
   resueltoEn: string | null;
 }
 
+/** Auditoría 2026-09-18 (backend) / 2026-09-20 (este gap): el endpoint de
+ *  transición de estado del ticket existía, pero el panel de Admin era
+ *  de solo lectura — nunca lo llamaba. */
+export function actualizarEstadoTicket(id: string, estado: EstadoTicket): Promise<TicketAdmin> {
+  return api.patch(`/api/admin/tickets/${id}`, { estado });
+}
+
 export function getTicketsAdmin(): Promise<TicketAdmin[]> {
   return api.get("/api/admin/tickets");
 }

@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import { getTicketsAdmin, mensajeDeError, type TicketAdmin } from "@/lib/api";
+import {
+  actualizarEstadoTicket,
+  getTicketsAdmin,
+  mensajeDeError,
+  type EstadoTicket,
+  type TicketAdmin,
+} from "@/lib/api";
 import {
   Alerta,
+  CampoSelect,
   Cargando,
   EstadoVacio,
   Insignia,
@@ -12,7 +19,7 @@ import {
   type TonoInsignia,
 } from "@/components/ui";
 
-const ETIQUETA_ESTADO: Record<string, string> = {
+const ETIQUETA_ESTADO: Record<EstadoTicket, string> = {
   abierto: "Abierto",
   en_proceso: "En proceso",
   resuelto: "Resuelto",
@@ -25,6 +32,8 @@ const TONO_ESTADO: Record<string, TonoInsignia> = {
   resuelto: "exito",
   cerrado: "neutro",
 };
+
+const ESTADOS: EstadoTicket[] = ["abierto", "en_proceso", "resuelto", "cerrado"];
 
 function formatFecha(iso: string | null): string {
   if (!iso) return "—";
@@ -41,6 +50,8 @@ export default function TicketsSoporte() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prohibido, setProhibido] = useState(false);
+  const [guardandoId, setGuardandoId] = useState<string | null>(null);
+  const [errorPorTicket, setErrorPorTicket] = useState<Record<string, string>>({});
 
   useEffect(() => {
     getTicketsAdmin()
@@ -54,6 +65,22 @@ export default function TicketsSoporte() {
       })
       .finally(() => setCargando(false));
   }, []);
+
+  async function cambiarEstado(id: string, estado: EstadoTicket) {
+    setGuardandoId(id);
+    setErrorPorTicket((prev) => ({ ...prev, [id]: "" }));
+    try {
+      const actualizado = await actualizarEstadoTicket(id, estado);
+      setTickets((prev) => (prev ? prev.map((t) => (t.id === id ? actualizado : t)) : prev));
+    } catch (err) {
+      setErrorPorTicket((prev) => ({
+        ...prev,
+        [id]: mensajeDeError(err, "No se pudo actualizar el estado."),
+      }));
+    } finally {
+      setGuardandoId(null);
+    }
+  }
 
   if (cargando) {
     return <Cargando>Cargando tickets…</Cargando>;
@@ -87,11 +114,29 @@ export default function TicketsSoporte() {
                 Origen: {t.origenModulo} · Abierto {formatFecha(t.creadoEn)}
               </p>
             </div>
-            <Insignia tono={TONO_ESTADO[t.estado] ?? "neutro"}>
-              {ETIQUETA_ESTADO[t.estado] ?? t.estado}
-            </Insignia>
+            <div className="flex items-center gap-2">
+              <Insignia tono={TONO_ESTADO[t.estado] ?? "neutro"}>
+                {ETIQUETA_ESTADO[t.estado] ?? t.estado}
+              </Insignia>
+              <CampoSelect
+                id={`estado-${t.id}`}
+                etiqueta="Cambiar estado"
+                etiquetaOculta
+                className="w-auto py-1.5 text-xs"
+                value={t.estado}
+                disabled={guardandoId === t.id}
+                onChange={(e) => cambiarEstado(t.id, e.target.value as EstadoTicket)}
+              >
+                {ESTADOS.map((estado) => (
+                  <option key={estado} value={estado}>
+                    {ETIQUETA_ESTADO[estado]}
+                  </option>
+                ))}
+              </CampoSelect>
+            </div>
           </div>
           <p className="mt-3 text-sm text-slate-800">{t.detalle}</p>
+          {errorPorTicket[t.id] && <Alerta tono="error" className="mt-3">{errorPorTicket[t.id]}</Alerta>}
         </Tarjeta>
       ))}
     </ul>
