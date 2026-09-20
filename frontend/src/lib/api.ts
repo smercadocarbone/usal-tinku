@@ -467,6 +467,61 @@ export function presentarDenuncia(body: {
   });
 }
 
+/* ---- M9 — Mis denuncias recibidas y mis alertas de seguridad (auditoría 2026-09-20) ----
+ * Antes de esto, el backend ya soportaba el descargo (derecho a réplica) pero
+ * no había NINGÚN endpoint para que el propio denunciado/detectado se
+ * enterara de que existía un caso — el plazo de descargoVenceAt corría en
+ * silencio hasta escalar. */
+
+export type EstadoDenunciaRecibida =
+  | "registrada"
+  | "en_revision"
+  | "resuelta_infundada"
+  | "resuelta_fundada"
+  | "escalada";
+
+export interface DenunciaRecibida {
+  id: string;
+  denunciadoId: string;
+  estado: EstadoDenunciaRecibida;
+  motivo: MotivoDenuncia;
+  sesionId: string | null;
+  descargoTexto: string | null;
+  descargoVenceAt: string | null;
+  slaResolucionVenceAt: string | null;
+  prioridadAlta: boolean;
+  resueltaAt: string | null;
+  createdAt: string;
+}
+
+export function getDenunciasRecibidas(): Promise<DenunciaRecibida[]> {
+  return api.get("/api/denuncias/recibidas");
+}
+
+export function presentarDescargoDenuncia(id: string, descargo: string): Promise<DenunciaRecibida> {
+  return api.post(`/api/denuncias/${id}/descargo`, { descargo });
+}
+
+export interface AlertaPropia {
+  id: string;
+  sesionId: string;
+  rama: string;
+  detectadoId: string;
+  estado: string;
+  descargoTexto: string | null;
+  descargoRecibidoAt: string | null;
+  clipRetencionHasta: string | null;
+  createdAt: string;
+}
+
+export function getAlertasMias(): Promise<AlertaPropia[]> {
+  return api.get("/api/alertas-seguridad/mias");
+}
+
+export function presentarDescargoAlerta(id: string, descargo: string): Promise<AlertaPropia> {
+  return api.post(`/api/alertas-seguridad/${id}/descargo`, { descargo });
+}
+
 /* ---- M3 — Sesión de una Reserva (backend: auditoría 2026-09-19) ---- */
 
 export type EstadoSesion =

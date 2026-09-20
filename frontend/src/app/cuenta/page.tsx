@@ -547,6 +547,10 @@ export default function CuentaPage() {
           </div>
         </dl>
 
+        <p className="mt-4 text-sm text-slate-500">
+          <Link href="/cuenta/seguridad">Denuncias y alertas de seguridad</Link>
+        </p>
+
         {payload?.tipo === "TUTOR" && <PanelTutor tutorId={String(payload.sub)} />}
         {payload?.cap_ar === true && <PanelAdulto />}
 
