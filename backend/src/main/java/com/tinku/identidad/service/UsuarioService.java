@@ -233,6 +233,33 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    /**
+     * "Editar cuenta" (auditoría 2026-09-19): cambio de email del usuario
+     * autenticado. Nunca toca nombre/apellido/dni/fechaNacimiento — esos son
+     * datos verificados por OCR contra la foto del DNI en el alta, y dejarlos
+     * editables por el propio usuario rompería el modelo de verificación de
+     * identidad que sostiene la seguridad de menores (Artículo II).
+     */
+    @Transactional
+    public Usuario actualizarEmail(Usuario usuario, String email) {
+        if (usuarioRepository.existsByEmailAndIdNot(email, usuario.getId())) {
+            throw new EmailYaRegistradoException();
+        }
+        usuario.setEmail(email);
+        return usuarioRepository.save(usuario);
+    }
+
+    /** "Editar cuenta": cambio de contraseña. Exige la actual — reautenticar
+     * la intención, no solo la sesión (FR de buena práctica, sin ticket propio). */
+    @Transactional
+    public void cambiarPassword(Usuario usuario, String passwordActual, String passwordNueva) {
+        if (!passwordEncoder.matches(passwordActual, usuario.getPasswordHash())) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Credenciales inválidas");
+        }
+        usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
+        usuarioRepository.save(usuario);
+    }
+
     /** Menores a cargo del Adulto Responsable autenticado (auditoría 2026-09-18,
      *  ver darDeBajaMenor arriba). Nunca de OTRO Adulto Responsable — el filtro
      *  de pertenencia es el propio parámetro de la consulta, no un chequeo aparte. */

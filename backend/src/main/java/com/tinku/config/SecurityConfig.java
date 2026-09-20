@@ -97,7 +97,8 @@ public class SecurityConfig {
                 // autenticado (FR-ID-020, Artículo II).
                 .requestMatchers("/api/usuarios/registro", "/api/usuarios/verificar-dni",
                         "/api/usuarios/login", "/api/tutores/registro",
-                        "/api/tutores/verificar-dni").permitAll()
+                        "/api/tutores/verificar-dni",
+                        "/api/usuarios/recuperar-password", "/api/usuarios/resetear-password").permitAll()
                 // Webhook de LiveKit: la autenticación ES su firma HS256 sobre
                 // el body (T-M3-02), no el JWT de Tinku — mismo patrón que el
                 // webhook de MercadoPago (T-M5-03): la autenticación ES la firma

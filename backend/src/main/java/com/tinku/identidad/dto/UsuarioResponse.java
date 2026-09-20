@@ -13,12 +13,13 @@ public record UsuarioResponse(
         String apellido,
         TipoUsuario tipo,
         boolean capacidadEstudiante,
-        boolean capacidadAdultoResponsable
+        boolean capacidadAdultoResponsable,
+        String email
 ) {
     public static UsuarioResponse from(Usuario u) {
         return new UsuarioResponse(
                 u.getId(), u.getNombre(), u.getApellido(), u.getTipo(),
-                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable()
+                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable(), u.getEmail()
         );
     }
 }

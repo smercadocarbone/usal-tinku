@@ -1,11 +1,16 @@
 package com.tinku.identidad.web;
 
 import com.tinku.identidad.dto.ActualizarCapacidadesRequest;
+import com.tinku.identidad.dto.ActualizarEmailRequest;
+import com.tinku.identidad.dto.CambiarPasswordRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
+import com.tinku.identidad.dto.ResetearPasswordRequest;
+import com.tinku.identidad.dto.SolicitarResetPasswordRequest;
 import com.tinku.identidad.dto.UsuarioResponse;
 import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.service.PasswordResetService;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
@@ -30,10 +35,28 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final UsuarioActual usuarioActual;
+    private final PasswordResetService passwordResetService;
 
-    public UsuarioController(UsuarioService usuarioService, UsuarioActual usuarioActual) {
+    public UsuarioController(UsuarioService usuarioService, UsuarioActual usuarioActual,
+                             PasswordResetService passwordResetService) {
         this.usuarioService = usuarioService;
         this.usuarioActual = usuarioActual;
+        this.passwordResetService = passwordResetService;
+    }
+
+    /** Público (auditoría 2026-09-19): siempre 204, exista o no el DNI —
+     * ver PasswordResetService#solicitarReset. */
+    @PostMapping("/recuperar-password")
+    public ResponseEntity<Void> recuperarPassword(@Valid @RequestBody SolicitarResetPasswordRequest request) {
+        passwordResetService.solicitarReset(request.dni());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Público: el token del link reemplaza a la autenticación acá. */
+    @PostMapping("/resetear-password")
+    public ResponseEntity<Void> resetearPassword(@Valid @RequestBody ResetearPasswordRequest request) {
+        passwordResetService.resetearPassword(request.token(), request.passwordNueva());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -81,6 +104,33 @@ public class UsuarioController {
                 .map(UsuarioResponse::from)
                 .toList();
         return ResponseEntity.ok(menores);
+    }
+
+    /** "Editar cuenta" (auditoría 2026-09-19): perfil propio, incluido el
+     * email — el JWT no lo lleva en el payload, así que la pantalla de
+     * cuenta necesita un endpoint aparte para mostrarlo. */
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponse> obtenerPropio(Authentication authentication) {
+        return ResponseEntity.ok(UsuarioResponse.from(usuarioActual.obtener(authentication)));
+    }
+
+    @PatchMapping("/me/email")
+    public ResponseEntity<UsuarioResponse> actualizarEmail(
+            @Valid @RequestBody ActualizarEmailRequest request,
+            Authentication authentication
+    ) {
+        Usuario usuario = usuarioService.actualizarEmail(usuarioActual.obtener(authentication), request.email());
+        return ResponseEntity.ok(UsuarioResponse.from(usuario));
+    }
+
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> cambiarPassword(
+            @Valid @RequestBody CambiarPasswordRequest request,
+            Authentication authentication
+    ) {
+        usuarioService.cambiarPassword(usuarioActual.obtener(authentication),
+                request.passwordActual(), request.passwordNueva());
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/me/capacidades")

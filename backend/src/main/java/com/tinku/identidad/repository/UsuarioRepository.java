@@ -15,6 +15,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     boolean existsByDni(String dni);
     Optional<Usuario> findByDni(String dni);
 
+    /** "Editar cuenta" (auditoría 2026-09-19): unicidad de email excluyendo al
+     * propio usuario — de lo contrario, guardar el mismo email que ya tenía
+     * dispararía un falso "ya registrado" (el índice único de V18 solo
+     * permite un dueño por email, pero acá ESE dueño puede ser el que pide
+     * el cambio). */
+    boolean existsByEmailAndIdNot(String email, UUID id);
+
     /** FR-ID-013: perfiles de menor a cargo de un Adulto Responsable. */
     long countByAdultoResponsableIdAndTipo(UUID adultoResponsableId, TipoUsuario tipo);
 

@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -68,6 +69,14 @@ public class CredencialService {
         credencial.setEstado(EstadoCredencial.PENDIENTE);
         credencial.setNumeroIntento(numeroDeIntentoParaCiclo(tutor.getId()));
         return credencialRepo.save(credencial);
+    }
+
+    /** Última credencial del Tutor autenticado (auditoría 2026-09-19: antes no
+     * había forma de que el propio Tutor consultara su estado real — el panel
+     * mostraba siempre el mismo texto fijo de "en revisión", incluso sin haber
+     * cargado nunca una credencial). {@code empty} = nunca cargó ninguna. */
+    public Optional<CredencialAcademica> obtenerUltima(UUID tutorId) {
+        return credencialRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId);
     }
 
     /** El intento dentro del ciclo actual: 1 si el ciclo arranca, o el siguiente tras un rechazo. */

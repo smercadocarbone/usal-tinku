@@ -10,11 +10,13 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
+import com.tinku.identidad.port.NotificadorResetPassword;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.identidad.service.CredencialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,10 +38,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -83,6 +87,7 @@ class IdentidadFlujosIntegracionTest {
     @Autowired CredencialService credencialService;
 
     @MockBean OcrService ocrService;
+    @MockBean NotificadorResetPassword notificadorResetPassword;
 
     private static final String PASSWORD = "password123";
 
@@ -513,5 +518,137 @@ class IdentidadFlujosIntegracionTest {
                 .getEstado()).isEqualTo(EstadoCredencial.APROBADO);
         // FR-ID-025 (heredado de CAP retirado): la credencial aprobada activa matching.
         assertThat(usuarioPorDni("12121212").isActivoParaMatching()).isTrue();
+    }
+
+    // ------------------------------------------------ "Editar cuenta": email y contraseña
+
+    @Test
+    void editarCuenta_actualizaEmail_yRechazaDuplicado() throws Exception {
+        String token1 = registrarAdultoYToken("20202020", "Marta", "Lopez", false);
+        registrarAdultoYToken("21212121", "Nora", "Ruiz", false);
+
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest("nuevo@tinku.test"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("nuevo@tinku.test"));
+
+        // El email que ya usa OTRO usuario -> 409, sin importar quién lo pide.
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest("21212121@tinku.test"))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void editarCuenta_cambiaPassword_conActualCorrecta_yRechazaConIncorrecta() throws Exception {
+        String token = registrarAdultoYToken("22222299", "Sol", "Aguirre", false);
+
+        mockMvc.perform(patch("/api/usuarios/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.CambiarPasswordRequest("passwordMala", "nuevaPassword1"))))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(patch("/api/usuarios/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.CambiarPasswordRequest(PASSWORD, "nuevaPassword1"))))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.LoginRequest("22222299", PASSWORD))))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.LoginRequest("22222299", "nuevaPassword1"))))
+                .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------------ "Olvidé mi contraseña"
+
+    @Test
+    void resetPassword_flujoCompleto_generaTokenYCambiaPassword() throws Exception {
+        registrarAdultoYToken("23232323", "Tomas", "Bravo", false);
+
+        mockMvc.perform(post("/api/usuarios/recuperar-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.SolicitarResetPasswordRequest("23232323"))))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificadorResetPassword).notificar(any(), tokenCaptor.capture());
+        String tokenPlano = tokenCaptor.getValue();
+
+        mockMvc.perform(post("/api/usuarios/resetear-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ResetearPasswordRequest(tokenPlano, "otraPassword2"))))
+                .andExpect(status().isNoContent());
+
+        // De un solo uso: reusar el mismo token ya no funciona.
+        mockMvc.perform(post("/api/usuarios/resetear-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ResetearPasswordRequest(tokenPlano, "otraPassword3"))))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(post("/api/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.LoginRequest("23232323", "otraPassword2"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void resetPassword_dniInexistente_respondeIgualQueSiExistiera() throws Exception {
+        // FR-ID-018: nunca confirmar/negar la existencia de un DNI.
+        mockMvc.perform(post("/api/usuarios/recuperar-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.SolicitarResetPasswordRequest("99999999"))))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void resetPassword_tokenInexistente_422() throws Exception {
+        mockMvc.perform(post("/api/usuarios/resetear-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ResetearPasswordRequest("token-trucho", "otraPassword2"))))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    // ------------------------------------------------ Estado real de la credencial (propio Tutor)
+
+    @Test
+    void credencialPropia_sinCargarNinguna_204() throws Exception {
+        String token = registrarTutorYToken("24242424", "Rocio", "Paz");
+
+        mockMvc.perform(get("/api/tutores/me/credencial")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void credencialPropia_conCargaPendiente_devuelveEstadoReal() throws Exception {
+        String token = registrarTutorYToken("25252525", "Ivan", "Nunez");
+        cargarCredencial(token, 201);
+
+        mockMvc.perform(get("/api/tutores/me/credencial")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"));
     }
 }

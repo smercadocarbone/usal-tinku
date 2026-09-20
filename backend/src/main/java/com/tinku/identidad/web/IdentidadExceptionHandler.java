@@ -22,6 +22,11 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(EmailYaRegistradoException.class)
+    public ResponseEntity<Map<String, String>> handleEmailDuplicado(EmailYaRegistradoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(DocumentoNoCoincideException.class)
     public ResponseEntity<Map<String, String>> handleNoCoincide(DocumentoNoCoincideException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
@@ -117,6 +122,11 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", ex.getMessage(),
                         "reservas_futuras", String.valueOf(ex.getCantidadReservas())));
+    }
+
+    @ExceptionHandler(TokenResetInvalidoException.class)
+    public ResponseEntity<Map<String, String>> handleTokenResetInvalido(TokenResetInvalidoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)

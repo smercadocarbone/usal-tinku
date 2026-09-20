@@ -95,6 +95,16 @@ public class TutorController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Estado real de la credencial del Tutor autenticado (auditoría
+     * 2026-09-19). 204 si todavía no cargó ninguna. */
+    @GetMapping("/me/credencial")
+    public ResponseEntity<CredencialResponse> miCredencial(Authentication authentication) {
+        Usuario tutor = usuarioActual.obtener(authentication);
+        return credencialService.obtenerUltima(tutor.getId())
+                .map(c -> ResponseEntity.ok(toResponse(c)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @PostMapping(value = "/credenciales", consumes = "multipart/form-data")
     public ResponseEntity<CredencialResponse> cargarCredencial(
             @Valid @RequestPart("datos") CargarCredencialRequest request,
