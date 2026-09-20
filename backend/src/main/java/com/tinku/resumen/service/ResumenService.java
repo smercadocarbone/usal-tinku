@@ -1,8 +1,10 @@
 package com.tinku.resumen.service;
 
 import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
+import com.tinku.identidad.model.Usuario;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
 import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
@@ -12,6 +14,8 @@ import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.ResumenProveedorNoConfiguradoException;
 import com.tinku.resumen.port.TranscriptSesionProveedor;
 import com.tinku.resumen.repository.ResumenSesionRepository;
+import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import org.quartz.JobBuilder;
@@ -104,6 +108,7 @@ public class ResumenService {
 
     private final ResumenSesionRepository resumenRepo;
     private final SesionAprendizajeRepository sesionRepo;
+    private final ReservaRepository reservaRepo;
     private final DenunciaRepository denunciaRepo;
     private final AlertaSeguridadRepository alertaRepo;
     private final AnonimizadorTranscript anonimizador;
@@ -113,6 +118,7 @@ public class ResumenService {
 
     public ResumenService(ResumenSesionRepository resumenRepo,
                           SesionAprendizajeRepository sesionRepo,
+                          ReservaRepository reservaRepo,
                           DenunciaRepository denunciaRepo,
                           AlertaSeguridadRepository alertaRepo,
                           AnonimizadorTranscript anonimizador,
@@ -121,12 +127,51 @@ public class ResumenService {
                           Scheduler scheduler) {
         this.resumenRepo = resumenRepo;
         this.sesionRepo = sesionRepo;
+        this.reservaRepo = reservaRepo;
         this.denunciaRepo = denunciaRepo;
         this.alertaRepo = alertaRepo;
         this.anonimizador = anonimizador;
         this.transcriptProveedor = transcriptProveedor;
         this.proveedor = proveedor;
         this.scheduler = scheduler;
+    }
+
+    // ------------------------------------------------------- consulta (T-M6-08)
+
+    /**
+     * Resumen visible para un participante de la Sesión (auditoría
+     * 2026-09-20): el módulo generaba el resumen, pero no existía NINGÚN
+     * endpoint para consultarlo — toda la funcionalidad de M6 era
+     * inalcanzable para cualquier cliente. Mismo criterio de autorización que
+     * M3/M7 (tutor, beneficiario o pagador).
+     *
+     * <p>{@code null} = "no disponible" y cubre TANTO que todavía no exista
+     * fila (sesión corta, sin finalizar, o el listener recién no corrió) COMO
+     * que exista pero no esté {@code generado} (pendiente/fallido/reintento
+     * agotado/suspendido). Deliberado no distinguir estos casos en la
+     * respuesta: un resumen {@code suspendido_seguridad} por una denuncia o
+     * alerta activa (T-M6-03) queda "reservado a M9" — filtrarle a un
+     * participante regular que existe una suspensión de seguridad activa
+     * sobre SU sesión sería revelar el estado de una investigación en curso.</p>
+     */
+    public ResumenSesion obtenerParaParticipante(Usuario usuario, UUID sesionId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(ResumenSesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ResumenSesionNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new ResumenNoPermitidoException();
+        }
+        return resumenRepo.findBySesionId(sesionId)
+                .filter(r -> ResumenSesion.ESTADO_GENERADO.equals(r.getEstado()))
+                .orElse(null);
+    }
+
+    private boolean esParticipante(Reserva reserva, Usuario usuario) {
+        return reserva.getTutor().getId().equals(usuario.getId())
+                || reserva.getBeneficiario().getId().equals(usuario.getId())
+                || (reserva.getPagador() != null
+                    && reserva.getPagador().getId().equals(usuario.getId()));
     }
 
     // ------------------------------------------------------- listener (T-M6-02)
