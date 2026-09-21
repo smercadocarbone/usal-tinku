@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ConnectionQuality,
@@ -12,6 +20,7 @@ import {
   RoomEvent,
   Track,
 } from "livekit-client";
+import { Mic, MicOff, MoreVertical, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 interface TokenResponse {
@@ -29,6 +38,10 @@ type Estado =
   | "sala_no_disponible"
   | "error"
   | "finalizada";
+
+/** Fuentes de video posibles en un momento dado: nunca son más de 4 (es 1:1) — la
+ * cámara de cada participante y, si están activas, sus pantallas compartidas. */
+type TileId = "camara-local" | "camara-remota" | "pantalla-local" | "pantalla-remota";
 
 const MENSAJES_ESTADO: Record<Estado, string> = {
   previa: "Preparando cámara y micrófono",
@@ -111,23 +124,96 @@ function BotonControl({
   onClick,
   etiquetaOn,
   etiquetaOff,
+  IconoOn,
+  IconoOff,
 }: {
   activo: boolean;
   onClick: () => void;
   etiquetaOn: string;
   etiquetaOff: string;
+  IconoOn: ComponentType<{ className?: string }>;
+  IconoOff: ComponentType<{ className?: string }>;
 }) {
+  const Icono = activo ? IconoOn : IconoOff;
   return (
     <button
       type="button"
-      className={`rounded-full border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-50 ${activo ? "" : "opacity-55"} cursor-pointer hover:border-gray-500`}
+      className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border transition-colors ${
+        activo
+          ? "border-gray-700 bg-gray-900 text-gray-50 hover:border-gray-500"
+          : "border-red-800 bg-red-900/80 text-red-50 hover:border-red-600"
+      }`}
       onClick={onClick}
       aria-pressed={activo}
       aria-label={activo ? etiquetaOff : etiquetaOn}
       title={activo ? etiquetaOff : etiquetaOn}
     >
-      {activo ? etiquetaOn : etiquetaOff}
+      <Icono className="h-5 w-5" aria-hidden />
     </button>
+  );
+}
+
+interface OpcionMenuLlamada {
+  id: string;
+  label: string;
+  Icono: ComponentType<{ className?: string }>;
+  onClick: () => void;
+}
+
+/** Botón "⋮" con menú desplegable hacia arriba (la barra de controles está pegada
+ * abajo de la pantalla). Recibe la lista de opciones como datos, no como JSX
+ * hardcodeado, para que sumar una opción nueva más adelante sea agregar un
+ * elemento al array, no reescribir el menú. */
+function MenuOpcionesLlamada({ opciones }: { opciones: OpcionMenuLlamada[] }) {
+  const [abierto, setAbierto] = useState(false);
+  const contenedorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!abierto) return;
+    function alClickFuera(e: MouseEvent) {
+      if (contenedorRef.current && !contenedorRef.current.contains(e.target as Node)) {
+        setAbierto(false);
+      }
+    }
+    document.addEventListener("mousedown", alClickFuera);
+    return () => document.removeEventListener("mousedown", alClickFuera);
+  }, [abierto]);
+
+  return (
+    <div className="relative" ref={contenedorRef}>
+      <button
+        type="button"
+        className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-gray-700 bg-gray-900 text-gray-50 hover:border-gray-500"
+        onClick={() => setAbierto((v) => !v)}
+        aria-label="Más opciones"
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+      >
+        <MoreVertical className="h-5 w-5" aria-hidden />
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          className="absolute bottom-full right-0 mb-2 w-56 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-lg"
+        >
+          {opciones.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="menuitem"
+              className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-gray-100 hover:bg-gray-800"
+              onClick={() => {
+                o.onClick();
+                setAbierto(false);
+              }}
+            >
+              <o.Icono className="h-4 w-4 shrink-0" aria-hidden />
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -140,6 +226,8 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const localScreenVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteScreenVideoRef = useRef<HTMLVideoElement>(null);
   const previaVideoTrackRef = useRef<LocalVideoTrack | null>(null);
   const previaAudioTrackRef = useRef<LocalAudioTrack | null>(null);
 
@@ -151,6 +239,11 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const [camActiva, setCamActiva] = useState(true);
   const [micActiva, setMicActiva] = useState(true);
   const [calidad, setCalidad] = useState<ConnectionQuality>(ConnectionQuality.Unknown);
+
+  // ---- Compartir pantalla + modelo de tiles (destacada + miniaturas tocables) ----
+  const [compartiendoPantalla, setCompartiendoPantalla] = useState(false);
+  const [remoteCompartiendoPantalla, setRemoteCompartiendoPantalla] = useState(false);
+  const [tileDestacada, setTileDestacada] = useState<TileId>("camara-remota");
 
   // ---- FR-AULA-002: degradación automática video → audio → texto ----
   const [camApagadaPorDegradacion, setCamApagadaPorDegradacion] = useState(false);
@@ -401,10 +494,31 @@ export default function AulaPage({ params }: { params: { id: string } }) {
         ) {
           pub.track.attach(localVideoRef.current);
         }
+        if (
+          pub.source === Track.Source.ScreenShare &&
+          pub.track?.kind === Track.Kind.Video &&
+          localScreenVideoRef.current
+        ) {
+          pub.track.attach(localScreenVideoRef.current);
+          setCompartiendoPantalla(true);
+          setTileDestacada("pantalla-local");
+        }
       });
 
-      room.on(RoomEvent.TrackSubscribed, (track, _pub, participante) => {
-        if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
+      room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
+        if (pub.source === Track.Source.ScreenShare) {
+          setCompartiendoPantalla(false);
+          setTileDestacada((actual) => (actual === "pantalla-local" ? "camara-remota" : actual));
+        }
+      });
+
+      room.on(RoomEvent.TrackSubscribed, (track, pub, participante) => {
+        if (track.kind === Track.Kind.Video && pub.source === Track.Source.ScreenShare) {
+          if (remoteScreenVideoRef.current) track.attach(remoteScreenVideoRef.current);
+          setRemoteCompartiendoPantalla(true);
+          setRemoteIdentity(participante.identity);
+          setTileDestacada("pantalla-remota");
+        } else if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
           track.attach(remoteVideoRef.current);
           setRemoteActivo(true);
           setRemoteIdentity(participante.identity);
@@ -413,10 +527,15 @@ export default function AulaPage({ params }: { params: { id: string } }) {
         }
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      room.on(RoomEvent.TrackUnsubscribed, (track, pub) => {
         track.detach();
         if (track.kind === Track.Kind.Video) {
-          setRemoteActivo(false);
+          if (pub.source === Track.Source.ScreenShare) {
+            setRemoteCompartiendoPantalla(false);
+            setTileDestacada((actual) => (actual === "pantalla-remota" ? "camara-remota" : actual));
+          } else {
+            setRemoteActivo(false);
+          }
         }
       });
 
@@ -540,6 +659,23 @@ export default function AulaPage({ params }: { params: { id: string } }) {
     roomRef.current?.localParticipant.setMicrophoneEnabled(nueva);
   }
 
+  async function alternarCompartirPantalla() {
+    if (!roomRef.current) return;
+    try {
+      await roomRef.current.localParticipant.setScreenShareEnabled(!compartiendoPantalla);
+      // El estado real (`compartiendoPantalla`) lo confirman los eventos
+      // LocalTrackPublished/LocalTrackUnpublished de arriba — no acá, para que
+      // quede correcto también cuando el usuario corta desde el botón nativo
+      // "Stop sharing" del navegador en vez de este menú.
+    } catch (err) {
+      // NotAllowedError: el usuario cerró el selector nativo del navegador sin
+      // elegir nada — no es un error real, no hace falta mostrar nada.
+      if (!(err instanceof DOMException && err.name === "NotAllowedError")) {
+        setError("No se pudo compartir la pantalla.");
+      }
+    }
+  }
+
   function enviarMensajeTexto(e: React.FormEvent) {
     e.preventDefault();
     const texto = textoAEnviar.trim();
@@ -588,12 +724,16 @@ export default function AulaPage({ params }: { params: { id: string } }) {
               onClick={alternarCamPrevia}
               etiquetaOn="Cámara on"
               etiquetaOff="Cámara off"
+              IconoOn={Video}
+              IconoOff={VideoOff}
             />
             <BotonControl
               activo={micActiva}
               onClick={alternarMicPrevia}
               etiquetaOn="Micro on"
               etiquetaOff="Micro off"
+              IconoOn={Mic}
+              IconoOff={MicOff}
             />
           </div>
 
@@ -648,6 +788,54 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   }
 
   // ---------------------------------------------------------------- En sala
+
+  interface Tile {
+    id: TileId;
+    etiqueta: string;
+    videoRef: RefObject<HTMLVideoElement>;
+    espejo?: boolean;
+    contenidoVacio?: ReactNode;
+  }
+
+  const tiles: Tile[] = [
+    {
+      id: "camara-remota",
+      etiqueta: remoteIdentity ? etiquetaParticipante(remoteIdentity, false) : "Participante",
+      videoRef: remoteVideoRef,
+      contenidoVacio: !remoteActivo ? (
+        <span className="px-4 text-center text-sm text-gray-500">
+          {estado === "conectado" || estado === "esperando" || estado === "reconectando"
+            ? "Esperando al otro participante"
+            : MENSAJES_ESTADO[estado]}
+        </span>
+      ) : undefined,
+    },
+    {
+      id: "camara-local",
+      etiqueta: "Vos",
+      videoRef: localVideoRef,
+      espejo: true,
+      contenidoVacio:
+        !camActiva || camApagadaPorDegradacion ? (
+          <span className="px-2 text-center text-xs text-gray-400">
+            {camApagadaPorDegradacion ? "Audio priorizado" : "Cámara apagada"}
+          </span>
+        ) : undefined,
+    },
+  ];
+  if (compartiendoPantalla) {
+    tiles.push({ id: "pantalla-local", etiqueta: "Tu pantalla", videoRef: localScreenVideoRef });
+  }
+  if (remoteCompartiendoPantalla) {
+    tiles.push({
+      id: "pantalla-remota",
+      etiqueta: `Pantalla de ${etiquetaParticipante(remoteIdentity, false)}`,
+      videoRef: remoteScreenVideoRef,
+    });
+  }
+  const tileDestacadaActual = tiles.find((t) => t.id === tileDestacada) ?? tiles[0];
+  const miniaturas = tiles.filter((t) => t.id !== tileDestacadaActual.id);
+
   return (
     <main className="flex min-h-screen flex-col p-0">
       <div className="flex min-h-screen flex-col bg-gray-900 text-gray-50">
@@ -672,33 +860,55 @@ export default function AulaPage({ params }: { params: { id: string } }) {
           </div>
         </header>
 
-        <div className="relative flex min-h-0 flex-1">
-          <div className="relative flex flex-1 items-center justify-center bg-black">
-            <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
-            {!remoteActivo && (
-              <div className="text-sm text-gray-500">
-                {estado === "conectado" || estado === "esperando" || estado === "reconectando"
-                  ? "Esperando al otro participante"
-                  : MENSAJES_ESTADO[estado]}
-              </div>
-            )}
-            {remoteActivo && remoteIdentity && (
-              <span className="absolute bottom-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-gray-100">
-                {etiquetaParticipante(remoteIdentity, false)}
-              </span>
-            )}
-          </div>
-          <div className="absolute bottom-4 right-4 w-[180px] overflow-hidden rounded-lg border-2 border-gray-700 bg-black">
-            <video ref={localVideoRef} autoPlay playsInline muted className="block w-full" />
-            {(!camActiva || camApagadaPorDegradacion) && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-xs text-gray-400">
-                {camApagadaPorDegradacion ? "Audio priorizado" : "Cámara apagada"}
-              </div>
-            )}
-            <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-gray-100">
-              Vos
-            </span>
-          </div>
+        <div className="relative flex min-h-0 flex-1 bg-black">
+          {tiles.map((t) => {
+            const esDestacada = t.id === tileDestacadaActual.id;
+            const indiceMini = esDestacada ? -1 : miniaturas.findIndex((m) => m.id === t.id);
+            const contenido = (
+              <>
+                <video
+                  ref={t.videoRef}
+                  autoPlay
+                  playsInline
+                  muted={t.id === "camara-local" || t.id === "pantalla-local"}
+                  className={`block h-full w-full ${esDestacada ? "object-contain" : "object-cover"} ${t.espejo ? "-scale-x-100" : ""}`}
+                />
+                {t.contenidoVacio && (
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center ${esDestacada ? "" : "bg-gray-800/95"}`}
+                  >
+                    {t.contenidoVacio}
+                  </div>
+                )}
+                <span
+                  className={`absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-gray-100 ${esDestacada ? "text-xs" : "text-[10px]"}`}
+                >
+                  {t.etiqueta}
+                </span>
+              </>
+            );
+
+            if (esDestacada) {
+              return (
+                <div key={t.id} className="absolute inset-0 flex items-center justify-center">
+                  {contenido}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTileDestacada(t.id)}
+                aria-label={`Ver en grande: ${t.etiqueta}`}
+                className="absolute bottom-4 w-[140px] cursor-pointer overflow-hidden rounded-lg border-2 border-gray-700 bg-black transition-[right] hover:border-gray-500 sm:w-[180px]"
+                style={{ right: `${16 + indiceMini * 196}px` }}
+              >
+                {contenido}
+              </button>
+            );
+          })}
           <audio ref={remoteAudioRef} autoPlay />
 
           {modoTexto && (
@@ -758,12 +968,26 @@ export default function AulaPage({ params }: { params: { id: string } }) {
                 onClick={alternarCam}
                 etiquetaOn="Cámara on"
                 etiquetaOff="Cámara off"
+                IconoOn={Video}
+                IconoOff={VideoOff}
               />
               <BotonControl
                 activo={micActiva}
                 onClick={alternarMic}
                 etiquetaOn="Micro on"
                 etiquetaOff="Micro off"
+                IconoOn={Mic}
+                IconoOff={MicOff}
+              />
+              <MenuOpcionesLlamada
+                opciones={[
+                  {
+                    id: "compartir-pantalla",
+                    label: compartiendoPantalla ? "Dejar de compartir" : "Compartir pantalla",
+                    Icono: compartiendoPantalla ? ScreenShareOff : ScreenShare,
+                    onClick: alternarCompartirPantalla,
+                  },
+                ]}
               />
               <span className="mx-1 h-6 w-px bg-gray-700" />
             </div>
