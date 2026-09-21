@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,7 +77,12 @@ public class TicketSoporteService {
         ticket.setEstado(nuevoEstado);
         if ((nuevoEstado == EstadoTicket.RESUELTO || nuevoEstado == EstadoTicket.CERRADO)
                 && ticket.getResueltoEn() == null) {
-            ticket.setResueltoEn(Instant.now());
+            // Postgres trunca timestamptz a microsegundos; si acá se guarda el
+            // Instant.now() crudo (nanosegundos en runners Linux), la respuesta
+            // de esta misma request devuelve más precisión de la que la base
+            // va a poder sostener — la próxima lectura desde la base ya viene
+            // truncada, y las dos respuestas dejan de coincidir.
+            ticket.setResueltoEn(Instant.now().truncatedTo(ChronoUnit.MICROS));
         }
         return ticketRepo.save(ticket);
     }
