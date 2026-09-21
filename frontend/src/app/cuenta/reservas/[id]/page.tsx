@@ -13,7 +13,6 @@ import {
 } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
-import Cabecera from "@/components/Cabecera";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
 
@@ -221,13 +220,10 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
     Date.now() >= new Date(reserva.horario).getTime() - 24 * 60 * 60 * 1000;
 
   return (
-    <>
-      <Cabecera enlaces={[{ href: "/cuenta/reservas", label: "Mis reservas" }]} />
-
-      <main className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-xl tracking-tight">
-          Detalle de la reserva
-        </h1>
+    <div className="max-w-2xl">
+      <h1 className="text-xl tracking-tight">
+        Detalle de la reserva
+      </h1>
 
         {cargando && <Cargando>Cargando...</Cargando>}
 
@@ -444,7 +440,6 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
             )}
           </>
         )}
-      </main>
-    </>
+    </div>
   );
 }

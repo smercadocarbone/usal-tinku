@@ -2,23 +2,15 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import {
-  actualizarCapacidades,
   actualizarEmail,
   cambiarPassword,
   getPerfilPropio,
   mensajeDeError,
   type PerfilPropio,
 } from "@/lib/api";
-import { Alerta, Boton, Campo, CampoCheckbox, Cargando, Tarjeta } from "@/components/ui";
+import { Alerta, Boton, Campo, Cargando, Tarjeta } from "@/components/ui";
 
-/**
- * "Editar cuenta" (auditoría 2026-09-19): antes no había ninguna forma de
- * cambiar el email o la contraseña una vez creada la cuenta. Solo email y
- * contraseña son editables acá — nombre/apellido/DNI/fecha de nacimiento son
- * datos verificados por OCR contra el DNI y dejarlos editables por el propio
- * usuario rompería el modelo de verificación de identidad (Artículo II).
- */
-export default function EditarCuenta() {
+export default function CuentaAccesoPage() {
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
 
@@ -33,19 +25,11 @@ export default function EditarCuenta() {
   const [errorPassword, setErrorPassword] = useState<string | null>(null);
   const [exitoPassword, setExitoPassword] = useState(false);
 
-  const [capEstudiante, setCapEstudiante] = useState(false);
-  const [capAr, setCapAr] = useState(false);
-  const [guardandoCapacidades, setGuardandoCapacidades] = useState(false);
-  const [errorCapacidades, setErrorCapacidades] = useState<string | null>(null);
-  const [exitoCapacidades, setExitoCapacidades] = useState(false);
-
   useEffect(() => {
     getPerfilPropio()
       .then((p) => {
         setPerfil(p);
         setNuevoEmail(p.email ?? "");
-        setCapEstudiante(p.capacidadEstudiante);
-        setCapAr(p.capacidadAdultoResponsable);
       })
       .catch(() => setPerfil(null))
       .finally(() => setCargandoPerfil(false));
@@ -84,25 +68,9 @@ export default function EditarCuenta() {
     }
   }
 
-  async function onSubmitCapacidades(e: FormEvent) {
-    e.preventDefault();
-    setErrorCapacidades(null);
-    setExitoCapacidades(false);
-    setGuardandoCapacidades(true);
-    try {
-      const p = await actualizarCapacidades(capEstudiante, capAr);
-      setPerfil(p);
-      setExitoCapacidades(true);
-    } catch (err) {
-      setErrorCapacidades(mensajeDeError(err, "No se pudieron actualizar las capacidades."));
-    } finally {
-      setGuardandoCapacidades(false);
-    }
-  }
-
   return (
-    <section className="mt-8">
-      <h2 className="text-lg font-semibold text-slate-800">Editar cuenta</h2>
+    <section>
+      <h2 className="text-lg font-semibold text-slate-800">Acceso</h2>
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row">
         <Tarjeta className="w-full max-w-sm p-6">
@@ -171,41 +139,6 @@ export default function EditarCuenta() {
             </Boton>
           </form>
         </Tarjeta>
-
-        {perfil?.tipo === "ADULTO" && (
-          <Tarjeta className="w-full max-w-sm p-6">
-            <h3 className="mb-3 text-base font-semibold text-slate-800">Capacidades</h3>
-            <form className="flex flex-col gap-3" onSubmit={onSubmitCapacidades}>
-              <CampoCheckbox
-                id="capEstudiante"
-                etiqueta="Estudiante"
-                checked={capEstudiante}
-                onChange={(e) => setCapEstudiante(e.target.checked)}
-              />
-              <CampoCheckbox
-                id="capAr"
-                etiqueta="Adulto Responsable"
-                checked={capAr}
-                onChange={(e) => setCapAr(e.target.checked)}
-              />
-              {errorCapacidades && <Alerta tono="error">{errorCapacidades}</Alerta>}
-              {exitoCapacidades && <Alerta tono="exito">Capacidades actualizadas.</Alerta>}
-              <Boton
-                type="submit"
-                tamano="sm"
-                className="w-fit"
-                cargando={guardandoCapacidades}
-                textoCargando="Guardando…"
-                disabled={
-                  capEstudiante === perfil?.capacidadEstudiante &&
-                  capAr === perfil?.capacidadAdultoResponsable
-                }
-              >
-                Guardar capacidades
-              </Boton>
-            </form>
-          </Tarjeta>
-        )}
       </div>
     </section>
   );

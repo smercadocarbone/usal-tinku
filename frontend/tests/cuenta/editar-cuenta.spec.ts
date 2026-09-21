@@ -26,7 +26,7 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoAcceso();
 
       await expect(cuenta.campoEmail).toHaveValue("viejo@tinku.test");
       await cuenta.campoEmail.fill("nuevo@tinku.test");
@@ -49,7 +49,7 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoAcceso();
 
       await cuenta.campoEmail.fill("ocupado@tinku.test");
       await cuenta.botonGuardarEmail.click();
@@ -69,7 +69,7 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoAcceso();
 
       await cuenta.campoPasswordActual.fill("actual12345");
       await cuenta.campoPasswordNueva.fill("nueva123456");
@@ -95,15 +95,15 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoAcceso();
 
       await cuenta.campoPasswordActual.fill("mala12345");
       await cuenta.campoPasswordNueva.fill("nueva123456");
       await cuenta.botonCambiarPassword.click();
 
       await expect(page.getByText("La contraseña actual no es correcta.")).toBeVisible();
-      // Seguimos en /cuenta: un 401 hubiera limpiado la sesión y mandado a /login.
-      await expect(page).toHaveURL(/\/cuenta$/);
+      // Seguimos en /cuenta/acceso: un 401 hubiera limpiado la sesión y mandado a /login.
+      await expect(page).toHaveURL(/\/cuenta\/acceso$/);
     }
   );
 });

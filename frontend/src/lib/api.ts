@@ -328,6 +328,7 @@ export interface ResolverAlertaBody {
   decision: DecisionAlerta;
   tipoSancion?: TipoSancion;
   diasSuspension?: number;
+  [key: string]: unknown;
 }
 
 export function getColaAlertas(): Promise<AlertaSeguridadCola[]> {
@@ -361,6 +362,7 @@ export interface ResolverDenunciaBody {
   resolucion: ResolucionDenuncia;
   tipoSancion?: TipoSancion;
   diasSuspension?: number;
+  [key: string]: unknown;
 }
 
 export function getColaDenuncias(): Promise<DenunciaCola[]> {

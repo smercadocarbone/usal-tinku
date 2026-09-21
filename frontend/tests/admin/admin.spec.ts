@@ -2,36 +2,33 @@ import { test, expect } from "@playwright/test";
 import { setFakeSession } from "../helpers";
 
 /**
- * Cubre el componente `Tabs` de la librería en su hábitat real: navegación
- * por teclado con foco móvil (un solo tab-stop para todo el grupo, flechas
- * para moverse) — el patrón WAI-ARIA que el toggle anterior (`aria-pressed`
- * suelto) no tenía. No depende del rol de Admin: alcanza con que el tablist
- * exista y reaccione, sea cual sea el contenido de cada cola.
+ * Cubre la navegación del `SettingsShell` en su hábitat real: la sección
+ * activa se resalta (`aria-current="page"`) según la URL, no según un
+ * estado de tabs en memoria — así el botón atrás/adelante del navegador
+ * funciona nativo. Reemplaza al viejo test de `Tabs` (`role="tablist"`),
+ * que ya no aplica: `/admin` navega por rutas reales, no por tabs en
+ * memoria.
  */
-test.describe("Panel de Administración — Tabs", () => {
+test.describe("Panel de Administración — navegación del SettingsShell", () => {
   test(
-    "las flechas mueven la selección y el foco entre pestañas",
+    "la sección activa se resalta según la URL y cambia al navegar",
     { tag: ["@a11y", "@TABS-E2E-001"] },
     async ({ page, context, baseURL }) => {
       await setFakeSession(context, baseURL!);
-      await page.goto("/admin");
+      await page.goto("/admin/alertas");
 
-      const tablist = page.getByRole("tablist", {
-        name: "Secciones del panel de administración",
-      });
-      const primeraTab = tablist.getByRole("tab").first();
-      const segundaTab = tablist.getByRole("tab").nth(1);
+      const nav = page.getByRole("navigation", { name: "Secciones" });
+      const linkAlertas = nav.getByRole("link", { name: "Alertas de Seguridad" });
+      const linkDenuncias = nav.getByRole("link", { name: "Denuncias" });
 
-      await expect(primeraTab).toHaveAttribute("aria-selected", "true");
-      await expect(primeraTab).toHaveAttribute("tabindex", "0");
-      await expect(segundaTab).toHaveAttribute("tabindex", "-1");
+      await expect(linkAlertas).toHaveAttribute("aria-current", "page");
+      await expect(linkDenuncias).not.toHaveAttribute("aria-current", "page");
 
-      await primeraTab.focus();
-      await page.keyboard.press("ArrowRight");
+      await linkDenuncias.click();
 
-      await expect(segundaTab).toHaveAttribute("aria-selected", "true");
-      await expect(segundaTab).toBeFocused();
-      await expect(primeraTab).toHaveAttribute("tabindex", "-1");
+      await expect(page).toHaveURL(/\/admin\/denuncias$/);
+      await expect(linkDenuncias).toHaveAttribute("aria-current", "page");
+      await expect(linkAlertas).not.toHaveAttribute("aria-current", "page");
     }
   );
 });

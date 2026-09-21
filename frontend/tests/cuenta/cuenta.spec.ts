@@ -16,7 +16,7 @@ test.describe("Cuenta — baja de menor", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoMenores();
 
       await expect(cuenta.selectMenorBaja).toBeVisible();
       await expect(
@@ -42,7 +42,7 @@ test.describe("Cuenta — baja de menor", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoMenores();
 
       await expect(page.getByText("No tenés menores a cargo todavía.")).toBeVisible();
       await expect(cuenta.selectMenorBaja).toHaveCount(0);
@@ -65,7 +65,7 @@ test.describe("Cuenta — baja de menor", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoMenores();
       await cuenta.botonDarDeBaja.click();
 
       await expect(page.getByText("Este menor tiene reservas futuras.")).toBeVisible();
