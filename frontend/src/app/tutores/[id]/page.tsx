@@ -12,6 +12,7 @@ import {
   Boton,
   CampoSelect,
   Cargando,
+  EstadoVacio,
   Insignia,
   Tarjeta,
   clasesBoton,
@@ -240,9 +241,9 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   )}
 
                   {menores !== null && menores.length === 0 && (
-                    <Alerta tono="info" className="w-fit">
+                    <EstadoVacio className="mx-0 max-w-none py-4 text-left">
                       Todavía no diste de alta a ningún menor. Podés hacerlo desde tu cuenta.
-                    </Alerta>
+                    </EstadoVacio>
                   )}
 
                   {menores !== null && menores.length > 0 && (

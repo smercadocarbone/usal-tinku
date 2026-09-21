@@ -13,6 +13,7 @@ import {
   Campo,
   CampoSelect,
   Cargando,
+  EstadoVacio,
   Tarjeta,
 } from "@/components/ui";
 
@@ -251,12 +252,7 @@ function ReservarForm() {
               </ul>
             </div>
           ) : (
-            <p
-              role="status"
-              className="text-sm text-slate-500"
-            >
-              Este tutor no publico disponibilidad todavia.
-            </p>
+            <EstadoVacio>Este tutor no publico disponibilidad todavia.</EstadoVacio>
           )}
 
           {horas.length > 0 && (
