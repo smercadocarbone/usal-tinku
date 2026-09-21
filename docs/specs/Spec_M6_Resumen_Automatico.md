@@ -46,7 +46,7 @@ Este módulo genera, de forma automática y para toda sesión que lo amerite, un
 | ID | Requisito |
 |---|---|
 | FR-SUM-001 | Generación automática de resumen para toda sesión con ≥10 min de duración efectiva, disparada por `sesion.finalizada`. Sin acción del usuario. |
-| FR-SUM-002 | Fuentes válidas: transcripción de audio/video y transcripción de los tramos degradados a texto. |
+| FR-SUM-002 | Fuentes válidas: transcripción de audio/video y transcripción de los tramos degradados a texto — incluida una sesión degradada a texto **desde el inicio y sin ningún tramo de audio** (degradación total, no solo parcial); el umbral de 10 minutos de FR-SUM-001 se mide igual sobre duración efectiva, sea cual sea el medio. |
 | FR-SUM-003 | Estructura fija: temas tratados, conceptos clave, ejercicios trabajados, dudas abiertas, sugerencia para la próxima sesión. |
 | FR-SUM-004 | Visibilidad: Estudiante y Tutor ven el mismo resumen; si el Estudiante es menor, también su Adulto Responsable. |
 | FR-SUM-005 | Anonimización de datos personales (nombres, contactos, enlaces, pagos) antes del envío al modelo y en la salida. |
@@ -70,6 +70,7 @@ Este módulo genera, de forma automática y para toda sesión que lo amerite, un
 | 4 | Denuncia activa sobre la sesión | La generación se pausa (coherente con FR-SEC-003 de M9); el material queda disponible para M9/Admin. **Decisión explícita:** si la disputa se resuelve con reembolso, el resumen igual queda accesible para el Estudiante — el reembolso es sobre el dinero, no sobre el valor educativo ya generado. |
 | 5 | Dos sesiones finalizan al mismo tiempo | Procesamiento independiente por sesión; no hay estado compartido entre resúmenes. |
 | 6 | El transcript contiene datos de contacto intercambiados entre los participantes | La anonimización (FR-SUM-005) los excluye del resumen. La captura de contacto fuera de plataforma es tema de M9, no del resumen. |
+| 7 _(agregado, auditoría 2026-09-18)_ | Sesión degradada a texto desde el inicio (sin ningún tramo de audio, no solo parcial) | Es fuente igualmente válida (FR-SUM-002); el ADR de proveedor LLM pendiente (Constitución, fila "LLM — Pendiente") debe soportar generar el resumen a partir de texto puro, no asumir que siempre hay audio de entrada. |
 
 **Supuestos validados en esta ronda:** umbral de 10 minutos, mismo resumen visible para Tutor y Estudiante, sin regeneración en el MVP — los tres se mantienen tal como estaban propuestos.
 

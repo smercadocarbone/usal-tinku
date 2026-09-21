@@ -44,6 +44,13 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 
 - **Dado** que la evidencia sugiera contenido ilegal, **cuando** el Admin de Moderación y Seguridad lo clasifique así, **entonces** se escala: preservación de evidencia con cadena de custodia, suspensión definitiva, y expediente para reporte a las autoridades (Artículo X).
 
+### US-5bis — Retención de evidencia escalada _(agregado, auditoría 2026-09-18)_
+*Como* Tinku, *quiero* que la evidencia preservada por un escalado de contenido ilegal tenga un plazo y un acceso explícitos, *para* que "cadena de custodia" no choque en la práctica con el Artículo V (minimización de datos) sin que nadie haya decidido el límite.
+
+- **Dado** que un caso se escale por contenido ilegal (US-5), **cuando** eso ocurra, **entonces** el clip de evidencia de 30s deja de estar sujeto al régimen general de descarte de M3 (BR-KS-02, se elimina si el caso no escala) y se retiene por un plazo fijo a definir por asesoría legal antes del piloto — este Spec no fija el número por no ser una decisión de producto, pero exige que exista uno explícito, nunca "indefinido" (FR-SEC-013).
+- **Dado** que el plazo de retención se cumpla sin que haya habido un reporte formal a la autoridad competente, **cuando** eso ocurra, **entonces** el clip se elimina igual que cualquier otro dato bajo el Artículo V — la excepción de "cadena de custodia" no es una excepción permanente al principio de minimización (FR-SEC-014).
+- **Dado** que el clip esté en este régimen de retención extendida, **cuando** se consulte quién puede acceder a él, **entonces** el acceso queda restringido al Admin de Moderación y Seguridad que gestiona el caso — mismo criterio de acceso restringido que ya define BR-KS-05 para el clip general, sin ampliarlo (FR-SEC-015).
+
 ### US-6 — Sanciones y su efecto en la plataforma
 *Como* Tinku, *quiero* que las sanciones tengan efectos consistentes, *para* que una cuenta sancionada no siga operando con normalidad.
 
@@ -67,6 +74,9 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 | FR-SEC-010 | SLA de 5 días hábiles para que el Admin de Moderación y Seguridad resuelva una Denuncia estándar tras el descargo; si se excede, escala con prioridad alta. |
 | FR-SEC-011 | La pausa de escrow en denuncias cruzadas es independiente por caso, no por par de cuentas. |
 | FR-SEC-012 | Sanción a Estudiante/Adulto Responsable: suspensión de cuenta (M1) + cancelación con reembolso de sus reservas futuras (M4). |
+| FR-SEC-013 _(agregado, auditoría 2026-09-18)_ | Evidencia de un caso escalado por contenido ilegal: retención por un plazo fijo (a definir con asesoría legal antes del piloto), no indefinida — excepción explícita y acotada al régimen general de descarte de M3. |
+| FR-SEC-014 _(agregado)_ | Vencido el plazo de FR-SEC-013 sin reporte formal a la autoridad, el clip se elimina igual que bajo el régimen general (Artículo V). |
+| FR-SEC-015 _(agregado)_ | Acceso al clip en retención extendida: restringido al Admin de Moderación y Seguridad del caso, mismo criterio que BR-KS-05, sin ampliarlo. |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 
@@ -88,6 +98,7 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 | 10 | Reembolso al Estudiante detectado como infractor en la rama 2 del kill-switch (ambos adultos) | Decisión explícita: recibe el 100% de vuelta igual (FR-PAG-009 prohíbe parciales) — la consecuencia real para el infractor es la sanción de cuenta (FR-SEC-012), no quedarse con su dinero. |
 | 11 | Conflicto de plazos: 12hs del kill-switch vs. 48hs de descargo | Resuelto: son dos tracks distintos. El kill-switch no espera un descargo previo para la revisión de 12hs; el descargo del Tutor puede llegar en cualquier momento y fundamentar una apelación posterior (FR-SEC-004). |
 | 12 | Quién decide la suspensión preventiva | Es 100% automática desde M3 en el momento del corte — nunca una "decisión" del Admin de Moderación y Seguridad. El Admin decide solo la reactivación o sanción final. |
+| 13 _(agregado, auditoría 2026-09-18)_ | Plazo de retención de evidencia de un caso escalado (choca con Artículo V si queda indefinido) | Plazo fijo a definir con asesoría legal antes del piloto; vencido sin reporte formal, se elimina igual que cualquier otro dato (FR-SEC-013/014). |
 
 ## 6. Fuera de Alcance de este Spec
 
@@ -99,7 +110,7 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 ## 7. Checklist de Revisión
 
 - [x] Todas las Historias de Usuario tienen criterios de aceptación testeables.
-- [x] Casos borde resueltos (12 de 12, incluyendo E-31 a E-35 del informe de QA).
+- [x] Casos borde resueltos (12 de 12 originales, incluyendo E-31 a E-35 del informe de QA, + caso 13 agregado en la auditoría 2026-09-18).
 - [x] Revisado contra la Constitución (Artículo II, Artículo X).
 
 ---

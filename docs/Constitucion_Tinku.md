@@ -4,16 +4,16 @@
 >
 > **Distinción importante:** los Artículos son principios durables — cambiarlos requiere una enmienda formal. La sección final ("Registro de Decisiones Técnicas Actuales") son elecciones de proveedor/tecnología concretas — pueden cambiar vía un ADR normal, sin tocar este documento.
 
-**Versión:** 2.1
+**Versión:** 2.2
 **Contexto del equipo (informativo, no es una regla en sí misma):** actualmente 1 desarrollador, presupuesto de infraestructura USD 0-100/mes durante desarrollo. Los principios de abajo están pensados para este contexto, pero siguen siendo buena práctica aunque el equipo crezca.
 
 ---
 
 ## Parte I — Principios de Negocio
 
-### Artículo I — La confianza se refuerza con verificación documental, no reemplaza a la ausencia de acceso estatal directo _(enmendado v2.1)_
+### Artículo I — La confianza se refuerza con verificación documental, no reemplaza a la ausencia de acceso estatal directo _(enmendado v2.2)_
 
-Tinku no tiene acceso a un sistema de verificación de antecedentes penales en tiempo real ni a una integración directa con el Registro Nacional de Reincidencia. Se exige al Tutor la carga del **Certificado de Antecedentes Penales (CAP)** vigente, tramitado por el propio Tutor vía argentina.gob.ar/Mi Argentina, con vencimiento de **12 meses** desde su emisión. El CAP se revisa manualmente (mismo tratamiento que la Credencial Académica: BR-ID-01, reintentos, backoff), sujeto a las reglas de descalificación definidas en el Spec de M1. La Credencial Académica del Tutor, la calificación explícita, el CAP y el kill-switch **son**, en conjunto, el mecanismo de confianza que reemplaza la ausencia de acceso estatal directo. Ninguna decisión de producto puede debilitar este conjunto para ganar velocidad de desarrollo o fricción de onboarding.
+Tinku no tiene acceso a un sistema de verificación de antecedentes penales en tiempo real ni a una integración directa con el Registro Nacional de Reincidencia. **El mecanismo de confianza vigente hoy es la Credencial Académica del Tutor, la calificación explícita y el kill-switch — no incluye verificación de antecedentes penales** (ver Historial de Enmiendas, v2.1 → v2.2: el Certificado de Antecedentes Penales, CAP, se exigió entre la enmienda v2.1 y el ADR-M1-02, que lo retiró). Esta es una decisión de producto explícita, no un vacío no considerado: prioriza velocidad de onboarding y ausencia de riesgo de criterio legal sin respaldo profesional, por sobre el nivel de verificación documental que la versión v2.1 de este Artículo exigía. Se acepta expresamente el riesgo de que un Tutor sin antecedentes verificados quede habilitado para sesiones 1:1 con un Menor (ver ADR-M1-02, sección "Riesgo aceptado"). Esta decisión se revisa obligatoriamente (no de forma optativa) antes de salir de piloto cerrado o de escalar el volumen de Tutores activos.
 
 ### Artículo II — La seguridad del menor prevalece sobre cualquier feature o métrica de negocio
 
@@ -107,6 +107,25 @@ Esta Constitución se modifica exclusivamente mediante una enmienda explícita, 
 **No cambia:** el resto de los Artículos, el Registro de Decisiones Técnicas, los NFRs.
 **Bajado a Spec/Plan en:** Spec_M1_Identidad_Perfiles.md (US-6, FR-ID-021 a 024), Plan_M1_Identidad_Perfiles.md (tabla `certificados_antecedentes_penales`, sección 2.4).
 
+### Enmienda v2.1 → v2.2 — Artículo I (retiro del CAP)
+
+**Motivo:** el CAP introducía fricción de onboarding medible en una etapa de piloto donde la
+oferta de Tutores es el recurso más escaso, y BR-CAP-02 (revisión de antecedentes fuera de la
+lista de rechazo automático) exigía un criterio de descalificación legal que, sin asesoría
+profesional contratada, recaía sin respaldo sobre el único desarrollador del proyecto. Se prioriza
+explícitamente velocidad de onboarding y reducción de riesgo legal operativo por sobre el nivel de
+verificación de antecedentes que exigía la v2.1 — ver justificación completa, alternativas
+descartadas (incluida una alternativa de alcance acotado a sesiones con Menores, rechazada
+explícitamente) y riesgo aceptado en **ADR-M1-02**.
+**Cambia:** Artículo I (texto de arriba, reemplaza el requisito de CAP).
+**No cambia:** el resto de los Artículos — en particular, el Artículo II (la seguridad del menor
+prevalece) sigue vigente sin excepción; esta enmienda reduce un control preventivo documental, no
+autoriza ninguna otra desviación del Artículo II —, el Registro de Decisiones Técnicas, los NFRs.
+**Bajado a Spec/Plan en:** Spec_M1_Identidad_Perfiles.md (US-6, FR-ID-021 a 025 y BR-CAP-01/02
+marcados `RETIRADO`), Plan_M1_Identidad_Perfiles.md (sección 2.4 y filas de API de CAP marcadas
+`RETIRADO`). El texto original se conserva en ambos documentos como registro histórico, no se
+borra.
+
 ---
 
-_Fin de la Constitución v2.1. Próximo paso: ejecutar Chunk M1-A._
+_Fin de la Constitución v2.2._

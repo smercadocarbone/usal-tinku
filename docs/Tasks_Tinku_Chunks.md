@@ -10,10 +10,10 @@
 
 - [x] **Chunk 000-A** — Scaffold + schemas (T-000-01, T-000-02)
 - [x] **Chunk 000-B** — Quartz persistido + eventos in-memory (T-000-03, T-000-04) — _alcance ampliado en ejecución real: incluyó verificación de V2\_\_m1_identidad.sql contra el Plan de M1 (no formaba parte de las tareas originales, surgió de la auditoría pre-000-B) y la decisión de perfil por defecto para que la app levante (idem). Mergeado a main en 4eab0b9._
-- [ ] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05)
-- [ ] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _mayormente manual, no requiere agente_
-- [ ] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08)
-- [ ] **Chunk 000-F** — CI mínimo (T-000-09) — _no bloqueante; hacerlo antes de cerrar el 3er módulo (M4), no antes de arrancar_
+- [x] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05) — _en producción: Spring Security + JJWT 0.12.6 + bcrypt, confirmado por `SecurityHttpTest`/`JwtAuthTest` y por el uso real en los 320 tests de la suite. Auditoría 2026-09-18: `Tasks_Tinku_Implementacion.md` nunca tildó T-000-05 pese a que el código lleva meses funcionando — corregido acá._
+- [x] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _confirmado por integración real de `LiveKitService` (M3-A) y `MercadoPagoClient`/webhook con firma HMAC (M5-A/B) contra las APIs reales, no solo stubs._
+- [x] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08) — _`GET /health` real, consumido además por `SaludInfraestructuraService` de M8 (ADR-M8-01)._
+- [~] **Chunk 000-F** — CI mínimo (T-000-09) — _parcial: `.github/workflows/ci-backend.yml` existe (build + `mvn verify` con path filter en `backend/**`), pero no hay pipeline para `frontend/` ni `matching-service/`. Pendiente real, no cosmético._
 - [ ] **Chunk 000-H** — Reconciliación de deuda técnica pre-existente (fuera de Tasks_Tinku_Implementacion.md original) — _ítem "ADR-000-01 (schema de Quartz)" ya completado fuera de orden durante el merge de 000-B, commit 4eab0b9. No pedirlo de nuevo en el prompt de este chunk._
 
 ## SPIKE — en paralelo desde el día 1, otra sesión/branch
@@ -80,58 +80,71 @@ _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que S
 
 - [x] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
 - [x] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05) — _cerrado: SesionService + 3 jobs de Quartz + endpoint finalizar + eventos `sesion.no_show_*/finalizada`; suite completa 157 tests OK._
-- [ ] **Chunk M3-C** — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07)
-- [ ] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09)
-- [ ] **Chunk M3-E** — Emisión de todos los eventos hacia M5 → _publica las clases ya definidas por M5 en `com.tinku.pagos.evento` (M5-B las consume y las probó con un publisher directo de test)_
-- [ ] **Chunk M3-F** — Test: manipulación de cliente no puede forzar la rama "adultos" con un menor presente (T-M3-11)
+- [~] **Chunk M3-C** — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07) — _PARCIAL: T-M3-07 (backend, `SesionService.ejecutarKillswitch`, rama decidida server-side) cerrado y testeado. **T-M3-06 (clasificador NSFW on-device en el cliente) sigue sin implementar** — cero NSFWJS/TensorFlow.js en `frontend/`. Bloqueante de seguridad real, no cosmético: sin esto el backend nunca recibe el disparo del kill-switch en una sesión real._
+- [x] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09) — _cerrado: `subirEvidencia` (Artículo V, solo referencia) + `confirmarRamaAdultos`._
+- [x] **Chunk M3-E** — Emisión de todos los eventos hacia M5 (T-M3-10) → _`sesion.finalizada/interrumpida/no_show_*/killswitch_*` cerrados; M5-B los consume._
+- [x] **Chunk M3-F** — Test: manipulación de cliente no puede forzar la rama "adultos" con un menor presente (T-M3-11) — _`KillswitchIntegracionTest`, ejercita el ataque explícito del enunciado._
 
 ## M9 — Denuncias, Seguridad y Moderación
 
 _(requiere M1, M3, M5 cerrados)_
 
-- [ ] **Chunk M9-A** — Migración (T-M9-01)
-- [ ] **Chunk M9-B** — Endpoint de denuncia con rechazo 403 a menores + jobs de plazos (48hs/5 días hábiles, track separado del kill-switch) (T-M9-02, T-M9-03)
-- [ ] **Chunk M9-C** — Resolución de Denuncia estándar + resolución de Alerta de kill-switch (T-M9-04, T-M9-05)
-- [ ] **Chunk M9-D** — Propagación de sanción a M1/M2/M4/M5 con reintentos ante fallo (T-M9-06)
-- [ ] **Chunk M9-E** — Tests: denuncias cruzadas, propagación de sanción a los 4 módulos (T-M9-07)
+- [x] **Chunk M9-A** — Migración (T-M9-01)
+- [x] **Chunk M9-B** — Endpoint de denuncia con rechazo 403 a menores + jobs de plazos (48hs/5 días hábiles, track separado del kill-switch) (T-M9-02, T-M9-03)
+- [x] **Chunk M9-C** — Resolución de Denuncia estándar + resolución de Alerta de kill-switch (T-M9-04, T-M9-05)
+- [x] **Chunk M9-D** — Propagación de sanción a M1/M2/M4/M5 con reintentos ante fallo (T-M9-06)
+- [x] **Chunk M9-E** — Tests: denuncias cruzadas, propagación de sanción a los 4 módulos (T-M9-07) — _suite completa verde, confirmado en T-FIN-02._
 
 ## M6 — Resumen Automático de Sesiones
 
 _(requiere M3 cerrado)_
 
-- [ ] **Chunk M6-A** — Migración + listener de `sesion.finalizada` con validación de duración (T-M6-01, T-M6-02)
-- [ ] **Chunk M6-B** — Verificación de Denuncia/Alerta activa antes de generar (T-M6-03)
-- [ ] **Chunk M6-C** — Módulo de anonimización, aislado y testeado antes de conectar al pipeline (T-M6-04)
-- [ ] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06)
-- [ ] **Chunk M6-E** — Recordatorio único a 24hs (T-M6-07)
-- [ ] **Chunk M6-F** — Test de anonimización con datos reales de prueba (T-M6-08)
+- [x] **Chunk M6-A** — Migración + listener de `sesion.finalizada` con validación de duración (T-M6-01, T-M6-02)
+- [x] **Chunk M6-B** — Verificación de Denuncia/Alerta activa antes de generar (T-M6-03)
+- [x] **Chunk M6-C** — Módulo de anonimización, aislado y testeado antes de conectar al pipeline (T-M6-04)
+- [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **el ADR de proveedor (GPT-4o vs. Gemini 2.0 Flash) sigue pendiente**, así que hoy no genera un resumen real, solo falla cerrado de forma segura. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
+- [x] **Chunk M6-E** — Recordatorio único a 24hs (T-M6-07)
+- [x] **Chunk M6-F** — Test de anonimización con datos reales de prueba (T-M6-08)
 
 ## M7 — Sistema de Calificaciones y Reputación
 
 _(requiere M3 cerrado; retroalimenta a M2-C y M4-E, que hasta acá tenían stubs)_
 
-- [ ] **Chunk M7-A** — Migración (T-M7-01)
-- [ ] **Chunk M7-B** — Endpoint de calificación + perfil público con umbral de 5 (T-M7-02, T-M7-03)
-- [ ] **Chunk M7-C** — Endpoint interno de calificación oculta (solo rol Moderación) + bloqueo de nueva reserva (T-M7-04, T-M7-05) → _reemplaza el stub del Chunk M4-E_
-- [ ] **Chunk M7-D** — Recordatorio/edición de calificación + señales implícitas incrementales (T-M7-06, T-M7-07) → _reemplaza el stub del Chunk M2-C_
-- [ ] **Chunk M7-E** — Test: ningún endpoint público filtra `tutor_a_estudiante` (T-M7-08)
+- [x] **Chunk M7-A** — Migración (T-M7-01)
+- [x] **Chunk M7-B** — Endpoint de calificación + perfil público con umbral de 5 (T-M7-02, T-M7-03)
+- [x] **Chunk M7-C** — Endpoint interno de calificación oculta (solo rol Moderación) + bloqueo de nueva reserva (T-M7-04, T-M7-05) → _reemplazó el stub del Chunk M4-E._
+- [x] **Chunk M7-D** — Recordatorio/edición de calificación + señales implícitas incrementales (T-M7-06, T-M7-07) → _reemplazó el stub del Chunk M2-C._
+- [x] **Chunk M7-E** — Test: ningún endpoint público filtra `tutor_a_estudiante` (T-M7-08)
 
 ## M8 — Panel de Administración
 
 _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no define nada nuevo)_
 
-- [ ] **Chunk M8-A** — Migración + interceptor de auditoría común, ANTES que cualquier endpoint (T-M8-01, T-M8-02)
-- [ ] **Chunk M8-B** — Endpoints de colas + ordenamiento por plazo restante (T-M8-03, T-M8-04)
-- [ ] **Chunk M8-C** — Mapeo de enrutamiento de tickets de soporte (T-M8-05)
-- [ ] **Chunk M8-D** — Test de aislamiento de roles (403 cruzado) (T-M8-06)
+- [x] **Chunk M8-A** — Migración + interceptor de auditoría común, ANTES que cualquier endpoint (T-M8-01, T-M8-02)
+- [x] **Chunk M8-B** — Endpoints de colas + ordenamiento por plazo restante (T-M8-03, T-M8-04)
+- [x] **Chunk M8-C** — Mapeo de enrutamiento de tickets de soporte (T-M8-05)
+- [x] **Chunk M8-D** — Test de aislamiento de roles (403 cruzado) (T-M8-06)
+- [x] **Chunk M8-E** _(agregado, fuera del plan original)_ — Resolución de credencial desde la cola (T-M8-07) + storage real local-fs (T-M8-08).
+- [x] **Chunk M8-F** _(agregado, PR #19, ADR-M5-01/M8-01)_ — Modo Bypass de la pasarela de pagos + pestaña "Salud de Infraestructura" con datos reales, formalizados retroactivamente vía ADR.
 
 ---
 
 ## Cierre — Integración Transversal
 
-- [ ] **Chunk FIN-A** — E2E flujo feliz completo, sin mocks entre módulos propios (T-FIN-01)
-- [ ] **Chunk FIN-B** — E2E rama de seguridad completa (T-FIN-02)
-- [ ] **Chunk FIN-C** — Revisión de que ningún ADR quedó pendiente (T-FIN-03)
+- [x] **Chunk FIN-A** — E2E flujo feliz completo, sin mocks entre módulos propios (T-FIN-01) — `E2EFlujoFelizIntegracionTest`.
+- [x] **Chunk FIN-B** — E2E rama de seguridad completa (T-FIN-02) — `E2ERamaSeguridadIntegracionTest`; suite completa 320 tests, 0 errores.
+- [x] **Chunk FIN-C** — Revisión de que ningún ADR quedó pendiente (T-FIN-03) — _M1/M2/M3 resueltos. M5 (productivo real de MercadoPago) y M6 (LLM) quedan pendientes de forma explícita y no bloqueante. **Auditoría 2026-09-18 agrega uno que T-FIN-03 no contempló: T-M3-06 (integración cliente del kill-switch) sigue sin resolver — a diferencia de M5/M6, este si es bloqueante de seguridad antes de producción real con menores.**_
+
+---
+
+## Nota de auditoría — 2026-09-18
+
+Este archivo y `README.md` estaban desactualizados desde ~72 commits atrás (última edición real
+10-sep, mientras `main` siguió recibiendo M6/M7/M8/M9 completos, M2-F, y features de admin/landing
+hasta 18-sep). `docs/Tasks_Tinku_Implementacion.md` es la fuente de verdad atómica; este archivo se
+corrigió contra ese documento y contra el código real en `backend/src/main/java/com/tinku/`. Único
+pendiente real de dominio: **T-M3-06** (ver Chunk M3-C). Todo lo demás marcado `[ ]` en este
+archivo antes de esta revisión era un falso negativo de tracking, no trabajo faltante.
 
 ---
 
@@ -139,10 +152,18 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 
 | Chunk con stub                        | Se completa en                                     | Motivo                                               |
 | ------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| M2-C (reputación/suspensión)          | M7-D, M9 (implícito vía M2-C ya usa consulta a M9) | M7 y M9 aún no existen cuando se hace M2             |
-| M4-E (sanción/calificación pendiente) | M9-D, M7-C                                         | Idem                                                 |
-| M5-B (listeners de eventos de sesión) | M3-E, M9-D                                        | M3-E/M9-D publican las clases definidas por M5 en `chunk/m5-b` (`sesion.*`, `denuncia.registrada`); `denuncia.resuelta` M5-side queda diferida a M5-C/D (payload mínimo de M9-D no alcanza — ver NOTA en T-M5-04) |
+| M2-C (reputación/suspensión)          | M7-D, M9 ✅                                        | Cerrado — reemplazado por consulta real a M7/M9. |
+| M4-E (sanción/calificación pendiente) | M9-D, M7-C ✅                                      | Cerrado — reemplazado por consulta real a M9/M7. |
+| M5-B (listeners de eventos de sesión) | M3-E, M9-D ✅                                      | Cerrado — M3-E/M9-D publican las clases definidas por M5 en `chunk/m5-b` (`sesion.*`, `denuncia.registrada`, `denuncia.resuelta` vía M5-C/D). |
 | M5-B (webhook MP real + confirmación) | M5-B ✅                                           | El webhook real con validación de firma reemplazó a `confirmar-pago-simulado` (stub M3-B dev/test) |
-| M3-C                                  | ~~SPIKE-C~~ → Resuelto (ADR-M3-01, 2026-09-08) | El clasificador real depende del resultado del spike |
+| M3-C (endpoint backend del killswitch)| M3-C ✅ (T-M3-07)                                  | Rama decidida en backend, cerrado y testeado (`KillswitchIntegracionTest`). |
+| M6-D (proveedor LLM real)             | Pendiente — requiere ADR (GPT-4o vs. Gemini)       | Código detrás de puerto fail-closed; no bloqueante para el resto del sistema (T-FIN-03). |
+
+**Único stub real que sigue sin reemplazar, y SÍ es bloqueante — distinto a los de arriba, no es
+un stub de integración entre módulos sino la mitad cliente de un control de seguridad:**
+
+| Pendiente                                              | Motivo                                                                                     |
+| -------------------------------------------------------| -------------------------------------------------------------------------------------------|
+| **T-M3-06** — clasificador NSFW on-device en el cliente | El backend del killswitch (T-M3-07 a T-M3-11) está completo y testeado, pero nunca recibe un disparo real en producción porque el frontend no corre ningún clasificador sobre los frames de video. Bloqueante de seguridad (Artículo II/XI de la Constitución) antes de cualquier sesión real con un menor presente. |
 
 _Cualquier stub que quede sin reemplazar al llegar a Chunk FIN-A debe tratarse como bloqueante — no cerrar el flujo feliz E2E con un mock permanente disfrazado de stub temporal._

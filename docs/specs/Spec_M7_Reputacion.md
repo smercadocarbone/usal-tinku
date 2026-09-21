@@ -2,7 +2,7 @@
 
 **Módulo:** M7 (ver Constitución, Artículo VI)
 **Estado:** Borrador para revisión
-**Depende de:** M3 (evento `sesion.finalizada`), M1 (identidad de las partes)
+**Depende de:** M3 (evento `sesion.finalizada`), M1 (identidad de las partes), M6 (módulo de anonimización reutilizado por FR-REP-011, agregado en la auditoría 2026-09-18)
 **Alimenta a:** M2 (señales implícitas para el orden del matching, BR-MATCH-01), M4 (bloqueo de próxima reserva del Tutor si no calificó), M9 (señal temprana de Estudiantes problemáticos)
 
 ---
@@ -19,6 +19,12 @@ Este módulo gestiona la confianza bidireccional entre Estudiante y Tutor: la ca
 - **Dado** que la sesión finalizó, **cuando** se me solicite calificar, **entonces** puedo dar de 1 a 5 estrellas y un comentario opcional. Esta calificación es pública, visible en el perfil del Tutor (FR-REP-001).
 - **Dado** que no califiqué, **cuando** pasen 24 horas desde la finalización, **entonces** recibo un único recordatorio (FR-REP-004) — no se insiste más allá de esa vez.
 - **Dado** que ya publiqué mi calificación, **cuando** quiera modificarla o eliminarla, **entonces** puedo hacerlo dentro de las **48 horas** posteriores a publicarla; pasado ese plazo, queda definitiva (FR-REP-005).
+
+### US-1bis — Moderación del comentario público _(agregado, auditoría 2026-09-18)_
+*Como* Tutor calificado públicamente, *quiero* que un comentario no pueda exponer mis datos personales ni contener lenguaje abusivo sin ningún filtro, *para* que la calificación siga siendo sobre la experiencia de la clase, no un canal abierto de acoso o de exposición de datos.
+
+- **Dado** que el Estudiante escriba un comentario opcional al calificar, **cuando** lo envíe, **entonces** el mismo filtro de anonimización que ya usa M6 (regex + NER liviano, reutilizado — no reinventado, Artículo I de la Constitución) se aplica sobre el texto antes de publicarlo, reemplazando datos de contacto/documento detectados por marcadores genéricos (FR-REP-011).
+- **Dado** que el comentario contenga lenguaje que la lista cerrada de motivos de Denuncia de M9 ya cubre (ej. amenazas), **cuando** el Tutor lo considere así, **entonces** puede denunciarlo por el canal ya existente de M9 — este Spec no crea un mecanismo de moderación de contenido nuevo y paralelo al de M9, solo la anonimización automática de FR-REP-011 (FR-REP-012).
 
 ### US-2 — Calificación del Tutor hacia el Estudiante (oculta, casi obligatoria)
 *Como* Tutor, *quiero* dejar constancia de cómo fue el Estudiante, *para* que Tinku tenga una señal temprana de comportamiento problemático.
@@ -52,6 +58,8 @@ Este módulo gestiona la confianza bidireccional entre Estudiante y Tutor: la ca
 | FR-REP-008 | Sesiones sin `sesion.finalizada` no se pueden calificar ni cuentan para el umbral de FR-REP-007. |
 | FR-REP-009 | El bloqueo de FR-REP-006 aplica solo a nuevas Reservas, nunca a Reservas ya confirmadas antes de la calificación pendiente. |
 | FR-REP-010 | La calificación oculta 1-2 estrellas del Tutor sobre el Estudiante no dispara ningún efecto automático — es señal pura para M9. |
+| FR-REP-011 _(agregado, auditoría 2026-09-18)_ | El comentario público opcional pasa por el mismo filtro de anonimización que M6 (regex + NER liviano) antes de publicarse — reutiliza el módulo, no lo reimplementa. |
+| FR-REP-012 _(agregado)_ | Contenido abusivo en un comentario se gestiona por el canal de Denuncia ya existente de M9 — este Spec no crea un mecanismo de moderación paralelo. |
 
 ## 4. Reglas de Negocio Aplicables (referencia)
 

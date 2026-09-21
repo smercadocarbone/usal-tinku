@@ -84,6 +84,7 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 |---|---|---|
 | 1 | Roles del Admin | Dos roles con colas y permisos separados: Moderación y Seguridad (Credenciales, kill-switch, Denuncias, sanciones) y Soporte Financiero (pagos fallidos, tabla de precios) (FR-ADM-008). |
 | 2 | Choque entre dos Admins del mismo rol abriendo el mismo caso | Sin mecanismo de bloqueo en el MVP — dado el tamaño del equipo, el riesgo es bajo; se resuelve con la primera decisión guardada. Revisar si el equipo crece (Artículo I de la Constitución: no sobre-diseñar para un problema que todavía no existe). |
+| 3 _(agregado, auditoría 2026-09-18)_ | El único Admin de Moderación y Seguridad no está disponible (enfermedad, vacaciones) y un SLA de 12hs (kill-switch) o 48hs (descargo) está por vencer | **Riesgo operacional aceptado explícitamente para el piloto, sin mecanismo de guardia/backup en el MVP** — mismo criterio que el caso 2 (Artículo I: no sobre-diseñar para 1 desarrollador). No hay hoy un segundo rol que pueda cubrir la cola de Moderación y Seguridad si la única persona no está. Revisar obligatoriamente antes de escalar el volumen de Tutores/Estudiantes activos, junto con la revisión de ADR-M1-02 (retiro del CAP) — ambos comparten la misma dependencia de un solo operador humano para la seguridad del menor. |
 
 ## 5. Fuera de Alcance de este Spec
 
@@ -94,7 +95,7 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 
 - [x] Todas las Historias de Usuario tienen criterios de aceptación testeables.
 - [x] Ninguna decisión técnica aparece en este documento.
-- [x] Las 2 preguntas abiertas fueron resueltas.
+- [x] Las 2 preguntas abiertas originales fueron resueltas, + 1 riesgo operacional agregado en la auditoría 2026-09-18.
 - [x] Revisado contra la Constitución (Artículo X — auditoría y NFR-SEC-04; Artículo I — no se agregó bloqueo de concurrencia sin necesidad probada).
 
 ---

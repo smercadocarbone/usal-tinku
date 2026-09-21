@@ -63,4 +63,4 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 
 ## 8. Gobernanza de este archivo
 
-Este archivo refleja la Constitución v2.0. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
+Este archivo refleja la Constitución v2.2. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.

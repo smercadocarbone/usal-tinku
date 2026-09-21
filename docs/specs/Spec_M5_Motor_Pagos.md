@@ -65,6 +65,13 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 
 - **Dado** que se reprograme una Reserva con ≥24hs de anticipación, **cuando** eso ocurra, **entonces** se conserva el precio original de la Reserva, sin importar si el precio vigente de esa franja cambió desde entonces (FR-PAG-013).
 
+### US-5quater — Contracargo bancario en paralelo a Tinku _(agregado, auditoría 2026-09-18)_
+*Como* Tinku, *quiero* un camino definido para cuando el titular de la tarjeta disputa el cargo directamente con su banco (contracargo/chargeback) en lugar de usar el flujo de Denuncia de la plataforma, *para* no descubrir el caso recién cuando MercadoPago ya retuvo o descontó fondos.
+
+- **Dado** que MercadoPago notifique un contracargo sobre una transacción con escrow ya liberado al Tutor, **cuando** eso ocurra, **entonces** el caso se enruta a la cola de intervención manual de Soporte Financiero (M8, misma cola que FR-PAG-007) — no hay reversión automática de fondos ya liberados al Tutor (FR-PAG-015).
+- **Dado** que el contracargo llegue con el escrow todavía retenido, **cuando** eso ocurra, **entonces** se pausa la liberación con el mismo criterio que una Denuncia con escrow activo (FR-PAG-002), hasta que Soporte Financiero lo resuelva manualmente (FR-PAG-016).
+- Este flujo es explícitamente distinto del de Denuncia de M9: un contracargo lo inicia el banco emisor de la tarjeta, no un usuario dentro de Tinku, y su resolución depende primero de MercadoPago/la red de la tarjeta, no del Admin de Moderación y Seguridad.
+
 ### US-6 — Precio de referencia regional
 *Como* Tutor, *quiero* una sugerencia de precio al configurar mi perfil, *para* no adivinar cuánto cobrar en mi zona.
 
@@ -104,6 +111,8 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | FR-PAG-012 | El reembolso por kill-switch es total incluso si el Estudiante fue el infractor detectado en la rama de ambos adultos. |
 | FR-PAG-013 | La reprogramación con ≥24hs conserva el precio original de la Reserva, no el precio vigente de la franja al momento de reprogramar. |
 | FR-PAG-014 _(agregado)_ | El precio configurado por el Tutor es un valor por hora. El monto final de cada Reserva = precio_hora × (duración_franja_minutos / 60), redondeado a 2 decimales. Aplica tanto al precio de referencia regional (US-6) como al precio final que ve el Estudiante (Artículo III). |
+| FR-PAG-015 _(agregado, auditoría 2026-09-18)_ | Contracargo bancario sobre escrow ya liberado: cola de intervención manual de Soporte Financiero (M8); sin reversión automática de fondos ya liberados. |
+| FR-PAG-016 _(agregado)_ | Contracargo bancario sobre escrow todavía retenido: pausa la liberación con el mismo criterio que una Denuncia con escrow activo, hasta resolución manual. |
 
 ## 5. Casos Borde — Resueltos, 1 Diferido a Propósito
 
@@ -115,6 +124,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | 4 | Métrica objetivo para revisar el 15% tras el piloto | **Diferido a propósito** — se define en el momento de esa revisión (BR-PAG-03). No bloquea este Spec. |
 | 5 | Quién absorbe la comisión de gateway en un reembolso | Tinku, siempre — reembolso total vía MP, costo real cero (FR-PAG-009/010). |
 | 6 | Fondos de un Tutor con sanción definitiva | Se libera lo de sesiones ya realizadas, se retiene y reembolsa lo futuro (FR-PAG-011). |
+| 7 _(agregado, auditoría 2026-09-18)_ | Titular de la tarjeta disputa el cargo directamente con su banco (contracargo), en paralelo o en vez de usar la Denuncia de Tinku | Cola de intervención manual de Soporte Financiero; pausa si el escrow sigue retenido, sin reversión automática si ya se liberó (FR-PAG-015/016). |
 
 ## 6. Fuera de Alcance de este Spec
 

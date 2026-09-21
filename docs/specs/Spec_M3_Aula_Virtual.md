@@ -50,6 +50,13 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 - **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor` que M5 usa para reembolsar al Estudiante (FR-PAG-009), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
 - **Dado** que el participante menor es quien genera la detección, **cuando** eso ocurra, **entonces** se aplica el mismo corte y se notifica al Adulto Responsable — la sesión nunca continúa, sin importar quién disparó la detección (Artículo II).
 
+### US-6bis — Falla técnica del propio clasificador _(agregado, auditoría 2026-09-18)_
+*Como* Tinku, *quiero* que una falla del clasificador (no un falso negativo de contenido, sino que el modelo no cargue o deje de responder) tenga un comportamiento explícito y a favor de la seguridad, *para* que nunca haya una sesión con un menor corriendo sin protección activa sin que nadie lo sepa.
+
+- **Dado** que el clasificador on-device no logre cargarse en el cliente (modelo no descarga, dispositivo sin soporte, error de runtime) **y** haya un perfil de menor en la sesión, **cuando** eso se detecte antes de habilitar el botón de unirse, **entonces** la sala no se habilita para ese participante y se informa un error claro — nunca se entra a una sesión con un menor sin el clasificador corriendo (fail-closed, Artículo II, mismo criterio que "ningún flujo con un menor depende de una confirmación que puede no llegar").
+- **Dado** que el clasificador deje de responder ya iniciada la sesión (crash del modelo, no un simple frame sin detección), **cuando** eso ocurra con un menor presente, **entonces** se trata como corte por conectividad del lado de quien perdió el clasificador (misma rama que US-4/US-5) — nunca se continúa la sesión con el menor sin monitoreo activo sabiendo que se perdió.
+- **Dado** que ambos participantes sean adultos y el clasificador falle en cargar, **cuando** eso ocurra, **entonces** la sesión puede continuar sin bloquear el ingreso (el Artículo II no aplica sin un menor presente) — el evento queda logueado para monitoreo de infraestructura, pero no es un caso de seguridad de la Constitución.
+
 ### US-7 — Kill-switch, ambos adultos (rama 2)
 *Como* Tinku, *quiero* una respuesta proporcionada cuando los dos participantes son adultos, *para* no cortar sesiones legítimas por falsos positivos.
 
@@ -77,6 +84,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
 | FR-AULA-009 | El kill-switch emite `sesion.killswitch_menor` o `sesion.killswitch_adultos` según la rama, eventos que M5 consume para reembolsar (ver tabla de eventos de M5). |
+| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 
@@ -95,6 +103,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | 5 | Nadie presiona "Finalizar" | Corte automático a fin de horario + 5 min de tolerancia; emite `sesion.finalizada` igual (FR-AULA-007). |
 | 6 | Un participante corta y nunca vuelve | `finalizada_anticipada` al agotarse la tolerancia; si ocurrió antes del 50%, aplica reembolso (US-5). |
 | 7 | Caída de LiveKit (falla del proveedor, no del usuario) | Se comunica a ambas partes, nunca falla en silencio (NFR-DISP-02). El outcome monetario sigue la regla de corte <50%. |
+| 8 _(agregado, auditoría 2026-09-18)_ | El clasificador on-device del kill-switch no carga o deja de responder | Con menor presente: fail-closed, no se habilita la sala o se trata como corte de conectividad si ya estaba en curso (FR-AULA-010). Sin menor: no bloquea, solo se loguea. |
 
 ## 6. Fuera de Alcance de este Spec
 

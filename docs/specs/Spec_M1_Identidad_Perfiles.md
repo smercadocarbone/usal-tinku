@@ -71,7 +71,7 @@ _Como_ Usuario con capacidad Adulto Responsable, _quiero_ señalar que no confí
 
 - **Dado** que marque a un Tutor como "no confiable", **cuando** eso ocurra, **entonces** deja de aparecer en los resultados de esa cuenta específicamente — sin alertar al Admin ni afectar su reputación pública (FR-ID-009). Aplica solo a la capacidad Adulto Responsable de esa cuenta, no a su capacidad Estudiante.
 
-### US-6 — Carga y aprobación del Certificado de Antecedentes Penales (CAP) _(agregado, enmienda Constitución v2.1)_
+### US-6 — Carga y aprobación del Certificado de Antecedentes Penales (CAP) _(RETIRADO — ver ADR-M1-02 y enmienda Constitución v2.2. Se conserva el texto original como registro histórico; el CAP no es un requisito vigente.)_
 
 _Como_ Tutor recién registrado, _quiero_ cargar mi Certificado de Antecedentes Penales, _para_ completar la verificación de confianza exigida por la plataforma.
 
@@ -99,17 +99,16 @@ _Como_ Tutor recién registrado, _quiero_ cargar mi Certificado de Antecedentes 
 | FR-ID-018 | Rechazo de registro si el DNI ya pertenece a una cuenta existente, sin exponer de quién es.                                                                                                                                          |
 | FR-ID-019 | La cuenta del menor pasa por la misma validación OCR de coincidencia nombre/apellido/DNI y unicidad que un adulto, al momento de darla de alta.                                                                                      |
 | FR-ID-020 | El menor no puede autorregistrarse; el Adulto Responsable crea la cuenta y define o delega la configuración de sus credenciales de acceso. Una vez creada, el menor inicia sesión de forma independiente, con permisos restringidos. |
-| FR-ID-021 | Carga del CAP por el Tutor, estado `pendiente` hasta revisión manual, mismo backoff que Credencial Académica.                                                                                                                        |
-| FR-ID-022 | CAP sin antecedentes → aprobación y habilitación para matching (junto al resto de requisitos).                                                                                                                                       |
-| FR-ID-023 | CAP con antecedente de la lista de rechazo automático (BR-CAP-01) → rechazo sin excepción, sin apelación en producto.                                                                                                                |
-| FR-ID-024 | CAP con antecedente fuera de esa lista, o proceso en trámite sin sentencia firme → estado `en_revision_legal`, decisión manual documentada, sin rechazo automático.                                                                  |
-| FR-ID-025 | Vencimiento del CAP a los 12 meses de emisión → suspensión de matching (no de cuenta) hasta recarga de un CAP vigente.                                                                                                               |
+| FR-ID-021 | _RETIRADO (ADR-M1-02)._ Carga del CAP por el Tutor, estado `pendiente` hasta revisión manual, mismo backoff que Credencial Académica.                                                                                                                        |
+| FR-ID-022 | _RETIRADO (ADR-M1-02)._ CAP sin antecedentes → aprobación y habilitación para matching (junto al resto de requisitos).                                                                                                                                       |
+| FR-ID-023 | _RETIRADO (ADR-M1-02)._ CAP con antecedente de la lista de rechazo automático (BR-CAP-01) → rechazo sin excepción, sin apelación en producto.                                                                                                                |
+| FR-ID-024 | _RETIRADO (ADR-M1-02)._ CAP con antecedente fuera de esa lista, o proceso en trámite sin sentencia firme → estado `en_revision_legal`, decisión manual documentada, sin rechazo automático.                                                                  |
+| FR-ID-025 | _RETIRADO (ADR-M1-02)._ Vencimiento del CAP a los 12 meses de emisión → suspensión de matching (no de cuenta) hasta recarga de un CAP vigente.                                                                                                               |
 
 ## 5. Reglas de Negocio Aplicables
 
 - **BR-ID-01:** Credencial de lista cerrada, revisión manual estricta.
-- **BR-CAP-01 (rechazo automático, sin excepción):** delitos contra la integridad sexual (abuso sexual, corrupción de menores, grooming Ley 26.904, pornografía infantil, trata con fines de explotación sexual), cualquier delito específicamente vinculado a menores, homicidio/tentativa de homicidio.
-- **BR-CAP-02 (revisión manual, sin regla automática):** cualquier otro antecedente (propiedad, estupefacientes por tenencia, delitos económicos) o proceso en trámite sin sentencia firme. **Pendiente de validación con asesoría legal antes de aplicarse en producción** — no lanzar esta política sin esa revisión.
+- **BR-CAP-01 y BR-CAP-02** _RETIRADAS (ADR-M1-02, Constitución v2.2)._ Texto histórico: BR-CAP-01 (rechazo automático, sin excepción) cubría delitos contra la integridad sexual (abuso sexual, corrupción de menores, grooming Ley 26.904, pornografía infantil, trata con fines de explotación sexual), cualquier delito específicamente vinculado a menores, homicidio/tentativa de homicidio. BR-CAP-02 (revisión manual, sin regla automática) cubría cualquier otro antecedente (propiedad, estupefacientes por tenencia, delitos económicos) o proceso en trámite sin sentencia firme, y quedó pendiente de validación legal externa que nunca se completó — el módulo se retiró en cambio de completarse esa validación.
 - **BR-CONSENT-01:** consentimiento de datos del menor explícito y separado del T&C general.
 - **Regla de acceso (corregida en esta ronda):** el perfil de menor tiene su propia cuenta y sesión, con permisos restringidos, pero no puede crearla por sí mismo — la da de alta su Adulto Responsable.
 
