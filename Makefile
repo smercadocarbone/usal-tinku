@@ -88,7 +88,7 @@ dev: up ## Aliass de `make up` — todo el stack dockerizado
 setup: ## Copia .env.example -> .env y prepara dependencias una sola vez (host, para tests)
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Creado .env (revisalo y completá los valores)."; fi
 	@[ -d "$(JAVA_HOME)" ] || echo "Aviso: JAVA_HOME=$(JAVA_HOME) no existe (solo hace falta para targets de host)."
-	@pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt 2>/dev/null || true
+	@uv pip install --system $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt 2>/dev/null || true
 	@echo "Setup listo."
 
 # -----------------------------------------------------------------------------
@@ -139,11 +139,11 @@ matching: db-up ## Levanta el servicio de matching (uvicorn, puerto 8000)
 	       TINKU_PG_DBNAME="$${TINKU_PG_DBNAME:-$(TINKU_PG_DBNAME)}" \
 	       TINKU_PG_USER="$${TINKU_PG_USER:-$${DB_USER:-$(DB_USER)}}" \
 	       TINKU_PG_PASSWORD="$${TINKU_PG_PASSWORD:-$${DB_PASSWORD:-$(DB_PASSWORD)}}"; \
-	pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt; \
+	uv pip install --system $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt; \
 	cd $(MATCHING_DIR) && uvicorn main:app --reload --port $(MATCHING_PORT)
 
 matching-test: ## Tests del matching service (pytest, inyecta embedder/repo falsos)
-	@pip install $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt; \
+	@uv pip install --system $(PIP_FLAGS) -r $(MATCHING_DIR)/requirements.txt; \
 	cd $(MATCHING_DIR) && python -m pytest test_main.py -q
 
 # -----------------------------------------------------------------------------
@@ -151,8 +151,8 @@ matching-test: ## Tests del matching service (pytest, inyecta embedder/repo fals
 # -----------------------------------------------------------------------------
 .PHONY: frontend
 frontend: ## Levanta el frontend (Next.js dev server)
-	@cd $(FRONTEND_DIR) && if [ ! -d node_modules ]; then npm install; fi; \
-	npm run dev -- --port $(FRONTEND_PORT)
+	@cd $(FRONTEND_DIR) && if [ ! -d node_modules ]; then bun install; fi; \
+	bun run dev -- --port $(FRONTEND_PORT)
 
 .PHONY: stop
 stop: ## Baja todo el stack dockerizado (conserva el volumen de datos)
