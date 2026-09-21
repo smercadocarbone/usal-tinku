@@ -31,7 +31,18 @@ export class CuentaPage extends BasePage {
     this.botonCargarCredencial = page.getByRole("button", { name: "Cargar credencial" });
   }
 
+  /** Perfil (raíz del shell): info de cuenta, capacidades y credencial del Tutor. */
   async goto(): Promise<void> {
     await super.goto("/cuenta");
+  }
+
+  /** Acceso: email y contraseña. */
+  async gotoAcceso(): Promise<void> {
+    await super.goto("/cuenta/acceso");
+  }
+
+  /** Menores a cargo del Adulto Responsable: alta, solicitudes, baja. */
+  async gotoMenores(): Promise<void> {
+    await super.goto("/cuenta/menores");
   }
 }
