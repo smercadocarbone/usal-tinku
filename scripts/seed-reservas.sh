@@ -52,7 +52,7 @@ print(ini.strftime("%H:%M"), fin.strftime("%H:%M"), res.isoformat(), sol.isoform
 PY
 )"
 
-echo "Franja: $H_INI–$H_FIN | Reserva directa: $RES_ISO | Solicitud menor: $SOL_ISO"
+echo "Franja: ${H_INI}–${H_FIN} | Reserva directa: $RES_ISO | Solicitud menor: $SOL_ISO"
 
 # ── Tarifas (idempotente: PUT actualiza) ──────────────────────────────────────
 echo "==> Tarifas de tutores (PUT /api/pagos/tarifa)"
@@ -65,7 +65,7 @@ for dni in "$JORGE_DNI" "$MARIA_DNI"; do
 done
 
 # ── Franjas de disponibilidad (fecha específica de hoy, skip si ya existe) ────
-echo "==> Franjas de disponibilidad (hoy $FECHA $H_INI–$H_FIN)"
+echo "==> Franjas de disponibilidad (hoy $FECHA ${H_INI}–${H_FIN})"
 FRANJA_BODY="{\"fechaEspecifica\":\"$FECHA\",\"horaInicio\":\"$H_INI\",\"horaFin\":\"$H_FIN\"}"
 for pair in "$JORGE_DNI:$JORGE_ID" "$MARIA_DNI:$MARIA_ID"; do
     dni="${pair%%:*}"; tid="${pair#*:}"
