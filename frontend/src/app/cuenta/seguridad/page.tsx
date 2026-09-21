@@ -12,7 +12,6 @@ import {
   type EstadoDenunciaRecibida,
   type MotivoDenuncia,
 } from "@/lib/api";
-import Cabecera from "@/components/Cabecera";
 import { Alerta, Boton, Cargando, Tarjeta } from "@/components/ui";
 
 const ETIQUETA_MOTIVO: Record<MotivoDenuncia, string> = {
@@ -137,14 +136,11 @@ export default function SeguridadPage() {
   const cargando = denuncias === null || alertas === null;
 
   return (
-    <>
-      <Cabecera enlaces={[{ href: "/cuenta", label: "Mi cuenta" }]} />
-
-      <main className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-xl tracking-tight text-slate-800">Denuncias y alertas de seguridad</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Acá ves los casos abiertos sobre tu cuenta y podés dar tu versión de los hechos.
-        </p>
+    <div className="max-w-2xl">
+      <h1 className="text-xl tracking-tight text-slate-800">Denuncias y alertas de seguridad</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Acá ves los casos abiertos sobre tu cuenta y podés dar tu versión de los hechos.
+      </p>
 
         {error && (
           <Alerta tono="error" className="mt-4">
@@ -212,7 +208,6 @@ export default function SeguridadPage() {
             )}
           </>
         )}
-      </main>
-    </>
+    </div>
   );
 }

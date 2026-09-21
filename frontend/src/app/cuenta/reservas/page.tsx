@@ -5,7 +5,6 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
-import Cabecera from "@/components/Cabecera";
 import { Alerta, Boton, Cargando, EstadoVacio, Tarjeta, clasesBoton } from "@/components/ui";
 
 export default function ReservasPage() {
@@ -33,13 +32,10 @@ export default function ReservasPage() {
   }, [cargar]);
 
   return (
-    <>
-      <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }, { href: "/cuenta", label: "Mi cuenta" }]} />
-
-      <main className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-xl tracking-tight">
-          Mis reservas
-        </h1>
+    <div className="max-w-2xl">
+      <h1 className="text-xl tracking-tight">
+        Mis reservas
+      </h1>
 
         {cargando && <Cargando>Cargando...</Cargando>}
 
@@ -92,7 +88,6 @@ export default function ReservasPage() {
             ))}
           </ul>
         )}
-      </main>
-    </>
+    </div>
   );
 }
