@@ -27,8 +27,7 @@ test.describe("Panel de Administración — Tickets de soporte", () => {
         "PATCH /api/admin/tickets/t-1": jsonRoute(200, ticket({ estado: "en_proceso" })),
       });
 
-      await page.goto("/admin");
-      await page.getByRole("tab", { name: "Tickets de soporte" }).click();
+      await page.goto("/admin/tickets");
 
       await expect(page.getByText("No puedo cargar mi credencial")).toBeVisible();
 
@@ -52,8 +51,7 @@ test.describe("Panel de Administración — Tickets de soporte", () => {
         }),
       });
 
-      await page.goto("/admin");
-      await page.getByRole("tab", { name: "Tickets de soporte" }).click();
+      await page.goto("/admin/tickets");
 
       const select = page.getByLabel("Cambiar estado");
       await select.selectOption("cerrado");
