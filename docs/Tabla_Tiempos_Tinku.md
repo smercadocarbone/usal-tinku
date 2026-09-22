@@ -30,3 +30,4 @@
 | Edad mínima de todos los adultos                  | 18 años                  | Verificado por OCR                                                                                                    | M1     |
 | Umbral mínimo de calificaciones públicas          | 5                        | Antes se muestra "Tutor nuevo"                                                                                        | M7     |
 | Reintentos de liberación de pago                  | 3, backoff 5min/15min/1h | Luego, intervención manual del Admin                                                                                  | M5     |
+| Reintentos de cierre de sala LiveKit tras corte   | 3, backoff 5min/15min/1h | El corte en la base no espera al cierre; agotados, log ERROR (ADR-M3-03)                                              | M3     |

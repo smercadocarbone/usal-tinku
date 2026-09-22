@@ -2,11 +2,13 @@ package com.tinku.seguridad.web;
 
 import com.tinku.seguridad.AlertaSeguridadNoEncontradaException;
 import com.tinku.seguridad.AlertaYaResueltaException;
+import com.tinku.seguridad.AutoDenunciaException;
 import com.tinku.seguridad.CasoNoEncontradoException;
 import com.tinku.seguridad.DenunciaNoEncontradaException;
 import com.tinku.seguridad.DenunciaYaResueltaException;
 import com.tinku.seguridad.DescargoInvalidoException;
 import com.tinku.seguridad.MenorNoDenunciaException;
+import com.tinku.seguridad.NoParticipanteDenunciaException;
 import com.tinku.seguridad.SancionInvalidaException;
 import com.tinku.seguridad.SoloParteInteresadaException;
 import com.tinku.shared.AccesoModeracionDenegadoException;
@@ -27,6 +29,7 @@ import java.util.Map;
 public class SeguridadExceptionHandler {
 
     @ExceptionHandler({MenorNoDenunciaException.class, SoloParteInteresadaException.class,
+            NoParticipanteDenunciaException.class,
             AccesoModeracionDenegadoException.class})
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
@@ -39,7 +42,8 @@ public class SeguridadExceptionHandler {
     }
 
     @ExceptionHandler({DenunciaYaResueltaException.class, AlertaYaResueltaException.class,
-            DescargoInvalidoException.class, SancionInvalidaException.class})
+            DescargoInvalidoException.class, SancionInvalidaException.class,
+            AutoDenunciaException.class})
     public ResponseEntity<Map<String, String>> handleOperacionInvalida(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));

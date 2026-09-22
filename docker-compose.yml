@@ -42,6 +42,7 @@ services:
       context: ./backend
     container_name: tinku-backend
     environment:
+      # Stack local: `dev` explícito. La imagen sola arranca en `prod` (AUD-004).
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tinku
       SPRING_DATASOURCE_USERNAME: tinku_dev

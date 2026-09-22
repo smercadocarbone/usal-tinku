@@ -1,0 +1,9 @@
+# Perfil de desarrollo local. NUNCA en un despliegue real: ArranqueSeguroValidator
+# aborta si `prod` está activo, y este perfil habilita StubOcrService (OCR falso).
+spring:
+  datasource:
+    # BD de docker-compose.yml (servicio `db`). SPRING_DATASOURCE_URL la pisa en el
+    # contenedor del backend.
+    url: jdbc:postgresql://localhost:5432/tinku
+    username: ${DB_USER:tinku_dev}
+    password: ${DB_PASSWORD:changeme}

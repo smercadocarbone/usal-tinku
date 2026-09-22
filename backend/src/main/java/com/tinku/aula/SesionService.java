@@ -42,6 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -78,6 +80,7 @@ public class SesionService {
     private final ConfirmacionKillswitchRepository confirmacionRepo;
     private final FranjaService franjaService;
     private final LiveKitService liveKitService;
+    private final CierreSalaService cierreSalaService;
     private final Scheduler scheduler;
     private final ApplicationEventPublisher events;
 
@@ -88,6 +91,7 @@ public class SesionService {
                          ConfirmacionKillswitchRepository confirmacionRepo,
                          FranjaService franjaService,
                          LiveKitService liveKitService,
+                         CierreSalaService cierreSalaService,
                          Scheduler scheduler,
                          ApplicationEventPublisher events) {
         this.sesionRepo = sesionRepo;
@@ -97,6 +101,7 @@ public class SesionService {
         this.confirmacionRepo = confirmacionRepo;
         this.franjaService = franjaService;
         this.liveKitService = liveKitService;
+        this.cierreSalaService = cierreSalaService;
         this.scheduler = scheduler;
         this.events = events;
     }
@@ -270,6 +275,9 @@ public class SesionService {
      * Devuelve el token de LiveKit para que el participante se conecte a la sala.
      * Misma autorización que {@link #finalizar}: solo tutor, beneficiario o pagador.
      * La sala debe haber sido creada ya (T-5, {@link com.tinku.aula.jobs.CrearSalaJob}).
+     * El identity es el UUID y el nombre visible es solo el nombre de pila, sin
+     * apellido ni DNI (AUD-003, minimización del Artículo V). Una sesión en estado
+     * terminal no recibe tokens nuevos (AUD-001): el corte cerró la sala.
      */
     public String[] obtenerToken(Usuario usuario, UUID sesionId) {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
@@ -277,13 +285,18 @@ public class SesionService {
         if (sesion.getLivekitRoomId() == null) {
             throw new SesionSinSalaException("La sala aún no fue creada (T-5 no alcanzado).");
         }
+        if (SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())) {
+            throw new SesionCerradaException();
+        }
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
             throw new SoloParticipanteException();
         }
         String token = liveKitService.generarTokenParticipante(
-                usuario.getDni(), sesion.getLivekitRoomId());
+                usuario.getId().toString(), usuario.getNombre(), sesion.getLivekitRoomId());
         return new String[]{token, sesion.getLivekitRoomId()};
     }
 
@@ -422,6 +435,10 @@ public class SesionService {
 
     // ------------------------------------------------ kill-switch (T-M3-07/08/09)
 
+    // Riesgo aceptado (AUD-005, ADR-M3-02): el único control es esParticipante() — el disparo es
+    // una afirmación del cliente (clasificador on-device) y el Artículo II exige cortar sin pedir
+    // evidencia previa. Lo que se desacopló es la plata: el escrow queda en pausa hasta que M9
+    // resuelva la Alerta. El límite de tasa llega con AUD-012 (FASE 2).
     /**
      * Disparo del kill-switch (T-M3-07, US-6/US-7, FR-AULA-009). El backend
      * decide la rama con datos propios de M1: si el {@code beneficiario} de la
@@ -468,14 +485,21 @@ public class SesionService {
     /**
      * US-6 — rama MENOR: corte directo, sin confirmación ni pregunta al menor
      * (Artículo II). Alerta de Seguridad {@code rama=menor}, suspensión
-     * preventiva del Tutor ({@code activo_para_matching=false}, FR-SEC-004) y
+     * preventiva del DETECTADO ({@code activo_para_matching=false}, FR-SEC-004) y
      * evento {@code sesion.killswitch_menor}.
+     *
+     * <p>Se suspende a {@code detectadoId}, igual que {@link #confirmarRamaAdultos}
+     * (decisión D2, AUD-006): así la Alerta siempre apunta a quien quedó suspendido
+     * y {@code AlertaSeguridadService.resolver} puede revertirlo. Si el detectado es
+     * el menor, el Tutor NO queda suspendido — riesgo aceptado en Spec_M3 US-6.</p>
      */
     private SesionAprendizaje ramaMenor(SesionAprendizaje sesion, Reserva reserva,
                                         UUID detectadoId) {
-        Usuario tutor = reserva.getTutor();
-        tutor.setActivoParaMatching(false);
-        usuarioRepo.save(tutor);
+        Usuario detectado = usuarioRepo.findById(detectadoId).orElse(null);
+        if (detectado != null) {
+            detectado.setActivoParaMatching(false);
+            usuarioRepo.save(detectado);
+        }
 
         AlertaSeguridad alerta = new AlertaSeguridad();
         alerta.setSesionId(sesion.getId());
@@ -593,6 +617,10 @@ public class SesionService {
      * Cierre de la sesión SIN emitir evento (lo emite cada rama del kill-switch
      * con su nombre exacto). Idempotente por los guards de estado: si ya está
      * finalizada/interrumpida, no re-marca ni permite doble evento.
+     *
+     * <p>Cierra la sala de LiveKit ANTES de persistir (AUD-001): "la sesión se
+     * corta para ambos" (Spec_M3 US-6). Si LiveKit falla, el corte se persiste
+     * igual y el cierre se reintenta con un job persistido (ADR-M3-03).</p>
      */
     private void cortar(SesionAprendizaje sesion, Reserva reserva) {
         if (reserva.getEstado() == EstadoReserva.FINALIZADA
@@ -600,6 +628,7 @@ public class SesionService {
                 || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())) {
             return;
         }
+        cierreSalaService.cerrar(sesion);
         Instant fin = Instant.now();
         long duracion = sesion.getInicioReal() != null
                 ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
@@ -613,10 +642,31 @@ public class SesionService {
     }
 
     private boolean esParticipante(Reserva reserva, Usuario usuario) {
-        return reserva.getTutor().getId().equals(usuario.getId())
-                || reserva.getBeneficiario().getId().equals(usuario.getId())
-                || (reserva.getPagador() != null
-                    && reserva.getPagador().getId().equals(usuario.getId()));
+        return participantesDe(reserva).contains(usuario.getId());
+    }
+
+    /**
+     * Participantes de la Sesión: tutor, beneficiario y pagador de su Reserva — el
+     * mismo criterio que autoriza token, finalizar y kill-switch. Lo usa M9 para
+     * exigir participación en una denuncia con sesión (AUD-011): así el Adulto
+     * Responsable que paga la sesión de su menor cuenta como participante.
+     */
+    public Set<UUID> participantes(UUID sesionId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        return participantesDe(reserva);
+    }
+
+    private static Set<UUID> participantesDe(Reserva reserva) {
+        Set<UUID> ids = new HashSet<>();
+        ids.add(reserva.getTutor().getId());
+        ids.add(reserva.getBeneficiario().getId());
+        if (reserva.getPagador() != null) {
+            ids.add(reserva.getPagador().getId());
+        }
+        return ids;
     }
 
     // ------------------------------------------------ agendar jobs de Quartz

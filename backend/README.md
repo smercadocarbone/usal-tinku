@@ -41,17 +41,13 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 > enforcer de Maven ("Se requiere Java 21 explícitamente"), no con el error
 > confuso de "cannot find symbol" de Lombok.
 
-`spring.profiles.active=dev` queda fijado como **default** en
-`application.yml`. Es decir, con JDK 21 activo `./mvnw spring-boot:run` levanta
-la app sin más flags. El perfil `dev`:
+**El artefacto no trae perfil por defecto** (AUD-004). El perfil viene siempre
+del entorno: `make backend` pasa `dev`, `docker-compose.yml` pasa `dev`, y la
+imagen Docker arranca en `prod` si nadie lo sobreescribe. El perfil `dev`:
 
-- usa la BD local (`localhost:5432` + creds de `docker-compose.yml` en la raíz);
-- usa el `StubOcrService` (OCR falso) y el JWT secret de desarrollo de
-  `application.yml`.
-
-> **IMPORTANTE:** imposible levantar sin perfil. El `StubOcrService` está gated
-> a `dev`/`test` y el `TesseractOcrService` (ADR-M1-01) a los demás perfiles.
-> Sin perfil, Spring no encuentra ningún `OcrService` y el arranque falla.
+- usa la BD local (`localhost:5432` + creds de `docker-compose.yml` en la raíz),
+  definida en `application-dev.yml`;
+- usa el `StubOcrService` (OCR falso) y admite el JWT secret placeholder.
 
 ```bash
 # 0. Asegurarse de usar JDK 21 (ver arriba)
@@ -60,29 +56,32 @@ docker compose up -d db
 
 # 2. (opcional) Levantar el servicio de matching, ver ../matching-service/README.md
 
-# 3. Levantar el backend — ya trae el perfil dev por defecto
-./mvnw spring-boot:run
+# 3. Levantar el backend con el perfil dev explícito (o `make backend` desde la raíz)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Para otro ambiente se sobreescribe el perfil, nunca se edita la app:
-
-```bash
-SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
-```
+`./mvnw spring-boot:run` **sin perfil no levanta**: sin `dev`/`test` se activa
+`TesseractOcrService`, y `ArranqueSeguroValidator` aborta porque el JWT secret es
+el placeholder. Es a propósito: el arranque sin configurar falla rápido y con un
+mensaje claro, en vez de levantar con piezas de desarrollo.
 
 ## Profiles
 
 | Perfil | Uso | OcrService |
 |---|---|---|
-| `dev` (default local) | desarrollo local contra la BD de docker-compose | `StubOcrService` |
+| `dev` | desarrollo local contra la BD de docker-compose | `StubOcrService` |
 | `test` | tests de integración (generalmente vía Testcontainers) | `StubOcrService` |
-| (otro, ej. `prod`) | despliegue real | `TesseractOcrService` (requiere Tesseract instalado, ver abajo) |
+| `prod` | despliegue real — `application-prod.yml`, solo variables de entorno sin default | `TesseractOcrService` (requiere Tesseract instalado, ver abajo) |
+| (ninguno) | no recomendado — mismo gating que `prod` en OCR y JWT | `TesseractOcrService` |
 
-> El perfil `dev` usa el `StubOcrService` (OCR falso) para poder correr el flujo
-> de registro sin depender del binario nativo. El `TesseractOcrService` real
-> (ADR-M1-01) se activa únicamente fuera de `dev`/`test`. Sin perfil activo no
-> hay ningún `OcrService` y la app no levanta: `spring.profiles.active=dev` es
-> el default en `application.yml`.
+`ArranqueSeguroValidator` aborta el arranque fuera de `dev`/`test` (y siempre
+que `prod` esté activo, aunque se le sume `dev`) si:
+
+- el `OcrService` activo es `StubOcrService` (AUD-004);
+- `tinku.jwt.secret` está vacío o es el placeholder del repo (AUD-034).
+
+`prod` exige `SPRING_DATASOURCE_URL`, `DB_USER`, `DB_PASSWORD` y `JWT_SECRET`: si
+falta cualquiera, el arranque falla al resolver el placeholder.
 
 ## OCR — Tesseract (ADR-M1-01)
 

@@ -353,7 +353,8 @@ class E2ERamaSeguridadIntegracionTest {
                                 Map.of("detectadoId", tutorId.toString()))))
                 .andExpect(status().isOk());
 
-        // Corte directo + Alerta rama menor + suspensión preventiva + reembolso.
+        // Corte directo + Alerta rama menor + suspensión preventiva + escrow en pausa
+        // (ADR-M3-02: el reembolso espera a la resolución de la Alerta).
         SesionAprendizaje cortada = sesionRepository.findById(sesionActual).orElseThrow();
         assertThat(cortada.getEstado()).isEqualTo(SesionAprendizaje.ESTADO_FINALIZADA);
         assertThat(reservaRepository.findById(reservaActual).orElseThrow().getEstado())
@@ -364,7 +365,7 @@ class E2ERamaSeguridadIntegracionTest {
         assertThat(alerta.getEstado()).isEqualTo(AlertaSeguridad.ESTADO_PENDIENTE_REVISION);
         assertThat(usuarioPorDni(dniTutor).isActivoParaMatching()).isFalse();
         assertThat(transaccionRepository.findByReservaId(reservaActual).orElseThrow().getEstado())
-                .isEqualTo(EstadoTransaccion.REEMBOLSADO);
+                .isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
 
         // M8 — la Alerta entra a la cola de moderación (admin de moderación real).
         Usuario admin = adminModeracion();
@@ -392,6 +393,9 @@ class E2ERamaSeguridadIntegracionTest {
         assertThat(sancion.getOrigen()).isEqualTo(OrigenSancion.ALERTA_SEGURIDAD);
         assertThat(sancion.getTipo()).isEqualTo(TipoSancion.SUSPENSION_TEMPORAL);
         assertThat(sancion.getDiasSuspension()).isEqualTo(15);
+        // M5 — resuelta la Alerta, recién ahora se reembolsa al Estudiante.
+        assertThat(transaccionRepository.findByReservaId(reservaActual).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.REEMBOLSADO);
 
         // M1 — cuenta suspendida; M2 — fuera del matching (mismo flag).
         Usuario tutorSancionado = usuarioPorDni(dniTutor);

@@ -1,5 +1,6 @@
 package com.tinku.seguridad.service;
 
+import com.tinku.aula.SesionService;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.TipoUsuario;
@@ -9,11 +10,13 @@ import com.tinku.pagos.evento.DenunciaRegistradaEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.evento.DenunciaResueltaEvent;
+import com.tinku.seguridad.AutoDenunciaException;
 import com.tinku.seguridad.CasoNoEncontradoException;
 import com.tinku.seguridad.DenunciaNoEncontradaException;
 import com.tinku.seguridad.DenunciaYaResueltaException;
 import com.tinku.seguridad.DescargoInvalidoException;
 import com.tinku.seguridad.MenorNoDenunciaException;
+import com.tinku.seguridad.NoParticipanteDenunciaException;
 import com.tinku.seguridad.SancionInvalidaException;
 import com.tinku.seguridad.SoloParteInteresadaException;
 import com.tinku.seguridad.evento.SancionAplicadaEvent;
@@ -70,6 +73,7 @@ public class DenunciaService {
     private final SancionRepository sancionRepo;
     private final UsuarioRepository usuarioRepo;
     private final SesionAprendizajeRepository sesionRepo;
+    private final SesionService sesionService;
     private final TransaccionRepository transaccionRepo;
     private final DiasHabilesService diasHabiles;
     private final ApplicationEventPublisher events;
@@ -77,12 +81,14 @@ public class DenunciaService {
 
     public DenunciaService(DenunciaRepository denunciaRepo, SancionRepository sancionRepo,
                            UsuarioRepository usuarioRepo, SesionAprendizajeRepository sesionRepo,
+                           SesionService sesionService,
                            TransaccionRepository transaccionRepo, DiasHabilesService diasHabiles,
                            ApplicationEventPublisher events, Scheduler scheduler) {
         this.denunciaRepo = denunciaRepo;
         this.sancionRepo = sancionRepo;
         this.usuarioRepo = usuarioRepo;
         this.sesionRepo = sesionRepo;
+        this.sesionService = sesionService;
         this.transaccionRepo = transaccionRepo;
         this.diasHabiles = diasHabiles;
         this.events = events;
@@ -96,12 +102,20 @@ public class DenunciaService {
      * {@code en_revision} con descargo de 48hs y agenda el job de vencimiento.
      * Si la sesión denunciada tiene escrow activo, publica {@code denuncia.registrada}
      * (FR-SEC-003 — pausa la liberación de ESA sesión, no de otras).
+     *
+     * <p>AUD-011 / decisión D5: con {@code sesionId}, denunciante y denunciado tienen que
+     * ser participantes de esa Sesión (el AR que paga la sesión de su menor lo es). Sin
+     * {@code sesionId} (denuncia de perfil) no se exige vínculo: no congela ningún
+     * escrow. Nadie se denuncia a sí mismo.</p>
      */
     @Transactional
     public Denuncia presentar(Usuario denunciante, UUID denunciadoId, UUID sesionId,
                               MotivoDenuncia motivo, String evidenciaUrl) {
         if (denunciante.getTipo() == TipoUsuario.MENOR) {
             throw new MenorNoDenunciaException();
+        }
+        if (denunciante.getId().equals(denunciadoId)) {
+            throw new AutoDenunciaException();
         }
         Usuario denunciado = usuarioRepo.findById(denunciadoId)
                 .orElseThrow(() -> new CasoNoEncontradoException(
@@ -112,6 +126,11 @@ public class DenunciaService {
                     .map(SesionAprendizaje::getReservaId)
                     .orElseThrow(() -> new CasoNoEncontradoException(
                             "La sesión denunciada no existe: " + sesionId));
+            Set<UUID> participantes = sesionService.participantes(sesionId);
+            if (!participantes.contains(denunciante.getId())
+                    || !participantes.contains(denunciado.getId())) {
+                throw new NoParticipanteDenunciaException();
+            }
         }
 
         Denuncia denuncia = new Denuncia();

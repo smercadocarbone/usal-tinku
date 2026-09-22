@@ -1,3 +1,18 @@
+> **REGISTRO HISTÓRICO — no refleja el estado actual del sistema.**
+> Fecha del contenido: cierre del branch `chunk/m1-g`.
+> Revisado el 2026-09-21. Desvíos conocidos respecto del estado actual:
+> - Dice "102 tests". La suite hoy tiene **383** (verificado 2026-09-21, JDK 21).
+> - Presenta el circuito de CAP (US-6, FR-ID-021 a 025) como logro. **El CAP fue retirado
+>   por ADR-M1-02**; las tablas de `V6__m1_certificados_antecedentes_penales.sql` quedaron
+>   huérfanas en la base (AUD-035).
+> - Dice que `/api/admin/**` queda en `authenticated()`. Hoy está cerrado por
+>   `AdminActivoAuthorizationManager` + `AdminModeracionGate` (M8).
+> - Menciona un `DomainEventExampleTest` que ya no existe en `src/test`.
+> - La sección de OCR real (`TesseractOcrServiceRealTest`) SIGUE VIGENTE y es correcta.
+>
+> El hallazgo del `driverDelegateClass` de Quartz sigue siendo válido y está reflejado en
+> `application.yml`.
+
 # NOTAS_VERIFICACION — branch `chunk/m1-g`
 
 Chunk M1-G: **T-M1-13** — tests de integración de TODAS las Historias de

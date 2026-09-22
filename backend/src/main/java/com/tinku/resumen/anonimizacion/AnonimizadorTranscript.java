@@ -78,6 +78,10 @@ public class AnonimizadorTranscript {
             Pattern.compile("\\b\\d{10}\\b")
     };
 
+    // FIXME AUD-036/ADR-M6-02 (auditoría 2026-09-21): el "porqué" de abajo es falso —
+    // ninguno de los 4 patrones de NO_PAGO_TELEFONO matchea el formato xx.xxx.xxx que este
+    // patrón documenta. El orden DNI→teléfono es inofensivo pero indiferente; el motivo real
+    // es la especificidad del ancla obligatoria `dni|documento`. Ver ADR-M6-02, punto 5.
     /** DNI/documento seguido del numero con formato xx.xxx.xxx (tolera palabras
      *  intermedias, p.ej. "DNI es 30.123.456"). Corre ANTES de los telefonos para
      *  que el numero no termine enmascarado como telefono. */

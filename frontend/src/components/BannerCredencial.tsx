@@ -118,7 +118,7 @@ export default function BannerCredencial() {
             id="archivoCredencial"
             etiqueta="Archivo"
             type="file"
-            accept="application/pdf,image/*"
+            accept="application/pdf,image/png,image/jpeg"
             onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
           />
 

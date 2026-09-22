@@ -45,6 +45,13 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 - Cada Historia de Usuario del Spec activo necesita al menos un test de integración que la ejercite de punta a punta — no alcanza con unit tests de la lógica interna.
 - Los tests de "caso borde" que cada Spec ya resolvió en su tabla (ver sección "Casos Borde") son casos de test obligatorios, no opcionales.
 - No mezclés la tarea de implementación con la tarea de test en el mismo commit si el chunk las separa explícitamente en `Tasks_Tinku_Implementacion.md`.
+- **La suite corre SOLO con JDK 21.** El `maven-enforcer-plugin` exige `[21,22)`.
+  Comando canónico: `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./mvnw -B test`
+  desde `backend/`. Con otra JVM el build falla en el enforcer y **no corre ni un test** —
+  y si pipeás la salida, el exit code puede dar 0 y parecer éxito. Siempre leer la línea
+  `Tests run:` antes de afirmar que algo pasa.
+- Baseline al 2026-09-21: **383 tests, 0 failures, 0 errors, 0 skipped**. Si tu cambio
+  baja ese número, borraste un test.
 
 ## 6. Tamaño y disciplina de las tareas
 
@@ -64,3 +71,33 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 ## 8. Gobernanza de este archivo
 
 Este archivo refleja la Constitución v2.2. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
+
+`docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan juntos o no se actualiza ninguno — la divergencia entre los dos fue AUD-030.
+
+## 9. Auditoría vigente (2026-09-21)
+
+Hay una auditoría técnica independiente con 36 hallazgos (7 CRÍTICA, 1 ya cerrado) — el estado
+vigente, fila por fila, está en `REGISTRO_FINDINGS.md`; no repitas estos números de memoria en
+otro documento, citá esa tabla. Antes de trabajar sobre M3 (Aula), M5 (Pagos), M9 (Seguridad) o
+el registro de identidad, leé el finding que corresponda.
+
+- Informe: `docs/auditoria/2026-09-21-auditoria-independiente.md`
+- Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md` — **se actualiza en el mismo
+  commit que cierra un finding.**
+- Plan de remediación: `docs/superpowers/plans/2026-09-21-remediacion-auditoria.md`
+
+**Reglas que esta auditoría agrega:**
+- Un finding se cierra con un commit + un test de regresión que falla ANTES del fix. No se
+  cierra "por análisis".
+- Si encontrás un `FIXME AUD-XXX` en el código, ese comentario describe un problema conocido
+  y su fase de corrección. No lo borres sin cerrar el finding.
+- Un javadoc puede estar describiendo el comportamiento DESEADO y no el real. Verificá contra
+  el código antes de confiar en un comentario.
+- De las decisiones de §4.4 del informe que necesitaban ADR, 2 quedaron deliberadamente sin
+  escribir (DNI como `sub` del JWT; notificador como log) porque FASE 1/2 las revierte —
+  documentar un ADR de una decisión que se va a deshacer sería peor que no tener ADR. Están
+  trackeadas como `T-AUD-023` en el plan de remediación, no perdidas.
+- Los inserts de comentario `FIXME AUD-XXX` de FASE 0 corrieron los números de línea que el
+  informe y el plan citaban (ej. `Spec_M3` o `SesionService.java`). Si vas a localizar algo por
+  una cita de línea de un documento anterior a esta fase, ubicalo por nombre de símbolo/método
+  y confirmá con `rg`, no confíes en el número tal cual — puede estar corrido.

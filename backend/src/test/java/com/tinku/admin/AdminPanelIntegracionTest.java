@@ -65,6 +65,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 /**
  * Chunk M8 — panel de administración de punta a punta (HTTP real + BD real):
@@ -111,6 +113,7 @@ class AdminPanelIntegracionTest {
     @Autowired PrecioReferenciaRegionalRepository precioRepository;
     @Autowired TicketSoporteRepository ticketRepository;
     @Autowired LogAuditoriaAdminRepository auditoriaRepository;
+    @Autowired com.tinku.identidad.port.Almacenamiento almacenamiento;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -257,6 +260,64 @@ class AdminPanelIntegracionTest {
         assertThat(auditadas).hasSize(1);
         assertThat(auditadas.get(0).getAdminId()).isNotNull();
         assertThat(auditadas.get(0).getEntidadTipo()).isEqualTo("credenciales");
+    }
+
+    // ------------------------------------------------ AUD-007: ver el archivo de la credencial
+
+    private static final byte[] PDF = "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF".getBytes(
+            java.nio.charset.StandardCharsets.UTF_8);
+    // Las fixtures usan APROBADO: el endpoint no mira el estado, y una PENDIENTE
+    // ensuciaría la cola que colasCredenciales_* afirma completa (BD compartida).
+
+    @Test
+    void aud007_moderadorVeElArchivoDeLaCredencial_bytesTipoYAuditoria() throws Exception {
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        CredencialAcademica c = credencial(usuario(TipoUsuario.TUTOR), EstadoCredencial.APROBADO, null);
+        c.setArchivoUrl(almacenamiento.guardar(PDF, "titulo.pdf"));
+        credencialRepository.save(c);
+
+        mvc.perform(get("/api/admin/moderacion/credenciales/{id}/archivo", c.getId())
+                        .header("Authorization", "Bearer " + token(moderador)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(content().bytes(PDF));
+
+        // Ver el documento de identidad académica de alguien es una acción auditable.
+        List<LogAuditoriaAdmin> auditadas = auditoriaDe(
+                "GET /api/admin/moderacion/credenciales/" + c.getId() + "/archivo");
+        assertThat(auditadas).hasSize(1);
+        assertThat(auditadas.get(0).getEntidadId()).isEqualTo(c.getId().toString());
+    }
+
+    @Test
+    void aud007_soporteFinancieroYUsuarioComun_403() throws Exception {
+        CredencialAcademica c = credencial(usuario(TipoUsuario.TUTOR), EstadoCredencial.APROBADO, null);
+        c.setArchivoUrl(almacenamiento.guardar(PDF, "titulo.pdf"));
+        credencialRepository.save(c);
+
+        mvc.perform(get("/api/admin/moderacion/credenciales/{id}/archivo", c.getId())
+                        .header("Authorization", "Bearer " + token(admin(RolAdmin.SOPORTE_FINANCIERO))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/moderacion/credenciales/{id}/archivo", c.getId())
+                        .header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
+                .andExpect(status().isForbidden());
+        // El propio Tutor tampoco: el endpoint es de moderación, no de consulta propia.
+        mvc.perform(get("/api/admin/moderacion/credenciales/{id}/archivo", c.getId())
+                        .header("Authorization", "Bearer " + token(c.getTutor())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aud007_archivoUrlFueraDelAlmacenamiento_noSeSirve() throws Exception {
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        CredencialAcademica c = credencial(usuario(TipoUsuario.TUTOR), EstadoCredencial.APROBADO, null);
+        c.setArchivoUrl("file:///etc/hosts"); // fila corrompida o manipulada
+        credencialRepository.save(c);
+
+        mvc.perform(get("/api/admin/moderacion/credenciales/{id}/archivo", c.getId())
+                        .header("Authorization", "Bearer " + token(moderador)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -516,8 +577,21 @@ class AdminPanelIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of("monto", 15000))))
                 .andExpect(status().isUnprocessableEntity());
 
+        // V24 (AUD-010): uq_transacciones_reserva exige una Transaccion por
+        // Reserva — esta fixture necesita su propia Reserva, no puede reusar la
+        // de enEscrow (antes de la migración, dos filas para la misma reserva
+        // era precisamente el bug: escrow duplicado irrecuperable).
+        Reserva reservaLiberada = new Reserva();
+        reservaLiberada.setPagador(pagador);
+        reservaLiberada.setBeneficiario(pagador);
+        reservaLiberada.setTutor(usuario(TipoUsuario.TUTOR));
+        reservaLiberada.setHorario(Instant.now().plusSeconds(3600));
+        reservaLiberada.setPrecio(BigDecimal.valueOf(15000));
+        reservaLiberada.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(reservaLiberada);
+
         Transaccion liberada = new Transaccion();
-        liberada.setReservaId(enEscrow.getReservaId());
+        liberada.setReservaId(reservaLiberada.getId());
         liberada.setMpPaymentId("mp-liberada-" + CONTADOR.incrementAndGet());
         liberada.setMontoBruto(new BigDecimal("15000.00"));
         liberada.setComisionPlataforma(new BigDecimal("2250.00"));

@@ -42,13 +42,39 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 *Como* Estudiante, *quiero* recuperar mi dinero si la clase no pudo darse, *para* no pagar por una sesión que no ocurrió.
 
 - **Dado** que la sesión se corte por completo (ambas partes desconectadas, sin reconexión) antes de cumplirse el 50% de la duración agendada, **cuando** el sistema lo determine, **entonces** emite el evento `sesion.interrumpida` y M5 reembolsa al Estudiante (FR-AULA-005, BR-CONN-02).
+
+  **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
+  `participant_joined`. La duración efectiva se calcula contra `Instant.now()` del job de corte,
+  no contra la última desconexión real, lo que puede liberar el escrow por una sesión de minutos.
+  El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
 - **Dado** que el corte ocurra después del 50%, **cuando** eso ocurra, **entonces** la sesión emite el mismo evento `sesion.finalizada` que cualquier cierre normal (no un evento especial) — así M5 libera los fondos con normalidad, M6 genera el resumen si hubo ≥10 min efectivos, y M7 habilita la calificación, sin reglas separadas para este caso (resuelve E-09 del informe de QA).
 
 ### US-6 — Kill-switch, contraparte menor (rama 1)
 *Como* Tinku, *quiero* cortar la sesión ante contenido inapropiado cuando hay un menor presente, *para* protegerlo de forma inmediata.
 
-- **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor` que M5 usa para reembolsar al Estudiante (FR-PAG-009), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
+- **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor`, con el que M5 pausa el escrow hasta que M9 resuelva la Alerta y recién ahí reembolsa al Estudiante (FR-PAG-009, ADR-M3-02: el corte es inmediato, la plata no), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
+
+  **Implementado (AUD-001, 2026-09-22):** el corte cierra la sala de LiveKit (`DeleteRoom`, que
+  desconecta a ambos) y la sesión deja de emitir tokens nuevos. Si LiveKit no contesta, el corte
+  se persiste igual y el cierre se reintenta con un job persistido — ver ADR-M3-03 para la
+  decisión fail-open y sus riesgos aceptados. Los tokens ya emitidos no se pueden revocar en
+  LiveKit; valen hasta su TTL contra una sala ya cerrada.
+
+  **NO IMPLEMENTADO (AUD-014, 2026-09-21):** no existe infraestructura de notificación en el
+  sistema. El Adulto Responsable no recibe ningún aviso. Ver FASE 2.
+
+  **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
+  existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
 - **Dado** que el participante menor es quien genera la detección, **cuando** eso ocurra, **entonces** se aplica el mismo corte y se notifica al Adulto Responsable — la sesión nunca continúa, sin importar quién disparó la detección (Artículo II).
+
+  **A quién se suspende (decisión D2, AUD-006, 2026-09-22):** el corte es incondicional, pero la
+  suspensión preventiva recae **solo sobre el detectado** (el usuario cuyo video disparó la
+  detección), igual que en la rama adultos (US-7). La Alerta apunta siempre a esa persona, y
+  resolverla en M9 revierte exactamente esa suspensión.
+  **Riesgo aceptado:** si el detectado es el menor, el Tutor no queda suspendido y puede tomar
+  otra sesión durante la ventana de 12hs hasta la revisión del Admin. Se acepta para no
+  penalizar a un Tutor por una detección que no generó; la revisión humana ocurre igual porque la
+  Alerta se crea siempre y entra a la cola de moderación.
 
 ### US-6bis — Falla técnica del propio clasificador _(agregado, auditoría 2026-09-18)_
 *Como* Tinku, *quiero* que una falla del clasificador (no un falso negativo de contenido, sino que el modelo no cargue o deje de responder) tenga un comportamiento explícito y a favor de la seguridad, *para* que nunca haya una sesión con un menor corriendo sin protección activa sin que nadie lo sepa.
@@ -71,6 +97,11 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 - **Dado** que nadie finalice manualmente, **cuando** se cumpla el fin del horario agendado más una tolerancia de gracia de 5 minutos, **entonces** el sistema corta la sala y marca la sesión `finalizada` automáticamente, emitiendo el mismo evento.
 - **Dado** que un participante corte antes del fin agendado sin presionar "Finalizar", **cuando** eso ocurra, **entonces** la sesión queda `finalizada_anticipada` cuando la otra parte también salga o al agotarse la tolerancia; ese outcome alimenta la regla de corte <50% de US-5.
 
+  **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
+  `participant_joined`. La duración efectiva se calcula contra `Instant.now()` del job de corte,
+  no contra la última desconexión real, lo que puede liberar el escrow por una sesión de minutos.
+  El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
+
 ## 3. Requisitos Funcionales
 
 | ID | Requisito |
@@ -84,7 +115,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
 | FR-AULA-009 | El kill-switch emite `sesion.killswitch_menor` o `sesion.killswitch_adultos` según la rama, eventos que M5 consume para reembolsar (ver tabla de eventos de M5). |
-| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). |
+| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). **NO IMPLEMENTADO (AUD-001, 2026-09-21):** `SesionService.obtenerToken()` no consulta ningún estado del clasificador; la sala se habilita siempre. |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 

@@ -37,6 +37,7 @@ import java.util.Date;
 public class LiveKitService {
 
     private static final String PATH_CREATE_ROOM = "/twirp/livekit.RoomService/CreateRoom";
+    private static final String PATH_DELETE_ROOM = "/twirp/livekit.RoomService/DeleteRoom";
 
     private final RestClient restClient;
     private final String baseUrl;
@@ -70,9 +71,14 @@ public class LiveKitService {
     /**
      * {@code POST /api/sesiones/{id}/token} devuelve el token del participante.
      * Sobre LiveKit, el token solo vale para la sala nombrada: el participante
-     * no puede abrir otra sala con este token.
+     * no puede abrir otra sala con este token, ni crear ni administrar salas
+     * (roomCreate/roomAdmin en false) — solo unirse a la sala indicada.
+     *
+     * <p>{@code identidad} es el UUID del usuario, nunca el DNI: LiveKit difunde el
+     * identity a todos los participantes de la sala (AUD-003). Lo que el otro
+     * participante ve en pantalla es {@code nombreVisible} (claim {@code name}).
      */
-    public String generarTokenParticipante(String identidad, String nombreSala) {
+    public String generarTokenParticipante(String identidad, String nombreVisible, String nombreSala) {
         verificarConfigurado();
         Instant now = Instant.now();
         return Jwts.builder()
@@ -81,7 +87,8 @@ public class LiveKitService {
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(tokenTtlSegundos)))
                 .claim("nbf", now.getEpochSecond())
-                .claim("video", new VideoClaim(nombreSala, true, true, true))
+                .claim("name", nombreVisible)
+                .claim("video", new VideoClaim(nombreSala, true, false, false))
                 .signWith(secretKey)
                 .compact();
     }
@@ -109,6 +116,36 @@ public class LiveKitService {
             return room.name();
         } catch (RestClientException e) {
             throw new IllegalStateException("LiveKit no responde al crear la sala "
+                    + nombreSala + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Cierre de la sala en el corte (AUD-001, ADR-M3-03) vía {@code DeleteRoom}:
+     * desconecta a todos los participantes. Mismo token de servidor que
+     * {@link #crearSala} ({@code DeleteRoom} exige {@code roomCreate}). Un 404
+     * (la sala ya no existe) es éxito: el objetivo es que la sala no esté viva.
+     */
+    public void eliminarSala(String nombreSala) {
+        verificarConfigurado();
+        try {
+            restClient.post()
+                    .uri(PATH_DELETE_ROOM)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + tokenServidor())
+                    .body("{\"room\":" + jsonQuote(nombreSala) + "}")
+                    .retrieve()
+                    .onStatus(status -> status.value() == 404, (request, response) -> {
+                    })
+                    .onStatus(status -> status.isError(),
+                            (request, response) -> {
+                                throw new IllegalStateException(
+                                        "LiveKit rechazo el cierre de la sala "
+                                                + nombreSala + " (" + response.getStatusCode() + ").");
+                            })
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            throw new IllegalStateException("LiveKit no responde al cerrar la sala "
                     + nombreSala + ": " + e.getMessage(), e);
         }
     }

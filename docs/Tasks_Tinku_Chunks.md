@@ -10,7 +10,7 @@
 
 - [x] **Chunk 000-A** — Scaffold + schemas (T-000-01, T-000-02)
 - [x] **Chunk 000-B** — Quartz persistido + eventos in-memory (T-000-03, T-000-04) — _alcance ampliado en ejecución real: incluyó verificación de V2\_\_m1_identidad.sql contra el Plan de M1 (no formaba parte de las tareas originales, surgió de la auditoría pre-000-B) y la decisión de perfil por defecto para que la app levante (idem). Mergeado a main en 4eab0b9._
-- [x] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05) — _en producción: Spring Security + JJWT 0.12.6 + bcrypt, confirmado por `SecurityHttpTest`/`JwtAuthTest` y por el uso real en los 320 tests de la suite. Auditoría 2026-09-18: `Tasks_Tinku_Implementacion.md` nunca tildó T-000-05 pese a que el código lleva meses funcionando — corregido acá._
+- [x] **Chunk 000-C** — Seguridad: JWT + hashing (T-000-05) — _en producción: Spring Security + JJWT 0.12.6 + bcrypt, confirmado por `SecurityHttpTest`/`JwtAuthTest` y por el uso real en los 383 tests (verificado 2026-09-21, JDK 21 + Testcontainers) de la suite. Auditoría 2026-09-18: `Tasks_Tinku_Implementacion.md` nunca tildó T-000-05 pese a que el código lleva meses funcionando — corregido acá._
 - [x] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _confirmado por integración real de `LiveKitService` (M3-A) y `MercadoPagoClient`/webhook con firma HMAC (M5-A/B) contra las APIs reales, no solo stubs._
 - [x] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08) — _`GET /health` real, consumido además por `SaludInfraestructuraService` de M8 (ADR-M8-01)._
 - [~] **Chunk 000-F** — CI mínimo (T-000-09) — _parcial: `.github/workflows/ci-backend.yml` existe (build + `mvn verify` con path filter en `backend/**`), pero no hay pipeline para `frontend/` ni `matching-service/`. Pendiente real, no cosmético._
@@ -80,7 +80,9 @@ _(Chunks A/B no dependen del spike; Chunk C sí — no arrancar M3-C hasta que S
 
 - [x] **Chunk M3-A** — Migración + integración LiveKit (T-M3-01, T-M3-02)
 - [x] **Chunk M3-B** — Jobs de sala a T-5, no-show a T+10, finalización (T-M3-03, T-M3-04, T-M3-05) — _cerrado: SesionService + 3 jobs de Quartz + endpoint finalizar + eventos `sesion.no_show_*/finalizada`; suite completa 157 tests OK._
+  _Auditoría 2026-09-21: el webhook de LiveKit solo procesa `participant_joined`; `participant_left` y `room_finished` no se manejan, así que US-5/US-8 (corte por desconexión) no tienen implementación server-side — AUD-029._
 - [~] **Chunk M3-C** — Clasificador on-device + endpoint de killswitch, rama decidida en backend (T-M3-06, T-M3-07) — _PARCIAL: T-M3-07 (backend, `SesionService.ejecutarKillswitch`, rama decidida server-side) cerrado y testeado. **T-M3-06 (clasificador NSFW on-device en el cliente) sigue sin implementar** — cero NSFWJS/TensorFlow.js en `frontend/`. Bloqueante de seguridad real, no cosmético: sin esto el backend nunca recibe el disparo del kill-switch en una sesión real._
+  _Auditoría 2026-09-21: **T-M3-07 tampoco está completo.** El backend decide la rama correctamente (eso sí está y está testeado), pero `SesionService.cortar()` sólo cambiaba estado en BD y nunca le decía nada a LiveKit (AUD-001) — **cerrado 2026-09-22 (c650018, ADR-M3-03):** el corte hace `DeleteRoom` y `/token` responde 422 sobre sesiones cortadas. Además, `POST /api/sesiones/{id}/killswitch` sólo exige ser participante de la Reserva: cualquiera de los tres actores puede dispararlo contra otro sin evidencia previa, sin límite de tasa y con efecto monetario inmediato (reembolso total vía `EscrowService`) — la evidencia (`subirEvidencia`) es opcional y posterior al corte (AUD-005)._
 - [x] **Chunk M3-D** — Evidencia de 30s + confirmación de la rama "adultos" (T-M3-08, T-M3-09) — _cerrado: `subirEvidencia` (Artículo V, solo referencia) + `confirmarRamaAdultos`._
 - [x] **Chunk M3-E** — Emisión de todos los eventos hacia M5 (T-M3-10) → _`sesion.finalizada/interrumpida/no_show_*/killswitch_*` cerrados; M5-B los consume._
 - [x] **Chunk M3-F** — Test: manipulación de cliente no puede forzar la rama "adultos" con un menor presente (T-M3-11) — _`KillswitchIntegracionTest`, ejercita el ataque explícito del enunciado._
@@ -103,6 +105,7 @@ _(requiere M3 cerrado)_
 - [x] **Chunk M6-B** — Verificación de Denuncia/Alerta activa antes de generar (T-M6-03)
 - [x] **Chunk M6-C** — Módulo de anonimización, aislado y testeado antes de conectar al pipeline (T-M6-04)
 - [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **el ADR de proveedor (GPT-4o vs. Gemini 2.0 Flash) sigue pendiente**, así que hoy no genera un resumen real, solo falla cerrado de forma segura. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
+  _Auditoría 2026-09-21: además del ADR del proveedor, **falta el transcript**: `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre y M3 no genera transcript (sin LiveKit Egress). Elegir proveedor de LLM no desbloquea M6 por sí solo — AUD-024._
 - [x] **Chunk M6-E** — Recordatorio único a 24hs (T-M6-07)
 - [x] **Chunk M6-F** — Test de anonimización con datos reales de prueba (T-M6-08)
 
@@ -125,6 +128,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 - [x] **Chunk M8-C** — Mapeo de enrutamiento de tickets de soporte (T-M8-05)
 - [x] **Chunk M8-D** — Test de aislamiento de roles (403 cruzado) (T-M8-06)
 - [x] **Chunk M8-E** _(agregado, fuera del plan original)_ — Resolución de credencial desde la cola (T-M8-07) + storage real local-fs (T-M8-08).
+  _Auditoría 2026-09-21: la resolución de credencial desde la cola está, pero **no existe endpoint para ver el archivo** que se está aprobando — `CredencialColaResponse` excluye `archivoUrl` a propósito y ningún controller sirve el archivo; el Admin aprobaba o rechazaba conociendo sólo nombre, apellido y tipo de documento — AUD-007. **Cerrado 2026-09-22:** `GET /api/admin/moderacion/credenciales/{id}/archivo` + visor en la cola._
 - [x] **Chunk M8-F** _(agregado, PR #19, ADR-M5-01/M8-01)_ — Modo Bypass de la pasarela de pagos + pestaña "Salud de Infraestructura" con datos reales, formalizados retroactivamente vía ADR.
 
 ---
@@ -132,7 +136,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 ## Cierre — Integración Transversal
 
 - [x] **Chunk FIN-A** — E2E flujo feliz completo, sin mocks entre módulos propios (T-FIN-01) — `E2EFlujoFelizIntegracionTest`.
-- [x] **Chunk FIN-B** — E2E rama de seguridad completa (T-FIN-02) — `E2ERamaSeguridadIntegracionTest`; suite completa 320 tests, 0 errores.
+- [x] **Chunk FIN-B** — E2E rama de seguridad completa (T-FIN-02) — `E2ERamaSeguridadIntegracionTest`; suite completa 383 tests (verificado 2026-09-21, JDK 21 + Testcontainers), 0 errores.
 - [x] **Chunk FIN-C** — Revisión de que ningún ADR quedó pendiente (T-FIN-03) — _M1/M2/M3 resueltos. M5 (productivo real de MercadoPago) y M6 (LLM) quedan pendientes de forma explícita y no bloqueante. **Auditoría 2026-09-18 agrega uno que T-FIN-03 no contempló: T-M3-06 (integración cliente del kill-switch) sigue sin resolver — a diferencia de M5/M6, este si es bloqueante de seguridad antes de producción real con menores.**_
 
 ---
@@ -167,3 +171,20 @@ un stub de integración entre módulos sino la mitad cliente de un control de se
 | **T-M3-06** — clasificador NSFW on-device en el cliente | El backend del killswitch (T-M3-07 a T-M3-11) está completo y testeado, pero nunca recibe un disparo real en producción porque el frontend no corre ningún clasificador sobre los frames de video. Bloqueante de seguridad (Artículo II/XI de la Constitución) antes de cualquier sesión real con un menor presente. |
 
 _Cualquier stub que quede sin reemplazar al llegar a Chunk FIN-A debe tratarse como bloqueante — no cerrar el flujo feliz E2E con un mock permanente disfrazado de stub temporal._
+
+---
+
+## Nota de auditoría — 2026-09-21
+
+Auditoría técnica independiente (segunda opinión, fuera del ciclo de desarrollo asistido).
+Informe: `docs/auditoria/2026-09-21-auditoria-independiente.md` — 36 findings.
+Registro de estado: `docs/auditoria/REGISTRO_FINDINGS.md`.
+Plan de remediación: `docs/superpowers/plans/2026-09-21-remediacion-auditoria.md`.
+
+La nota de auditoría del 2026-09-18 afirmaba que "todo lo demás marcado `[ ]` era un falso
+negativo de tracking, no trabajo faltante". Esta auditoría corrige esa conclusión: hay 7
+findings CRÍTICOS de seguridad y 13 de integridad que no estaban registrados en ningún lado,
+y la suite verde (383 tests) no los detecta porque ninguno de ellos es expresable como
+"request → estado en BD".
+
+**Verificación de la suite al 2026-09-21:** 383 tests, 0 failures, 0 errors, 0 skipped.

@@ -5,6 +5,7 @@ import com.tinku.identidad.model.EstadoCredencial;
 import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.port.VerificadorSancionVigente;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -38,13 +39,16 @@ public class CredencialService {
     private final CredencialAcademicaRepository credencialRepo;
     private final CredencialBackoffService backoffService;
     private final UsuarioRepository usuarioRepo;
+    private final VerificadorSancionVigente verificadorSancion;
 
     public CredencialService(CredencialAcademicaRepository credencialRepo,
                              CredencialBackoffService backoffService,
-                             UsuarioRepository usuarioRepo) {
+                             UsuarioRepository usuarioRepo,
+                             VerificadorSancionVigente verificadorSancion) {
         this.credencialRepo = credencialRepo;
         this.backoffService = backoffService;
         this.usuarioRepo = usuarioRepo;
+        this.verificadorSancion = verificadorSancion;
     }
 
     /**
@@ -89,17 +93,19 @@ public class CredencialService {
 
     /** Transición PENDIENTE → APROBADO (invocada por el panel Admin, M8).
      * Con el CAP retirado del onboarding, la Credencial aprobada es la que
-     * habilita el matching del Tutor (antes lo hacía el CAP aprobado). */
+     * habilita el matching del Tutor (antes lo hacía el CAP aprobado) — salvo que
+     * tenga una sanción vigente (AUD-013): la credencial se aprueba igual, pero el
+     * matching no se toca. */
     @Transactional
     public CredencialAcademica marcarAprobada(UUID credencialId, UUID adminRevisorId) {
-        CredencialAcademica c = credencialO(credencialId);
+        CredencialAcademica c = pendienteO(credencialId);
         c.setEstado(EstadoCredencial.APROBADO);
         c.setAdminRevisorId(adminRevisorId);
         c.setRevisadoAt(Instant.now());
         CredencialAcademica guardada = credencialRepo.save(c);
 
         Usuario tutor = c.getTutor();
-        if (!tutor.isActivoParaMatching()) {
+        if (!tutor.isActivoParaMatching() && !verificadorSancion.tieneSancionVigente(tutor.getId())) {
             tutor.setActivoParaMatching(true);
             usuarioRepo.save(tutor);
         }
@@ -113,7 +119,7 @@ public class CredencialService {
      */
     @Transactional
     public CredencialAcademica marcarRechazada(UUID credencialId, UUID adminRevisorId) {
-        CredencialAcademica c = credencialO(credencialId);
+        CredencialAcademica c = pendienteO(credencialId);
         c.setEstado(EstadoCredencial.RECHAZADO);
         c.setAdminRevisorId(adminRevisorId);
         c.setRevisadoAt(Instant.now());
@@ -125,8 +131,13 @@ public class CredencialService {
         return guardada;
     }
 
-    private CredencialAcademica credencialO(UUID credencialId) {
-        return credencialRepo.findById(credencialId)
+    /** AUD-033: solo PENDIENTE → APROBADO/RECHAZADO; nunca se re-resuelve una credencial. */
+    private CredencialAcademica pendienteO(UUID credencialId) {
+        CredencialAcademica c = credencialRepo.findById(credencialId)
                 .orElseThrow(CredencialNoEncontradaException::new);
+        if (c.getEstado() != EstadoCredencial.PENDIENTE) {
+            throw new CredencialNoPendienteException();
+        }
+        return c;
     }
 }

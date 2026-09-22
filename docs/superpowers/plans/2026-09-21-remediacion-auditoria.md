@@ -69,6 +69,13 @@ Esta sección es tan obligatoria como las tareas. Está dividida en dos: lo que 
 | B9 | **Verificar que Docker está corriendo antes de la primera tarea de cada sesión** (`docker info`). Sin Docker, los fallos de Testcontainers se confunden con fallos del fix. |
 | B10 | **Nunca declarar "listo" sin haber pegado la salida real del comando de verificación.** Evidencia antes que afirmaciones. |
 
+### C. Decisiones ya tomadas por el usuario — no volver a preguntarlas
+
+Las tareas 1.4, 1.5, 1.7, 1.10, 2.1, 2.2, 2.3, 2.6 y 3.8 tenían "PARAR y preguntar".
+El usuario las resolvió el 2026-09-22. El registro completo, con lo que implica cada una,
+está en `.superpowers/sdd/decisiones/decisiones-usuario.md`. Si una tarea de este plan
+todavía dice "parar y preguntar" sobre algo que ese archivo ya resuelve, gana el archivo.
+
 ---
 
 ## File Structure
@@ -147,7 +154,7 @@ FASE 0 — Documentación y trazabilidad        [bloquea a todas]
 **Interfaces:**
 - Produces: la tabla que **todas** las tareas posteriores de este plan actualizan (guardrail B4). Columnas exactas: `ID | Severidad | Título | Estado | Fase | Commit | Test que lo cubre`.
 
-- [ ] **Paso 1: Crear el archivo con las 36 filas**
+- [x] **Paso 1: Crear el archivo con las 36 filas**
 
 Sacar ID, severidad y título de la sección "3. Findings" del informe. Estado inicial de todos: `ABIERTO`. Fase según la sección "9. Recommended Action Plan" del informe.
 
@@ -166,12 +173,12 @@ Sacar ID, severidad y título de la sección "3. Findings" del informe. Estado i
 ...
 ```
 
-- [ ] **Paso 2: Verificar que están las 36**
+- [x] **Paso 2: Verificar que están las 36**
 
 Run: `grep -c '^| AUD-' docs/auditoria/REGISTRO_FINDINGS.md`
 Expected: `36`
 
-- [ ] **Paso 3: Verificar que ningún ID se repite ni falta**
+- [x] **Paso 3: Verificar que ningún ID se repite ni falta**
 
 Run: `grep -o '^| AUD-[0-9]*' docs/auditoria/REGISTRO_FINDINGS.md | sort | uniq -d`
 Expected: salida vacía (sin duplicados).
@@ -179,7 +186,7 @@ Expected: salida vacía (sin duplicados).
 Run: `grep -o 'AUD-[0-9]\{3\}' docs/auditoria/2026-09-21-auditoria-independiente.md | sort -u | wc -l`
 Expected: `36` — el mismo conjunto que el registro.
 
-- [ ] **Paso 4: Commit**
+- [x] **Paso 4: Commit**
 
 ```bash
 git add docs/auditoria/
@@ -201,35 +208,35 @@ git commit -m "docs(auditoria): informe independiente 2026-09-21 + registro de f
 
 > **NO tildar en bloque.** Cada una se verifica contra el código antes de tocarla. Si una no se puede verificar, se deja `[ ]` y se anota por qué.
 
-- [ ] **Paso 1: Verificar T-000-01 (scaffold + paquetes por módulo)**
+- [x] **Paso 1: Verificar T-000-01 (scaffold + paquetes por módulo)**
 
 Run: `fd -t d -d 1 . backend/src/main/java/com/tinku | sort`
 Expected: los 9 paquetes de dominio + `config` + `shared`.
 Si coincide → tildar. Si no → dejar abierto y anotar qué falta.
 
-- [ ] **Paso 2: Verificar T-000-02 (schemas por módulo)**
+- [x] **Paso 2: Verificar T-000-02 (schemas por módulo)**
 
 Run: `grep -n 'schemas:' backend/src/main/resources/application.yml && cat backend/src/main/resources/db/migration/V1__crear_schemas.sql`
 Expected: los 9 schemas declarados en Flyway y creados en V1.
 
-- [ ] **Paso 3: Verificar T-000-03 (Quartz persistido)**
+- [x] **Paso 3: Verificar T-000-03 (Quartz persistido)**
 
 Run: `grep -n 'job-store-type' backend/src/main/resources/application.yml && ls backend/src/test/java/com/tinku/config/QuartzPersistenciaTest.java`
 Expected: `job-store-type: jdbc` y el test existe.
 
-- [ ] **Paso 4: Verificar T-000-04 (eventos de dominio)**
+- [x] **Paso 4: Verificar T-000-04 (eventos de dominio)**
 
 Run: `grep -rl 'ApplicationEventPublisher' backend/src/main/java | head`
 Expected: al menos `ReservaService`, `SesionService`, `DenunciaService`.
 
 > El enunciado de T-000-04 pide "un evento de prueba y un listener de prueba". `NOTAS_VERIFICACION.md` menciona un `DomainEventExampleTest` que **hoy no existe** en `src/test`. Tildar la tarea igual (el mecanismo está validado por 9 listeners reales en producción y por los tests de integración de M5/M9), y **anotar esa discrepancia en el mismo renglón** — no borrarla.
 
-- [ ] **Paso 5: Verificar T-000-05 (Security + JWT + bcrypt)**
+- [x] **Paso 5: Verificar T-000-05 (Security + JWT + bcrypt)**
 
 Run: `ls backend/src/test/java/com/tinku/config/security/ && grep -n 'BCryptPasswordEncoder' backend/src/main/java/com/tinku/config/SecurityConfig.java`
 Expected: `JwtAuthTest.java`, `SecurityHttpTest.java`, y el bean de bcrypt.
 
-- [ ] **Paso 6: Verificar T-000-06 y T-000-07 (cuentas externas)**
+- [x] **Paso 6: Verificar T-000-06 y T-000-07 (cuentas externas)**
 
 Estas dos son **tareas de cuenta externa, no de código**. El código de integración existe (`LiveKitService`, `MercadoPagoClientHttp`) pero este plan **no puede verificar que existan las cuentas**.
 
@@ -237,12 +244,12 @@ Run: `grep -n 'LIVEKIT_API_KEY\|MP_ACCESS_TOKEN' .env.example`
 
 Dejar ambas como `[ ]` con la nota: _"código de integración implementado y testeado contra stub HTTP local; la existencia de la cuenta real no es verificable desde el repo — confirmar manualmente antes de piloto"_. **No tildar algo que no se puede verificar.**
 
-- [ ] **Paso 7: Verificar T-000-08 (servicio Python + /health)**
+- [x] **Paso 7: Verificar T-000-08 (servicio Python + /health)**
 
 Run: `grep -n 'def health' matching-service/main.py && grep -rn 'MatchingServiceHealthCheck' backend/src/main/java`
 Expected: el endpoint existe y el backend lo consume.
 
-- [ ] **Paso 8: T-000-09 (CI) — dejar ABIERTA**
+- [x] **Paso 8: T-000-09 (CI) — dejar ABIERTA**
 
 Run: `fd . .github/workflows -t f`
 Expected: `ci-backend.yml`, `ci-frontend.yml` — **falta `matching-service`** (AUD-031).
@@ -252,12 +259,12 @@ Dejar `[ ]` y reescribir el texto de la tarea para que diga exactamente qué fal
 - [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests). _(Parcial al 2026-09-21: `ci-backend.yml` y `ci-frontend.yml` existen; **falta pipeline para `matching-service/`** — `test_main.py` no corre en ningún CI. Ver AUD-031, FASE 2.)_
 ```
 
-- [ ] **Paso 9: Verificar que el conteo de tildes cambió como se espera**
+- [x] **Paso 9: Verificar que el conteo de tildes cambió como se espera**
 
 Run: `grep -c '^- \[x\]' docs/Tasks_Tinku_Implementacion.md`
 Expected: el valor previo (115) + la cantidad de tareas que efectivamente se tildaron en los pasos 1-7. Anotar ambos números.
 
-- [ ] **Paso 10: Commit**
+- [x] **Paso 10: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Implementacion.md
@@ -273,7 +280,7 @@ git commit -m "docs(tasks): reconciliar FASE 0 con el codigo real (AUD-030)"
 
 > **Cuidado (AUD-030):** de las 4 tareas de este bloque, **solo T-M4-12 está implementada**. T-M4-13, T-M4-14 y T-M4-15 siguen realmente pendientes. No tildar el bloque entero.
 
-- [ ] **Paso 1: Verificar T-M4-12**
+- [x] **Paso 1: Verificar T-M4-12**
 
 Run: `ls backend/src/main/java/com/tinku/reservas/service/HorariosDisponiblesService.java && grep -n 'horarios' backend/src/main/java/com/tinku/reservas/web/FranjaController.java backend/src/main/java/com/tinku/identidad/web/TutorController.java`
 Run: `grep -n 'tM412' backend/src/test/java/com/tinku/reservas/web/ReservasFlujosIntegracionTest.java`
@@ -281,19 +288,19 @@ Expected: el servicio existe, el endpoint existe, y hay al menos 2 tests `tM412_
 
 Si coincide → tildar T-M4-12 con la nota: _"cerrado; la nota sobre `duracionMinutos` sigue vigente — la fuente del parámetro no está en ningún Spec"_.
 
-- [ ] **Paso 2: Verificar T-M4-13 (integración del picker)**
+- [x] **Paso 2: Verificar T-M4-13 (integración del picker)**
 
 Run: `grep -n 'DynamicTimeSlotPicker' frontend/src/app/reservar/page.tsx`
 Si no aparece → **dejar `[ ]`**. Es pendiente real.
 
-- [ ] **Paso 3: Verificar T-M4-14 (manejo del 409)**
+- [x] **Paso 3: Verificar T-M4-14 (manejo del 409)**
 
 Run: `grep -n 'isConflictError\|409' frontend/src/app/reservar/page.tsx`
 Si no aparece → **dejar `[ ]`**. Agregar referencia cruzada: _"bloqueada por AUD-009: hoy el 409 solo cubre horarios idénticos, no solapados"_.
 
-- [ ] **Paso 4: Dejar T-M4-15 abierta** y agregar la referencia a AUD-009 (el test de solapamiento parcial que falta).
+- [x] **Paso 4: Dejar T-M4-15 abierta** y agregar la referencia a AUD-009 (el test de solapamiento parcial que falta).
 
-- [ ] **Paso 5: Agregar el bloque de tareas nuevas de auditoría**
+- [x] **Paso 5: Agregar el bloque de tareas nuevas de auditoría**
 
 Al final del archivo, una sección nueva. Una línea por cada finding que genera trabajo, con su fase:
 
@@ -304,14 +311,14 @@ Al final del archivo, una sección nueva. Una línea por cada finding que genera
 > Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md`
 
 ### FASE 1 — P0 Seguridad
-- [ ] T-AUD-001: Cerrar la sala de LiveKit en el kill-switch y rechazar `/token` sobre sesiones cerradas (AUD-001)
-- [ ] T-AUD-002: Quitar `roomCreate`/`roomAdmin` del token de participante (AUD-002)
+- [ ] T-AUD-001: `VideoClaim(sala, true, **false**, **false**)` + aserciones negativas en `LiveKitServiceTest` (AUD-002)
+- [ ] T-AUD-002: Cerrar la sala de LiveKit en `cortar()` (`RemoveParticipant` + `DeleteRoom`) y rechazar `/token` sobre sesiones cerradas (AUD-001)
 ...
 ```
 
 (La lista completa sale de la sección "9. Recommended Action Plan" del informe — 41 acciones numeradas.)
 
-- [ ] **Paso 6: Verificar que no se rompió el formato de checkbox**
+- [x] **Paso 6: Verificar que no se rompió el formato de checkbox**
 
 Run: `grep -c '^- \[ \]\|^- \[x\]' docs/Tasks_Tinku_Implementacion.md`
 Expected: mayor que antes, sin líneas malformadas.
@@ -319,7 +326,7 @@ Expected: mayor que antes, sin líneas malformadas.
 Run: `grep -n '^- \[' docs/Tasks_Tinku_Implementacion.md | grep -v '^\S*:- \[ \]\|^\S*:- \[x\]'`
 Expected: salida vacía.
 
-- [ ] **Paso 7: Commit**
+- [x] **Paso 7: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Implementacion.md
@@ -335,29 +342,29 @@ git commit -m "docs(tasks): reconciliar M4-12..15 y agregar FASE AUD (AUD-030)"
 
 > Este archivo ya hace bien lo correcto con M3-C y M6-D (declara el pendiente y explica por qué). La tarea es **extender ese mismo criterio** a lo que la auditoría encontró, no reescribirlo.
 
-- [ ] **Paso 1: Corregir el conteo de tests**
+- [x] **Paso 1: Corregir el conteo de tests**
 
 Buscar `320 tests` y reemplazar por `383 tests (verificado 2026-09-21, JDK 21 + Testcontainers)`.
 
 Run: `grep -n '320 tests' docs/Tasks_Tinku_Chunks.md`
 
-- [ ] **Paso 2: Reabrir Chunk M3-C**
+- [x] **Paso 2: Reabrir Chunk M3-C**
 
 Hoy dice `[~]` y solo menciona T-M3-06. Agregar que **T-M3-07 tampoco está completo**: el backend decide la rama correctamente (eso sí está y está testeado) pero **no corta la sala** (AUD-001) y el disparo no exige evidencia (AUD-005).
 
-- [ ] **Paso 3: Reabrir Chunk M3-B**
+- [x] **Paso 3: Reabrir Chunk M3-B**
 
 Agregar: _"el webhook de LiveKit solo procesa `participant_joined`; `participant_left` y `room_finished` no se manejan, así que US-5/US-8 (corte por desconexión) no tienen implementación server-side — AUD-029"_.
 
-- [ ] **Paso 4: Reabrir Chunk M8-E**
+- [x] **Paso 4: Reabrir Chunk M8-E**
 
 Agregar: _"la resolución de credencial desde la cola está, pero **no existe endpoint para ver el archivo** que se está aprobando — AUD-007"_.
 
-- [ ] **Paso 5: Corregir la nota de M6-D**
+- [x] **Paso 5: Corregir la nota de M6-D**
 
 Hoy atribuye el bloqueo solo al ADR del LLM. Agregar el segundo bloqueante: _"además del ADR del proveedor, **falta el transcript**: `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre y M3 no genera transcript (sin LiveKit Egress). Elegir proveedor de LLM no desbloquea M6 por sí solo — AUD-024"_.
 
-- [ ] **Paso 6: Agregar la sección de auditoría al final**
+- [x] **Paso 6: Agregar la sección de auditoría al final**
 
 ```markdown
 ## Nota de auditoría — 2026-09-21
@@ -376,7 +383,7 @@ y la suite verde (383 tests) no los detecta porque ninguno de ellos es expresabl
 **Verificación de la suite al 2026-09-21:** 383 tests, 0 failures, 0 errors, 0 skipped.
 ```
 
-- [ ] **Paso 7: Commit**
+- [x] **Paso 7: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Chunks.md
@@ -392,7 +399,7 @@ git commit -m "docs(chunks): reabrir M3-B/M3-C/M8-E y M6-D con los hallazgos de 
 
 > **Convención:** el proyecto ya usa el marcador `RETIRADO` en `Spec_M1` para requisitos que salieron de alcance, conservando el texto original. Acá se usa el mismo mecanismo con un marcador distinto: **`NO IMPLEMENTADO (AUD-XXX, 2026-09-21)`**. No se borra ni se reescribe el texto del requisito — se le agrega el marcador. La diferencia importa: `RETIRADO` = decisión de producto; `NO IMPLEMENTADO` = deuda.
 
-- [ ] **Paso 1: US-6, línea ~50 — el corte**
+- [x] **Paso 1: US-6, línea ~50 — el corte**
 
 Agregar al final del criterio de aceptación:
 ```
@@ -401,21 +408,21 @@ Agregar al final del criterio de aceptación:
 ni revoca los tokens emitidos. Ver FASE 1 del plan de remediación.
 ```
 
-- [ ] **Paso 2: US-6, línea ~50 — la notificación**
+- [x] **Paso 2: US-6, línea ~50 — la notificación**
 
 ```
 **NO IMPLEMENTADO (AUD-014, 2026-09-21):** no existe infraestructura de notificación en el
 sistema. El Adulto Responsable no recibe ningún aviso. Ver FASE 2.
 ```
 
-- [ ] **Paso 3: US-6, línea ~50 — el buffer de 30s**
+- [x] **Paso 3: US-6, línea ~50 — el buffer de 30s**
 
 ```
 **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
 existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
 ```
 
-- [ ] **Paso 4: US-6, línea ~51 — quién es el detectado**
+- [x] **Paso 4: US-6, línea ~51 — quién es el detectado**
 
 ```
 **IMPLEMENTADO CON DESVÍO (AUD-006, 2026-09-21):** el corte se aplica en todos los casos,
@@ -423,14 +430,14 @@ correcto. Pero `ramaMenor()` suspende siempre al Tutor, incluso cuando el detect
 menor, y la resolución de la Alerta en M9 nunca lo reactiva. Ver FASE 1.
 ```
 
-- [ ] **Paso 5: FR-AULA-010, línea ~87**
+- [x] **Paso 5: FR-AULA-010, línea ~87**
 
 ```
 **NO IMPLEMENTADO (AUD-001, 2026-09-21):** `SesionService.obtenerToken()` no consulta ningún
 estado del clasificador; la sala se habilita siempre.
 ```
 
-- [ ] **Paso 6: US-5 (línea ~44) y US-8 (línea ~72) — desconexiones**
+- [x] **Paso 6: US-5 (línea ~44) y US-8 (línea ~72) — desconexiones**
 
 ```
 **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
@@ -439,7 +446,7 @@ no contra la última desconexión real, lo que puede liberar el escrow por una s
 El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
 ```
 
-- [ ] **Paso 7: Verificar que no se rompió nada del texto original**
+- [x] **Paso 7: Verificar que no se rompió nada del texto original**
 
 Run: `git diff --stat docs/specs/Spec_M3_Aula_Virtual.md`
 Expected: solo líneas agregadas (`+`), **cero líneas borradas** salvo las que se parten en dos para insertar el marcador.
@@ -447,7 +454,7 @@ Expected: solo líneas agregadas (`+`), **cero líneas borradas** salvo las que 
 Run: `git diff docs/specs/Spec_M3_Aula_Virtual.md | grep '^-' | grep -v '^---'`
 Expected: salida vacía o solo reformateo evidente. **Si hay texto de requisito borrado, revertir.**
 
-- [ ] **Paso 8: Commit**
+- [x] **Paso 8: Commit**
 
 ```bash
 git add docs/specs/Spec_M3_Aula_Virtual.md
@@ -461,7 +468,7 @@ git commit -m "docs(spec-m3): marcar NO IMPLEMENTADO los puntos de US-5/6/8 y FR
 **Files:**
 - Modify: `docs/specs/Spec_M6_Resumen_Automatico.md:5` (línea "Depende de:")
 
-- [ ] **Paso 1: Verificar el estado actual del proveedor de transcript**
+- [x] **Paso 1: Verificar el estado actual del proveedor de transcript**
 
 Run: `cat backend/src/main/java/com/tinku/resumen/port/TranscriptSesionProveedorNoDisponible.java`
 Expected: `return null;` como única implementación.
@@ -469,7 +476,7 @@ Expected: `return null;` como única implementación.
 Run: `grep -rn 'Egress\|egress' backend/src/main/java`
 Expected: salida vacía — no hay integración de grabación.
 
-- [ ] **Paso 2: Agregar la nota de bloqueo**
+- [x] **Paso 2: Agregar la nota de bloqueo**
 
 Debajo de la línea `**Depende de:**`:
 ```markdown
@@ -488,7 +495,7 @@ Debajo de la línea `**Depende de:**`:
 > el del LLM y debe justificarse contra la Ley 25.326 ANTES de implementarse, no después.
 ```
 
-- [ ] **Paso 3: Commit**
+- [x] **Paso 3: Commit**
 
 ```bash
 git add docs/specs/Spec_M6_Resumen_Automatico.md
@@ -504,7 +511,7 @@ git commit -m "docs(spec-m6): declarar el transcript como bloqueante y el riesgo
 
 > Este archivo documenta el branch `chunk/m1-g`, habla de "102 tests" y presenta como logro el circuito del CAP, que ADR-M1-02 retiró. **No se borra** (guardrail A4): es registro histórico válido y contiene el hallazgo del `driverDelegateClass` de Quartz, que es buen material de defensa.
 
-- [ ] **Paso 1: Agregar el bloque de encabezado**
+- [x] **Paso 1: Agregar el bloque de encabezado**
 
 Arriba de todo, antes del `# NOTAS_VERIFICACION`:
 ```markdown
@@ -524,7 +531,7 @@ Arriba de todo, antes del `# NOTAS_VERIFICACION`:
 > `application.yml`.
 ```
 
-- [ ] **Paso 2: Commit**
+- [x] **Paso 2: Commit**
 
 ```bash
 git add NOTAS_VERIFICACION.md
@@ -548,7 +555,7 @@ git commit -m "docs: marcar NOTAS_VERIFICACION como registro historico con sus d
 >
 > **Formato:** copiar la estructura de `docs/adr/ADR-M1-02.md`, que es el mejor ADR del repo: Estado / Contexto / Decisión / Alternativas descartadas / Riesgo aceptado / Implementación / Consecuencias / Registro de Decisiones Técnicas. Todos llevan `**Estado:** Aceptado — documentado retroactivamente el 2026-09-21 (decisión ya tomada en el código, recién formalizada)`, que es el mecanismo que AGENTS.md §7 exige para este caso.
 
-- [ ] **Paso 1: `ADR-000-02` — Backend Java + Spring Boot**
+- [x] **Paso 1: `ADR-000-02` — Backend Java + Spring Boot**
 
 La Constitución dice "Decidido, evaluado contra Go y Node.js" y no existe el documento con esa evaluación. Es la decisión tecnológica más visible del trabajo y la única sin respaldo escrito (informe §7.2, pregunta 8).
 
@@ -560,7 +567,7 @@ Contenido mínimo obligatorio, argumentado contra **1 desarrollador y USD 0-100/
 - Familiaridad del único desarrollador como criterio explícito y legítimo bajo Artículo VII.
 - **Consecuencia honesta que hay que escribir:** el ecosistema de `sentence-transformers` no existe en Java, y eso forzó la única excepción al Artículo VIII (`matching-service`). El ADR debe decirlo, no ocultarlo.
 
-- [ ] **Paso 2: `ADR-000-03` — Acoplamiento entre módulos: deuda aceptada**
+- [x] **Paso 2: `ADR-000-03` — Acoplamiento entre módulos: deuda aceptada**
 
 Este es el ADR que convierte el finding AUD-019 de vulnerabilidad de defensa en decisión de ingeniería. Contenido obligatorio:
 
@@ -570,7 +577,7 @@ Este es el ADR que convierte el finding AUD-019 de vulnerabilidad de defensa en 
 - **Qué NO se corrige y por qué:** el resto de los accesos cruzados. Costo estimado vs. beneficio contra 1 desarrollador.
 - **Cómo se evita que empeore:** un test de ArchUnit que congele el conteo actual. **No agregar la dependencia de ArchUnit en esta tarea** (guardrail A7) — el ADR la propone, FASE 3 decide.
 
-- [ ] **Paso 3: `ADR-000-04` — Una sola instancia: Quartz no clusterizado + sesión en el cliente**
+- [x] **Paso 3: `ADR-000-04` — Una sola instancia: Quartz no clusterizado + sesión en el cliente**
 
 Agrupa las decisiones de escala y sesión que permanecen:
 - `isClustered: false`: el sistema no soporta más de una instancia sin duplicar jobs. Consciente, coherente con el presupuesto, y el costo de levantarlo es conocido (activar clustering de Quartz + revisar los guards de idempotencia, que ya existen).
@@ -578,14 +585,14 @@ Agrupa las decisiones de escala y sesión que permanecen:
 - TTL de 60 minutos sin refresh token.
 - **Escribir el límite en números**, no en adjetivos: con qué carga concreta esta decisión deja de servir.
 
-- [ ] **Paso 4: `ADR-M1-03` — Storage de archivos: filesystem local tras el puerto `Almacenamiento`**
+- [x] **Paso 4: `ADR-M1-03` — Storage de archivos: filesystem local tras el puerto `Almacenamiento`**
 
 `NOTAS_VERIFICACION.md` lo cita como "ADR pendiente" y nunca se escribió. La decisión es correcta para el alcance (el puerto aísla bien) y permanece. Debe incluir:
 - Por qué el puerto `Almacenamiento` hace que el reemplazo por S3 no toque llamadores.
 - **La limitación que hay que declarar:** la URI `file:` no es servible por HTTP, que es la causa raíz de AUD-007. El ADR debe decir que el endpoint de lectura (FASE 1) sirve bytes, no la URI.
 - Riesgo aceptado: sin backup ni replicación del directorio.
 
-- [ ] **Paso 5: `ADR-M6-02` — Anonimización por regex + diccionario como puente**
+- [x] **Paso 5: `ADR-M6-02` — Anonimización por regex + diccionario como puente**
 
 El javadoc de `AnonimizadorTranscript` dice "ADR-M6-01 pendiente" y describe la estrategia con precisión. Formalizarla:
 - Estrategia fail-safe explícita: _ante la duda, enmascarar de más_ — un falso positivo tapa una palabra, un falso negativo filtra un dato de un menor (Artículo II manda).
@@ -593,7 +600,7 @@ El javadoc de `AnonimizadorTranscript` dice "ADR-M6-01 pendiente" y describe la 
 - Límite conocido: diccionario cerrado de nombres hispanos; un nombre fuera del diccionario y fuera de un patrón de presentación **no se enmascara**.
 - **Riesgo aceptado, escrito:** hoy es inofensivo porque no hay transcript (AUD-024). Cuando M6 se active, este componente pasa a ser un control de privacidad de datos de menores y el ADR-M6-01 (NER real) deja de ser opcional.
 
-- [ ] **Paso 6: Verificar que los 5 ADR existen y tienen las secciones obligatorias**
+- [x] **Paso 6: Verificar que los 5 ADR existen y tienen las secciones obligatorias**
 
 Run: `for f in docs/adr/ADR-000-02.md docs/adr/ADR-000-03.md docs/adr/ADR-000-04.md docs/adr/ADR-M1-03.md docs/adr/ADR-M6-02.md; do echo "== $f"; grep -c '^## ' $f; done`
 Expected: cada uno con al menos 5 secciones `##`.
@@ -601,7 +608,7 @@ Expected: cada uno con al menos 5 secciones `##`.
 Run: `grep -L 'Estado' docs/adr/ADR-000-0*.md docs/adr/ADR-M1-03.md docs/adr/ADR-M6-02.md`
 Expected: salida vacía (todos tienen sección Estado).
 
-- [ ] **Paso 7: Actualizar el Registro de Decisiones Técnicas de la Constitución**
+- [x] **Paso 7: Actualizar el Registro de Decisiones Técnicas de la Constitución**
 
 En `docs/Constitucion_Tinku.md`, tabla "Registro de Decisiones Técnicas Actuales": agregar la referencia al ADR en las filas que ahora lo tienen (Backend, Scheduler de jobs). **Esto NO es una enmienda** — el propio documento dice que esa tabla se cambia con un ADR normal, sin tocar los Artículos.
 
@@ -610,7 +617,7 @@ En `docs/Constitucion_Tinku.md`, tabla "Registro de Decisiones Técnicas Actuale
 Run: `git diff docs/Constitucion_Tinku.md | grep '^[+-]' | grep -i 'artículo\|articulo\|enmienda'`
 Expected: salida vacía.
 
-- [ ] **Paso 8: Commit**
+- [x] **Paso 8: Commit**
 
 ```bash
 git add docs/adr/ docs/Constitucion_Tinku.md
@@ -633,7 +640,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 >
 > **No reescribir el javadoc para que describa el bug.** El texto actual describe el comportamiento *deseado*, que FASE 1 va a implementar. Se le agrega el marcador arriba; el texto queda.
 
-- [ ] **Paso 1: `LiveKitService.java` — antes del javadoc de `generarTokenParticipante`**
+- [x] **Paso 1: `LiveKitService.java` — antes del javadoc de `generarTokenParticipante`**
 
 ```java
 // FIXME AUD-002 (auditoría 2026-09-21): el javadoc de abajo afirma que el token no permite
@@ -641,7 +648,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // comportamiento descrito acá es el DESEADO; el real es el opuesto. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 2: `SesionService.java` — antes de `cortar(...)`**
+- [x] **Paso 2: `SesionService.java` — antes de `cortar(...)`**
 
 ```java
 // FIXME AUD-001 (auditoría 2026-09-21): este método NO cierra la sala de LiveKit. Solo
@@ -649,7 +656,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // su TTL. Spec_M3 US-6 exige "la sesión se corta para ambos". Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 3: `SesionService.java` — antes de `obtenerToken(...)`**
+- [x] **Paso 3: `SesionService.java` — antes de `obtenerToken(...)`**
 
 ```java
 // FIXME AUD-001/AUD-003 (auditoría 2026-09-21): (a) no hay guard de estado — devuelve token
@@ -658,7 +665,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // esto es un dato sensible bajo Ley 25.326. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 4: `SesionService.java` — antes de `ejecutarKillswitch(...)`**
+- [x] **Paso 4: `SesionService.java` — antes de `ejecutarKillswitch(...)`**
 
 ```java
 // FIXME AUD-005 (auditoría 2026-09-21): el único control es esParticipante(). Cualquiera de
@@ -667,7 +674,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // a ADR-M3-01 (modelo de amenaza del clasificador on-device).
 ```
 
-- [ ] **Paso 5: `SesionService.java` — antes de `ramaMenor(...)`**
+- [x] **Paso 5: `SesionService.java` — antes de `ramaMenor(...)`**
 
 ```java
 // FIXME AUD-006 (auditoría 2026-09-21): suspende siempre a reserva.getTutor(), ignorando
@@ -677,7 +684,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // detectado. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 6: `CredencialColaResponse.java`**
+- [x] **Paso 6: `CredencialColaResponse.java`**
 
 ```java
 // FIXME AUD-007 (auditoría 2026-09-21): el javadoc dice que "la revisión visual del archivo
@@ -686,14 +693,14 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // tras ADR-M1-02— se aprueba a ciegas. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 7: `TutorPerfilResponse.java`**
+- [x] **Paso 7: `TutorPerfilResponse.java`**
 
 ```java
 // FIXME AUD-003 (auditoría 2026-09-21): este DTO no expone el DNI, correcto. Pero el DNI SÍ
 // sale del sistema por otra vía: SesionService.obtenerToken() lo usa como identity de LiveKit.
 ```
 
-- [ ] **Paso 8: `frontend/src/middleware.ts`**
+- [x] **Paso 8: `frontend/src/middleware.ts`**
 
 ```ts
 // FIXME AUD-016 (auditoría 2026-09-21): esto NO es una protección de seguridad. Solo verifica
@@ -703,7 +710,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // honestamente como redirección de UX.
 ```
 
-- [ ] **Paso 9: `frontend/src/lib/api.ts` — en `getCatalogos`**
+- [x] **Paso 9: `frontend/src/lib/api.ts` — en `getCatalogos`**
 
 ```ts
 // FIXME AUD-026 (auditoría 2026-09-21): el catch también atrapa errores de red (un
@@ -711,7 +718,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // catálogo falso que parece real. Se acota en FASE 3.
 ```
 
-- [ ] **Paso 10: Verificar que el diff es SOLO comentarios**
+- [x] **Paso 10: Verificar que el diff es SOLO comentarios**
 
 Run: `git diff --stat`
 Run: `git diff -- '*.java' '*.ts' | grep '^+' | grep -v '^+++' | grep -vE '^\+\s*(//|\*|/\*)'`
@@ -720,7 +727,7 @@ Expected: **salida vacía.** Cada línea agregada tiene que ser un comentario. S
 Run: `git diff -- '*.java' '*.ts' | grep '^-' | grep -v '^---'`
 Expected: **salida vacía.** No se borra ninguna línea existente.
 
-- [ ] **Paso 11: Compilar y correr la suite completa**
+- [x] **Paso 11: Compilar y correr la suite completa**
 
 Run: `cd backend && JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./mvnw -B test`
 Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0` — **exactamente el mismo número.** Un comentario no cambia el conteo. Si cambió, tocaste código.
@@ -728,7 +735,7 @@ Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0` — **exactamente
 Run: `cd frontend && bun run lint`
 Expected: sin errores.
 
-- [ ] **Paso 12: Commit**
+- [x] **Paso 12: Commit**
 
 ```bash
 git add backend/src/main/java frontend/src
@@ -744,7 +751,7 @@ git commit -m "docs(codigo): marcadores FIXME AUD-* donde el javadoc contradice 
 
 > `AGENTS.md` se lee automáticamente en cada sesión. Es el lugar donde tiene que vivir lo que ningún agente puede pasar por alto. **No reescribir las secciones existentes** — agregar dos.
 
-- [ ] **Paso 1: Agregar el requisito de Java 21 en la sección 5 (Testing)**
+- [x] **Paso 1: Agregar el requisito de Java 21 en la sección 5 (Testing)**
 
 ```markdown
 - **La suite corre SOLO con JDK 21.** El `maven-enforcer-plugin` exige `[21,22)`.
@@ -756,14 +763,15 @@ git commit -m "docs(codigo): marcadores FIXME AUD-* donde el javadoc contradice 
   baja ese número, borraste un test.
 ```
 
-- [ ] **Paso 2: Agregar sección 9 — Auditoría vigente**
+- [x] **Paso 2: Agregar sección 9 — Auditoría vigente**
 
 ```markdown
 ## 9. Auditoría vigente (2026-09-21)
 
-Hay una auditoría técnica independiente con 36 hallazgos abiertos, 8 de ellos CRÍTICOS de
-seguridad. Antes de trabajar sobre M3 (Aula), M5 (Pagos), M9 (Seguridad) o el registro de
-identidad, leé el finding que corresponda.
+Hay una auditoría técnica independiente con 36 hallazgos (7 CRÍTICA, 1 ya cerrado) — el estado
+vigente, fila por fila, está en `REGISTRO_FINDINGS.md`; no repitas estos números de memoria en
+otro documento, citá esa tabla. Antes de trabajar sobre M3 (Aula), M5 (Pagos), M9 (Seguridad) o
+el registro de identidad, leé el finding que corresponda.
 
 - Informe: `docs/auditoria/2026-09-21-auditoria-independiente.md`
 - Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md` — **se actualiza en el mismo
@@ -779,11 +787,11 @@ identidad, leé el finding que corresponda.
   el código antes de confiar en un comentario.
 ```
 
-- [ ] **Paso 3: Actualizar la sección 8 (Gobernanza)**
+- [x] **Paso 3: Actualizar la sección 8 (Gobernanza)**
 
 Agregar que `docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan **juntos o no se actualizan** — la divergencia entre los dos fue AUD-030.
 
-- [ ] **Paso 4: Commit**
+- [x] **Paso 4: Commit**
 
 ```bash
 git add AGENTS.md
@@ -798,23 +806,23 @@ git commit -m "docs(agents): requisito de JDK 21 y seccion de auditoria vigente"
 
 > No se abre FASE 1 hasta que todos estos checks pasen. Si alguno falla, arreglalo en esta fase.
 
-- [ ] **Paso 1: La suite sigue idéntica**
+- [x] **Paso 1: La suite sigue idéntica**
 
 Run: `cd backend && JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./mvnw -B test 2>&1 | grep 'Tests run:.*Failures' | tail -1`
 Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0`
 
-- [ ] **Paso 2: FASE 0 no tocó lógica**
+- [x] **Paso 2: FASE 0 no tocó lógica**
 
 Run: `git diff main...HEAD --stat -- backend/src/main/java frontend/src`
 Run: `git diff main...HEAD -- backend/src/main/java frontend/src | grep '^[+-]' | grep -v '^[+-][+-]' | grep -vE '^[+-]\s*(//|\*|/\*)'`
 Expected: **salida vacía.**
 
-- [ ] **Paso 3: No se editó ninguna migración existente**
+- [x] **Paso 3: No se editó ninguna migración existente**
 
 Run: `git diff main...HEAD --name-only -- backend/src/main/resources/db/migration/`
 Expected: **salida vacía.** (Guardrail A1.)
 
-- [ ] **Paso 4: No se tocó la Tabla de Tiempos ni los Artículos de la Constitución**
+- [x] **Paso 4: No se tocó la Tabla de Tiempos ni los Artículos de la Constitución**
 
 Run: `git diff main...HEAD --name-only -- docs/Tabla_Tiempos_Tinku.md`
 Expected: salida vacía. (Guardrail A3.)
@@ -822,7 +830,7 @@ Expected: salida vacía. (Guardrail A3.)
 Run: `git diff main...HEAD -- docs/Constitucion_Tinku.md | grep -iE '^[+-].*(artículo|enmienda)'`
 Expected: salida vacía. (Guardrail A4.)
 
-- [ ] **Paso 5: Los 36 findings están registrados, y solo AUD-030 cerró en esta fase**
+- [x] **Paso 5: Los 36 findings están registrados, y solo AUD-030 cerró en esta fase**
 
 Run: `grep -c '^| AUD-' docs/auditoria/REGISTRO_FINDINGS.md`
 Expected: `36`
@@ -837,7 +845,7 @@ Expected: la fila en estado `CERRADO` con un hash de commit en la columna Commit
 
 > Si cerraste cualquier otro finding en FASE 0, lo cerraste sin test de regresión (guardrail A9). Revertí el estado a `ABIERTO`.
 
-- [ ] **Paso 6: Frontend limpio**
+- [x] **Paso 6: Frontend limpio**
 
 Run: `cd frontend && bun run lint`
 Expected: sin errores.
@@ -933,7 +941,11 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 3. `SesionService.cortar()` los invoca **antes** de persistir el estado.
 4. `SesionService.obtenerToken()` rechaza sesiones en estado `finalizada` o `interrumpida` con una excepción nueva → 422.
 
-**Decisión de diseño que hay que tomar y escribir:** ¿el fallo de LiveKit al cerrar la sala debe abortar la transacción del corte? **Sí, fail-closed** — es el criterio que el resto del módulo ya usa (`programarSiFalta` aborta la confirmación de la Reserva si Quartz falla). Pero hay que decidir qué pasa si LiveKit está caído: la sesión no se puede cortar y el menor queda expuesto. **Proponer la alternativa y dejarla registrada**: cortar igual + encolar un job de Quartz de reintento del cierre. Esa segunda opción probablemente sea la correcta bajo el Artículo II, pero **es una decisión de producto — si dudás, pará y preguntá** (guardrail B8).
+**Decisión de diseño (D4, 2026-09-22):** si LiveKit falla al cerrar la sala, **NO** se aborta la transacción del corte. `SesionService.cortar()` intenta `RemoveParticipant` + `DeleteRoom`; si falla, persiste igual el estado (sesión cortada, Alerta, escrow en pausa por D3, evento) y agenda un job de Quartz que reintenta el cierre de sala con el mismo patrón de backoff de `LiberacionEscrowService` (5/15/60min, ya en `Tabla_Tiempos_Tinku.md`).
+
+**Fundamento:** esto es una **desviación consciente** del estilo fail-closed que el resto del módulo usa (`programarSiFalta` aborta la confirmación de la Reserva si Quartz falla) y hay que justificarla explícitamente en el ADR. La razón: LiveKit separa plano de control y plano de medios — su API puede estar caída mientras la videollamada sigue viva. Fail-closed acá (abortar el corte si LiveKit no contesta) produce el resultado opuesto al deseado: el menor queda expuesto y la sesión no se corta en ningún lado, ni siquiera en la BD.
+
+**Riesgo aceptado:** entre el disparo y el reintento exitoso, la sala sigue abierta. Se mitiga con la desconexión local del frontend, que no es garantía (un cliente modificado la ignora). El cierre pasa de "nunca" a "apenas LiveKit conteste".
 
 **Test obligatorio:** (a) unit sobre `LiveKitService` con stub HTTP local verificando que se postea a `DeleteRoom` con el token de servidor — mismo patrón que `crearSalaPosteaAlTwirp`; (b) integración en `KillswitchIntegracionTest`: tras el kill-switch rama menor, `POST /api/sesiones/{id}/token` responde 422.
 
@@ -949,11 +961,11 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 
 **Cambio concreto:** suspender al usuario de `detectadoId`, no a `reserva.getTutor()`. Comparar con `confirmarRamaAdultos()` (línea 545), que ya lo hace bien — usar ese mismo código.
 
-**Decisión de producto que hay que confirmar antes de codear:** ¿cuando el detectado es el menor, el Tutor debe quedar igual en suspensión preventiva? `Spec_M3:51` dice que el corte se aplica igual, pero **no dice nada de suspender al Tutor**. Dos lecturas válidas:
-- (a) Solo se suspende al detectado. Simple, coherente con la rama adultos.
-- (b) En toda rama menor el Tutor queda en suspensión preventiva, porque el Artículo II manda proteger al menor incluso ante ambigüedad — **y entonces la resolución de la Alerta en M9 tiene que poder reactivar a los dos.**
+**Decisión de producto (D2, 2026-09-22):** solo se suspende al detectado, igual que la rama adultos. `Spec_M3:51` exige el corte incondicional, pero era mudo sobre a quién se suspende — hay que escribirlo en `Spec_M3` US-6.
 
-**Parar y preguntar cuál** (guardrail B6/B8). Si se elige (b), hay que tocar también `AlertaSeguridadService.resolver()` y el Spec.
+**Esto resuelve, gratis, un bug aparte:** `AlertaSeguridadService.resolver()` ya opera sobre `alerta.getDetectadoId()`, y con esta decisión ese id pasa a coincidir siempre con quien fue suspendido. Eso cierra por sí solo el bug de "el Tutor queda suspendido para siempre" cuando el detectado era el menor — **no hay que tocar M9**.
+
+**Riesgo aceptado a declarar en el ADR:** cuando el detectado es el menor, el Tutor NO queda en suspensión preventiva, así que durante la ventana de 12hs hasta la resolución del Admin puede tomar otra sesión con otro menor. Se acepta a cambio de no penalizar a un Tutor por una detección que no generó, y porque la revisión humana ocurre igual (la Alerta se crea siempre y entra a la cola de moderación).
 
 **Test obligatorio:** el caso que hoy no existe — kill-switch rama menor con `detectadoId = menorId`, y verificar (a) a quién se suspende y (b) que `AlertaSeguridadService.resolver(REACTIVAR)` revierte efectivamente esa suspensión. Los 18 tests actuales usan siempre `detectadoId = tutor`.
 
@@ -997,7 +1009,13 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 
 **Cuidado con el caso legítimo del Artículo II:** el Adulto Responsable denuncia **en nombre de** su menor. Si el menor es el beneficiario y el AR es el pagador, el AR **sí** es participante — el `esParticipante` de `SesionService:615` ya cubre exactamente ese caso. Reutilizar ese criterio, no escribir uno nuevo.
 
-**Decisión pendiente:** la denuncia "de perfil" (sin `sesionId`) queda sin restricción de relación. Evaluar si exige al menos una reserva compartida histórica. **Si esto no está en el Spec_M9, parar y preguntar** (guardrail B7/B8).
+**Decisión de alcance (D5, 2026-09-22):** la denuncia **con** `sesionId` exige participación de denunciante y denunciado (lo implementado arriba). La denuncia **de perfil** (sin `sesionId`) queda abierta a cualquier usuario no-menor, sin restricción de relación.
+
+**Dato verificado que acota el riesgo:** `presentar()` solo emite `DenunciaRegistradaEvent` si `reservaId != null && tieneEscrowActivo(reservaId)`, y el `reservaId` sale del `sesionId`. Es decir, **una denuncia de perfil no congela el escrow de nadie** — el vector financiero de AUD-011 es exclusivo de las denuncias con sesión, que es justo lo que esta decisión cierra.
+
+**Riesgo aceptado:** la denuncia de perfil sigue pudiendo spamear la cola de moderación y arrancar el reloj de 48hs de descargo sobre alguien inocente. Se mitiga con el rate limiting de FASE 2 (D8), no con un chequeo de vínculo.
+
+**Hueco del Spec a cerrar:** `Spec_M9` NO define la denuncia de perfil en ningún lado — FR-SEC-001 solo dice quién puede denunciar. El concepto vive solo en el código y en el frontend. Hay que escribirlo.
 
 **Test obligatorio:** tres casos — (a) un tercero no participante denuncia una sesión ajena → 403; (b) verificar que el escrow de esa sesión **NO** quedó en `PAUSADO_DENUNCIA`; (c) el AR denunciando la sesión de su menor sigue funcionando (regresión).
 
@@ -1051,15 +1069,13 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 - Create: `docs/adr/ADR-M3-02.md` (anexo a ADR-M3-01: modelo de amenaza del clasificador on-device)
 - Test: `KillswitchIntegracionTest.java`
 
-> **PARAR ANTES DE CODEAR.** Esta no es una tarea de código, es una decisión de producto con consecuencias sobre el Artículo II. El informe propone tres controles y **no se debe elegir uno solo por criterio técnico**:
+> **Decisión de producto (D3, 2026-09-22): opción 2.** El corte sigue siendo inmediato e incondicional (Artículo II intacto). Lo que se desacopla es la plata: el escrow pasa a `PAUSADO_DENUNCIA` en vez de reembolsarse automáticamente. M9 decide el destino del dinero al resolver la Alerta.
 >
-> 1. **Exigir la evidencia (clip de 30s) en el mismo request** como condición del corte. Contra: hoy no hay cliente que la produzca (T-M3-06), así que esto **deshabilitaría el kill-switch por completo** hasta que exista.
-> 2. **Desacoplar el efecto monetario del corte:** el corte sigue siendo inmediato (Artículo II intacto), pero el escrow va a `PAUSADO_DENUNCIA` en vez de reembolsarse, y M9 decide al resolver la Alerta. **Esta es probablemente la correcta**: protege al menor sin regalar el incentivo de abuso.
-> 3. **Límite de disparos por usuario y por ventana de tiempo.** Necesita el rate limiting de FASE 2.
+> **Qué elimina:** el premio instantáneo. Hoy se puede tomar 55 de 60 minutos y disparar el kill-switch para cobrar el 100% — `reembolsarSiRetenida` no mira el tiempo transcurrido.
 >
-> **Escribir `ADR-M3-02` primero, con la decisión y el riesgo aceptado. Recién después implementar.** El ADR es más valioso para la defensa que el parche (informe §7.1, pregunta 7).
+> **Escribir `ADR-M3-02` primero, con la decisión y el riesgo aceptado. Recién después implementar.** Eso no cambia: el ADR es más valioso para la defensa que el parche (informe §7.1, pregunta 7).
 
-**Si se elige la opción 2 (recomendada), el cambio concreto es:** `EscrowService.onSesionKillswitchMenor` y `onSesionKillswitchAdultos` pasan la transacción a `PAUSADO_DENUNCIA` en vez de llamar a `reembolsarSiRetenida`. Y `AlertaSeguridadService.resolver()` resuelve el escrow: `REACTIVAR` (falso positivo) → reembolso total al Estudiante; `SANCIONAR` → reembolso total al Estudiante. **Ojo: en ambos casos el Estudiante cobra — lo que cambia es que ya no es automático ni instantáneo.**
+**Implementación concreta (D3):** `EscrowService.onSesionKillswitchMenor` y `onSesionKillswitchAdultos` dejan de llamar a `reembolsarSiRetenida` y pasan la transacción al estado `PAUSADO_DENUNCIA` (ya existe, ya está en el CHECK de V11 y ya está testeado por la vía de `denuncia.registrada`). `AlertaSeguridadService.resolver()` pasa a resolver también el escrow: `REACTIVAR` (falso positivo) → reembolso total al Estudiante; `SANCIONAR` → reembolso total al Estudiante. **Ojo: en ambos casos el Estudiante cobra — lo que cambia es que ya no es automático ni instantáneo.** `SesionService.cortar()` NO cambia — el Artículo II queda intacto.
 
 **NO cambiar:** que el corte sea inmediato. El Artículo II no se negocia. Lo que se desacopla es la plata, no la protección.
 
@@ -1098,21 +1114,35 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 ---
 
-### Task 2.1: Congelar la duración y arreglar el solapamiento — AUD-009 + AUD-020
+### Task 2.1: Modelo de disponibilidad por bloques de 30' + tarifa por hora — AUD-009 + AUD-020
 
-> **Requiere plan detallado propio.** Es la tarea de mayor riesgo de todo el documento: toca el modelo de datos de `reservas`, el agendamiento de M3 y el umbral del 50% que decide reembolso vs. liberación en M5.
+> **Requiere plan detallado propio.** Es la tarea de mayor riesgo de todo el documento: cambia el modelo entero, no solo el bug puntual. Toca el modelo de datos de `reservas`, el agendamiento de M3, la tarifa de M5-H y el umbral del 50% que decide reembolso vs. liberación.
 
-**Files:** `V25__m4_duracion_reserva.sql` (nueva), `Reserva.java`, `ReservaService.java`, `SesionService.java`, `HorariosDisponiblesService.java`, `ReservasFlujosIntegracionTest.java`
+**Decisión de producto (D6, 2026-09-22) — modelo resultante:**
+- El átomo de disponibilidad es de **30 minutos**. El Tutor los posiciona libremente donde puede.
+- Una franja 10:00–12:00 son **4 unidades** de 30', no una sesión de 120 min.
+- El **Estudiante** elige cuántas unidades **consecutivas** reserva (1h = 2 unidades, o más).
+- El Tutor puede **recomendar** una duración, sin imponerla.
+- **Tarifa:** precio por hora × fracción. `TarifaTutor.precioSesion` pasa a `precioHora`; una reserva de 30' cuesta la mitad. `precio = precioHora × unidades / 2`, `BigDecimal` con scale 2 y HALF_UP, congelado al crear la Reserva (FR-PAG-013 no cambia).
 
-**Cambio concreto:**
-1. **V25**: `ALTER TABLE reservas.reservas ADD COLUMN duracion_minutos INT` + backfill desde la franja + `SET NOT NULL`. Después, reemplazar la `EXCLUDE` de V9 por una sobre rango: `EXCLUDE USING gist (tutor_id WITH =, tstzrange(horario, horario + (duracion_minutos || ' minutes')::interval) WITH &&) WHERE (estado <> 'cancelada')`, e idem para `beneficiario_id`. `btree_gist` ya está instalada por V9.
-2. `ReservaService.crearReserva` congela `duracionMinutos` desde la franja, igual que ya congela `precio` (FR-PAG-013). **Es la misma regla y el mismo motivo.**
-3. `SesionService.programarSesion` y `reprogramarSesionProgramada` usan `reserva.getDuracionMinutos()` en vez de recalcular desde la franja. Eso elimina de paso el `IllegalStateException` → 500 cuando el Tutor borró la franja.
-4. Chequeo de solapamiento en aplicación **antes** de la constraint, para dar 422 con mensaje de negocio en vez de un 409 genérico.
+**Esto resuelve la contradicción raíz** que la auditoría encontró: hoy `FranjaService` + `SesionService` tratan la franja como UNA sesión (la duración agendada es la de la franja completa) mientras `HorariosDisponiblesService` la trata como contenedor de bloques. Los dos no pueden ser ciertos, y de ahí salen AUD-009 y AUD-020.
 
-**Decisión de producto que hay que confirmar:** la tarifa es "por sesión" (`TarifaTutor.precioSesion`), así que una franja de 30 min y una de 180 cuestan lo mismo. El modelo de precio y el de disponibilidad no están alineados. **Parar y preguntar** si la tarifa pasa a ser por hora, o si la franja se parte en bloques de duración fija.
+**Files:** `V25__m4_duracion_reserva.sql` (nueva), `Reserva.java`, `ReservaService.java`, `SesionService.java`, `HorariosDisponiblesService.java`, `TarifaTutor.java`, `PagoService.java` (`actualizarTarifaTutor`), DTO de tarifa, `frontend` (`cuenta/precio`, `DynamicTimeSlotPicker`), `ReservasFlujosIntegracionTest.java`
 
-**Test obligatorio:** el que hoy no existe — franja 10:00–12:00, reserva A a las 10:00, reserva B a las 11:00 → la segunda debe dar 409/422. Los 3 tests actuales de FR-RES-007 usan siempre el mismo `horario`.
+**Cambio concreto (todos los "Implica" de D6):**
+1. **V25**: `ALTER TABLE reservas.reservas ADD COLUMN duracion_minutos INT NOT NULL` (múltiplo de 30), con backfill desde la franja. **NUNCA editar V9** (guardrail A1) — es migración nueva.
+2. Reemplazar la `EXCLUDE` de V9 por solapamiento de rangos: `EXCLUDE USING gist (tutor_id WITH =, tstzrange(horario, horario + duracion) WITH &&)`. Ahora es **crítico**: con bloques de 30', dos reservas contiguas del mismo Tutor son el caso NORMAL y hay que distinguirlas del solapamiento real. `btree_gist` ya está instalada por V9.
+3. `ReservaService.crearReserva` congela `duracionMinutos` (igual que ya congela `precio`, FR-PAG-013 — es la misma regla y el mismo motivo).
+4. `SesionService.programarSesion` usa `reserva.getDuracionMinutos()` en vez de recalcular desde la franja. Esto arregla de paso el `IllegalStateException` → 500 cuando el Tutor borró la franja, y el umbral del 50% de FR-AULA-005 pasa a ser estable.
+5. `TarifaTutor`: `precioSesion` → `precioHora`. Toca M5-H, `PagoService.actualizarTarifaTutor`, el DTO y la UI de `cuenta/precio`.
+6. `precios_referencia_regional.valor_sugerido` (M5-E) pasa a estar declarado en la misma unidad (por hora). Hoy no declara unidad ninguna.
+7. FR-RES-024 (franjas de 30 a 180 min) sigue valiendo como límite del contenedor.
+
+**Lo que VALIDA:** `HorariosDisponiblesService` y el `DynamicTimeSlotPicker` quedan correctos, y el parámetro `duracionMinutos` de T-M4-12 —que la propia tarea marcaba como "no está definido en ningún Spec, confirmar con producto antes de inventar"— por fin tiene fuente: es la selección del Estudiante, en múltiplos de 30.
+
+**Nota de scope:** "el tutor recomienda una hora" es un campo nuevo (duración recomendada, en el perfil del Tutor o por materia) que no está en ningún Spec. El Artículo VI obliga a decidir aparte si entra al alcance del MVP o queda fuera — no está resuelto por D6, hay que decidirlo antes de implementarlo.
+
+**Test obligatorio:** el que hoy no existe — franja 10:00–12:00, reserva A a las 10:00 (2 unidades), reserva B a las 11:00 → la segunda debe dar 409/422. Los 3 tests actuales de FR-RES-007 usan siempre el mismo `horario`.
 
 **NO tocar:** V9. Guardrail A1.
 
@@ -1128,7 +1158,15 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 **Prioridad dentro de la tarea:** `/verificar-dni` primero. Es público, no autenticado, y dispara Tesseract in-process (CPU-bound): es el DoS más barato del sistema.
 
-**Decisión del ADR:** Redis (Upstash) ya está en el Registro de Decisiones de la Constitución, así que el bucket distribuido no introduce tecnología nueva — solo una librería. Alternativa más simple bajo Artículo VII: bucket en memoria, dado que `isClustered: false` significa que hay **una sola instancia** (ADR-000-04). **Esa alternativa es probablemente la correcta y hay que evaluarla en serio antes de meter Redis.**
+**Decisión (D8, 2026-09-22): bucket en memoria del proceso.** Sin Redis, sin tabla en Postgres.
+
+**Fundamento:** `ADR-000-04` (ya escrito en FASE 0) formaliza que el sistema corre en una sola instancia (`isClustered: false`), así que un contador compartido no compra nada hoy. Artículo VII: la más simple que cumple el requisito. Y no mete una dependencia de red en el camino crítico del login — si Redis se cayera, el login no se cae con él.
+
+**Modo de falla aceptado:** un reinicio del proceso resetea los contadores. Benigno.
+
+**ADR:** si se implementa a mano con `ConcurrentHashMap` + ventana deslizante, **no hay dependencia nueva y no hace falta ADR**. Si se usa una librería, sí (guardrail A7) — evaluar cuál sale más barato antes de decidir.
+
+**Revisión futura a dejar escrita:** el día que `ADR-000-04` se revise por escalar a N≥2 instancias, este bucket deja de servir junto con el scheduler. Van atados.
 
 **Bloqueo por intentos de login:** reutilizar el patrón que ya existe y funciona en `OcrBackoffService` / `CredencialBackoffService`, no inventar uno nuevo.
 
@@ -1143,6 +1181,20 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 **Files:** `com.tinku.shared.notificacion` (puerto), implementación outbox, `V26__notificaciones_outbox.sql`, llamadores en `SesionService` y `DenunciaService`
 
 **El puerto se define ahora aunque el proveedor no exista.** El ADR del proveedor de email puede esperar; el puerto y los llamadores, no. Implementación inicial: tabla outbox persistida, consultable desde el panel de Admin.
+
+**Decisión de alcance (D2-bis, 2026-09-22):** el Adulto Responsable recibe **aviso inmediato** cuando se dispara el kill-switch, y el **clip recién si M9 resuelve fundado** la Alerta. Si M9 resuelve falso positivo, el AR nunca lo ve.
+
+**Los tres motivos por los que se acotó así:**
+1. El buffer de 30s es de una videollamada 1:1: contiene a los DOS participantes. Entregarlo al AR es entregarle video del Tutor a un tercero sin su consentimiento — el AR tiene base legítima sobre la imagen de su hijo, no sobre la del Tutor.
+2. La retención de ese clip hoy está justificada contra la Ley 25.326 por UN solo propósito: evidencia para M9 (BR-KS-01/02, 30 días desde la resolución). Enviarlo al AR sería un segundo propósito, y el Artículo V obliga a justificar toda nueva necesidad de retención **antes** de implementarla — acá no está justificado.
+3. Si la Alerta se resuelve como falso positivo, ya no hay vuelta atrás: un clip que no debía existir ya estaría en manos de un tercero.
+
+**Implica:**
+- El aviso es inmediato e incondicional. No depende de nada nuevo.
+- El clip queda reservado a M9 hasta la resolución del Admin; con `REACTIVAR` (falso positivo) el AR nunca lo ve, con `SANCIONAR` se le da acceso.
+- No agrega un propósito de retención nuevo: usa el que BR-KS-02 ya justifica.
+- Depende de T-M3-06 para que el clip exista siquiera (hoy ningún cliente lo produce).
+- Hueco del Spec a cerrar: `Spec_M3` US-6 dice "se notifica inmediatamente al Adulto Responsable" pero no dice QUÉ se le notifica ni qué puede ver después. Hay que escribirlo.
 
 **Mínimo indispensable antes de piloto, en este orden:**
 1. Kill-switch rama menor → Adulto Responsable. Es la obligación más importante del sistema hacia la familia (`Spec_M3:50`) y hoy no existe.
@@ -1186,13 +1238,22 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 ### Task 2.6: Baja de menor — AUD-017
 
-> **Requiere ADR previo:** borrado en cascada vs. anonimización. Con transacciones financieras de por medio (`reservas`, `pagos.transacciones`), la anonimización suele ser la correcta — conserva integridad contable y de auditoría y satisface el derecho de supresión de la Ley 25.326.
+> **Decisión (D7, 2026-09-22): anonimización.** La fila sobrevive, los datos personales se borran. Con transacciones financieras de por medio (`reservas`, `pagos.transacciones`) y con historial de sanciones de M9, la anonimización conserva integridad contable y de auditoría y satisface el derecho de supresión de la Ley 25.326.
 
 **Files:** `docs/adr/ADR-M1-04.md`, `UsuarioService.java:277-299`, migración si hace falta, `UsuarioServiceDarDeBajaTest` + test de integración nuevo
 
+**Implementación concreta:**
+- `UsuarioService.darDeBajaMenor()` deja de hacer `usuarioRepository.delete(menor)`. En su lugar reemplaza `nombre`, `apellido`, `dni`, `fechaNacimiento` y `email` por valores anónimos, y marca la fila como dada de baja (columna nueva o `estado_cuenta` nuevo valor).
+- El `dni` anónimo tiene que seguir cumpliendo el **UNIQUE de V2** — usar algo derivado del `id`, no un valor fijo ni un random que pueda colisionar.
+- La cuenta no puede volver a loguearse: `UsuarioDetailsService` ya rechaza lo que no está `ACTIVA`, así que alcanza con el estado.
+- Se conserva la integridad referencial de `reservas`, `solicitudes_sesion`, `denuncias`, `sanciones`, `calificaciones` y `pasarela_estado` — hoy cualquiera de esas FK hace fallar el `DELETE` con un 500 para todo menor que tuvo una reserva.
+- `autorizaciones_tutor` y `consentimientos_menor` se siguen borrando (ya se borran hoy).
+
+**Fundamento legal:** la Ley 25.326 da derecho de supresión **con excepciones donde la retención es legalmente exigible**. Acá hay transacciones de MercadoPago y hay historial de sanciones de M9: si ese menor estuvo en un incidente de seguridad, borrar la evidencia no es defendible. Requiere `ADR-M1-04` con esta justificación.
+
 **FKs que hoy no se limpian y hacen fallar el `DELETE`:** `reservas.reservas` (beneficiario_id, pagador_id, tutor_id), `reservas.solicitudes_sesion.menor_id`, `seguridad.denuncias`, `seguridad.sanciones`, `reputacion.calificaciones.autor_id`, `pagos.pasarela_estado.updated_by`.
 
-**Test obligatorio:** de **integración** con Testcontainers sobre un menor con historial real de reservas. El test actual es unitario con mocks y por eso nunca vio el problema.
+**Test obligatorio:** de **integración** con Testcontainers sobre un menor con historial real de reservas. El test actual (`UsuarioServiceDarDeBajaTest`) es unitario con mocks y por eso nunca ejecutó el DELETE contra el esquema — por eso el bug sobrevivió.
 
 ---
 
@@ -1271,10 +1332,11 @@ Ya iniciado en la Task 1.10 (`ADR-M3-02`). **Cerrarlo formalmente** con el resul
 | 3.5 | Distinguir la constraint violada antes de devolver 409 | AUD-023 | `ConstraintViolationException.getConstraintName()`. Solo `ex_reservas_sin_superposicion_*` → 409; el resto → 500 con log. |
 | 3.6 | `credentials_version` en el JWT + `sub` = UUID | AUD-027 | Invalida sesiones al resetear contraseña. **Toca `JwtUtil`, `UsuarioDetailsService`, `AdminModeracionGate`, `UsuarioActual` y todos los tests que generan tokens.** Plan detallado propio. |
 | 3.7 | Acotar el fallback a `catalogoMock` | AUD-026 | 404 estricto, o `NODE_ENV !== 'production'`. |
-| 3.8 | Una calificación pública por sesión | AUD-028 | **Decisión de producto — parar y preguntar.** Hoy el AR y el menor pueden calificar la misma sesión, y eso sesga el umbral de 5 de FR-REP-007. |
+| 3.8 | Una calificación pública por sesión | AUD-028 | **Decisión (D9, 2026-09-22): califica solo el pagador.** `derivarDireccion()` (línea ~135) hoy mapea `beneficiario` **O** `pagador` → `DIR_ESTUDIANTE_A_TUTOR`; pasa a mapear solo `pagador` (el beneficiario que no es pagador cae en `CalificacionNoPermitidaException` → 403). Para un Estudiante adulto reservando para sí mismo no cambia nada (`pagador == beneficiario`). Argumento de defensa: coherente con el patrón del Artículo II que ya rige M1/M4/M9 — el menor no paga, no autoriza Tutores, no denuncia; el AR lo hace en su nombre. Resuelve que hoy una sesión con menor pese el doble en el promedio del Tutor. Revisar el frontend para que no ofrezca calificar a un menor. Hueco del Spec a cerrar: `Spec_M7` no dice quién califica cuando pagador != beneficiario. |
 | 3.9 | Migración que dropee las tablas de CAP (V6) | AUD-035 | Migración **V29**, nunca editar V6 (guardrail A1). Comentario que referencie ADR-M1-02. |
 | 3.10 | Dependabot + actualizar Spring Boot | AUD-032 | Mejor relación costo/beneficio del informe. |
 | 3.11 | Middleware de Next.js: verificar firma o renombrar | AUD-016 | Si se verifica: `jose`, edge-compatible, comparte el secreto. Si no: renombrar el comentario y ser honesto. Ambas son válidas. |
+| 3.12 | Borrar la rama DNI de `LiveKitWebhookService.mismaPersona()` | AUD-003 (limpieza) | Desde Task 1.3 el identity de LiveKit es el UUID. La rama `usuario.getDni().equals(identity)` solo sobrevive para tokens emitidos antes del deploy de 1.3 (TTL de `tinku.livekit.token-ttl-segundos`, default 1h). Borrarla cuando ese TTL haya vencido en todos los entornos. |
 
 ---
 

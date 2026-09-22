@@ -3,6 +3,21 @@
 **Módulo:** M6 (ver Constitución, Artículo VI)
 **Estado:** Borrador para revisión
 **Depende de:** M3 (transcript de la sesión + evento `sesion.finalizada`), M4 (contexto de la reserva: materia, tutor, duración), M1 (perfil, minoría de edad), M9 (pausa de generación si hay Denuncia activa sobre la sesión, FR-SEC-003)
+
+> **ESTADO AL 2026-09-21 (AUD-024):** M6 no puede generar un resumen por **dos** motivos
+> independientes:
+> 1. No hay proveedor de LLM (ADR pendiente, ya registrado en T-FIN-03).
+> 2. **No hay transcript.** M3 no lo produce: `LiveKitService` no usa Egress y
+>    `sesiones_aprendizaje` no tiene columna de transcript. El bean por defecto
+>    `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre, y el pipeline marca
+>    la fila como `fallido` (caso borde #2).
+>
+> Resolver el ADR del LLM **no** desbloquea M6 por sí solo.
+>
+> **Advertencia de alcance:** grabar audio de sesiones donde hay un menor presente es
+> exactamente lo que el Artículo V restringe. El ADR de Egress/retención es más delicado que
+> el del LLM y debe justificarse contra la Ley 25.326 ANTES de implementarse, no después.
+
 **Alimenta a:** M7 (el resumen como insumo indirecto), M9 (el material queda disponible como referencia si el Admin revisa un caso)
 
 ---

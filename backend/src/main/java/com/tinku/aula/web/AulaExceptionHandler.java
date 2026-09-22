@@ -4,6 +4,7 @@ import com.tinku.aula.AlertaNoEncontradaException;
 import com.tinku.aula.ConfirmacionNoPendienteException;
 import com.tinku.aula.DetectadoInvalidoException;
 import com.tinku.aula.EvidenciaInvalidaException;
+import com.tinku.aula.SesionCerradaException;
 import com.tinku.aula.SesionNoEncontradaException;
 import com.tinku.aula.SesionSinSalaException;
 import com.tinku.aula.SoloParticipanteException;
@@ -49,7 +50,8 @@ public class AulaExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler({SesionSinSalaException.class, DetectadoInvalidoException.class,
+    @ExceptionHandler({SesionSinSalaException.class, SesionCerradaException.class,
+            DetectadoInvalidoException.class,
             ConfirmacionNoPendienteException.class,
             EvidenciaInvalidaException.class})
     public ResponseEntity<Map<String, String>> handleInvalido(RuntimeException ex) {

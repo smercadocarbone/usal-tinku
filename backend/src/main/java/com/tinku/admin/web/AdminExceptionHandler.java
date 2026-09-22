@@ -2,6 +2,7 @@ package com.tinku.admin.web;
 
 import com.tinku.admin.service.OrigenMapNoDefinidoException;
 import com.tinku.admin.service.TicketNoEncontradoException;
+import com.tinku.identidad.service.CredencialNoPendienteException;
 import com.tinku.shared.AccesoModeracionDenegadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,12 @@ public class AdminExceptionHandler {
 
     @ExceptionHandler(OrigenMapNoDefinidoException.class)
     public ResponseEntity<Map<String, String>> origenSinMapeo(OrigenMapNoDefinidoException e) {
+        return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
+    }
+
+    /** AUD-033: carrera entre el chequeo del controller y la transición del servicio. */
+    @ExceptionHandler(CredencialNoPendienteException.class)
+    public ResponseEntity<Map<String, String>> credencialNoPendiente(CredencialNoPendienteException e) {
         return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
     }
 

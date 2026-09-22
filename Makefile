@@ -113,12 +113,12 @@ db-reset: ## BORRA el volumen de datos y recrea la base desde cero (Flyway la re
 # Backend (Spring Boot, monolito modular — com.tinku.*)
 # -----------------------------------------------------------------------------
 .PHONY: backend backend-test backend-build
-backend: db-up ## Levanta el backend (perfil dev por defecto, puerto 8080)
+backend: db-up ## Levanta el backend (perfil dev explícito, puerto 8080)
 	@if [ ! -d "$(JAVA_HOME)" ]; then \
 		echo "JAVA_HOME=$(JAVA_HOME) no existe. Instalá TempleJDK/temurin-21 o pasá 'make JAVA_HOME=/ruta/al/jdk'."; exit 2; \
 	fi
 	@set -a; [ -f .env ] && . ./.env || true; set +a; \
-	cd $(BACKEND_DIR) && JAVA_HOME="$(JAVA_HOME)" ./mvnw spring-boot:run
+	cd $(BACKEND_DIR) && JAVA_HOME="$(JAVA_HOME)" ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 backend-test: db-up ## Corre la suite de tests del backend (Testcontainers requiere Docker)
 	@set -a; [ -f .env ] && . ./.env || true; set +a; \
