@@ -516,8 +516,21 @@ class AdminPanelIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of("monto", 15000))))
                 .andExpect(status().isUnprocessableEntity());
 
+        // V24 (AUD-010): uq_transacciones_reserva exige una Transaccion por
+        // Reserva — esta fixture necesita su propia Reserva, no puede reusar la
+        // de enEscrow (antes de la migración, dos filas para la misma reserva
+        // era precisamente el bug: escrow duplicado irrecuperable).
+        Reserva reservaLiberada = new Reserva();
+        reservaLiberada.setPagador(pagador);
+        reservaLiberada.setBeneficiario(pagador);
+        reservaLiberada.setTutor(usuario(TipoUsuario.TUTOR));
+        reservaLiberada.setHorario(Instant.now().plusSeconds(3600));
+        reservaLiberada.setPrecio(BigDecimal.valueOf(15000));
+        reservaLiberada.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(reservaLiberada);
+
         Transaccion liberada = new Transaccion();
-        liberada.setReservaId(enEscrow.getReservaId());
+        liberada.setReservaId(reservaLiberada.getId());
         liberada.setMpPaymentId("mp-liberada-" + CONTADOR.incrementAndGet());
         liberada.setMontoBruto(new BigDecimal("15000.00"));
         liberada.setComisionPlataforma(new BigDecimal("2250.00"));

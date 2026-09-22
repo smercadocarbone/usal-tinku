@@ -24,8 +24,10 @@ import com.tinku.shared.ResolucionDenuncia;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -106,6 +108,15 @@ public class EscrowService {
      * llega cuando la Reserva YA no está {@code pendiente_pago} (timeout o
      * cancelación posterior al cobro, Chunk M5-D) se reembolsa en total: el
      * dinero se cobró pero la sesión ya no va a existir.
+     *
+     * <p>El guard de arriba es un check-then-act: no protege contra dos
+     * reintentos de MP solapados que lo pasan antes de que el primero
+     * commitee (AUD-010). La protección real es la unicidad de base de V24
+     * ({@code uq_transacciones_mp_payment}, {@code uq_transacciones_reserva}):
+     * si el {@code saveAndFlush} viola cualquiera de los dos índices, el otro
+     * hilo ya ganó la carrera — se trata como no-op idempotente y NUNCA se
+     * relanza (un 5xx hace que MP reintente en loop, el mismo problema que
+     * describe el javadoc de {@link #reembolsarPagoTardio}).</p>
      */
     @Transactional
     public void procesarPagoAprobado(String mpPaymentId) {
@@ -137,7 +148,20 @@ public class EscrowService {
         transaccion.setMpPaymentId(mpPaymentId);
         transaccion.setMontoBruto(reserva.getPrecio());
         transaccion.setComisionPlataforma(comision.calcular(reserva.getPrecio()));
-        transaccionRepo.save(transaccion);
+        try {
+            // flush inmediato: fuerza el INSERT ahora (no en el commit del
+            // proxy transaccional) para poder capturar la violación de unicidad
+            // DENTRO de este método y devolver 2xx igual.
+            transaccionRepo.saveAndFlush(transaccion);
+        } catch (DataIntegrityViolationException e) {
+            LOG.info("Webhook de MP duplicado por reintentos solapados (AUD-010): "
+                    + "mpPaymentId={} reservaId={} — el otro hilo ya creó el escrow, no-op idempotente.",
+                    mpPaymentId, reserva.getId());
+            // El INSERT falló: la transacción de Postgres quedó abortada. No
+            // dejar que el proxy la commitee (fallaría igual) — se descarta.
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return;
+        }
         // Transición pendiente_pago → confirmada + ReservaConfirmadaEvent (M3
         // crea y agenda la Sesión). Idempotente; corre dentro de esta transacción.
         reservaService.confirmarPagoSimulado(reserva.getId());

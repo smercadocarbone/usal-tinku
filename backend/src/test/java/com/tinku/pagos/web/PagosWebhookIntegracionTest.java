@@ -53,6 +53,11 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -288,6 +293,19 @@ class PagosWebhookIntegracionTest {
                 new PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(), monto));
     }
 
+    /** Igual que el POST del webhook, pero esperando una largada común (para
+     * disparar dos requests al unísono desde hilos distintos, AUD-010). */
+    private int postWebhookStatus(String mpPaymentId, String cuerpo, String firma,
+                                  CountDownLatch largada) throws Exception {
+        largada.await(30, TimeUnit.SECONDS);
+        return mockMvc.perform(post("/api/webhooks/mercadopago")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("data.id", mpPaymentId)
+                        .header("x-signature", firma)
+                        .content(cuerpo))
+                .andReturn().getResponse().getStatus();
+    }
+
     // ------------------------------------------------ tests
 
     @Test
@@ -376,6 +394,44 @@ class PagosWebhookIntegracionTest {
         assertThat(transaccionRepository.findAll().stream()
                 .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
         verify(mercadopago, times(1)).getPago(mpPaymentId);
+    }
+
+    @Test
+    void webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx() throws Exception {
+        // AUD-010: MP reintenta agresivamente los webhooks que tardan (>22s) o
+        // que no responden 2xx, y esos reintentos pueden solaparse. El guard de
+        // aplicación (findByMpPaymentId antes de insertar) es un check-then-act
+        // sin protección de base: dos hilos lo pasan antes de que el primero
+        // commitee. Sin la unicidad de V24, esto crea DOS filas para la misma
+        // Reserva y rompe para siempre cualquier findByReservaId de ese escrow
+        // (ver javadoc de EscrowService.reembolsarPagoTardio).
+        UUID reservaId = crearReservaEnPendiente();
+        String mpPaymentId = "pago-concurrente";
+        pagoAprobado(mpPaymentId, reservaId, new BigDecimal("15000"));
+        String cuerpo = cuerpoNotificacion(mpPaymentId);
+        String firma = firma(mpPaymentId, null);
+
+        CountDownLatch largada = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> res1 = pool.submit(() -> postWebhookStatus(mpPaymentId, cuerpo, firma, largada));
+            Future<Integer> res2 = pool.submit(() -> postWebhookStatus(mpPaymentId, cuerpo, firma, largada));
+            largada.countDown();
+
+            int s1 = res1.get(30, TimeUnit.SECONDS);
+            int s2 = res2.get(30, TimeUnit.SECONDS);
+
+            // Nunca un 5xx: MP reintenta los no-2xx y entra en loop (mismo
+            // javadoc de la clase). El hilo que pierde la carrera debe tratar
+            // la violación del índice único como no-op idempotente.
+            assertThat(s1).isEqualTo(200);
+            assertThat(s2).isEqualTo(200);
+
+            assertThat(transaccionRepository.findAll().stream()
+                    .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test
