@@ -446,9 +446,39 @@ class IdentidadFlujosIntegracionTest {
                         .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
                                 TipoCredencial.TITULO)))
                         .file(new MockMultipartFile("archivo", "titulo.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{9, 9}))
+                                MediaType.APPLICATION_PDF_VALUE, "%PDF-1.4 credencial de prueba".getBytes()))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isTooManyRequests()); // CredencialEnBackoffException -> 429
+    }
+
+    @Test
+    void aud007_subidaDeCredencialQueNoEsPdfNiImagen_422() throws Exception {
+        String token = registrarTutorYToken("55555577", "Rocio", "Diaz");
+        byte[] html = "<html><script>alert(1)</script></html>".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        // El Content-Type declarado miente: lo que manda es el contenido real (magic bytes).
+        mockMvc.perform(multipart("/api/tutores/credenciales")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
+                                TipoCredencial.TITULO)))
+                        .file(new MockMultipartFile("archivo", "titulo.pdf", "application/pdf", html))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(credencialRepo.findFirstByTutorIdOrderByCreatedAtDesc(
+                usuarioPorDni("55555577").getId())).isEmpty();
+    }
+
+    @Test
+    void aud007_subidaDeCredencialMayorAlLimite_413() throws Exception {
+        String token = registrarTutorYToken("55555588", "Marta", "Ruiz");
+        byte[] grande = new byte[6 * 1024 * 1024];
+        System.arraycopy("%PDF-1.4".getBytes(), 0, grande, 0, 8); // PDF válido, solo que enorme
+
+        mockMvc.perform(multipart("/api/tutores/credenciales")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
+                                TipoCredencial.TITULO)))
+                        .file(new MockMultipartFile("archivo", "titulo.pdf", "application/pdf", grande))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isPayloadTooLarge());
     }
 
     @Test
@@ -470,7 +500,7 @@ class IdentidadFlujosIntegracionTest {
                         .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
                                 TipoCredencial.TITULO)))
                         .file(new MockMultipartFile("archivo", "titulo.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{9, 9}))
+                                MediaType.APPLICATION_PDF_VALUE, "%PDF-1.4 credencial de prueba".getBytes()))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().is(expectedStatus))
                 .andReturn();

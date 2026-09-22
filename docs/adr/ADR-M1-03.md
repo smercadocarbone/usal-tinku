@@ -98,3 +98,14 @@ la elección ya deployada en `main`.
 ## Registro de Decisiones Técnicas (Constitución)
 No aplica una fila del Registro (el storage de archivos no tiene una fila propia hoy). Queda
 registrada únicamente como este ADR.
+
+## Actualización 2026-09-22 — endpoint implementado (AUD-007, Task 1.9)
+- `Almacenamiento.leer(referencia): byte[]`. `AlmacenamientoLocal` resuelve `..` y symlinks
+  (`toRealPath`) y rechaza toda ruta que no caiga dentro del directorio configurado, o que no use
+  el esquema `file:`, con `ArchivoNoDisponibleException`.
+- `GET /api/admin/moderacion/credenciales/{id}/archivo`, gateado por `requiereModeracion` y
+  auditado por el `AuditoriaInterceptor`. Sirve bytes, nunca la referencia. El `Content-Type` sale
+  de los magic bytes, con `nosniff`, `CSP: sandbox` y `no-store`.
+- Subida: allowlist por contenido real (PDF, PNG, JPEG) y tamaño máximo explícito de 5MB, que
+  aplica el contenedor y se re-chequea en el controller.
+- `CredencialColaResponse` sigue sin exponer `archivoUrl`.

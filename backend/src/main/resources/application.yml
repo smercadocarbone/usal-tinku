@@ -13,6 +13,14 @@ spring:
     username: ${DB_USER:}
     password: ${DB_PASSWORD:}
 
+  servlet:
+    multipart:
+      # AUD-007: límite explícito de la subida de credenciales (antes, el default
+      # implícito de 1MB). Un escaneo de título en PDF o una foto de celular entran
+      # holgados en 5MB.
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   jpa:
     hibernate:
       ddl-auto: validate # el esquema real lo maneja Flyway, nunca auto-generado en runtime

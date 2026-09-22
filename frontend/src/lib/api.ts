@@ -24,18 +24,22 @@ export class ApiError extends Error {
 
 type Cuerpo = Record<string, unknown> | FormData | string | undefined;
 
+function headersConToken(): Headers {
+  const token =
+    typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : null;
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return headers;
+}
+
 async function request<T>(
   path: string,
   options: { method: string; body?: Cuerpo }
 ): Promise<T> {
-  const token =
-    typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : null;
-
   const esMultipart =
     typeof FormData !== "undefined" && options.body instanceof FormData;
 
-  const headers = new Headers();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const headers = headersConToken();
   if (options.body !== undefined && !esMultipart && typeof options.body !== "string") {
     headers.set("Content-Type", "application/json");
   }
@@ -299,6 +303,23 @@ export interface CredencialCola {
 
 export function getColaCredenciales(): Promise<CredencialCola[]> {
   return api.get("/api/admin/moderacion/credenciales");
+}
+
+/**
+ * Archivo de la Credencial para revisarlo antes de decidir (AUD-007). Devuelve
+ * bytes, no JSON: el backend fija el Content-Type por el contenido real del
+ * archivo, nunca por lo que declaró el Tutor.
+ */
+export async function getArchivoCredencial(id: string): Promise<Blob> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/moderacion/credenciales/${id}/archivo`,
+    { headers: headersConToken() }
+  );
+  if (!res.ok) {
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
+  }
+  return res.blob();
 }
 
 export function resolverCredencial(

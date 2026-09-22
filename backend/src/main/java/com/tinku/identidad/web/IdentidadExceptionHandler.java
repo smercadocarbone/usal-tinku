@@ -91,6 +91,16 @@ public class IdentidadExceptionHandler {
                         "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
     }
 
+    @ExceptionHandler(ArchivoCredencialDemasiadoGrandeException.class)
+    public ResponseEntity<Map<String, String>> handleArchivoCredencialGrande(ArchivoCredencialDemasiadoGrandeException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ArchivoCredencialInvalidoException.class)
+    public ResponseEntity<Map<String, String>> handleArchivoCredencialInvalido(ArchivoCredencialInvalidoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(CredencialNoPendienteException.class)
     public ResponseEntity<Map<String, String>> handleCredencialNoPendiente(CredencialNoPendienteException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));

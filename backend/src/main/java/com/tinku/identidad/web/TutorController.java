@@ -9,14 +9,18 @@ import com.tinku.identidad.dto.TutorPerfilResponse;
 import com.tinku.identidad.dto.UsuarioResponse;
 import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.CredencialAcademica;
+import com.tinku.identidad.model.TipoArchivoCredencial;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.port.PerfilMatchingProvider;
 import com.tinku.identidad.port.ReputacionPerfilProvider;
+import com.tinku.identidad.service.ArchivoCredencialDemasiadoGrandeException;
+import com.tinku.identidad.service.ArchivoCredencialInvalidoException;
 import com.tinku.identidad.service.CredencialService;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -46,13 +51,17 @@ public class TutorController {
     private final Almacenamiento almacenamiento;
     private final PerfilMatchingProvider perfilMatchingProvider;
     private final ReputacionPerfilProvider reputacionPerfilProvider;
+    /** Mismo valor que corta el contenedor; se re-chequea acá (ver cargarCredencial). */
+    private final DataSize maxArchivoCredencial;
 
     public TutorController(UsuarioService usuarioService,
                            CredencialService credencialService,
                            UsuarioActual usuarioActual,
                            Almacenamiento almacenamiento,
                            PerfilMatchingProvider perfilMatchingProvider,
-                           ReputacionPerfilProvider reputacionPerfilProvider) {
+                           ReputacionPerfilProvider reputacionPerfilProvider,
+                           @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial) {
+        this.maxArchivoCredencial = maxArchivoCredencial;
         this.usuarioService = usuarioService;
         this.credencialService = credencialService;
         this.usuarioActual = usuarioActual;
@@ -112,7 +121,17 @@ public class TutorController {
             Authentication authentication
     ) throws IOException {
         Usuario tutor = usuarioActual.obtener(authentication);
-        String archivoUrl = almacenamiento.guardar(archivo.getBytes(), archivo.getOriginalFilename());
+        byte[] contenido = archivo.getBytes();
+        // AUD-007: tamaño y allowlist por contenido real, antes de guardar nada. El
+        // límite de spring.servlet.multipart lo aplica el contenedor; se repite acá
+        // para no depender de cómo se despliegue (y para poder testearlo).
+        if (archivo.getSize() > maxArchivoCredencial.toBytes()) {
+            throw new ArchivoCredencialDemasiadoGrandeException(maxArchivoCredencial);
+        }
+        if (TipoArchivoCredencial.detectar(contenido).isEmpty()) {
+            throw new ArchivoCredencialInvalidoException();
+        }
+        String archivoUrl = almacenamiento.guardar(contenido, archivo.getOriginalFilename());
         CredencialAcademica credencial =
                 credencialService.cargarCredencial(tutor, request.tipoDocumento(), archivoUrl);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(credencial));

@@ -212,7 +212,7 @@ class CatalogoTemasIntegracionTest {
         MvcResult cargada = mockMvc.perform(multipart("/api/tutores/credenciales")
                         .file(jsonPart("datos", new CargarCredencialRequest(TipoCredencial.TITULO)))
                         .file(new MockMultipartFile("archivo", "credencial.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
+                                MediaType.APPLICATION_PDF_VALUE, "%PDF-1.4 credencial de prueba".getBytes()))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isCreated())
                 .andReturn();

@@ -163,7 +163,7 @@ class MatchingFlujosIntegracionTest {
                         .file(jsonPart("datos", new com.tinku.identidad.dto.CargarCredencialRequest(
                                 com.tinku.identidad.model.TipoCredencial.TITULO)))
                         .file(new MockMultipartFile("archivo", "credencial.pdf",
-                                MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{7, 7}))
+                                MediaType.APPLICATION_PDF_VALUE, "%PDF-1.4 credencial de prueba".getBytes()))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isCreated())
                 .andReturn();

@@ -258,7 +258,7 @@ function PasoDos() {
             id="archivoCredencial"
             etiqueta="Archivo de credencial"
             type="file"
-            accept=".pdf,image/*"
+            accept="application/pdf,image/png,image/jpeg"
             required
             onChange={(e) => setArchivoCredencial(e.target.files?.[0] ?? null)}
           />

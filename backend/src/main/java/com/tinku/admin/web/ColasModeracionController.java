@@ -5,6 +5,9 @@ import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
+import com.tinku.identidad.model.TipoArchivoCredencial;
+import com.tinku.identidad.port.Almacenamiento;
+import com.tinku.identidad.port.ArchivoNoDisponibleException;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.service.CredencialService;
 import com.tinku.seguridad.model.EstadoDenuncia;
@@ -13,6 +16,10 @@ import com.tinku.seguridad.web.AlertaSeguridadResponse;
 import com.tinku.seguridad.web.DenunciaResponse;
 import com.tinku.shared.AdminModeracionGate;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,17 +58,20 @@ public class ColasModeracionController {
     private final AlertaSeguridadRepository alertaRepo;
     private final DenunciaRepository denunciaRepo;
     private final CredencialService credencialService;
+    private final Almacenamiento almacenamiento;
 
     public ColasModeracionController(AdminModeracionGate gate,
                                      CredencialAcademicaRepository credencialRepo,
                                      AlertaSeguridadRepository alertaRepo,
                                      DenunciaRepository denunciaRepo,
-                                     CredencialService credencialService) {
+                                     CredencialService credencialService,
+                                     Almacenamiento almacenamiento) {
         this.gate = gate;
         this.credencialRepo = credencialRepo;
         this.alertaRepo = alertaRepo;
         this.denunciaRepo = denunciaRepo;
         this.credencialService = credencialService;
+        this.almacenamiento = almacenamiento;
     }
 
     @GetMapping("/credenciales")
@@ -69,6 +79,46 @@ public class ColasModeracionController {
         gate.requiereModeracion(authentication);
         return ResponseEntity.ok(credencialRepo.colaPendientes(EstadoCredencial.PENDIENTE)
                 .stream().map(CredencialColaResponse::from).toList());
+    }
+
+    /**
+     * El archivo de la Credencial, para que el Admin la revise antes de decidir
+     * (AUD-007: hasta acá se aprobaba a ciegas, y la Credencial es la única
+     * verificación que habilita el matching tras ADR-M1-02). Sirve BYTES, nunca la
+     * referencia interna del almacenamiento (ADR-M1-03). Queda auditado por el
+     * {@code AuditoriaInterceptor} de {@code /api/admin/**}.
+     *
+     * <p>El Content-Type sale de los magic bytes, no de lo que declaró el Tutor. Un
+     * archivo fuera de la allowlist (subido antes de AUD-007) se entrega como
+     * descarga opaca, nunca inline. {@code CSP: sandbox} + {@code nosniff} evitan que
+     * un archivo hostil ejecute algo en el origen del panel.</p>
+     */
+    @GetMapping("/credenciales/{credencialId}/archivo")
+    public ResponseEntity<byte[]> archivoCredencial(@PathVariable UUID credencialId,
+                                                    Authentication authentication) {
+        gate.requiereModeracion(authentication);
+        CredencialAcademica credencial = credencialRepo.findById(credencialId).orElse(null);
+        if (credencial == null) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] contenido;
+        try {
+            contenido = almacenamiento.leer(credencial.getArchivoUrl());
+        } catch (ArchivoNoDisponibleException e) {
+            return ResponseEntity.notFound().build();
+        }
+        var tipo = TipoArchivoCredencial.detectar(contenido);
+        ContentDisposition disposicion = tipo.isPresent()
+                ? ContentDisposition.inline().build()
+                : ContentDisposition.attachment().filename("credencial-" + credencialId).build();
+        return ResponseEntity.ok()
+                .contentType(tipo.map(t -> MediaType.parseMediaType(t.getMediaType()))
+                        .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposicion.toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "sandbox")
+                .cacheControl(CacheControl.noStore())
+                .body(contenido);
     }
 
     @PostMapping("/credenciales/{credencialId}/resolver")

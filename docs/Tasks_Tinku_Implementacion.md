@@ -214,7 +214,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-AUD-006: `UNIQUE (mp_payment_id)` + `UNIQUE (reserva_id)` en `pagos.transacciones` (migración nueva) (AUD-010) — CERRADO (b6bd538)
 - [x] T-AUD-007: Exigir participación en `DenunciaService.presentar` + rechazar auto-denuncia (AUD-011) — CERRADO (D5: la denuncia de perfil sigue abierta, FR-SEC-001bis)
 - [x] T-AUD-008: `ramaMenor` suspende a `detectadoId`, no a `reserva.getTutor()` — o documentar la intención en el Spec y arreglar la resolución de la Alerta (AUD-006) — CERRADO: se suspende al detectado (D2), riesgo aceptado en Spec_M3 US-6
-- [ ] T-AUD-009: Endpoint de visualización del archivo de la Credencial, gateado por `requiereModeracion` (AUD-007)
+- [x] T-AUD-009: Endpoint de visualización del archivo de la Credencial, gateado por `requiereModeracion` (AUD-007) — CERRADO (incluye allowlist por magic bytes y límite de 5MB en la subida)
 - [x] T-AUD-010: Guard de sanción vigente antes de reactivar (`AlertaSeguridadService`, `CredencialService`) (AUD-013) — CERRADO (incluye `ReactivacionCuentaJob`, tercer camino con el mismo bug)
 - [x] T-AUD-011: Fallar el arranque si `tinku.jwt.secret` es el placeholder fuera de `dev`/`test` (AUD-034) — CERRADO (Task 1.6, `ArranqueSeguroValidator`)
 

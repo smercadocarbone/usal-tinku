@@ -128,7 +128,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 - [x] **Chunk M8-C** — Mapeo de enrutamiento de tickets de soporte (T-M8-05)
 - [x] **Chunk M8-D** — Test de aislamiento de roles (403 cruzado) (T-M8-06)
 - [x] **Chunk M8-E** _(agregado, fuera del plan original)_ — Resolución de credencial desde la cola (T-M8-07) + storage real local-fs (T-M8-08).
-  _Auditoría 2026-09-21: la resolución de credencial desde la cola está, pero **no existe endpoint para ver el archivo** que se está aprobando — `CredencialColaResponse` excluye `archivoUrl` a propósito y ningún controller sirve el archivo; el Admin aprueba o rechaza conociendo sólo nombre, apellido y tipo de documento — AUD-007._
+  _Auditoría 2026-09-21: la resolución de credencial desde la cola está, pero **no existe endpoint para ver el archivo** que se está aprobando — `CredencialColaResponse` excluye `archivoUrl` a propósito y ningún controller sirve el archivo; el Admin aprobaba o rechazaba conociendo sólo nombre, apellido y tipo de documento — AUD-007. **Cerrado 2026-09-22:** `GET /api/admin/moderacion/credenciales/{id}/archivo` + visor en la cola._
 - [x] **Chunk M8-F** _(agregado, PR #19, ADR-M5-01/M8-01)_ — Modo Bypass de la pasarela de pagos + pestaña "Salud de Infraestructura" con datos reales, formalizados retroactivamente vía ADR.
 
 ---
