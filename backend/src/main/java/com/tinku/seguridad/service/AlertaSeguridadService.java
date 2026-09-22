@@ -2,9 +2,11 @@ package com.tinku.seguridad.service;
 
 import com.tinku.aula.model.AlertaSeguridad;
 import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.pagos.evento.AlertaResueltaEvent;
 import com.tinku.seguridad.AlertaSeguridadNoEncontradaException;
 import com.tinku.seguridad.AlertaYaResueltaException;
 import com.tinku.seguridad.DescargoInvalidoException;
@@ -43,15 +45,18 @@ public class AlertaSeguridadService {
     private final AlertaSeguridadRepository alertaRepo;
     private final SancionRepository sancionRepo;
     private final UsuarioRepository usuarioRepo;
+    private final SesionAprendizajeRepository sesionRepo;
     private final ApplicationEventPublisher events;
 
     public AlertaSeguridadService(AlertaSeguridadRepository alertaRepo,
                                   SancionRepository sancionRepo,
                                   UsuarioRepository usuarioRepo,
+                                  SesionAprendizajeRepository sesionRepo,
                                   ApplicationEventPublisher events) {
         this.alertaRepo = alertaRepo;
         this.sancionRepo = sancionRepo;
         this.usuarioRepo = usuarioRepo;
+        this.sesionRepo = sesionRepo;
         this.events = events;
     }
 
@@ -87,7 +92,8 @@ public class AlertaSeguridadService {
      * Resuelve la Alerta: {@code reactivar} restablece el matching del Tutor
      * (acusación falsa, caso borde #4) salvo que tenga otra sanción vigente (AUD-013); {@code sancionar} persiste la sanción y
      * publica {@code sancion.aplicada} (misma transacción que revierte la
-     * suspensión preventiva de M3). Ambas fijan la retención del clip (BR-KS-02).
+     * suspensión preventiva de M3). Ambas fijan la retención del clip (BR-KS-02) y
+     * publican {@code alerta.resuelta}, que reembolsa el escrow pausado (ADR-M3-02).
      */
     @Transactional
     public AlertaSeguridad resolver(UUID alertaId, UUID adminId, DecisionAlerta decision,
@@ -118,6 +124,10 @@ public class AlertaSeguridadService {
         }
         alerta.setClipRetencionHasta(Instant.now().plus(RETENCION_CLIP));
         usuarioRepo.save(detectado);
+        // ADR-M3-02: el kill-switch dejó el escrow en pausa; resolver la Alerta (en
+        // cualquier sentido) libera el reembolso total al Estudiante.
+        sesionRepo.findById(alerta.getSesionId()).ifPresent(sesion ->
+                events.publishEvent(new AlertaResueltaEvent(this, sesion.getReservaId())));
         return alertaRepo.save(alerta);
     }
 

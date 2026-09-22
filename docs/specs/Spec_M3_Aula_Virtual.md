@@ -52,7 +52,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 ### US-6 — Kill-switch, contraparte menor (rama 1)
 *Como* Tinku, *quiero* cortar la sesión ante contenido inapropiado cuando hay un menor presente, *para* protegerlo de forma inmediata.
 
-- **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor` que M5 usa para reembolsar al Estudiante (FR-PAG-009), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
+- **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor`, con el que M5 pausa el escrow hasta que M9 resuelva la Alerta y recién ahí reembolsa al Estudiante (FR-PAG-009, ADR-M3-02: el corte es inmediato, la plata no), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
 
   **Implementado (AUD-001, 2026-09-22):** el corte cierra la sala de LiveKit (`DeleteRoom`, que
   desconecta a ambos) y la sesión deja de emitir tokens nuevos. Si LiveKit no contesta, el corte

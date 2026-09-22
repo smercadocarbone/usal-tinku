@@ -6,6 +6,7 @@ import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.pagos.evento.DenunciaRegistradaEvent;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
 import com.tinku.pagos.evento.SesionInterrumpidaEvent;
+import com.tinku.pagos.evento.AlertaResueltaEvent;
 import com.tinku.pagos.evento.SesionKillswitchAdultosEvent;
 import com.tinku.pagos.evento.SesionKillswitchMenorEvent;
 import com.tinku.pagos.evento.SesionNoShowDobleEvent;
@@ -207,10 +208,39 @@ class EscrowListenersIntegracionTest {
     }
 
     @Test
-    void sesionKillswitchMenor_reembolsaAlEstudiante() {
+    void sesionKillswitchMenor_pausaElEscrowSinReembolsar() {
+        // ADR-M3-02 (D3): el corte es inmediato, la plata no. M9 decide al resolver la Alerta.
         Escena e = escena();
+        Transaccion t0 = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        t0.setLiberarAt(Instant.now().plusSeconds(60));
+        transaccionRepository.save(t0);
 
         events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        assertThat(t.getLiberarAt()).isNull();
+        verifyNoInteractions(reembolso);
+    }
+
+    @Test
+    void sesionKillswitchAdultos_pausaElEscrowSinReembolsar() {
+        Escena e = escena();
+
+        events.publishEvent(new SesionKillswitchAdultosEvent("M3", e.reservaId(), e.pagadorId()));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        verifyNoInteractions(reembolso);
+    }
+
+    @Test
+    void alertaResuelta_trasKillswitch_reembolsaTotalInclusoSiElDetectadoEsElPagador() {
+        // FR-PAG-012: total aunque el pagador haya sido el detectado — ahora, al resolver.
+        Escena e = escena();
+        events.publishEvent(new SesionKillswitchAdultosEvent("M3", e.reservaId(), e.pagadorId()));
+
+        events.publishEvent(new AlertaResueltaEvent("M9", e.reservaId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
         assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
@@ -218,16 +248,15 @@ class EscrowListenersIntegracionTest {
     }
 
     @Test
-    void sesionKillswitchAdultos_reembolsaTotalInclusoSiElDetectadoEsElPagador() {
-        // FR-PAG-012: el reembolso por kill-switch es total aunque el propio
-        // pagador haya sido el detectado — la plataforma no usa dinero como castigo.
+    void alertaResuelta_sinEscrowPausado_esNoOp() {
+        // Alertas previas a ADR-M3-02 (escrow nunca pausado): no se mueve dinero.
         Escena e = escena();
 
-        events.publishEvent(new SesionKillswitchAdultosEvent("M3", e.reservaId(), e.pagadorId()));
+        events.publishEvent(new AlertaResueltaEvent("M9", e.reservaId()));
 
-        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
-        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
-        verify(reembolso).reembolsarTotal(any(Transaccion.class));
+        assertThat(transaccionRepository.findById(e.transaccion().getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
+        verifyNoInteractions(reembolso);
     }
 
     @Test

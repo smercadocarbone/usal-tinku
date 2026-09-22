@@ -14,7 +14,7 @@
 | AUD-002 | CRÍTICA | Tokens de LiveKit con roomAdmin y roomCreate | CERRADO | 1 | 92375ee | `LiveKitServiceTest.tokenDeParticipanteSeVerificaYDeclaraLaSalaCorrecta` |
 | AUD-003 | CRÍTICA | El DNI se usa como identity de LiveKit y se expone en pantalla | CERRADO | 1 | 049fb8f | `SesionesIntegracionTest.tM3Token_participanteConSalaCreada_obtieneTokenYUrl`, `LiveKitServiceTest.tokenDeParticipanteLlevaElNombreVisibleEnElClaimName` |
 | AUD-004 | CRÍTICA | Perfil `dev` con OCR stub activo por defecto en el artefacto | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (elArtefactoNoTraePerfilActivoHardcodeado, prodConStubOcr, prodYDevJuntosConStubOcr) |
-| AUD-005 | CRÍTICA | Kill-switch disparable por cualquier participante sin evidencia | ABIERTO | 1 | — | — |
+| AUD-005 | CRÍTICA | Kill-switch disparable por cualquier participante sin evidencia | CERRADO | 1 | (este commit) — ADR-M3-02 (vector financiero cerrado; corte arbitrario aceptado por Art. II) | `EscrowListenersIntegracionTest` (killswitch pausa, alertaResuelta), `DenunciasModeracionIntegracionTest.aud005_*`, `E2ERamaSeguridadIntegracionTest.killswitchMenor_*` |
 | AUD-006 | ALTA | `ramaMenor` suspende siempre al Tutor, ignorando al detectado real | CERRADO | 1 | 5834fb1 | `KillswitchIntegracionTest.aud006_menor_detectadoEsElMenor_noSuspendeAlTutorYLaResolucionRevierte` |
 | AUD-007 | CRÍTICA | No hay endpoint para ver el archivo de la Credencial Académica | ABIERTO | 1 | — | — |
 | AUD-008 | CRÍTICA | El token de reset de contraseña se loguea en claro junto al DNI | CERRADO | 1 | 676a6b8 | `NotificadorResetPasswordLogTest.notificarNoLoguearElTokenNiElDni` |
@@ -22,7 +22,7 @@
 | AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | CERRADO | 1 | b6bd538 | `PagosWebhookIntegracionTest.webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx` |
 | AUD-011 | ALTA | `DenunciaService.presentar` sin validar participación (BOLA) | CERRADO | 1 | beaf32a | `DenunciasModeracionIntegracionTest.aud011_*` (5) |
 | AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
-| AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | (este commit) | `DenunciasModeracionIntegracionTest.aud013_*` (5) |
+| AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | 5ddaa1d | `DenunciasModeracionIntegracionTest.aud013_*` (5) |
 | AUD-014 | ALTA | No existe infraestructura real de notificaciones | ABIERTO | 2 | — | — |
 | AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | ABIERTO | 2 | — | — |
 | AUD-016 | MEDIA | El middleware de Next.js sólo verifica que exista la cookie JWT | ABIERTO | 3 | — | — |
@@ -42,7 +42,7 @@
 | AUD-030 | MEDIA | `Tasks_Tinku_Implementacion.md` desactualizado y contradice los chunks | CERRADO | 2 | 8707da6, 64fe386, 352d065, 2d4e108 | n/a (documentación) |
 | AUD-031 | MEDIA | `matching-service` sin CI; E2E de Playwright mockean `/api` completo | ABIERTO | 2 | — | — |
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | ABIERTO | 3 | — | — |
-| AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | (este commit) | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
+| AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | 5ddaa1d | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
 | AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
 | AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | ABIERTO | 3 | — | — |
 | AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) | ABIERTO | 4 | — | — |

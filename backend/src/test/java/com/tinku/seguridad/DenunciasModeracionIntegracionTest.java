@@ -616,6 +616,33 @@ class DenunciasModeracionIntegracionTest {
         // D5: sin sesionId no se exige vínculo (y no congela ningún escrow).
         postDenuncia(cualquiera, tutor.getId(), null).andExpect(status().isCreated());
     }
+    // ------------------------- AUD-005 / ADR-M3-02: la Alerta decide el dinero
+
+    @Test
+    void aud005_alertaReactivar_conEscrowPausadoPorKillswitch_reembolsaAlEstudiante() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR, false);
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+        Transaccion t = transaccion(cupo.transaccionId());
+        t.setEstado(EstadoTransaccion.PAUSADO_DENUNCIA); // lo dejó así el kill-switch
+        transaccionRepository.save(t);
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(cupo.sesionId());
+        alerta.setRama("menor");
+        alerta.setDetectadoId(tutor.getId());
+        alertaRepository.save(alerta);
+
+        mvc.perform(post("/api/admin/moderacion/alertas-seguridad/" + alerta.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(admin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "reactivar"))))
+                .andExpect(status().isOk());
+
+        // Falso positivo: igual cobra el Estudiante — lo que cambió es que pasó por un Admin.
+        assertThat(transaccion(cupo.transaccionId()).getEstado())
+                .isEqualTo(EstadoTransaccion.REEMBOLSADO);
+    }
+
     // ------------------------- AUD-013: ninguna reactivación pisa una sanción vigente
 
     /** Sanción real persistida (origen DENUNCIA de perfil: la fixture más chica que cumple los CHECK). */

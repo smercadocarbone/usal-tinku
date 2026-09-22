@@ -1,5 +1,6 @@
 package com.tinku.pagos.service;
 
+import com.tinku.pagos.evento.AlertaResueltaEvent;
 import com.tinku.pagos.evento.DenunciaRegistradaEvent;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
 import com.tinku.pagos.evento.SesionInterrumpidaEvent;
@@ -232,20 +233,40 @@ public class EscrowService {
         reembolsarSiRetenida(evento.getReservaId());
     }
 
-    /** {@code sesion.killswitch_menor} (FR-PAG-009): reembolso total. */
+    /** {@code sesion.killswitch_menor}: el corte es inmediato, la plata no
+     * (ADR-M3-02, AUD-005). El escrow se pausa hasta que M9 resuelva la Alerta
+     * ({@link #onAlertaResuelta}); antes se reembolsaba acá, sin revisión, y eso
+     * premiaba disparar el kill-switch al final de una clase ya dada. */
     @EventListener
     @Transactional
     public void onSesionKillswitchMenor(SesionKillswitchMenorEvent evento) {
-        reembolsarSiRetenida(evento.getReservaId());
+        pausarSiRetenida(evento.getReservaId());
     }
 
-    /** {@code sesion.killswitch_adultos} (FR-PAG-012): reembolso total INCLUSO si
-     * el detectado es el propio pagador — {@code detectadoId} se ignora a
-     * propósito (ver javadoc del evento). */
+    /** {@code sesion.killswitch_adultos}: igual que la rama menor (ADR-M3-02). El
+     * reembolso, cuando llegue, es total INCLUSO si el detectado es el propio
+     * pagador (FR-PAG-012) — {@code detectadoId} se ignora a propósito. */
     @EventListener
     @Transactional
     public void onSesionKillswitchAdultos(SesionKillswitchAdultosEvent evento) {
-        reembolsarSiRetenida(evento.getReservaId());
+        pausarSiRetenida(evento.getReservaId());
+    }
+
+    /** {@code alerta.resuelta} (M9 → M5, ADR-M3-02): cierra la pausa del kill-switch
+     * con reembolso total al Estudiante, sea {@code reactivar} o {@code sancionar}.
+     * Si la transacción ya no está en pausa (una Alerta previa a ADR-M3-02, o una
+     * Denuncia sobre la misma sesión que se resolvió antes), es no-op. */
+    @EventListener
+    @Transactional
+    public void onAlertaResuelta(AlertaResueltaEvent evento) {
+        transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
+            if (t.getEstado() != EstadoTransaccion.PAUSADO_DENUNCIA) {
+                return;
+            }
+            t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+            transaccionRepo.save(t);
+            reembolsarSiRetenida(evento.getReservaId());
+        });
     }
 
     /** {@code denuncia.registrada} (Spec_M5 §2): pausa el escrow hasta la
@@ -254,7 +275,11 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onDenunciaRegistrada(DenunciaRegistradaEvent evento) {
-        transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
+        pausarSiRetenida(evento.getReservaId());
+    }
+
+    private void pausarSiRetenida(UUID reservaId) {
+        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 t.setEstado(EstadoTransaccion.PAUSADO_DENUNCIA);
                 t.setLiberarAt(null);
