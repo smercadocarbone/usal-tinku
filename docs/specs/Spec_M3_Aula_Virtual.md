@@ -67,9 +67,14 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
   existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
 - **Dado** que el participante menor es quien genera la detección, **cuando** eso ocurra, **entonces** se aplica el mismo corte y se notifica al Adulto Responsable — la sesión nunca continúa, sin importar quién disparó la detección (Artículo II).
 
-  **IMPLEMENTADO CON DESVÍO (AUD-006, 2026-09-21):** el corte se aplica en todos los casos,
-  correcto. Pero `ramaMenor()` suspende siempre al Tutor, incluso cuando el detectado es el
-  menor, y la resolución de la Alerta en M9 nunca lo reactiva. Ver FASE 1.
+  **A quién se suspende (decisión D2, AUD-006, 2026-09-22):** el corte es incondicional, pero la
+  suspensión preventiva recae **solo sobre el detectado** (el usuario cuyo video disparó la
+  detección), igual que en la rama adultos (US-7). La Alerta apunta siempre a esa persona, y
+  resolverla en M9 revierte exactamente esa suspensión.
+  **Riesgo aceptado:** si el detectado es el menor, el Tutor no queda suspendido y puede tomar
+  otra sesión durante la ventana de 12hs hasta la revisión del Admin. Se acepta para no
+  penalizar a un Tutor por una detección que no generó; la revisión humana ocurre igual porque la
+  Alerta se crea siempre y entra a la cola de moderación.
 
 ### US-6bis — Falla técnica del propio clasificador _(agregado, auditoría 2026-09-18)_
 *Como* Tinku, *quiero* que una falla del clasificador (no un falso negativo de contenido, sino que el modelo no cargue o deje de responder) tenga un comportamiento explícito y a favor de la seguridad, *para* que nunca haya una sesión con un menor corriendo sin protección activa sin que nadie lo sepa.

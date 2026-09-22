@@ -480,22 +480,24 @@ public class SesionService {
         return ramaAdultos(sesion, reserva, detectadoId);
     }
 
-    // FIXME AUD-006 (auditoría 2026-09-21): suspende siempre a reserva.getTutor(), ignorando
-    // detectadoId. Cuando el detectado es el menor (caso previsto en Spec_M3 US-6), el Tutor
-    // queda suspendido y AlertaSeguridadService.resolver() nunca lo reactiva, porque resuelve
-    // mirando alerta.getDetectadoId(). Comparar con confirmarRamaAdultos(), que sí usa el
-    // detectado. Se corrige en FASE 1.
     /**
      * US-6 — rama MENOR: corte directo, sin confirmación ni pregunta al menor
      * (Artículo II). Alerta de Seguridad {@code rama=menor}, suspensión
-     * preventiva del Tutor ({@code activo_para_matching=false}, FR-SEC-004) y
+     * preventiva del DETECTADO ({@code activo_para_matching=false}, FR-SEC-004) y
      * evento {@code sesion.killswitch_menor}.
+     *
+     * <p>Se suspende a {@code detectadoId}, igual que {@link #confirmarRamaAdultos}
+     * (decisión D2, AUD-006): así la Alerta siempre apunta a quien quedó suspendido
+     * y {@code AlertaSeguridadService.resolver} puede revertirlo. Si el detectado es
+     * el menor, el Tutor NO queda suspendido — riesgo aceptado en Spec_M3 US-6.</p>
      */
     private SesionAprendizaje ramaMenor(SesionAprendizaje sesion, Reserva reserva,
                                         UUID detectadoId) {
-        Usuario tutor = reserva.getTutor();
-        tutor.setActivoParaMatching(false);
-        usuarioRepo.save(tutor);
+        Usuario detectado = usuarioRepo.findById(detectadoId).orElse(null);
+        if (detectado != null) {
+            detectado.setActivoParaMatching(false);
+            usuarioRepo.save(detectado);
+        }
 
         AlertaSeguridad alerta = new AlertaSeguridad();
         alerta.setSesionId(sesion.getId());

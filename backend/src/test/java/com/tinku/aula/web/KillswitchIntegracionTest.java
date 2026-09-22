@@ -22,6 +22,8 @@ import com.tinku.pagos.evento.SesionKillswitchMenorEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
+import com.tinku.seguridad.model.DecisionAlerta;
+import com.tinku.seguridad.service.AlertaSeguridadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,6 +102,7 @@ class KillswitchIntegracionTest {
     @Autowired SesionService sesionService;
     @Autowired JwtUtil jwtUtil;
     @Autowired CierreSalaService cierreSalaService;
+    @Autowired AlertaSeguridadService alertaSeguridadService;
     @Autowired Scheduler scheduler;
     // Sin credenciales de LiveKit en CI (T-000-06): se mockea el borde HTTP.
     @MockBean LiveKitService liveKitService;
@@ -258,6 +261,37 @@ class KillswitchIntegracionTest {
 
         assertThat(EVENTOS).hasSize(1);
         assertThat(alertaRepository.findBySesionId(sesion.getId())).isPresent();
+    }
+
+    // ------------------------------------------------ AUD-006 — se suspende al detectado
+
+    @Test
+    void aud006_menor_detectadoEsElMenor_noSuspendeAlTutorYLaResolucionRevierte() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
+        menor.setActivoParaMatching(true);
+        usuarioRepository.save(menor);
+        SesionAprendizaje sesion = sesionDirecta(reservaConfirmada(ar, menor, tutor), 3600);
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", menor.getId().toString()));
+
+        // El corte es incondicional (Art. II) — eso no cambia.
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("finalizada");
+        // D2: se suspende solo al detectado. El Tutor no generó la detección.
+        assertThat(tutorConId(tutor.getId()).isActivoParaMatching()).isTrue();
+        assertThat(usuarioRepository.findById(menor.getId()).orElseThrow().isActivoParaMatching())
+                .isFalse();
+
+        // La Alerta apunta a quien fue suspendido: resolver REACTIVAR lo revierte.
+        AlertaSeguridad alerta = alertaRepository.findBySesionId(sesion.getId()).orElseThrow();
+        assertThat(alerta.getDetectadoId()).isEqualTo(menor.getId());
+        alertaSeguridadService.resolver(alerta.getId(), UUID.randomUUID(),
+                DecisionAlerta.REACTIVAR, null, null);
+        assertThat(usuarioRepository.findById(menor.getId()).orElseThrow().isActivoParaMatching())
+                .isTrue();
+        assertThat(tutorConId(tutor.getId()).isActivoParaMatching()).isTrue();
     }
 
     // ------------------------------------------------ AUD-001 — el corte cierra la sala
