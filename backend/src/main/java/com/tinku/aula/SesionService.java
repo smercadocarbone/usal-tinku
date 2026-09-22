@@ -42,6 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -640,10 +642,31 @@ public class SesionService {
     }
 
     private boolean esParticipante(Reserva reserva, Usuario usuario) {
-        return reserva.getTutor().getId().equals(usuario.getId())
-                || reserva.getBeneficiario().getId().equals(usuario.getId())
-                || (reserva.getPagador() != null
-                    && reserva.getPagador().getId().equals(usuario.getId()));
+        return participantesDe(reserva).contains(usuario.getId());
+    }
+
+    /**
+     * Participantes de la Sesión: tutor, beneficiario y pagador de su Reserva — el
+     * mismo criterio que autoriza token, finalizar y kill-switch. Lo usa M9 para
+     * exigir participación en una denuncia con sesión (AUD-011): así el Adulto
+     * Responsable que paga la sesión de su menor cuenta como participante.
+     */
+    public Set<UUID> participantes(UUID sesionId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        return participantesDe(reserva);
+    }
+
+    private static Set<UUID> participantesDe(Reserva reserva) {
+        Set<UUID> ids = new HashSet<>();
+        ids.add(reserva.getTutor().getId());
+        ids.add(reserva.getBeneficiario().getId());
+        if (reserva.getPagador() != null) {
+            ids.add(reserva.getPagador().getId());
+        }
+        return ids;
     }
 
     // ------------------------------------------------ agendar jobs de Quartz

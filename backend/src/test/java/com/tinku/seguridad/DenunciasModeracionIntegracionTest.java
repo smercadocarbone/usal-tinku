@@ -536,4 +536,81 @@ class DenunciasModeracionIntegracionTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.descargoTexto").value("No era lo que parecía."));
     }
+    // ------------------------- AUD-011: participación exigida en denuncias con sesión
+
+    private org.springframework.test.web.servlet.ResultActions postDenuncia(
+            Usuario denunciante, UUID denunciadoId, UUID sesionId) throws Exception {
+        Map<String, String> body = new java.util.HashMap<>();
+        body.put("denunciadoId", denunciadoId.toString());
+        body.put("motivo", "fraude");
+        if (sesionId != null) {
+            body.put("sesionId", sesionId.toString());
+        }
+        return mvc.perform(post("/api/denuncias")
+                .header("Authorization", "Bearer " + token(denunciante))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    @Test
+    void aud011_terceroNoParticipante_denunciaSesionAjena_403_yNoPausaElEscrow() throws Exception {
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Usuario tercero = usuario(TipoUsuario.ADULTO, false);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+
+        postDenuncia(tercero, tutor.getId(), cupo.sesionId()).andExpect(status().isForbidden());
+
+        // El vector financiero de AUD-011: congelar el escrow de una sesión ajena.
+        assertThat(transaccion(cupo.transaccionId()).getEstado())
+                .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
+    }
+
+    @Test
+    void aud011_denunciadoNoParticipanteDeLaSesion_403() throws Exception {
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Usuario ajeno = usuario(TipoUsuario.TUTOR, true);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+
+        postDenuncia(estudiante, ajeno.getId(), cupo.sesionId()).andExpect(status().isForbidden());
+        assertThat(transaccion(cupo.transaccionId()).getEstado())
+                .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
+    }
+
+    @Test
+    void aud011_autoDenuncia_422() throws Exception {
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+
+        postDenuncia(estudiante, estudiante.getId(), cupo.sesionId())
+                .andExpect(status().isUnprocessableEntity());
+        postDenuncia(estudiante, estudiante.getId(), null)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void aud011_adultoResponsableDenunciaLaSesionDeSuMenor_201() throws Exception {
+        Usuario ar = usuario(TipoUsuario.ADULTO, false);
+        Usuario chico = menor(ar);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+        Cupo cupo = cupoConEscrow(ar, tutor, Instant.now().plusSeconds(3600));
+        Reserva reserva = reservaRepository.findById(cupo.reservaId()).orElseThrow();
+        reserva.setBeneficiario(chico); // el menor es el beneficiario, el AR paga (Art. II)
+        reservaRepository.save(reserva);
+
+        postDenuncia(ar, tutor.getId(), cupo.sesionId()).andExpect(status().isCreated());
+        assertThat(transaccion(cupo.transaccionId()).getEstado())
+                .isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+    }
+
+    @Test
+    void aud011_denunciaDePerfilSinSesion_sigueAbiertaACualquierAdulto() throws Exception {
+        Usuario cualquiera = usuario(TipoUsuario.ADULTO, false);
+        Usuario tutor = usuario(TipoUsuario.TUTOR, true);
+
+        // D5: sin sesionId no se exige vínculo (y no congela ningún escrow).
+        postDenuncia(cualquiera, tutor.getId(), null).andExpect(status().isCreated());
+    }
 }

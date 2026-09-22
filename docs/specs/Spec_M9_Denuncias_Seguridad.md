@@ -63,6 +63,7 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 | ID | Requisito |
 |---|---|
 | FR-SEC-001 | Denuncia disponible para Estudiante, Adulto Responsable y Tutor — **restringida para el perfil de menor** (aunque tenga cuenta propia, esta función no está habilitada en su sesión). |
+| FR-SEC-001bis _(agregado, AUD-011 / decisión D5, 2026-09-22)_ | Dos tipos de Denuncia. **Con sesión** (`sesionId`): denunciante y denunciado tienen que ser participantes de esa Sesión (tutor, beneficiario o pagador de su Reserva — el Adulto Responsable que paga la sesión de su menor cuenta como participante); si no, 403. Es la única que puede pausar un escrow (FR-SEC-003). **De perfil** (sin `sesionId`): la puede presentar cualquier usuario no-menor, sin exigir vínculo, y no pausa ningún escrow. En ambos casos se rechaza la auto-denuncia (422). **Riesgo aceptado:** la denuncia de perfil puede spamear la cola de moderación y arrancar el plazo de descargo sobre un inocente; se mitiga con rate limiting (FASE 2, AUD-012), no con un chequeo de vínculo. |
 | FR-SEC-002 | Estados de la Denuncia estándar: `registrada` → `en_revision` (descargo 48hs) → `resuelta` / `escalada`. |
 | FR-SEC-003 | Denuncia con escrow activo pausa la liberación **de esa sesión específica**, no de otras interacciones entre las mismas cuentas. |
 | FR-SEC-004 | Alertas del kill-switch: track independiente, prioridad alta, revisión del Admin de Moderación y Seguridad en 12hs sin descargo previo obligatorio; suspensión preventiva ya automática desde M3. |
