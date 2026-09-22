@@ -435,10 +435,10 @@ public class SesionService {
 
     // ------------------------------------------------ kill-switch (T-M3-07/08/09)
 
-    // FIXME AUD-005 (auditoría 2026-09-21): el único control es esParticipante(). Cualquiera de
-    // los tres puede disparar el corte contra otro, sin evidencia y sin límite de tasa; en rama
-    // menor eso produce reembolso total + suspensión del Tutor. Ver FASE 1 y el anexo pendiente
-    // a ADR-M3-01 (modelo de amenaza del clasificador on-device).
+    // Riesgo aceptado (AUD-005, ADR-M3-02): el único control es esParticipante() — el disparo es
+    // una afirmación del cliente (clasificador on-device) y el Artículo II exige cortar sin pedir
+    // evidencia previa. Lo que se desacopló es la plata: el escrow queda en pausa hasta que M9
+    // resuelva la Alerta. El límite de tasa llega con AUD-012 (FASE 2).
     /**
      * Disparo del kill-switch (T-M3-07, US-6/US-7, FR-AULA-009). El backend
      * decide la rama con datos propios de M1: si el {@code beneficiario} de la
