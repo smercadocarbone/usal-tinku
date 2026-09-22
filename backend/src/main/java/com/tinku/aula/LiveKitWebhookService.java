@@ -77,6 +77,8 @@ public class LiveKitWebhookService {
         }
     }
 
+    // La rama del DNI es compatibilidad con tokens emitidos antes de AUD-003 (identity = DNI).
+    // Se borra en FASE 3 (plan de remediación, Task 3.12). No agregar usos nuevos.
     private boolean mismaPersona(Usuario usuario, String identity) {
         return usuario.getId().toString().equals(identity) || usuario.getDni().equals(identity);
     }

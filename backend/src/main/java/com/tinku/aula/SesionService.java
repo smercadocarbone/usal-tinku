@@ -266,14 +266,14 @@ public class SesionService {
 
     // ------------------------------------------------ token de acceso (M3-frontend)
 
-    // FIXME AUD-001/AUD-003 (auditoría 2026-09-21): (a) no hay guard de estado — devuelve token
-    // para una sesión ya cortada por kill-switch; (b) la identidad del participante es el DNI,
-    // que LiveKit difunde al otro participante y el frontend renderiza en pantalla. Con menores
-    // esto es un dato sensible bajo Ley 25.326. Se corrige en FASE 1.
+    // FIXME AUD-001 (auditoría 2026-09-21): no hay guard de estado — devuelve token para una
+    // sesión ya cortada por kill-switch. Se corrige en FASE 1.
     /**
      * Devuelve el token de LiveKit para que el participante se conecte a la sala.
      * Misma autorización que {@link #finalizar}: solo tutor, beneficiario o pagador.
      * La sala debe haber sido creada ya (T-5, {@link com.tinku.aula.jobs.CrearSalaJob}).
+     * El identity es el UUID y el nombre visible es solo el nombre de pila, sin
+     * apellido ni DNI (AUD-003, minimización del Artículo V).
      */
     public String[] obtenerToken(Usuario usuario, UUID sesionId) {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
@@ -287,7 +287,7 @@ public class SesionService {
             throw new SoloParticipanteException();
         }
         String token = liveKitService.generarTokenParticipante(
-                usuario.getDni(), sesion.getLivekitRoomId());
+                usuario.getId().toString(), usuario.getNombre(), sesion.getLivekitRoomId());
         return new String[]{token, sesion.getLivekitRoomId()};
     }
 

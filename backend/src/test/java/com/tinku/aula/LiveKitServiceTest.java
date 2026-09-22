@@ -78,7 +78,7 @@ class LiveKitServiceTest {
         LiveKitService service = new LiveKitService("http://localhost:" + portOk,
                 API_KEY, API_SECRET, TTL_SEGUNDOS);
 
-        String token = service.generarTokenParticipante("tutor-1", "sala-42");
+        String token = service.generarTokenParticipante("tutor-1", "Pablo", "sala-42");
 
         Claims cl = parsear(token);
         assertThat(cl.getIssuer()).isEqualTo(API_KEY);
@@ -90,6 +90,20 @@ class LiveKitServiceTest {
         assertThat(video.get("roomJoin")).isEqualTo(true);
         assertThat(video.get("roomCreate")).isEqualTo(false);
         assertThat(video.get("roomAdmin")).isEqualTo(false);
+    }
+
+    @Test
+    void tokenDeParticipanteLlevaElNombreVisibleEnElClaimName() {
+        LiveKitService service = new LiveKitService("http://localhost:" + portOk,
+                API_KEY, API_SECRET, TTL_SEGUNDOS);
+
+        String token = service.generarTokenParticipante(
+                "3f1c9a52-0000-0000-0000-000000000001", "Pablo", "sala-42");
+
+        // AUD-003: el otro participante ve el name, no el identity (que es un UUID opaco).
+        Claims cl = parsear(token);
+        assertThat(cl.get("name", String.class)).isEqualTo("Pablo");
+        assertThat(cl.getSubject()).isEqualTo("3f1c9a52-0000-0000-0000-000000000001");
     }
 
     @Test
@@ -126,7 +140,7 @@ class LiveKitServiceTest {
         assertThatThrownBy(() -> service.crearSala("sala-42"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("LIVEKIT_API_KEY");
-        assertThatThrownBy(() -> service.generarTokenParticipante("x", "sala-42"))
+        assertThatThrownBy(() -> service.generarTokenParticipante("x", "X", "sala-42"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("LIVEKIT_API_KEY");
     }

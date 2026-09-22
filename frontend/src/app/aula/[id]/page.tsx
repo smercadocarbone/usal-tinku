@@ -55,15 +55,12 @@ const MENSAJES_ESTADO: Record<Estado, string> = {
 };
 
 /**
- * El único identificador que el token de LiveKit trae hoy es el DNI
- * (`SesionService.obtenerToken` firma con `usuario.getDni()`, sin nombre) —
- * mostrar "Ana" en vez de un DNI necesita que el backend agregue un claim de
- * nombre al token. Hasta entonces, un DNI legible es mejor que ninguna
- * etiqueta, que era el estado anterior.
+ * La etiqueta sale del claim `name` del token de LiveKit (solo el nombre de
+ * pila). El `identity` es un UUID opaco y NO se renderiza nunca (AUD-003).
  */
-function etiquetaParticipante(identity: string, esLocal: boolean): string {
+function etiquetaParticipante(nombre: string, esLocal: boolean): string {
   if (esLocal) return "Vos";
-  return identity ? `Participante (DNI ${identity})` : "Participante";
+  return nombre || "Participante";
 }
 
 function mensajeErrorDispositivo(err: unknown): string {
@@ -235,7 +232,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [finalizando, setFinalizando] = useState(false);
   const [remoteActivo, setRemoteActivo] = useState(false);
-  const [remoteIdentity, setRemoteIdentity] = useState("");
+  const [remoteNombre, setRemoteNombre] = useState("");
   const [camActiva, setCamActiva] = useState(true);
   const [micActiva, setMicActiva] = useState(true);
   const [calidad, setCalidad] = useState<ConnectionQuality>(ConnectionQuality.Unknown);
@@ -477,13 +474,13 @@ export default function AulaPage({ params }: { params: { id: string } }) {
 
       room.on(RoomEvent.ParticipantConnected, (participante) => {
         setEstado("conectado");
-        setRemoteIdentity(participante.identity);
+        setRemoteNombre(participante.name ?? "");
       });
 
       room.on(RoomEvent.ParticipantDisconnected, () => {
         setEstado("esperando");
         setRemoteActivo(false);
-        setRemoteIdentity("");
+        setRemoteNombre("");
       });
 
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
@@ -516,12 +513,12 @@ export default function AulaPage({ params }: { params: { id: string } }) {
         if (track.kind === Track.Kind.Video && pub.source === Track.Source.ScreenShare) {
           if (remoteScreenVideoRef.current) track.attach(remoteScreenVideoRef.current);
           setRemoteCompartiendoPantalla(true);
-          setRemoteIdentity(participante.identity);
+          setRemoteNombre(participante.name ?? "");
           setTileDestacada("pantalla-remota");
         } else if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
           track.attach(remoteVideoRef.current);
           setRemoteActivo(true);
-          setRemoteIdentity(participante.identity);
+          setRemoteNombre(participante.name ?? "");
         } else if (track.kind === Track.Kind.Audio && remoteAudioRef.current) {
           track.attach(remoteAudioRef.current);
         }
@@ -800,7 +797,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const tiles: Tile[] = [
     {
       id: "camara-remota",
-      etiqueta: remoteIdentity ? etiquetaParticipante(remoteIdentity, false) : "Participante",
+      etiqueta: remoteNombre ? etiquetaParticipante(remoteNombre, false) : "Participante",
       videoRef: remoteVideoRef,
       contenidoVacio: !remoteActivo ? (
         <span className="px-4 text-center text-sm text-gray-500">
@@ -829,7 +826,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   if (remoteCompartiendoPantalla) {
     tiles.push({
       id: "pantalla-remota",
-      etiqueta: `Pantalla de ${etiquetaParticipante(remoteIdentity, false)}`,
+      etiqueta: `Pantalla de ${etiquetaParticipante(remoteNombre, false)}`,
       videoRef: remoteScreenVideoRef,
     });
   }

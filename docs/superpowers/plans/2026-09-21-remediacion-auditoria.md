@@ -1336,6 +1336,7 @@ Ya iniciado en la Task 1.10 (`ADR-M3-02`). **Cerrarlo formalmente** con el resul
 | 3.9 | Migración que dropee las tablas de CAP (V6) | AUD-035 | Migración **V29**, nunca editar V6 (guardrail A1). Comentario que referencie ADR-M1-02. |
 | 3.10 | Dependabot + actualizar Spring Boot | AUD-032 | Mejor relación costo/beneficio del informe. |
 | 3.11 | Middleware de Next.js: verificar firma o renombrar | AUD-016 | Si se verifica: `jose`, edge-compatible, comparte el secreto. Si no: renombrar el comentario y ser honesto. Ambas son válidas. |
+| 3.12 | Borrar la rama DNI de `LiveKitWebhookService.mismaPersona()` | AUD-003 (limpieza) | Desde Task 1.3 el identity de LiveKit es el UUID. La rama `usuario.getDni().equals(identity)` solo sobrevive para tokens emitidos antes del deploy de 1.3 (TTL de `tinku.livekit.token-ttl-segundos`, default 1h). Borrarla cuando ese TTL haya vencido en todos los entornos. |
 
 ---
 

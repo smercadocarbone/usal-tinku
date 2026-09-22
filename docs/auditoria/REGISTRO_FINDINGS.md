@@ -12,7 +12,7 @@
 |----|-----|--------|--------|------|--------|------|
 | AUD-001 | CRÍTICA | El kill-switch no cierra la sala de LiveKit | ABIERTO | 1 | — | — |
 | AUD-002 | CRÍTICA | Tokens de LiveKit con roomAdmin y roomCreate | CERRADO | 1 | 92375ee | `LiveKitServiceTest.tokenDeParticipanteSeVerificaYDeclaraLaSalaCorrecta` |
-| AUD-003 | CRÍTICA | El DNI se usa como identity de LiveKit y se expone en pantalla | ABIERTO | 1 | — | — |
+| AUD-003 | CRÍTICA | El DNI se usa como identity de LiveKit y se expone en pantalla | CERRADO | 1 | (este commit) | `SesionesIntegracionTest.tM3Token_participanteConSalaCreada_obtieneTokenYUrl`, `LiveKitServiceTest.tokenDeParticipanteLlevaElNombreVisibleEnElClaimName` |
 | AUD-004 | CRÍTICA | Perfil `dev` con OCR stub activo por defecto en el artefacto | ABIERTO | 1 | — | — |
 | AUD-005 | CRÍTICA | Kill-switch disparable por cualquier participante sin evidencia | ABIERTO | 1 | — | — |
 | AUD-006 | ALTA | `ramaMenor` suspende siempre al Tutor, ignorando al detectado real | ABIERTO | 1 | — | — |

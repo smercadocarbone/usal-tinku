@@ -71,6 +71,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -142,7 +143,7 @@ class SesionesIntegracionTest {
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
         when(liveKitService.crearSala(anyString())).thenAnswer(inv -> inv.getArgument(0));
-        when(liveKitService.generarTokenParticipante(anyString(), anyString()))
+        when(liveKitService.generarTokenParticipante(anyString(), anyString(), anyString()))
                 .thenReturn("jwt-test-token");
         when(liveKitService.getBaseUrl()).thenReturn("wss://test.livekit.cloud");
     }
@@ -575,7 +576,13 @@ class SesionesIntegracionTest {
         assertThat(body.get("token").asText()).isEqualTo("jwt-test-token");
         assertThat(body.get("livekitUrl").asText()).isEqualTo("wss://test.livekit.cloud");
         assertThat(body.get("livekitRoomId").asText()).isEqualTo("sesion-" + sesion.getId());
-        verify(liveKitService).generarTokenParticipante(e.dniTutor(), "sesion-" + sesion.getId());
+        // AUD-003: la identity de LiveKit es el UUID, nunca el DNI — LiveKit la difunde al
+        // otro participante (con menores, dato sensible bajo Ley 25.326).
+        // El claim name lleva solo el nombre de pila (minimización, Art. V): sin apellido.
+        verify(liveKitService).generarTokenParticipante(
+                e.tutorId().toString(), "Pablo", "sesion-" + sesion.getId());
+        verify(liveKitService, never())
+                .generarTokenParticipante(eq(e.dniTutor()), anyString(), anyString());
     }
 
     @Test
@@ -590,7 +597,7 @@ class SesionesIntegracionTest {
         mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
                         .header("Authorization", "Bearer " + tokenTercero))
                 .andExpect(status().isForbidden());
-        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString());
+        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -602,7 +609,7 @@ class SesionesIntegracionTest {
         mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
                         .header("Authorization", "Bearer " + e.tokenTutor()))
                 .andExpect(status().isUnprocessableEntity());
-        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString());
+        verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString(), anyString());
     }
 
     // ------------------------------------------------ GET /sesiones/por-reserva (frontend M4/M3)

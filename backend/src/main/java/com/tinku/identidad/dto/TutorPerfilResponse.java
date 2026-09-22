@@ -7,8 +7,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-// FIXME AUD-003 (auditoría 2026-09-21): este DTO no expone el DNI, correcto. Pero el DNI SÍ
-// sale del sistema por otra vía: SesionService.obtenerToken() lo usa como identity de LiveKit.
 /**
  * Perfil PÚBLICO de un Tutor (GET /api/tutores/{id}). Base = campos de
  * {@link UsuarioResponse} (nunca exportera passwordHash ni DNI) + materias y

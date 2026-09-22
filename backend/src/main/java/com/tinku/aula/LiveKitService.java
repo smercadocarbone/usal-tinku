@@ -72,8 +72,12 @@ public class LiveKitService {
      * Sobre LiveKit, el token solo vale para la sala nombrada: el participante
      * no puede abrir otra sala con este token, ni crear ni administrar salas
      * (roomCreate/roomAdmin en false) — solo unirse a la sala indicada.
+     *
+     * <p>{@code identidad} es el UUID del usuario, nunca el DNI: LiveKit difunde el
+     * identity a todos los participantes de la sala (AUD-003). Lo que el otro
+     * participante ve en pantalla es {@code nombreVisible} (claim {@code name}).
      */
-    public String generarTokenParticipante(String identidad, String nombreSala) {
+    public String generarTokenParticipante(String identidad, String nombreVisible, String nombreSala) {
         verificarConfigurado();
         Instant now = Instant.now();
         return Jwts.builder()
@@ -82,6 +86,7 @@ public class LiveKitService {
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(tokenTtlSegundos)))
                 .claim("nbf", now.getEpochSecond())
+                .claim("name", nombreVisible)
                 .claim("video", new VideoClaim(nombreSala, true, false, false))
                 .signWith(secretKey)
                 .compact();
