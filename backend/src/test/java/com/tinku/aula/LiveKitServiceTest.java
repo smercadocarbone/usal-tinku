@@ -88,6 +88,8 @@ class LiveKitServiceTest {
         Map<?, ?> video = cl.get("video", Map.class);
         assertThat(video.get("room")).isEqualTo("sala-42");
         assertThat(video.get("roomJoin")).isEqualTo(true);
+        assertThat(video.get("roomCreate")).isEqualTo(false);
+        assertThat(video.get("roomAdmin")).isEqualTo(false);
     }
 
     @Test
