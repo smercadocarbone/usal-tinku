@@ -7,6 +7,10 @@ import com.tinku.identidad.model.TipoCredencial;
 import java.time.Instant;
 import java.util.UUID;
 
+// FIXME AUD-007 (auditoría 2026-09-21): el javadoc dice que "la revisión visual del archivo
+// es del frontend interno". Ese frontend interno NO existe, y tampoco existe ningún endpoint
+// que sirva el archivo. Hoy la Credencial Académica —único mecanismo de confianza vigente
+// tras ADR-M1-02— se aprueba a ciegas. Se corrige en FASE 1.
 /**
  * Fila de la cola de Credenciales pendientes (US-1, FR-ADM-001) — lo que el
  * Admin necesita para decidir: de quién es, qué documento, en qué intento está

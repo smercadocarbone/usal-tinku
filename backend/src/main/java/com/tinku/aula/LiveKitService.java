@@ -67,6 +67,9 @@ public class LiveKitService {
                 .build();
     }
 
+    // FIXME AUD-002 (auditoría 2026-09-21): el javadoc de abajo afirma que el token no permite
+    // abrir otra sala, pero la línea del claim emite roomCreate=true y roomAdmin=true. El
+    // comportamiento descrito acá es el DESEADO; el real es el opuesto. Se corrige en FASE 1.
     /**
      * {@code POST /api/sesiones/{id}/token} devuelve el token del participante.
      * Sobre LiveKit, el token solo vale para la sala nombrada: el participante

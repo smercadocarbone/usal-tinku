@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { COOKIE_NAME } from "@/lib/auth";
 
+// FIXME AUD-016 (auditoría 2026-09-21): esto NO es una protección de seguridad. Solo verifica
+// que la cookie exista: no valida firma ni expiración. Cualquiera puede setear
+// document.cookie = "tinku_jwt=x" y cargar el shell de /admin. La autorización real la hace
+// el backend en cada request. Se decide en FASE 3: verificar la firma, o renombrar esto
+// honestamente como redirección de UX.
 /**
  * Protección de rutas desde el server: sin cookie de sesión → /login.
  * La cookie es la "copia" del token que setSession() escribe en el login

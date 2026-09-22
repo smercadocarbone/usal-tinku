@@ -147,7 +147,7 @@ FASE 0 — Documentación y trazabilidad        [bloquea a todas]
 **Interfaces:**
 - Produces: la tabla que **todas** las tareas posteriores de este plan actualizan (guardrail B4). Columnas exactas: `ID | Severidad | Título | Estado | Fase | Commit | Test que lo cubre`.
 
-- [ ] **Paso 1: Crear el archivo con las 36 filas**
+- [x] **Paso 1: Crear el archivo con las 36 filas**
 
 Sacar ID, severidad y título de la sección "3. Findings" del informe. Estado inicial de todos: `ABIERTO`. Fase según la sección "9. Recommended Action Plan" del informe.
 
@@ -166,12 +166,12 @@ Sacar ID, severidad y título de la sección "3. Findings" del informe. Estado i
 ...
 ```
 
-- [ ] **Paso 2: Verificar que están las 36**
+- [x] **Paso 2: Verificar que están las 36**
 
 Run: `grep -c '^| AUD-' docs/auditoria/REGISTRO_FINDINGS.md`
 Expected: `36`
 
-- [ ] **Paso 3: Verificar que ningún ID se repite ni falta**
+- [x] **Paso 3: Verificar que ningún ID se repite ni falta**
 
 Run: `grep -o '^| AUD-[0-9]*' docs/auditoria/REGISTRO_FINDINGS.md | sort | uniq -d`
 Expected: salida vacía (sin duplicados).
@@ -179,7 +179,7 @@ Expected: salida vacía (sin duplicados).
 Run: `grep -o 'AUD-[0-9]\{3\}' docs/auditoria/2026-09-21-auditoria-independiente.md | sort -u | wc -l`
 Expected: `36` — el mismo conjunto que el registro.
 
-- [ ] **Paso 4: Commit**
+- [x] **Paso 4: Commit**
 
 ```bash
 git add docs/auditoria/
@@ -201,35 +201,35 @@ git commit -m "docs(auditoria): informe independiente 2026-09-21 + registro de f
 
 > **NO tildar en bloque.** Cada una se verifica contra el código antes de tocarla. Si una no se puede verificar, se deja `[ ]` y se anota por qué.
 
-- [ ] **Paso 1: Verificar T-000-01 (scaffold + paquetes por módulo)**
+- [x] **Paso 1: Verificar T-000-01 (scaffold + paquetes por módulo)**
 
 Run: `fd -t d -d 1 . backend/src/main/java/com/tinku | sort`
 Expected: los 9 paquetes de dominio + `config` + `shared`.
 Si coincide → tildar. Si no → dejar abierto y anotar qué falta.
 
-- [ ] **Paso 2: Verificar T-000-02 (schemas por módulo)**
+- [x] **Paso 2: Verificar T-000-02 (schemas por módulo)**
 
 Run: `grep -n 'schemas:' backend/src/main/resources/application.yml && cat backend/src/main/resources/db/migration/V1__crear_schemas.sql`
 Expected: los 9 schemas declarados en Flyway y creados en V1.
 
-- [ ] **Paso 3: Verificar T-000-03 (Quartz persistido)**
+- [x] **Paso 3: Verificar T-000-03 (Quartz persistido)**
 
 Run: `grep -n 'job-store-type' backend/src/main/resources/application.yml && ls backend/src/test/java/com/tinku/config/QuartzPersistenciaTest.java`
 Expected: `job-store-type: jdbc` y el test existe.
 
-- [ ] **Paso 4: Verificar T-000-04 (eventos de dominio)**
+- [x] **Paso 4: Verificar T-000-04 (eventos de dominio)**
 
 Run: `grep -rl 'ApplicationEventPublisher' backend/src/main/java | head`
 Expected: al menos `ReservaService`, `SesionService`, `DenunciaService`.
 
 > El enunciado de T-000-04 pide "un evento de prueba y un listener de prueba". `NOTAS_VERIFICACION.md` menciona un `DomainEventExampleTest` que **hoy no existe** en `src/test`. Tildar la tarea igual (el mecanismo está validado por 9 listeners reales en producción y por los tests de integración de M5/M9), y **anotar esa discrepancia en el mismo renglón** — no borrarla.
 
-- [ ] **Paso 5: Verificar T-000-05 (Security + JWT + bcrypt)**
+- [x] **Paso 5: Verificar T-000-05 (Security + JWT + bcrypt)**
 
 Run: `ls backend/src/test/java/com/tinku/config/security/ && grep -n 'BCryptPasswordEncoder' backend/src/main/java/com/tinku/config/SecurityConfig.java`
 Expected: `JwtAuthTest.java`, `SecurityHttpTest.java`, y el bean de bcrypt.
 
-- [ ] **Paso 6: Verificar T-000-06 y T-000-07 (cuentas externas)**
+- [x] **Paso 6: Verificar T-000-06 y T-000-07 (cuentas externas)**
 
 Estas dos son **tareas de cuenta externa, no de código**. El código de integración existe (`LiveKitService`, `MercadoPagoClientHttp`) pero este plan **no puede verificar que existan las cuentas**.
 
@@ -237,12 +237,12 @@ Run: `grep -n 'LIVEKIT_API_KEY\|MP_ACCESS_TOKEN' .env.example`
 
 Dejar ambas como `[ ]` con la nota: _"código de integración implementado y testeado contra stub HTTP local; la existencia de la cuenta real no es verificable desde el repo — confirmar manualmente antes de piloto"_. **No tildar algo que no se puede verificar.**
 
-- [ ] **Paso 7: Verificar T-000-08 (servicio Python + /health)**
+- [x] **Paso 7: Verificar T-000-08 (servicio Python + /health)**
 
 Run: `grep -n 'def health' matching-service/main.py && grep -rn 'MatchingServiceHealthCheck' backend/src/main/java`
 Expected: el endpoint existe y el backend lo consume.
 
-- [ ] **Paso 8: T-000-09 (CI) — dejar ABIERTA**
+- [x] **Paso 8: T-000-09 (CI) — dejar ABIERTA**
 
 Run: `fd . .github/workflows -t f`
 Expected: `ci-backend.yml`, `ci-frontend.yml` — **falta `matching-service`** (AUD-031).
@@ -252,12 +252,12 @@ Dejar `[ ]` y reescribir el texto de la tarea para que diga exactamente qué fal
 - [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests). _(Parcial al 2026-09-21: `ci-backend.yml` y `ci-frontend.yml` existen; **falta pipeline para `matching-service/`** — `test_main.py` no corre en ningún CI. Ver AUD-031, FASE 2.)_
 ```
 
-- [ ] **Paso 9: Verificar que el conteo de tildes cambió como se espera**
+- [x] **Paso 9: Verificar que el conteo de tildes cambió como se espera**
 
 Run: `grep -c '^- \[x\]' docs/Tasks_Tinku_Implementacion.md`
 Expected: el valor previo (115) + la cantidad de tareas que efectivamente se tildaron en los pasos 1-7. Anotar ambos números.
 
-- [ ] **Paso 10: Commit**
+- [x] **Paso 10: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Implementacion.md
@@ -273,7 +273,7 @@ git commit -m "docs(tasks): reconciliar FASE 0 con el codigo real (AUD-030)"
 
 > **Cuidado (AUD-030):** de las 4 tareas de este bloque, **solo T-M4-12 está implementada**. T-M4-13, T-M4-14 y T-M4-15 siguen realmente pendientes. No tildar el bloque entero.
 
-- [ ] **Paso 1: Verificar T-M4-12**
+- [x] **Paso 1: Verificar T-M4-12**
 
 Run: `ls backend/src/main/java/com/tinku/reservas/service/HorariosDisponiblesService.java && grep -n 'horarios' backend/src/main/java/com/tinku/reservas/web/FranjaController.java backend/src/main/java/com/tinku/identidad/web/TutorController.java`
 Run: `grep -n 'tM412' backend/src/test/java/com/tinku/reservas/web/ReservasFlujosIntegracionTest.java`
@@ -281,19 +281,19 @@ Expected: el servicio existe, el endpoint existe, y hay al menos 2 tests `tM412_
 
 Si coincide → tildar T-M4-12 con la nota: _"cerrado; la nota sobre `duracionMinutos` sigue vigente — la fuente del parámetro no está en ningún Spec"_.
 
-- [ ] **Paso 2: Verificar T-M4-13 (integración del picker)**
+- [x] **Paso 2: Verificar T-M4-13 (integración del picker)**
 
 Run: `grep -n 'DynamicTimeSlotPicker' frontend/src/app/reservar/page.tsx`
 Si no aparece → **dejar `[ ]`**. Es pendiente real.
 
-- [ ] **Paso 3: Verificar T-M4-14 (manejo del 409)**
+- [x] **Paso 3: Verificar T-M4-14 (manejo del 409)**
 
 Run: `grep -n 'isConflictError\|409' frontend/src/app/reservar/page.tsx`
 Si no aparece → **dejar `[ ]`**. Agregar referencia cruzada: _"bloqueada por AUD-009: hoy el 409 solo cubre horarios idénticos, no solapados"_.
 
-- [ ] **Paso 4: Dejar T-M4-15 abierta** y agregar la referencia a AUD-009 (el test de solapamiento parcial que falta).
+- [x] **Paso 4: Dejar T-M4-15 abierta** y agregar la referencia a AUD-009 (el test de solapamiento parcial que falta).
 
-- [ ] **Paso 5: Agregar el bloque de tareas nuevas de auditoría**
+- [x] **Paso 5: Agregar el bloque de tareas nuevas de auditoría**
 
 Al final del archivo, una sección nueva. Una línea por cada finding que genera trabajo, con su fase:
 
@@ -304,14 +304,14 @@ Al final del archivo, una sección nueva. Una línea por cada finding que genera
 > Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md`
 
 ### FASE 1 — P0 Seguridad
-- [ ] T-AUD-001: Cerrar la sala de LiveKit en el kill-switch y rechazar `/token` sobre sesiones cerradas (AUD-001)
-- [ ] T-AUD-002: Quitar `roomCreate`/`roomAdmin` del token de participante (AUD-002)
+- [ ] T-AUD-001: `VideoClaim(sala, true, **false**, **false**)` + aserciones negativas en `LiveKitServiceTest` (AUD-002)
+- [ ] T-AUD-002: Cerrar la sala de LiveKit en `cortar()` (`RemoveParticipant` + `DeleteRoom`) y rechazar `/token` sobre sesiones cerradas (AUD-001)
 ...
 ```
 
 (La lista completa sale de la sección "9. Recommended Action Plan" del informe — 41 acciones numeradas.)
 
-- [ ] **Paso 6: Verificar que no se rompió el formato de checkbox**
+- [x] **Paso 6: Verificar que no se rompió el formato de checkbox**
 
 Run: `grep -c '^- \[ \]\|^- \[x\]' docs/Tasks_Tinku_Implementacion.md`
 Expected: mayor que antes, sin líneas malformadas.
@@ -319,7 +319,7 @@ Expected: mayor que antes, sin líneas malformadas.
 Run: `grep -n '^- \[' docs/Tasks_Tinku_Implementacion.md | grep -v '^\S*:- \[ \]\|^\S*:- \[x\]'`
 Expected: salida vacía.
 
-- [ ] **Paso 7: Commit**
+- [x] **Paso 7: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Implementacion.md
@@ -335,29 +335,29 @@ git commit -m "docs(tasks): reconciliar M4-12..15 y agregar FASE AUD (AUD-030)"
 
 > Este archivo ya hace bien lo correcto con M3-C y M6-D (declara el pendiente y explica por qué). La tarea es **extender ese mismo criterio** a lo que la auditoría encontró, no reescribirlo.
 
-- [ ] **Paso 1: Corregir el conteo de tests**
+- [x] **Paso 1: Corregir el conteo de tests**
 
 Buscar `320 tests` y reemplazar por `383 tests (verificado 2026-09-21, JDK 21 + Testcontainers)`.
 
 Run: `grep -n '320 tests' docs/Tasks_Tinku_Chunks.md`
 
-- [ ] **Paso 2: Reabrir Chunk M3-C**
+- [x] **Paso 2: Reabrir Chunk M3-C**
 
 Hoy dice `[~]` y solo menciona T-M3-06. Agregar que **T-M3-07 tampoco está completo**: el backend decide la rama correctamente (eso sí está y está testeado) pero **no corta la sala** (AUD-001) y el disparo no exige evidencia (AUD-005).
 
-- [ ] **Paso 3: Reabrir Chunk M3-B**
+- [x] **Paso 3: Reabrir Chunk M3-B**
 
 Agregar: _"el webhook de LiveKit solo procesa `participant_joined`; `participant_left` y `room_finished` no se manejan, así que US-5/US-8 (corte por desconexión) no tienen implementación server-side — AUD-029"_.
 
-- [ ] **Paso 4: Reabrir Chunk M8-E**
+- [x] **Paso 4: Reabrir Chunk M8-E**
 
 Agregar: _"la resolución de credencial desde la cola está, pero **no existe endpoint para ver el archivo** que se está aprobando — AUD-007"_.
 
-- [ ] **Paso 5: Corregir la nota de M6-D**
+- [x] **Paso 5: Corregir la nota de M6-D**
 
 Hoy atribuye el bloqueo solo al ADR del LLM. Agregar el segundo bloqueante: _"además del ADR del proveedor, **falta el transcript**: `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre y M3 no genera transcript (sin LiveKit Egress). Elegir proveedor de LLM no desbloquea M6 por sí solo — AUD-024"_.
 
-- [ ] **Paso 6: Agregar la sección de auditoría al final**
+- [x] **Paso 6: Agregar la sección de auditoría al final**
 
 ```markdown
 ## Nota de auditoría — 2026-09-21
@@ -376,7 +376,7 @@ y la suite verde (383 tests) no los detecta porque ninguno de ellos es expresabl
 **Verificación de la suite al 2026-09-21:** 383 tests, 0 failures, 0 errors, 0 skipped.
 ```
 
-- [ ] **Paso 7: Commit**
+- [x] **Paso 7: Commit**
 
 ```bash
 git add docs/Tasks_Tinku_Chunks.md
@@ -392,7 +392,7 @@ git commit -m "docs(chunks): reabrir M3-B/M3-C/M8-E y M6-D con los hallazgos de 
 
 > **Convención:** el proyecto ya usa el marcador `RETIRADO` en `Spec_M1` para requisitos que salieron de alcance, conservando el texto original. Acá se usa el mismo mecanismo con un marcador distinto: **`NO IMPLEMENTADO (AUD-XXX, 2026-09-21)`**. No se borra ni se reescribe el texto del requisito — se le agrega el marcador. La diferencia importa: `RETIRADO` = decisión de producto; `NO IMPLEMENTADO` = deuda.
 
-- [ ] **Paso 1: US-6, línea ~50 — el corte**
+- [x] **Paso 1: US-6, línea ~50 — el corte**
 
 Agregar al final del criterio de aceptación:
 ```
@@ -401,21 +401,21 @@ Agregar al final del criterio de aceptación:
 ni revoca los tokens emitidos. Ver FASE 1 del plan de remediación.
 ```
 
-- [ ] **Paso 2: US-6, línea ~50 — la notificación**
+- [x] **Paso 2: US-6, línea ~50 — la notificación**
 
 ```
 **NO IMPLEMENTADO (AUD-014, 2026-09-21):** no existe infraestructura de notificación en el
 sistema. El Adulto Responsable no recibe ningún aviso. Ver FASE 2.
 ```
 
-- [ ] **Paso 3: US-6, línea ~50 — el buffer de 30s**
+- [x] **Paso 3: US-6, línea ~50 — el buffer de 30s**
 
 ```
 **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
 existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
 ```
 
-- [ ] **Paso 4: US-6, línea ~51 — quién es el detectado**
+- [x] **Paso 4: US-6, línea ~51 — quién es el detectado**
 
 ```
 **IMPLEMENTADO CON DESVÍO (AUD-006, 2026-09-21):** el corte se aplica en todos los casos,
@@ -423,14 +423,14 @@ correcto. Pero `ramaMenor()` suspende siempre al Tutor, incluso cuando el detect
 menor, y la resolución de la Alerta en M9 nunca lo reactiva. Ver FASE 1.
 ```
 
-- [ ] **Paso 5: FR-AULA-010, línea ~87**
+- [x] **Paso 5: FR-AULA-010, línea ~87**
 
 ```
 **NO IMPLEMENTADO (AUD-001, 2026-09-21):** `SesionService.obtenerToken()` no consulta ningún
 estado del clasificador; la sala se habilita siempre.
 ```
 
-- [ ] **Paso 6: US-5 (línea ~44) y US-8 (línea ~72) — desconexiones**
+- [x] **Paso 6: US-5 (línea ~44) y US-8 (línea ~72) — desconexiones**
 
 ```
 **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
@@ -439,7 +439,7 @@ no contra la última desconexión real, lo que puede liberar el escrow por una s
 El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
 ```
 
-- [ ] **Paso 7: Verificar que no se rompió nada del texto original**
+- [x] **Paso 7: Verificar que no se rompió nada del texto original**
 
 Run: `git diff --stat docs/specs/Spec_M3_Aula_Virtual.md`
 Expected: solo líneas agregadas (`+`), **cero líneas borradas** salvo las que se parten en dos para insertar el marcador.
@@ -447,7 +447,7 @@ Expected: solo líneas agregadas (`+`), **cero líneas borradas** salvo las que 
 Run: `git diff docs/specs/Spec_M3_Aula_Virtual.md | grep '^-' | grep -v '^---'`
 Expected: salida vacía o solo reformateo evidente. **Si hay texto de requisito borrado, revertir.**
 
-- [ ] **Paso 8: Commit**
+- [x] **Paso 8: Commit**
 
 ```bash
 git add docs/specs/Spec_M3_Aula_Virtual.md
@@ -461,7 +461,7 @@ git commit -m "docs(spec-m3): marcar NO IMPLEMENTADO los puntos de US-5/6/8 y FR
 **Files:**
 - Modify: `docs/specs/Spec_M6_Resumen_Automatico.md:5` (línea "Depende de:")
 
-- [ ] **Paso 1: Verificar el estado actual del proveedor de transcript**
+- [x] **Paso 1: Verificar el estado actual del proveedor de transcript**
 
 Run: `cat backend/src/main/java/com/tinku/resumen/port/TranscriptSesionProveedorNoDisponible.java`
 Expected: `return null;` como única implementación.
@@ -469,7 +469,7 @@ Expected: `return null;` como única implementación.
 Run: `grep -rn 'Egress\|egress' backend/src/main/java`
 Expected: salida vacía — no hay integración de grabación.
 
-- [ ] **Paso 2: Agregar la nota de bloqueo**
+- [x] **Paso 2: Agregar la nota de bloqueo**
 
 Debajo de la línea `**Depende de:**`:
 ```markdown
@@ -488,7 +488,7 @@ Debajo de la línea `**Depende de:**`:
 > el del LLM y debe justificarse contra la Ley 25.326 ANTES de implementarse, no después.
 ```
 
-- [ ] **Paso 3: Commit**
+- [x] **Paso 3: Commit**
 
 ```bash
 git add docs/specs/Spec_M6_Resumen_Automatico.md
@@ -504,7 +504,7 @@ git commit -m "docs(spec-m6): declarar el transcript como bloqueante y el riesgo
 
 > Este archivo documenta el branch `chunk/m1-g`, habla de "102 tests" y presenta como logro el circuito del CAP, que ADR-M1-02 retiró. **No se borra** (guardrail A4): es registro histórico válido y contiene el hallazgo del `driverDelegateClass` de Quartz, que es buen material de defensa.
 
-- [ ] **Paso 1: Agregar el bloque de encabezado**
+- [x] **Paso 1: Agregar el bloque de encabezado**
 
 Arriba de todo, antes del `# NOTAS_VERIFICACION`:
 ```markdown
@@ -524,7 +524,7 @@ Arriba de todo, antes del `# NOTAS_VERIFICACION`:
 > `application.yml`.
 ```
 
-- [ ] **Paso 2: Commit**
+- [x] **Paso 2: Commit**
 
 ```bash
 git add NOTAS_VERIFICACION.md
@@ -548,7 +548,7 @@ git commit -m "docs: marcar NOTAS_VERIFICACION como registro historico con sus d
 >
 > **Formato:** copiar la estructura de `docs/adr/ADR-M1-02.md`, que es el mejor ADR del repo: Estado / Contexto / Decisión / Alternativas descartadas / Riesgo aceptado / Implementación / Consecuencias / Registro de Decisiones Técnicas. Todos llevan `**Estado:** Aceptado — documentado retroactivamente el 2026-09-21 (decisión ya tomada en el código, recién formalizada)`, que es el mecanismo que AGENTS.md §7 exige para este caso.
 
-- [ ] **Paso 1: `ADR-000-02` — Backend Java + Spring Boot**
+- [x] **Paso 1: `ADR-000-02` — Backend Java + Spring Boot**
 
 La Constitución dice "Decidido, evaluado contra Go y Node.js" y no existe el documento con esa evaluación. Es la decisión tecnológica más visible del trabajo y la única sin respaldo escrito (informe §7.2, pregunta 8).
 
@@ -560,7 +560,7 @@ Contenido mínimo obligatorio, argumentado contra **1 desarrollador y USD 0-100/
 - Familiaridad del único desarrollador como criterio explícito y legítimo bajo Artículo VII.
 - **Consecuencia honesta que hay que escribir:** el ecosistema de `sentence-transformers` no existe en Java, y eso forzó la única excepción al Artículo VIII (`matching-service`). El ADR debe decirlo, no ocultarlo.
 
-- [ ] **Paso 2: `ADR-000-03` — Acoplamiento entre módulos: deuda aceptada**
+- [x] **Paso 2: `ADR-000-03` — Acoplamiento entre módulos: deuda aceptada**
 
 Este es el ADR que convierte el finding AUD-019 de vulnerabilidad de defensa en decisión de ingeniería. Contenido obligatorio:
 
@@ -570,7 +570,7 @@ Este es el ADR que convierte el finding AUD-019 de vulnerabilidad de defensa en 
 - **Qué NO se corrige y por qué:** el resto de los accesos cruzados. Costo estimado vs. beneficio contra 1 desarrollador.
 - **Cómo se evita que empeore:** un test de ArchUnit que congele el conteo actual. **No agregar la dependencia de ArchUnit en esta tarea** (guardrail A7) — el ADR la propone, FASE 3 decide.
 
-- [ ] **Paso 3: `ADR-000-04` — Una sola instancia: Quartz no clusterizado + sesión en el cliente**
+- [x] **Paso 3: `ADR-000-04` — Una sola instancia: Quartz no clusterizado + sesión en el cliente**
 
 Agrupa las decisiones de escala y sesión que permanecen:
 - `isClustered: false`: el sistema no soporta más de una instancia sin duplicar jobs. Consciente, coherente con el presupuesto, y el costo de levantarlo es conocido (activar clustering de Quartz + revisar los guards de idempotencia, que ya existen).
@@ -578,14 +578,14 @@ Agrupa las decisiones de escala y sesión que permanecen:
 - TTL de 60 minutos sin refresh token.
 - **Escribir el límite en números**, no en adjetivos: con qué carga concreta esta decisión deja de servir.
 
-- [ ] **Paso 4: `ADR-M1-03` — Storage de archivos: filesystem local tras el puerto `Almacenamiento`**
+- [x] **Paso 4: `ADR-M1-03` — Storage de archivos: filesystem local tras el puerto `Almacenamiento`**
 
 `NOTAS_VERIFICACION.md` lo cita como "ADR pendiente" y nunca se escribió. La decisión es correcta para el alcance (el puerto aísla bien) y permanece. Debe incluir:
 - Por qué el puerto `Almacenamiento` hace que el reemplazo por S3 no toque llamadores.
 - **La limitación que hay que declarar:** la URI `file:` no es servible por HTTP, que es la causa raíz de AUD-007. El ADR debe decir que el endpoint de lectura (FASE 1) sirve bytes, no la URI.
 - Riesgo aceptado: sin backup ni replicación del directorio.
 
-- [ ] **Paso 5: `ADR-M6-02` — Anonimización por regex + diccionario como puente**
+- [x] **Paso 5: `ADR-M6-02` — Anonimización por regex + diccionario como puente**
 
 El javadoc de `AnonimizadorTranscript` dice "ADR-M6-01 pendiente" y describe la estrategia con precisión. Formalizarla:
 - Estrategia fail-safe explícita: _ante la duda, enmascarar de más_ — un falso positivo tapa una palabra, un falso negativo filtra un dato de un menor (Artículo II manda).
@@ -593,7 +593,7 @@ El javadoc de `AnonimizadorTranscript` dice "ADR-M6-01 pendiente" y describe la 
 - Límite conocido: diccionario cerrado de nombres hispanos; un nombre fuera del diccionario y fuera de un patrón de presentación **no se enmascara**.
 - **Riesgo aceptado, escrito:** hoy es inofensivo porque no hay transcript (AUD-024). Cuando M6 se active, este componente pasa a ser un control de privacidad de datos de menores y el ADR-M6-01 (NER real) deja de ser opcional.
 
-- [ ] **Paso 6: Verificar que los 5 ADR existen y tienen las secciones obligatorias**
+- [x] **Paso 6: Verificar que los 5 ADR existen y tienen las secciones obligatorias**
 
 Run: `for f in docs/adr/ADR-000-02.md docs/adr/ADR-000-03.md docs/adr/ADR-000-04.md docs/adr/ADR-M1-03.md docs/adr/ADR-M6-02.md; do echo "== $f"; grep -c '^## ' $f; done`
 Expected: cada uno con al menos 5 secciones `##`.
@@ -601,7 +601,7 @@ Expected: cada uno con al menos 5 secciones `##`.
 Run: `grep -L 'Estado' docs/adr/ADR-000-0*.md docs/adr/ADR-M1-03.md docs/adr/ADR-M6-02.md`
 Expected: salida vacía (todos tienen sección Estado).
 
-- [ ] **Paso 7: Actualizar el Registro de Decisiones Técnicas de la Constitución**
+- [x] **Paso 7: Actualizar el Registro de Decisiones Técnicas de la Constitución**
 
 En `docs/Constitucion_Tinku.md`, tabla "Registro de Decisiones Técnicas Actuales": agregar la referencia al ADR en las filas que ahora lo tienen (Backend, Scheduler de jobs). **Esto NO es una enmienda** — el propio documento dice que esa tabla se cambia con un ADR normal, sin tocar los Artículos.
 
@@ -610,7 +610,7 @@ En `docs/Constitucion_Tinku.md`, tabla "Registro de Decisiones Técnicas Actuale
 Run: `git diff docs/Constitucion_Tinku.md | grep '^[+-]' | grep -i 'artículo\|articulo\|enmienda'`
 Expected: salida vacía.
 
-- [ ] **Paso 8: Commit**
+- [x] **Paso 8: Commit**
 
 ```bash
 git add docs/adr/ docs/Constitucion_Tinku.md
@@ -633,7 +633,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 >
 > **No reescribir el javadoc para que describa el bug.** El texto actual describe el comportamiento *deseado*, que FASE 1 va a implementar. Se le agrega el marcador arriba; el texto queda.
 
-- [ ] **Paso 1: `LiveKitService.java` — antes del javadoc de `generarTokenParticipante`**
+- [x] **Paso 1: `LiveKitService.java` — antes del javadoc de `generarTokenParticipante`**
 
 ```java
 // FIXME AUD-002 (auditoría 2026-09-21): el javadoc de abajo afirma que el token no permite
@@ -641,7 +641,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // comportamiento descrito acá es el DESEADO; el real es el opuesto. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 2: `SesionService.java` — antes de `cortar(...)`**
+- [x] **Paso 2: `SesionService.java` — antes de `cortar(...)`**
 
 ```java
 // FIXME AUD-001 (auditoría 2026-09-21): este método NO cierra la sala de LiveKit. Solo
@@ -649,7 +649,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // su TTL. Spec_M3 US-6 exige "la sesión se corta para ambos". Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 3: `SesionService.java` — antes de `obtenerToken(...)`**
+- [x] **Paso 3: `SesionService.java` — antes de `obtenerToken(...)`**
 
 ```java
 // FIXME AUD-001/AUD-003 (auditoría 2026-09-21): (a) no hay guard de estado — devuelve token
@@ -658,7 +658,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // esto es un dato sensible bajo Ley 25.326. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 4: `SesionService.java` — antes de `ejecutarKillswitch(...)`**
+- [x] **Paso 4: `SesionService.java` — antes de `ejecutarKillswitch(...)`**
 
 ```java
 // FIXME AUD-005 (auditoría 2026-09-21): el único control es esParticipante(). Cualquiera de
@@ -667,7 +667,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // a ADR-M3-01 (modelo de amenaza del clasificador on-device).
 ```
 
-- [ ] **Paso 5: `SesionService.java` — antes de `ramaMenor(...)`**
+- [x] **Paso 5: `SesionService.java` — antes de `ramaMenor(...)`**
 
 ```java
 // FIXME AUD-006 (auditoría 2026-09-21): suspende siempre a reserva.getTutor(), ignorando
@@ -677,7 +677,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // detectado. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 6: `CredencialColaResponse.java`**
+- [x] **Paso 6: `CredencialColaResponse.java`**
 
 ```java
 // FIXME AUD-007 (auditoría 2026-09-21): el javadoc dice que "la revisión visual del archivo
@@ -686,14 +686,14 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // tras ADR-M1-02— se aprueba a ciegas. Se corrige en FASE 1.
 ```
 
-- [ ] **Paso 7: `TutorPerfilResponse.java`**
+- [x] **Paso 7: `TutorPerfilResponse.java`**
 
 ```java
 // FIXME AUD-003 (auditoría 2026-09-21): este DTO no expone el DNI, correcto. Pero el DNI SÍ
 // sale del sistema por otra vía: SesionService.obtenerToken() lo usa como identity de LiveKit.
 ```
 
-- [ ] **Paso 8: `frontend/src/middleware.ts`**
+- [x] **Paso 8: `frontend/src/middleware.ts`**
 
 ```ts
 // FIXME AUD-016 (auditoría 2026-09-21): esto NO es una protección de seguridad. Solo verifica
@@ -703,7 +703,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // honestamente como redirección de UX.
 ```
 
-- [ ] **Paso 9: `frontend/src/lib/api.ts` — en `getCatalogos`**
+- [x] **Paso 9: `frontend/src/lib/api.ts` — en `getCatalogos`**
 
 ```ts
 // FIXME AUD-026 (auditoría 2026-09-21): el catch también atrapa errores de red (un
@@ -711,7 +711,7 @@ git commit -m "docs(adr): formalizar retroactivamente 5 decisiones vigentes sin 
 // catálogo falso que parece real. Se acota en FASE 3.
 ```
 
-- [ ] **Paso 10: Verificar que el diff es SOLO comentarios**
+- [x] **Paso 10: Verificar que el diff es SOLO comentarios**
 
 Run: `git diff --stat`
 Run: `git diff -- '*.java' '*.ts' | grep '^+' | grep -v '^+++' | grep -vE '^\+\s*(//|\*|/\*)'`
@@ -720,7 +720,7 @@ Expected: **salida vacía.** Cada línea agregada tiene que ser un comentario. S
 Run: `git diff -- '*.java' '*.ts' | grep '^-' | grep -v '^---'`
 Expected: **salida vacía.** No se borra ninguna línea existente.
 
-- [ ] **Paso 11: Compilar y correr la suite completa**
+- [x] **Paso 11: Compilar y correr la suite completa**
 
 Run: `cd backend && JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./mvnw -B test`
 Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0` — **exactamente el mismo número.** Un comentario no cambia el conteo. Si cambió, tocaste código.
@@ -728,7 +728,7 @@ Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0` — **exactamente
 Run: `cd frontend && bun run lint`
 Expected: sin errores.
 
-- [ ] **Paso 12: Commit**
+- [x] **Paso 12: Commit**
 
 ```bash
 git add backend/src/main/java frontend/src
@@ -744,7 +744,7 @@ git commit -m "docs(codigo): marcadores FIXME AUD-* donde el javadoc contradice 
 
 > `AGENTS.md` se lee automáticamente en cada sesión. Es el lugar donde tiene que vivir lo que ningún agente puede pasar por alto. **No reescribir las secciones existentes** — agregar dos.
 
-- [ ] **Paso 1: Agregar el requisito de Java 21 en la sección 5 (Testing)**
+- [x] **Paso 1: Agregar el requisito de Java 21 en la sección 5 (Testing)**
 
 ```markdown
 - **La suite corre SOLO con JDK 21.** El `maven-enforcer-plugin` exige `[21,22)`.
@@ -756,14 +756,15 @@ git commit -m "docs(codigo): marcadores FIXME AUD-* donde el javadoc contradice 
   baja ese número, borraste un test.
 ```
 
-- [ ] **Paso 2: Agregar sección 9 — Auditoría vigente**
+- [x] **Paso 2: Agregar sección 9 — Auditoría vigente**
 
 ```markdown
 ## 9. Auditoría vigente (2026-09-21)
 
-Hay una auditoría técnica independiente con 36 hallazgos abiertos, 8 de ellos CRÍTICOS de
-seguridad. Antes de trabajar sobre M3 (Aula), M5 (Pagos), M9 (Seguridad) o el registro de
-identidad, leé el finding que corresponda.
+Hay una auditoría técnica independiente con 36 hallazgos (7 CRÍTICA, 1 ya cerrado) — el estado
+vigente, fila por fila, está en `REGISTRO_FINDINGS.md`; no repitas estos números de memoria en
+otro documento, citá esa tabla. Antes de trabajar sobre M3 (Aula), M5 (Pagos), M9 (Seguridad) o
+el registro de identidad, leé el finding que corresponda.
 
 - Informe: `docs/auditoria/2026-09-21-auditoria-independiente.md`
 - Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md` — **se actualiza en el mismo
@@ -779,11 +780,11 @@ identidad, leé el finding que corresponda.
   el código antes de confiar en un comentario.
 ```
 
-- [ ] **Paso 3: Actualizar la sección 8 (Gobernanza)**
+- [x] **Paso 3: Actualizar la sección 8 (Gobernanza)**
 
 Agregar que `docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan **juntos o no se actualizan** — la divergencia entre los dos fue AUD-030.
 
-- [ ] **Paso 4: Commit**
+- [x] **Paso 4: Commit**
 
 ```bash
 git add AGENTS.md
@@ -798,23 +799,23 @@ git commit -m "docs(agents): requisito de JDK 21 y seccion de auditoria vigente"
 
 > No se abre FASE 1 hasta que todos estos checks pasen. Si alguno falla, arreglalo en esta fase.
 
-- [ ] **Paso 1: La suite sigue idéntica**
+- [x] **Paso 1: La suite sigue idéntica**
 
 Run: `cd backend && JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./mvnw -B test 2>&1 | grep 'Tests run:.*Failures' | tail -1`
 Expected: `Tests run: 383, Failures: 0, Errors: 0, Skipped: 0`
 
-- [ ] **Paso 2: FASE 0 no tocó lógica**
+- [x] **Paso 2: FASE 0 no tocó lógica**
 
 Run: `git diff main...HEAD --stat -- backend/src/main/java frontend/src`
 Run: `git diff main...HEAD -- backend/src/main/java frontend/src | grep '^[+-]' | grep -v '^[+-][+-]' | grep -vE '^[+-]\s*(//|\*|/\*)'`
 Expected: **salida vacía.**
 
-- [ ] **Paso 3: No se editó ninguna migración existente**
+- [x] **Paso 3: No se editó ninguna migración existente**
 
 Run: `git diff main...HEAD --name-only -- backend/src/main/resources/db/migration/`
 Expected: **salida vacía.** (Guardrail A1.)
 
-- [ ] **Paso 4: No se tocó la Tabla de Tiempos ni los Artículos de la Constitución**
+- [x] **Paso 4: No se tocó la Tabla de Tiempos ni los Artículos de la Constitución**
 
 Run: `git diff main...HEAD --name-only -- docs/Tabla_Tiempos_Tinku.md`
 Expected: salida vacía. (Guardrail A3.)
@@ -822,7 +823,7 @@ Expected: salida vacía. (Guardrail A3.)
 Run: `git diff main...HEAD -- docs/Constitucion_Tinku.md | grep -iE '^[+-].*(artículo|enmienda)'`
 Expected: salida vacía. (Guardrail A4.)
 
-- [ ] **Paso 5: Los 36 findings están registrados, y solo AUD-030 cerró en esta fase**
+- [x] **Paso 5: Los 36 findings están registrados, y solo AUD-030 cerró en esta fase**
 
 Run: `grep -c '^| AUD-' docs/auditoria/REGISTRO_FINDINGS.md`
 Expected: `36`
@@ -837,7 +838,7 @@ Expected: la fila en estado `CERRADO` con un hash de commit en la columna Commit
 
 > Si cerraste cualquier otro finding en FASE 0, lo cerraste sin test de regresión (guardrail A9). Revertí el estado a `ABIERTO`.
 
-- [ ] **Paso 6: Frontend limpio**
+- [x] **Paso 6: Frontend limpio**
 
 Run: `cd frontend && bun run lint`
 Expected: sin errores.

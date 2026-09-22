@@ -6,15 +6,15 @@
 
 ## FASE 0 — Setup General (una sola vez, antes de cualquier módulo)
 
-- [ ] T-000-01: Inicializar proyecto Spring Boot (Java), estructura de paquetes por módulo (`identidad`, `matching`, `aula`, `reservas`, `pagos`, `resumen`, `reputacion`, `admin`, `seguridad`) — bounded contexts del Artículo VIII de la Constitución.
-- [ ] T-000-02: Configurar PostgreSQL con schemas separados por módulo (`identidad.*`, `pagos.*`, etc., Artículo VIII).
-- [ ] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima.
-- [ ] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real.
-- [ ] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02).
-- [ ] T-000-06: Cuenta de desarrollador de LiveKit Cloud + credenciales de sandbox.
-- [ ] T-000-07: Cuenta de MercadoPago Developers + usuarios de prueba operando en modo productivo controlado (ADR-M5-01 — **no** el sandbox clásico, por el problema conocido de webhooks).
-- [ ] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él.
-- [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests) — no bloqueante para arrancar, pero antes de tener 3+ módulos implementados.
+- [x] T-000-01: Inicializar proyecto Spring Boot (Java), estructura de paquetes por módulo (`identidad`, `matching`, `aula`, `reservas`, `pagos`, `resumen`, `reputacion`, `admin`, `seguridad`) — bounded contexts del Artículo VIII de la Constitución. _(Verificado 2026-09-21: los 9 paquetes de dominio existen en `backend/src/main/java/com/tinku/` junto con `config` y `shared`.)_
+- [x] T-000-02: Configurar PostgreSQL con schemas separados por módulo (`identidad.*`, `pagos.*`, etc., Artículo VIII). _(Verificado 2026-09-21: `application.yml` declara los 9 schemas en Flyway y `V1__crear_schemas.sql` los crea.)_
+- [x] T-000-03: Configurar Quartz con JobStore persistido en la misma base (Artículo IV/X) — probar que un job programado sobrevive a un reinicio del proceso antes de construir nada encima. _(Verificado 2026-09-21: `job-store-type: jdbc` en `application.yml` y `QuartzPersistenciaTest.java` existe.)_
+- [x] T-000-04: Configurar `ApplicationEventPublisher` (o equivalente) para eventos de dominio en memoria (Artículo IX) — crear un evento de prueba y un listener de prueba para validar el mecanismo antes de usarlo en lógica real. _(Verificado 2026-09-21: `ApplicationEventPublisher` en uso real en `ReservaService`, `SesionService`, `DenunciaService` y `AlertaSeguridadService`. Discrepancia: `NOTAS_VERIFICACION.md` menciona un `DomainEventExampleTest` que hoy **no existe** en `src/test` — se tilda igual porque el mecanismo está validado por 9 listeners reales en producción y por los tests de integración de M5/M9, no por ese test de ejemplo.)_
+- [x] T-000-05: Configurar Spring Security + JWT + bcrypt/argon2 para hashing de contraseñas (NFR-SEC-02). _(Verificado 2026-09-21: `JwtAuthTest.java` y `SecurityHttpTest.java` existen, y `SecurityConfig.java` define el bean `BCryptPasswordEncoder`.)_
+- [ ] T-000-06: Cuenta de desarrollador de LiveKit Cloud + credenciales de sandbox. _(código de integración implementado y testeado contra stub HTTP local; la existencia de la cuenta real no es verificable desde el repo — confirmar manualmente antes de piloto)_
+- [ ] T-000-07: Cuenta de MercadoPago Developers + usuarios de prueba operando en modo productivo controlado (ADR-M5-01 — **no** el sandbox clásico, por el problema conocido de webhooks). _(código de integración implementado y testeado contra stub HTTP local; la existencia de la cuenta real no es verificable desde el repo — confirmar manualmente antes de piloto)_
+- [x] T-000-08: Levantar el proceso Python del Motor de Matching como servicio separado, con un endpoint de salud (`/health`) y comunicación interna verificada desde el backend Java antes de implementar lógica de negocio sobre él. _(Verificado 2026-09-21: `def health()` en `matching-service/main.py` y `MatchingServiceHealthCheck.java` en el backend lo consume vía `MatchingServiceClient.health()`.)_
+- [ ] T-000-09: Configurar pipeline de CI mínimo (build + tests). _(Parcial al 2026-09-21: `ci-backend.yml` y `ci-frontend.yml` existen; **falta pipeline para `matching-service/`** — `test_main.py` no corre en ningún CI. Ver AUD-031, FASE 2.)_
 
 ## SPIKE PRIORITARIO — arranca en paralelo desde el día 1 (Artículo XI, ADR-M3-01)
 
@@ -110,10 +110,10 @@
 
 > El componente `frontend/src/components/DynamicTimeSlotPicker.tsx` ya existe (rama `dynamic-time-slot-picker`, commit `f0a3923`): micro-navegación día a día, agrupación Mañana/Tarde/Noche, estados disponible/seleccionado/ocupado, sticky footer con `type="submit"` y píldora que vibra ante conflicto (`globals.css`, token `--animate-shake`). **No está integrado** — el backend no expone un endpoint que produzca sus `TimeSlot[]`, y `reservar/page.tsx` sigue calculando las horas en cliente (paso fijo de 60min, sin conocer ocupación real). Pendiente:
 
-- [ ] T-M4-12: Endpoint `GET /api/tutores/{id}/horarios?fecha=YYYY-MM-DD&duracionMinutos=N` — devuelve los bloques de un día como `TimeSlot[] {id, startTime, endTime, isAvailable}` (startTime/endTime ISO 8601 con offset), calculando: solo franjas publicadas (FR-RES-012), bloques de `duracionMinutos` dentro de cada franja, exclusión de reservas NO canceladas superpuestas (misma EXCLUDE de FR-RES-007: `estado <> 'cancelada'`) y de bloques con <15 min de anticipación (FR-RES-013). `isAvailable=false` para los ocupados (el UI los muestra tachados, no los oculta). _(Nota: la fuente de `duracionMinutos` — "el Tutor define la duración" del brief del picker — no está definida en ningún Spec; confirmar con producto antes de inventar. Sin respuesta, el frontend la pediría al usuario.)_
-- [ ] T-M4-13: Integrar `DynamicTimeSlotPicker` en `reservar/page.tsx` — reemplaza el `<select>` de horas por el picker (el `type="submit"` del footer funciona dentro del `<form>` existente). Botón del footer según rol: menor → "Enviar Solicitud de Aprobación" = `POST /api/solicitudes` (FR-RES-021, hoy la página oculta el form completo para el menor; con esta integración el menor ve el picker y genera la Solicitud); adulto/AR → "Confirmar y Pagar" = `POST /api/reservas` (FR-RES-001). Selector de fecha nativo puede convivir como fecha inicial de la micro-navegación.
-- [ ] T-M4-14: Condición de carrera en el frontend (FR-RES-007) — cuando `POST /api/reservas` responde 409 (EXCLUDE), setear `isConflictError=true` (píldora elegida vibra + micro-copy "Este horario acaba de ser tomado…"), limpiar `selectedSlotId`, refetchear los slots de T-M4-12 para marcar el bloque como ocupado y deshabilitar el botón del footer hasta elegir otro horario. El 409 del backend ya existe y crea una sola fila (ver T-M4-11).
-- [ ] T-M4-15: Tests — backend: cobertura de T-M4-12 (bloques dentro de franja, ocupado por reserva no cancelada, ventana de 15 min, `isAvailable=false` vs bloque ausente). Frontend: flujo manual punta a punta — elegir horario → footer sticky → confirmar → redirect a pago; y el caso 409 con la píldora vibrando.
+- [x] T-M4-12: Endpoint `GET /api/tutores/{id}/horarios?fecha=YYYY-MM-DD&duracionMinutos=N` — devuelve los bloques de un día como `TimeSlot[] {id, startTime, endTime, isAvailable}` (startTime/endTime ISO 8601 con offset), calculando: solo franjas publicadas (FR-RES-012), bloques de `duracionMinutos` dentro de cada franja, exclusión de reservas NO canceladas superpuestas (misma EXCLUDE de FR-RES-007: `estado <> 'cancelada'`) y de bloques con <15 min de anticipación (FR-RES-013). `isAvailable=false` para los ocupados (el UI los muestra tachados, no los oculta). _(Nota: la fuente de `duracionMinutos` — "el Tutor define la duración" del brief del picker — no está definida en ningún Spec; confirmar con producto antes de inventar. Sin respuesta, el frontend la pediría al usuario.)_ _(Verificado 2026-09-21: cerrado; `HorariosDisponiblesService` existe, el endpoint vive en `FranjaController.java:67` (no en `TutorController`), y hay 2 tests `tM412_*` en `ReservasFlujosIntegracionTest`. La nota sobre `duracionMinutos` sigue vigente — la fuente del parámetro no está en ningún Spec.)_
+- [ ] T-M4-13: Integrar `DynamicTimeSlotPicker` en `reservar/page.tsx` — reemplaza el `<select>` de horas por el picker (el `type="submit"` del footer funciona dentro del `<form>` existente). Botón del footer según rol: menor → "Enviar Solicitud de Aprobación" = `POST /api/solicitudes` (FR-RES-021, hoy la página oculta el form completo para el menor; con esta integración el menor ve el picker y genera la Solicitud); adulto/AR → "Confirmar y Pagar" = `POST /api/reservas` (FR-RES-001). Selector de fecha nativo puede convivir como fecha inicial de la micro-navegación. _(Verificado 2026-09-21: `DynamicTimeSlotPicker` no aparece en `frontend/src/app/reservar/page.tsx` — pendiente real, sin integrar.)_
+- [ ] T-M4-14: Condición de carrera en el frontend (FR-RES-007) — cuando `POST /api/reservas` responde 409 (EXCLUDE), setear `isConflictError=true` (píldora elegida vibra + micro-copy "Este horario acaba de ser tomado…"), limpiar `selectedSlotId`, refetchear los slots de T-M4-12 para marcar el bloque como ocupado y deshabilitar el botón del footer hasta elegir otro horario. El 409 del backend ya existe y crea una sola fila (ver T-M4-11). _(Verificado 2026-09-21: `isConflictError`/`409` no aparecen en `frontend/src/app/reservar/page.tsx` — pendiente real. Bloqueada por AUD-009: hoy el 409 solo cubre horarios idénticos, no solapados.)_
+- [ ] T-M4-15: Tests — backend: cobertura de T-M4-12 (bloques dentro de franja, ocupado por reserva no cancelada, ventana de 15 min, `isAvailable=false` vs bloque ausente). Frontend: flujo manual punta a punta — elegir horario → footer sticky → confirmar → redirect a pago; y el caso 409 con la píldora vibrando. _(Pendiente real; referencia cruzada AUD-009 — falta el test de solapamiento parcial.)_
 
 ## M5 — Motor de Pagos
 
@@ -195,5 +195,61 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 ## Cierre — Integración Transversal Final
 
 - [x] T-FIN-01: Test end-to-end: alta de Adulto Responsable → alta de menor → autorización de Tutor → Solicitud → Reserva → pago → sesión → resumen → calificación — el flujo feliz completo, sin mocks en los puntos de integración entre módulos propios. (`com.tinku.cierre.E2EFlujoFelizIntegracionTest`).
-- [x] T-FIN-02: Test end-to-end de la rama de seguridad: sesión con menor → disparo simulado de kill-switch → suspensión → Alerta en M8 → resolución del Admin → efectos propagados a M1/M2/M4/M5. (`com.tinku.cierre.E2ERamaSeguridadIntegracionTest`; suite completa: 320 tests, 0 errores).
+- [x] T-FIN-02: Test end-to-end de la rama de seguridad: sesión con menor → disparo simulado de kill-switch → suspensión → Alerta en M8 → resolución del Admin → efectos propagados a M1/M2/M4/M5. (`com.tinku.cierre.E2ERamaSeguridadIntegracionTest`; suite completa: 383 tests, 0 failures, 0 errors, 0 skipped — verificado con JDK 21 al cierre de FASE 0, 2026-09-21).
 - [x] T-FIN-03: Revisión final de ADRs — M1 (ADR-M1-01), M2 (ADR-M2-01) y M3 (ADR-M3-01) resueltos, con su archivo en `docs/adr/`. M5 (MercadoPago): decisión tomada (sandbox de test users para desarrollo, escrow); el salto a productivo queda pendiente por la infra (T-000) y no bloquea el cierre del código. M6 (LLM para resumen + transcripción): la elección GPT-4o vs. Gemini 2.0 Flash sigue pendiente de ADR (fila "Pendiente — ADR" en la Constitución); el código ya la aisló tras el puerto `ResumenProveedor` fail-closed, así que el cierre no la bloquea.
+
+---
+
+## FASE AUD — Remediación de la auditoría 2026-09-21
+
+> Plan completo: `docs/superpowers/plans/2026-09-21-remediacion-auditoria.md`
+> Estado por finding: `docs/auditoria/REGISTRO_FINDINGS.md`
+
+### FASE 1 — P0 Seguridad
+- [ ] T-AUD-001: `VideoClaim(sala, true, **false**, **false**)` + aserciones negativas en `LiveKitServiceTest` (AUD-002)
+- [ ] T-AUD-002: Cerrar la sala de LiveKit en `cortar()` (`RemoveParticipant` + `DeleteRoom`) y rechazar `/token` sobre sesiones cerradas (AUD-001)
+- [ ] T-AUD-003: Identity de LiveKit = UUID, no DNI; claim `name` para la etiqueta de UI (AUD-003)
+- [ ] T-AUD-004: Quitar `profiles.active: dev` del artefacto y abortar el arranque si `StubOcrService` está activo fuera de `dev`/`test` (AUD-004)
+- [ ] T-AUD-005: Dejar de loguear el token de reset (y el DNI) (AUD-008)
+- [ ] T-AUD-006: `UNIQUE (mp_payment_id)` + `UNIQUE (reserva_id)` en `pagos.transacciones` (migración nueva) (AUD-010)
+- [ ] T-AUD-007: Exigir participación en `DenunciaService.presentar` + rechazar auto-denuncia (AUD-011)
+- [ ] T-AUD-008: `ramaMenor` suspende a `detectadoId`, no a `reserva.getTutor()` — o documentar la intención en el Spec y arreglar la resolución de la Alerta (AUD-006)
+- [ ] T-AUD-009: Endpoint de visualización del archivo de la Credencial, gateado por `requiereModeracion` (AUD-007)
+- [ ] T-AUD-010: Guard de sanción vigente antes de reactivar (`AlertaSeguridadService`, `CredencialService`) (AUD-013)
+- [ ] T-AUD-011: Fallar el arranque si `tinku.jwt.secret` es el placeholder fuera de `dev`/`test` (AUD-034)
+
+### FASE 2 — P1 Resolver antes de considerar el proyecto terminado
+- [ ] T-AUD-012: Congelar `duracion_minutos` en `reservas.reservas` y reemplazar la `EXCLUDE` por `tstzrange(...) &&`, con chequeo equivalente en aplicación (AUD-009 + AUD-020)
+- [ ] T-AUD-013: Rate limiting en los 7 endpoints públicos + bloqueo escalado por intentos de login (reutilizar el patrón de `OcrBackoffService`) (AUD-012)
+- [ ] T-AUD-014: Puerto `Notificador` + outbox persistido; implementar como mínimo kill-switch rama menor → Adulto Responsable (AUD-014)
+- [ ] T-AUD-015: Autenticación en `matching-service` + quitar `ports:` del compose + pool de conexiones (AUD-015)
+- [ ] T-AUD-016: Decidir y documentar (ADR) baja de menor: cascada o anonimización; test de integración real (AUD-017)
+- [ ] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029)
+- [ ] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018)
+- [x] T-AUD-019: Reconciliar `Tasks_Tinku_Implementacion.md` con el código y elegir una sola fuente de verdad (AUD-030) — CERRADO, ver `REGISTRO_FINDINGS.md` (commits 8707da6, 64fe386, 352d065, 2d4e108)
+- [ ] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033)
+- [ ] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031)
+- [ ] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021)
+- [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9)
+- [ ] T-AUD-024: Anexo a ADR-M3-01: modelo de amenaza del clasificador on-device y controles compensatorios (AUD-005)
+
+### FASE 3 — P2 Mejoras recomendables
+- [ ] T-AUD-025: Romper el ciclo `shared ↔ admin`; mover `AlertaSeguridad` a `seguridad` (AUD-019)
+- [ ] T-AUD-026: Mover cada evento al módulo que lo publica (o a `shared.evento`) (AUD-022)
+- [ ] T-AUD-027: `EXCLUDE` de superposición en `franjas_disponibilidad` + `franjaQueCubre` como query (AUD-025)
+- [ ] T-AUD-028: Distinguir la constraint violada antes de devolver 409 "horario ocupado" (AUD-023)
+- [ ] T-AUD-029: `credentials_version` en el JWT para invalidar sesiones al resetear contraseña (AUD-027)
+- [ ] T-AUD-030: Acotar el fallback a `catalogoMock` a 404 estricto o a no-producción (AUD-026)
+- [ ] T-AUD-031: Decidir una calificación pública por sesión (o documentar el sesgo) (AUD-028)
+- [ ] T-AUD-032: Migración que dropee las tablas de CAP (V6) referenciando ADR-M1-02 (AUD-035)
+- [ ] T-AUD-033: Dependabot + actualización de Spring Boot (AUD-032)
+- [x] T-AUD-034: Declarar el transcript de M6 como pendiente explícito en los chunks (AUD-024) — hecho por FASE 0 Task 0.4 (`Tasks_Tinku_Chunks.md`) y Task 0.6 (bloqueante real de M6)
+- [ ] T-AUD-035: Middleware de Next.js: verificar firma, o renombrarlo honestamente como redirección de UX (AUD-016)
+
+### FASE 4 — P3 Mejoras opcionales
+- [ ] T-AUD-036: Poner el `Usuario` en el principal del filtro para eliminar la doble consulta (AUD-036.1)
+- [ ] T-AUD-037: Unificar `@Transactional` en el de Spring (AUD-036.3)
+- [ ] T-AUD-038: Subpaquetes de capa en `matching` (AUD-036.2)
+- [ ] T-AUD-039: `@JsonIgnore` en `Usuario.getEdad()` (AUD-036.6)
+- [ ] T-AUD-040: Lock en la carga lazy del embedder de Python (AUD-036.7)
+- [ ] T-AUD-041: Actuator con `/health` e `/info` (AUD-034)

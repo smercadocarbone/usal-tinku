@@ -266,6 +266,10 @@ public class SesionService {
 
     // ------------------------------------------------ token de acceso (M3-frontend)
 
+    // FIXME AUD-001/AUD-003 (auditoría 2026-09-21): (a) no hay guard de estado — devuelve token
+    // para una sesión ya cortada por kill-switch; (b) la identidad del participante es el DNI,
+    // que LiveKit difunde al otro participante y el frontend renderiza en pantalla. Con menores
+    // esto es un dato sensible bajo Ley 25.326. Se corrige en FASE 1.
     /**
      * Devuelve el token de LiveKit para que el participante se conecte a la sala.
      * Misma autorización que {@link #finalizar}: solo tutor, beneficiario o pagador.
@@ -422,6 +426,10 @@ public class SesionService {
 
     // ------------------------------------------------ kill-switch (T-M3-07/08/09)
 
+    // FIXME AUD-005 (auditoría 2026-09-21): el único control es esParticipante(). Cualquiera de
+    // los tres puede disparar el corte contra otro, sin evidencia y sin límite de tasa; en rama
+    // menor eso produce reembolso total + suspensión del Tutor. Ver FASE 1 y el anexo pendiente
+    // a ADR-M3-01 (modelo de amenaza del clasificador on-device).
     /**
      * Disparo del kill-switch (T-M3-07, US-6/US-7, FR-AULA-009). El backend
      * decide la rama con datos propios de M1: si el {@code beneficiario} de la
@@ -465,6 +473,11 @@ public class SesionService {
         return ramaAdultos(sesion, reserva, detectadoId);
     }
 
+    // FIXME AUD-006 (auditoría 2026-09-21): suspende siempre a reserva.getTutor(), ignorando
+    // detectadoId. Cuando el detectado es el menor (caso previsto en Spec_M3 US-6), el Tutor
+    // queda suspendido y AlertaSeguridadService.resolver() nunca lo reactiva, porque resuelve
+    // mirando alerta.getDetectadoId(). Comparar con confirmarRamaAdultos(), que sí usa el
+    // detectado. Se corrige en FASE 1.
     /**
      * US-6 — rama MENOR: corte directo, sin confirmación ni pregunta al menor
      * (Artículo II). Alerta de Seguridad {@code rama=menor}, suspensión
@@ -589,6 +602,9 @@ public class SesionService {
         return alertaRepo.save(alerta);
     }
 
+    // FIXME AUD-001 (auditoría 2026-09-21): este método NO cierra la sala de LiveKit. Solo
+    // persiste el estado. La sala sigue viva y los tokens emitidos siguen siendo válidos hasta
+    // su TTL. Spec_M3 US-6 exige "la sesión se corta para ambos". Se corrige en FASE 1.
     /**
      * Cierre de la sesión SIN emitir evento (lo emite cada rama del kill-switch
      * con su nombre exacto). Idempotente por los guards de estado: si ya está

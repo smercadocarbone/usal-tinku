@@ -164,6 +164,9 @@ export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[
   if (filtros?.materia) params.set("materia", filtros.materia);
   const qs = params.toString();
   return api.get<NivelCatalogo[]>(`/api/catalogos${qs ? `?${qs}` : ""}`).catch((err) => {
+    // FIXME AUD-026 (auditoría 2026-09-21): el catch también atrapa errores de red (un
+    // TypeError de fetch no es ApiError), así que con el backend caído el usuario ve un
+    // catálogo falso que parece real. Se acota en FASE 3.
     if (err instanceof ApiError && err.status !== 404) throw err;
     // ponytail: fallback local hasta que el backend aterrice en FASE 3
     // (orquestador). El GET real es la fuente; este fixture solo cubre
