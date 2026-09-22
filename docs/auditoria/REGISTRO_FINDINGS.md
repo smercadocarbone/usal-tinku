@@ -11,15 +11,15 @@
 | ID | Sev | Título | Estado | Fase | Commit | Test |
 |----|-----|--------|--------|------|--------|------|
 | AUD-001 | CRÍTICA | El kill-switch no cierra la sala de LiveKit | ABIERTO | 1 | — | — |
-| AUD-002 | CRÍTICA | Tokens de LiveKit con roomAdmin y roomCreate | ABIERTO | 1 | — | — |
+| AUD-002 | CRÍTICA | Tokens de LiveKit con roomAdmin y roomCreate | CERRADO | 1 | 92375ee | `LiveKitServiceTest.tokenDeParticipanteSeVerificaYDeclaraLaSalaCorrecta` |
 | AUD-003 | CRÍTICA | El DNI se usa como identity de LiveKit y se expone en pantalla | ABIERTO | 1 | — | — |
 | AUD-004 | CRÍTICA | Perfil `dev` con OCR stub activo por defecto en el artefacto | ABIERTO | 1 | — | — |
 | AUD-005 | CRÍTICA | Kill-switch disparable por cualquier participante sin evidencia | ABIERTO | 1 | — | — |
 | AUD-006 | ALTA | `ramaMenor` suspende siempre al Tutor, ignorando al detectado real | ABIERTO | 1 | — | — |
 | AUD-007 | CRÍTICA | No hay endpoint para ver el archivo de la Credencial Académica | ABIERTO | 1 | — | — |
-| AUD-008 | CRÍTICA | El token de reset de contraseña se loguea en claro junto al DNI | ABIERTO | 1 | — | — |
+| AUD-008 | CRÍTICA | El token de reset de contraseña se loguea en claro junto al DNI | CERRADO | 1 | 676a6b8 | `NotificadorResetPasswordLogTest.notificarNoLoguearElTokenNiElDni` |
 | AUD-009 | ALTA | La constraint de reservas compara igualdad exacta, no solapamiento | ABIERTO | 2 | — | — |
-| AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | ABIERTO | 1 | — | — |
+| AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | CERRADO | 1 | b6bd538 | `PagosWebhookIntegracionTest.webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx` |
 | AUD-011 | ALTA | `DenunciaService.presentar` sin validar participación (BOLA) | ABIERTO | 1 | — | — |
 | AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
 | AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | ABIERTO | 1 | — | — |
