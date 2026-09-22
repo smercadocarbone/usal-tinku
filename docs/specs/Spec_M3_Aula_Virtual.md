@@ -54,9 +54,11 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 
 - **Dado** que hay un perfil de menor en la sesión y el clasificador on-device detecta contenido inapropiado/ilegal en el video del Tutor, **cuando** la detección se confirme, **entonces** la sesión se corta para ambos, el buffer de 30s se sube y persiste como Alerta de Seguridad (BR-KS-01), el Tutor queda en suspensión preventiva, se emite el evento `sesion.killswitch_menor` que M5 usa para reembolsar al Estudiante (FR-PAG-009), y se notifica inmediatamente al Adulto Responsable. La Alerta pasa a M9 (ventana de 12hs → revisión del Admin).
 
-  **NO IMPLEMENTADO (AUD-001, 2026-09-21):** el corte cambia el estado en la base
-  (`sesiones_aprendizaje`, `reservas`) y emite el evento, pero NO cierra la sala de LiveKit
-  ni revoca los tokens emitidos. Ver FASE 1 del plan de remediación.
+  **Implementado (AUD-001, 2026-09-22):** el corte cierra la sala de LiveKit (`DeleteRoom`, que
+  desconecta a ambos) y la sesión deja de emitir tokens nuevos. Si LiveKit no contesta, el corte
+  se persiste igual y el cierre se reintenta con un job persistido — ver ADR-M3-03 para la
+  decisión fail-open y sus riesgos aceptados. Los tokens ya emitidos no se pueden revocar en
+  LiveKit; valen hasta su TTL contra una sala ya cerrada.
 
   **NO IMPLEMENTADO (AUD-014, 2026-09-21):** no existe infraestructura de notificación en el
   sistema. El Adulto Responsable no recibe ningún aviso. Ver FASE 2.
