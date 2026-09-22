@@ -52,6 +52,7 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -64,6 +65,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -432,6 +434,47 @@ class PagosWebhookIntegracionTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void webhook_dosPagosDistintosConcurrentesMismaReserva_unoConfirmaYElOtroSeReembolsa() throws Exception {
+        // Efecto colateral de AUD-010: con uq_transacciones_reserva, dos pagos DISTINTOS
+        // (ej. el pagador apretó "Pagar" dos veces en pestañas distintas) para la misma
+        // Reserva llegaban juntos, los dos veían pendiente_pago, y el perdedor caía en
+        // el catch del índice único como "no-op": su plata quedaba cobrada y nunca se
+        // devolvía. El perdedor tiene que ir por el reembolso de pago tardío.
+        UUID reservaId = crearReservaEnPendiente();
+        pagoAprobado("pago-a", reservaId, new BigDecimal("15000"));
+        pagoAprobado("pago-b", reservaId, new BigDecimal("15000"));
+        String cuerpoA = cuerpoNotificacion("pago-a");
+        String cuerpoB = cuerpoNotificacion("pago-b");
+        String firmaA = firma("pago-a", null);
+        String firmaB = firma("pago-b", null);
+
+        CountDownLatch largada = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> resA = pool.submit(() -> postWebhookStatus("pago-a", cuerpoA, firmaA, largada));
+            Future<Integer> resB = pool.submit(() -> postWebhookStatus("pago-b", cuerpoB, firmaB, largada));
+            largada.countDown();
+
+            assertThat(resA.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+            assertThat(resB.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        // Una sola fila (la del ganador) y la Reserva confirmada una vez.
+        List<Transaccion> filas = transaccionRepository.findAll().stream()
+                .filter(t -> t.getReservaId().equals(reservaId)).toList();
+        assertThat(filas).hasSize(1);
+        String ganador = filas.get(0).getMpPaymentId();
+        String perdedor = ganador.equals("pago-a") ? "pago-b" : "pago-a";
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CONFIRMADA);
+        // El pago perdedor se devuelve entero; el ganador, nunca.
+        verify(mercadopago, times(1)).reembolsarPago(perdedor);
+        verify(mercadopago, never()).reembolsarPago(ganador);
     }
 
     @Test
