@@ -2,14 +2,28 @@ package com.tinku.reservas.repository;
 
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
+
+    /**
+     * {@code SELECT ... FOR UPDATE}: serializa el procesamiento de pagos de UNA Reserva
+     * (webhook de MP). Un segundo pago concurrente espera al primero y ve el estado ya
+     * commiteado — ver {@code EscrowService.procesarPagoAprobado}.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Reserva r where r.id = :id")
+    Optional<Reserva> findByIdParaActualizar(@Param("id") UUID id);
 
     /** FR-RES-020: barrido de recuperación de reservas cuyo timeout de pago venció. */
     List<Reserva> findByEstadoAndCreatedAtBefore(EstadoReserva estado, Instant antesDe);

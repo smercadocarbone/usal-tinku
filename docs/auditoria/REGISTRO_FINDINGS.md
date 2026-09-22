@@ -19,7 +19,7 @@
 | AUD-007 | CRÍTICA | No hay endpoint para ver el archivo de la Credencial Académica | CERRADO | 1 | f97b12e | `AdminPanelIntegracionTest.aud007_*` (3), `AlmacenamientoLocalTest` (5), `IdentidadFlujosIntegracionTest.aud007_*` (2) |
 | AUD-008 | CRÍTICA | El token de reset de contraseña se loguea en claro junto al DNI | CERRADO | 1 | 676a6b8 | `NotificadorResetPasswordLogTest.notificarNoLoguearElTokenNiElDni` |
 | AUD-009 | ALTA | La constraint de reservas compara igualdad exacta, no solapamiento | ABIERTO | 2 | — | — |
-| AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | CERRADO | 1 | b6bd538 | `PagosWebhookIntegracionTest.webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx` |
+| AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | CERRADO | 1 | b6bd538 + (este commit: pagos distintos concurrentes) | `PagosWebhookIntegracionTest.webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx`, `webhook_dosPagosDistintosConcurrentesMismaReserva_unoConfirmaYElOtroSeReembolsa` |
 | AUD-011 | ALTA | `DenunciaService.presentar` sin validar participación (BOLA) | CERRADO | 1 | beaf32a | `DenunciasModeracionIntegracionTest.aud011_*` (5) |
 | AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
 | AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | 5ddaa1d | `DenunciasModeracionIntegracionTest.aud013_*` (5) |

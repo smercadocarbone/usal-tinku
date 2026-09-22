@@ -118,6 +118,14 @@ public class EscrowService {
      * hilo ya ganó la carrera — se trata como no-op idempotente y NUNCA se
      * relanza (un 5xx hace que MP reintente en loop, el mismo problema que
      * describe el javadoc de {@link #reembolsarPagoTardio}).</p>
+     *
+     * <p>Dos pagos DISTINTOS para la misma Reserva (doble click en "Pagar" en dos
+     * pestañas) no son un reintento: el perdedor tiene que reembolsarse. Por eso la
+     * Reserva se lee con {@code FOR UPDATE} y el guard de {@code mpPaymentId} se repite
+     * después del lock: el segundo webhook espera al primero, ve la Reserva ya
+     * {@code confirmada} y va por {@link #reembolsarPagoTardio}. Sin el lock, ambos
+     * veían {@code pendiente_pago} y el perdedor caía en el catch del índice único,
+     * con su plata cobrada y nunca devuelta.</p>
      */
     @Transactional
     public void procesarPagoAprobado(String mpPaymentId) {
@@ -128,12 +136,17 @@ public class EscrowService {
         if (!pago.aprobado()) {
             return;
         }
-        Reserva reserva = reservaPorExternalReference(pago.externalReference());
+        Reserva reserva = reservaBloqueadaPorExternalReference(pago.externalReference());
         if (reserva == null) {
             // external_reference no corresponde a ninguna Reserva de Tinku: no
             // reembolsar automáticamente un pago que no podemos atribuir.
             LOG.warn("Pago aprobado con external_reference no atribuible, se ignora: {} -> {}",
                     mpPaymentId, pago.externalReference());
+            return;
+        }
+        // Re-chequeo bajo el lock: un reintento de ESTE mismo pago que esperó al
+        // primero lo encuentra ya persistido (antes caía en el catch de abajo).
+        if (transaccionRepo.findByMpPaymentId(mpPaymentId).isPresent()) {
             return;
         }
         if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
@@ -169,13 +182,14 @@ public class EscrowService {
     }
 
     /** La {@code external_reference} de la preferencia ES el id de la Reserva
-     * (M5-A): es la clave de reconciliación del webhook. Desconocida → null. */
-    private Reserva reservaPorExternalReference(String externalReference) {
+     * (M5-A): es la clave de reconciliación del webhook. Desconocida → null. Se
+     * lee con lock de fila (ver javadoc de {@link #procesarPagoAprobado}). */
+    private Reserva reservaBloqueadaPorExternalReference(String externalReference) {
         if (externalReference == null || externalReference.isBlank()) {
             return null;
         }
         try {
-            return reservaRepo.findById(UUID.fromString(externalReference)).orElse(null);
+            return reservaRepo.findByIdParaActualizar(UUID.fromString(externalReference)).orElse(null);
         } catch (IllegalArgumentException e) {
             return null;
         }
