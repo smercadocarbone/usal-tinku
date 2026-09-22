@@ -25,3 +25,8 @@ matching-service/.venv/
 .env.local
 application-local.yml
 .DS_Store
+
+# Claude Code (estado local de cada máquina, nunca va al repo)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
