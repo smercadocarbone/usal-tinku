@@ -1,6 +1,8 @@
 package com.tinku.aula.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tinku.aula.CierreSalaService;
+import com.tinku.aula.LiveKitService;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.model.AlertaSeguridad;
 import com.tinku.aula.model.ConfirmacionKillswitch;
@@ -26,6 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.quartz.Scheduler;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
@@ -48,6 +52,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -91,6 +99,10 @@ class KillswitchIntegracionTest {
     @Autowired ConfirmacionKillswitchRepository confirmacionRepository;
     @Autowired SesionService sesionService;
     @Autowired JwtUtil jwtUtil;
+    @Autowired CierreSalaService cierreSalaService;
+    @Autowired Scheduler scheduler;
+    // Sin credenciales de LiveKit en CI (T-000-06): se mockea el borde HTTP.
+    @MockBean LiveKitService liveKitService;
 
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 
@@ -107,6 +119,7 @@ class KillswitchIntegracionTest {
     @BeforeEach
     void limpiar() {
         EVENTOS.clear();
+        reset(liveKitService);
     }
 
     // ------------------------------------------------ helpers de datos
@@ -245,6 +258,83 @@ class KillswitchIntegracionTest {
 
         assertThat(EVENTOS).hasSize(1);
         assertThat(alertaRepository.findBySesionId(sesion.getId())).isPresent();
+    }
+
+    // ------------------------------------------------ AUD-001 — el corte cierra la sala
+
+    /** Rama menor con la sala ya creada (T-5 alcanzado) — el caso real de un corte en vivo. */
+    private SesionAprendizaje sesionMenorConSala(Usuario ar, Usuario tutor) {
+        Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
+        SesionAprendizaje sesion = sesionDirecta(reservaConfirmada(ar, menor, tutor), 3600);
+        sesion.setLivekitRoomId("sesion-" + sesion.getId());
+        return sesionRepository.save(sesion);
+    }
+
+    @Test
+    void aud001_menor_killswitch_cierraLaSalaDeLiveKit() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        SesionAprendizaje sesion = sesionMenorConSala(ar, tutor);
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", tutor.getId().toString()));
+
+        verify(liveKitService).eliminarSala("sesion-" + sesion.getId());
+        assertThat(scheduler.checkExists(CierreSalaService.triggerCierre(sesion.getId()))).isFalse();
+    }
+
+    @Test
+    void aud001_menor_trasKillswitch_tokenResponde422() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        SesionAprendizaje sesion = sesionMenorConSala(ar, tutor);
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", tutor.getId().toString()));
+
+        mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        .header("Authorization", "Bearer " + tokenDe(tutor)))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void aud001_menor_liveKitCaido_elCorteSePersisteIgualYSeAgendaReintento() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        SesionAprendizaje sesion = sesionMenorConSala(ar, tutor);
+        doThrow(new IllegalStateException("LiveKit no responde"))
+                .when(liveKitService).eliminarSala(anyString());
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", tutor.getId().toString()));
+
+        // D4 / ADR-M3-03: un fallo de LiveKit NO revierte el corte en la base.
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("finalizada");
+        assertThat(alertaRepository.findBySesionId(sesion.getId())).isPresent();
+        assertThat(EVENTOS).hasSize(1);
+        assertThat(EVENTOS.get(0)).isInstanceOf(SesionKillswitchMenorEvent.class);
+        assertThat(scheduler.checkExists(CierreSalaService.triggerCierre(sesion.getId()))).isTrue();
+    }
+
+    @Test
+    void aud001_reintentoDeCierre_exitoQuitaElJobYAgotadoNoReprograma() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        SesionAprendizaje sesion = sesionMenorConSala(ar, tutor);
+        UUID id = sesion.getId();
+
+        doThrow(new IllegalStateException("LiveKit no responde"))
+                .when(liveKitService).eliminarSala(anyString());
+        cierreSalaService.ejecutarCierre(id, 1);
+        assertThat(scheduler.checkExists(CierreSalaService.triggerCierre(id))).isTrue();
+
+        // 3° reintento fallido: se agotan los reintentos, no se reprograma.
+        cierreSalaService.ejecutarCierre(id, 3);
+        assertThat(scheduler.checkExists(CierreSalaService.triggerCierre(id))).isFalse();
+
+        reset(liveKitService);
+        cierreSalaService.ejecutarCierre(id, 1);
+        cierreSalaService.ejecutarCierre(id, 2);
+        verify(liveKitService, org.mockito.Mockito.times(2)).eliminarSala("sesion-" + id);
+        assertThat(scheduler.checkExists(CierreSalaService.triggerCierre(id))).isFalse();
     }
 
     // ------------------------------------------------ T-M3-07 — rama adultos: no corta

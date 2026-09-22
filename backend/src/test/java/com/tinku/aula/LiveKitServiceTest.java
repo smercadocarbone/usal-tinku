@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -52,6 +53,18 @@ class LiveKitServiceTest {
                 os.write(body);
             }
         });
+        serverOk.createContext("/twirp/livekit.RoomService/DeleteRoom", exchange -> {
+            authHeaderRecibido = exchange.getRequestHeaders().getFirst("Authorization");
+            bodyRecibido = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            boolean inexistente = bodyRecibido.contains("sala-inexistente");
+            byte[] body = (inexistente ? "{\"code\":\"not_found\",\"msg\":\"room not found\"}" : "{}")
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(inexistente ? 404 : 200, body.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(body);
+            }
+        });
         serverOk.start();
         portOk = serverOk.getAddress().getPort();
 
@@ -59,6 +72,13 @@ class LiveKitServiceTest {
         serverError.createContext("/twirp/livekit.RoomService/CreateRoom", exchange -> {
             byte[] body = "{\"code\":3,\"msg\":\"permission denied\"}".getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(403, body.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(body);
+            }
+        });
+        serverError.createContext("/twirp/livekit.RoomService/DeleteRoom", exchange -> {
+            byte[] body = "{\"code\":\"unavailable\",\"msg\":\"down\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(503, body.length);
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(body);
             }
@@ -131,6 +151,39 @@ class LiveKitServiceTest {
         assertThatThrownBy(() -> service.crearSala("sala-42"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("rechazo");
+    }
+
+    @Test
+    void eliminarSalaPosteaAlTwirpDeleteRoomConTokenDeServidor() {
+        LiveKitService service = new LiveKitService("http://localhost:" + portOk,
+                API_KEY, API_SECRET, TTL_SEGUNDOS);
+
+        service.eliminarSala("sala-42");
+
+        // AUD-001: DeleteRoom desconecta a todos los participantes. Exige roomCreate,
+        // que es el grant que ya tiene el token de servidor.
+        assertThat(bodyRecibido).contains("\"room\":\"sala-42\"");
+        assertThat(authHeaderRecibido).startsWith("Bearer ");
+        Map<?, ?> video = parsear(authHeaderRecibido.substring("Bearer ".length()))
+                .get("video", Map.class);
+        assertThat(video.get("roomCreate")).isEqualTo(true);
+    }
+
+    @Test
+    void eliminarSalaQueYaNoExisteEsIdempotente() {
+        LiveKitService service = new LiveKitService("http://localhost:" + portOk,
+                API_KEY, API_SECRET, TTL_SEGUNDOS);
+
+        assertThatCode(() -> service.eliminarSala("sala-inexistente")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void eliminarSalaPropagaElErrorDeLiveKit() {
+        LiveKitService service = new LiveKitService("http://localhost:" + portError,
+                API_KEY, API_SECRET, TTL_SEGUNDOS);
+
+        assertThatThrownBy(() -> service.eliminarSala("sala-42"))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

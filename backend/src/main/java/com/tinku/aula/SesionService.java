@@ -78,6 +78,7 @@ public class SesionService {
     private final ConfirmacionKillswitchRepository confirmacionRepo;
     private final FranjaService franjaService;
     private final LiveKitService liveKitService;
+    private final CierreSalaService cierreSalaService;
     private final Scheduler scheduler;
     private final ApplicationEventPublisher events;
 
@@ -88,6 +89,7 @@ public class SesionService {
                          ConfirmacionKillswitchRepository confirmacionRepo,
                          FranjaService franjaService,
                          LiveKitService liveKitService,
+                         CierreSalaService cierreSalaService,
                          Scheduler scheduler,
                          ApplicationEventPublisher events) {
         this.sesionRepo = sesionRepo;
@@ -97,6 +99,7 @@ public class SesionService {
         this.confirmacionRepo = confirmacionRepo;
         this.franjaService = franjaService;
         this.liveKitService = liveKitService;
+        this.cierreSalaService = cierreSalaService;
         this.scheduler = scheduler;
         this.events = events;
     }
@@ -266,20 +269,24 @@ public class SesionService {
 
     // ------------------------------------------------ token de acceso (M3-frontend)
 
-    // FIXME AUD-001 (auditoría 2026-09-21): no hay guard de estado — devuelve token para una
-    // sesión ya cortada por kill-switch. Se corrige en FASE 1.
     /**
      * Devuelve el token de LiveKit para que el participante se conecte a la sala.
      * Misma autorización que {@link #finalizar}: solo tutor, beneficiario o pagador.
      * La sala debe haber sido creada ya (T-5, {@link com.tinku.aula.jobs.CrearSalaJob}).
      * El identity es el UUID y el nombre visible es solo el nombre de pila, sin
-     * apellido ni DNI (AUD-003, minimización del Artículo V).
+     * apellido ni DNI (AUD-003, minimización del Artículo V). Una sesión en estado
+     * terminal no recibe tokens nuevos (AUD-001): el corte cerró la sala.
      */
     public String[] obtenerToken(Usuario usuario, UUID sesionId) {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
                 .orElseThrow(SesionNoEncontradaException::new);
         if (sesion.getLivekitRoomId() == null) {
             throw new SesionSinSalaException("La sala aún no fue creada (T-5 no alcanzado).");
+        }
+        if (SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())) {
+            throw new SesionCerradaException();
         }
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
@@ -602,13 +609,14 @@ public class SesionService {
         return alertaRepo.save(alerta);
     }
 
-    // FIXME AUD-001 (auditoría 2026-09-21): este método NO cierra la sala de LiveKit. Solo
-    // persiste el estado. La sala sigue viva y los tokens emitidos siguen siendo válidos hasta
-    // su TTL. Spec_M3 US-6 exige "la sesión se corta para ambos". Se corrige en FASE 1.
     /**
      * Cierre de la sesión SIN emitir evento (lo emite cada rama del kill-switch
      * con su nombre exacto). Idempotente por los guards de estado: si ya está
      * finalizada/interrumpida, no re-marca ni permite doble evento.
+     *
+     * <p>Cierra la sala de LiveKit ANTES de persistir (AUD-001): "la sesión se
+     * corta para ambos" (Spec_M3 US-6). Si LiveKit falla, el corte se persiste
+     * igual y el cierre se reintenta con un job persistido (ADR-M3-03).</p>
      */
     private void cortar(SesionAprendizaje sesion, Reserva reserva) {
         if (reserva.getEstado() == EstadoReserva.FINALIZADA
@@ -616,6 +624,7 @@ public class SesionService {
                 || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())) {
             return;
         }
+        cierreSalaService.cerrar(sesion);
         Instant fin = Instant.now();
         long duracion = sesion.getInicioReal() != null
                 ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
