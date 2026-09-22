@@ -69,6 +69,13 @@ Esta sección es tan obligatoria como las tareas. Está dividida en dos: lo que 
 | B9 | **Verificar que Docker está corriendo antes de la primera tarea de cada sesión** (`docker info`). Sin Docker, los fallos de Testcontainers se confunden con fallos del fix. |
 | B10 | **Nunca declarar "listo" sin haber pegado la salida real del comando de verificación.** Evidencia antes que afirmaciones. |
 
+### C. Decisiones ya tomadas por el usuario — no volver a preguntarlas
+
+Las tareas 1.4, 1.5, 1.7, 1.10, 2.1, 2.2, 2.3, 2.6 y 3.8 tenían "PARAR y preguntar".
+El usuario las resolvió el 2026-09-22. El registro completo, con lo que implica cada una,
+está en `.superpowers/sdd/decisiones/decisiones-usuario.md`. Si una tarea de este plan
+todavía dice "parar y preguntar" sobre algo que ese archivo ya resuelve, gana el archivo.
+
 ---
 
 ## File Structure
@@ -934,7 +941,11 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 3. `SesionService.cortar()` los invoca **antes** de persistir el estado.
 4. `SesionService.obtenerToken()` rechaza sesiones en estado `finalizada` o `interrumpida` con una excepción nueva → 422.
 
-**Decisión de diseño que hay que tomar y escribir:** ¿el fallo de LiveKit al cerrar la sala debe abortar la transacción del corte? **Sí, fail-closed** — es el criterio que el resto del módulo ya usa (`programarSiFalta` aborta la confirmación de la Reserva si Quartz falla). Pero hay que decidir qué pasa si LiveKit está caído: la sesión no se puede cortar y el menor queda expuesto. **Proponer la alternativa y dejarla registrada**: cortar igual + encolar un job de Quartz de reintento del cierre. Esa segunda opción probablemente sea la correcta bajo el Artículo II, pero **es una decisión de producto — si dudás, pará y preguntá** (guardrail B8).
+**Decisión de diseño (D4, 2026-09-22):** si LiveKit falla al cerrar la sala, **NO** se aborta la transacción del corte. `SesionService.cortar()` intenta `RemoveParticipant` + `DeleteRoom`; si falla, persiste igual el estado (sesión cortada, Alerta, escrow en pausa por D3, evento) y agenda un job de Quartz que reintenta el cierre de sala con el mismo patrón de backoff de `LiberacionEscrowService` (5/15/60min, ya en `Tabla_Tiempos_Tinku.md`).
+
+**Fundamento:** esto es una **desviación consciente** del estilo fail-closed que el resto del módulo usa (`programarSiFalta` aborta la confirmación de la Reserva si Quartz falla) y hay que justificarla explícitamente en el ADR. La razón: LiveKit separa plano de control y plano de medios — su API puede estar caída mientras la videollamada sigue viva. Fail-closed acá (abortar el corte si LiveKit no contesta) produce el resultado opuesto al deseado: el menor queda expuesto y la sesión no se corta en ningún lado, ni siquiera en la BD.
+
+**Riesgo aceptado:** entre el disparo y el reintento exitoso, la sala sigue abierta. Se mitiga con la desconexión local del frontend, que no es garantía (un cliente modificado la ignora). El cierre pasa de "nunca" a "apenas LiveKit conteste".
 
 **Test obligatorio:** (a) unit sobre `LiveKitService` con stub HTTP local verificando que se postea a `DeleteRoom` con el token de servidor — mismo patrón que `crearSalaPosteaAlTwirp`; (b) integración en `KillswitchIntegracionTest`: tras el kill-switch rama menor, `POST /api/sesiones/{id}/token` responde 422.
 
@@ -950,11 +961,11 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 
 **Cambio concreto:** suspender al usuario de `detectadoId`, no a `reserva.getTutor()`. Comparar con `confirmarRamaAdultos()` (línea 545), que ya lo hace bien — usar ese mismo código.
 
-**Decisión de producto que hay que confirmar antes de codear:** ¿cuando el detectado es el menor, el Tutor debe quedar igual en suspensión preventiva? `Spec_M3:51` dice que el corte se aplica igual, pero **no dice nada de suspender al Tutor**. Dos lecturas válidas:
-- (a) Solo se suspende al detectado. Simple, coherente con la rama adultos.
-- (b) En toda rama menor el Tutor queda en suspensión preventiva, porque el Artículo II manda proteger al menor incluso ante ambigüedad — **y entonces la resolución de la Alerta en M9 tiene que poder reactivar a los dos.**
+**Decisión de producto (D2, 2026-09-22):** solo se suspende al detectado, igual que la rama adultos. `Spec_M3:51` exige el corte incondicional, pero era mudo sobre a quién se suspende — hay que escribirlo en `Spec_M3` US-6.
 
-**Parar y preguntar cuál** (guardrail B6/B8). Si se elige (b), hay que tocar también `AlertaSeguridadService.resolver()` y el Spec.
+**Esto resuelve, gratis, un bug aparte:** `AlertaSeguridadService.resolver()` ya opera sobre `alerta.getDetectadoId()`, y con esta decisión ese id pasa a coincidir siempre con quien fue suspendido. Eso cierra por sí solo el bug de "el Tutor queda suspendido para siempre" cuando el detectado era el menor — **no hay que tocar M9**.
+
+**Riesgo aceptado a declarar en el ADR:** cuando el detectado es el menor, el Tutor NO queda en suspensión preventiva, así que durante la ventana de 12hs hasta la resolución del Admin puede tomar otra sesión con otro menor. Se acepta a cambio de no penalizar a un Tutor por una detección que no generó, y porque la revisión humana ocurre igual (la Alerta se crea siempre y entra a la cola de moderación).
 
 **Test obligatorio:** el caso que hoy no existe — kill-switch rama menor con `detectadoId = menorId`, y verificar (a) a quién se suspende y (b) que `AlertaSeguridadService.resolver(REACTIVAR)` revierte efectivamente esa suspensión. Los 18 tests actuales usan siempre `detectadoId = tutor`.
 
@@ -998,7 +1009,13 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 
 **Cuidado con el caso legítimo del Artículo II:** el Adulto Responsable denuncia **en nombre de** su menor. Si el menor es el beneficiario y el AR es el pagador, el AR **sí** es participante — el `esParticipante` de `SesionService:615` ya cubre exactamente ese caso. Reutilizar ese criterio, no escribir uno nuevo.
 
-**Decisión pendiente:** la denuncia "de perfil" (sin `sesionId`) queda sin restricción de relación. Evaluar si exige al menos una reserva compartida histórica. **Si esto no está en el Spec_M9, parar y preguntar** (guardrail B7/B8).
+**Decisión de alcance (D5, 2026-09-22):** la denuncia **con** `sesionId` exige participación de denunciante y denunciado (lo implementado arriba). La denuncia **de perfil** (sin `sesionId`) queda abierta a cualquier usuario no-menor, sin restricción de relación.
+
+**Dato verificado que acota el riesgo:** `presentar()` solo emite `DenunciaRegistradaEvent` si `reservaId != null && tieneEscrowActivo(reservaId)`, y el `reservaId` sale del `sesionId`. Es decir, **una denuncia de perfil no congela el escrow de nadie** — el vector financiero de AUD-011 es exclusivo de las denuncias con sesión, que es justo lo que esta decisión cierra.
+
+**Riesgo aceptado:** la denuncia de perfil sigue pudiendo spamear la cola de moderación y arrancar el reloj de 48hs de descargo sobre alguien inocente. Se mitiga con el rate limiting de FASE 2 (D8), no con un chequeo de vínculo.
+
+**Hueco del Spec a cerrar:** `Spec_M9` NO define la denuncia de perfil en ningún lado — FR-SEC-001 solo dice quién puede denunciar. El concepto vive solo en el código y en el frontend. Hay que escribirlo.
 
 **Test obligatorio:** tres casos — (a) un tercero no participante denuncia una sesión ajena → 403; (b) verificar que el escrow de esa sesión **NO** quedó en `PAUSADO_DENUNCIA`; (c) el AR denunciando la sesión de su menor sigue funcionando (regresión).
 
@@ -1052,15 +1069,13 @@ Escribir en el PR/resumen: qué tareas de `Tasks_Tinku_Implementacion.md` se til
 - Create: `docs/adr/ADR-M3-02.md` (anexo a ADR-M3-01: modelo de amenaza del clasificador on-device)
 - Test: `KillswitchIntegracionTest.java`
 
-> **PARAR ANTES DE CODEAR.** Esta no es una tarea de código, es una decisión de producto con consecuencias sobre el Artículo II. El informe propone tres controles y **no se debe elegir uno solo por criterio técnico**:
+> **Decisión de producto (D3, 2026-09-22): opción 2.** El corte sigue siendo inmediato e incondicional (Artículo II intacto). Lo que se desacopla es la plata: el escrow pasa a `PAUSADO_DENUNCIA` en vez de reembolsarse automáticamente. M9 decide el destino del dinero al resolver la Alerta.
 >
-> 1. **Exigir la evidencia (clip de 30s) en el mismo request** como condición del corte. Contra: hoy no hay cliente que la produzca (T-M3-06), así que esto **deshabilitaría el kill-switch por completo** hasta que exista.
-> 2. **Desacoplar el efecto monetario del corte:** el corte sigue siendo inmediato (Artículo II intacto), pero el escrow va a `PAUSADO_DENUNCIA` en vez de reembolsarse, y M9 decide al resolver la Alerta. **Esta es probablemente la correcta**: protege al menor sin regalar el incentivo de abuso.
-> 3. **Límite de disparos por usuario y por ventana de tiempo.** Necesita el rate limiting de FASE 2.
+> **Qué elimina:** el premio instantáneo. Hoy se puede tomar 55 de 60 minutos y disparar el kill-switch para cobrar el 100% — `reembolsarSiRetenida` no mira el tiempo transcurrido.
 >
-> **Escribir `ADR-M3-02` primero, con la decisión y el riesgo aceptado. Recién después implementar.** El ADR es más valioso para la defensa que el parche (informe §7.1, pregunta 7).
+> **Escribir `ADR-M3-02` primero, con la decisión y el riesgo aceptado. Recién después implementar.** Eso no cambia: el ADR es más valioso para la defensa que el parche (informe §7.1, pregunta 7).
 
-**Si se elige la opción 2 (recomendada), el cambio concreto es:** `EscrowService.onSesionKillswitchMenor` y `onSesionKillswitchAdultos` pasan la transacción a `PAUSADO_DENUNCIA` en vez de llamar a `reembolsarSiRetenida`. Y `AlertaSeguridadService.resolver()` resuelve el escrow: `REACTIVAR` (falso positivo) → reembolso total al Estudiante; `SANCIONAR` → reembolso total al Estudiante. **Ojo: en ambos casos el Estudiante cobra — lo que cambia es que ya no es automático ni instantáneo.**
+**Implementación concreta (D3):** `EscrowService.onSesionKillswitchMenor` y `onSesionKillswitchAdultos` dejan de llamar a `reembolsarSiRetenida` y pasan la transacción al estado `PAUSADO_DENUNCIA` (ya existe, ya está en el CHECK de V11 y ya está testeado por la vía de `denuncia.registrada`). `AlertaSeguridadService.resolver()` pasa a resolver también el escrow: `REACTIVAR` (falso positivo) → reembolso total al Estudiante; `SANCIONAR` → reembolso total al Estudiante. **Ojo: en ambos casos el Estudiante cobra — lo que cambia es que ya no es automático ni instantáneo.** `SesionService.cortar()` NO cambia — el Artículo II queda intacto.
 
 **NO cambiar:** que el corte sea inmediato. El Artículo II no se negocia. Lo que se desacopla es la plata, no la protección.
 
@@ -1099,21 +1114,35 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 ---
 
-### Task 2.1: Congelar la duración y arreglar el solapamiento — AUD-009 + AUD-020
+### Task 2.1: Modelo de disponibilidad por bloques de 30' + tarifa por hora — AUD-009 + AUD-020
 
-> **Requiere plan detallado propio.** Es la tarea de mayor riesgo de todo el documento: toca el modelo de datos de `reservas`, el agendamiento de M3 y el umbral del 50% que decide reembolso vs. liberación en M5.
+> **Requiere plan detallado propio.** Es la tarea de mayor riesgo de todo el documento: cambia el modelo entero, no solo el bug puntual. Toca el modelo de datos de `reservas`, el agendamiento de M3, la tarifa de M5-H y el umbral del 50% que decide reembolso vs. liberación.
 
-**Files:** `V25__m4_duracion_reserva.sql` (nueva), `Reserva.java`, `ReservaService.java`, `SesionService.java`, `HorariosDisponiblesService.java`, `ReservasFlujosIntegracionTest.java`
+**Decisión de producto (D6, 2026-09-22) — modelo resultante:**
+- El átomo de disponibilidad es de **30 minutos**. El Tutor los posiciona libremente donde puede.
+- Una franja 10:00–12:00 son **4 unidades** de 30', no una sesión de 120 min.
+- El **Estudiante** elige cuántas unidades **consecutivas** reserva (1h = 2 unidades, o más).
+- El Tutor puede **recomendar** una duración, sin imponerla.
+- **Tarifa:** precio por hora × fracción. `TarifaTutor.precioSesion` pasa a `precioHora`; una reserva de 30' cuesta la mitad. `precio = precioHora × unidades / 2`, `BigDecimal` con scale 2 y HALF_UP, congelado al crear la Reserva (FR-PAG-013 no cambia).
 
-**Cambio concreto:**
-1. **V25**: `ALTER TABLE reservas.reservas ADD COLUMN duracion_minutos INT` + backfill desde la franja + `SET NOT NULL`. Después, reemplazar la `EXCLUDE` de V9 por una sobre rango: `EXCLUDE USING gist (tutor_id WITH =, tstzrange(horario, horario + (duracion_minutos || ' minutes')::interval) WITH &&) WHERE (estado <> 'cancelada')`, e idem para `beneficiario_id`. `btree_gist` ya está instalada por V9.
-2. `ReservaService.crearReserva` congela `duracionMinutos` desde la franja, igual que ya congela `precio` (FR-PAG-013). **Es la misma regla y el mismo motivo.**
-3. `SesionService.programarSesion` y `reprogramarSesionProgramada` usan `reserva.getDuracionMinutos()` en vez de recalcular desde la franja. Eso elimina de paso el `IllegalStateException` → 500 cuando el Tutor borró la franja.
-4. Chequeo de solapamiento en aplicación **antes** de la constraint, para dar 422 con mensaje de negocio en vez de un 409 genérico.
+**Esto resuelve la contradicción raíz** que la auditoría encontró: hoy `FranjaService` + `SesionService` tratan la franja como UNA sesión (la duración agendada es la de la franja completa) mientras `HorariosDisponiblesService` la trata como contenedor de bloques. Los dos no pueden ser ciertos, y de ahí salen AUD-009 y AUD-020.
 
-**Decisión de producto que hay que confirmar:** la tarifa es "por sesión" (`TarifaTutor.precioSesion`), así que una franja de 30 min y una de 180 cuestan lo mismo. El modelo de precio y el de disponibilidad no están alineados. **Parar y preguntar** si la tarifa pasa a ser por hora, o si la franja se parte en bloques de duración fija.
+**Files:** `V25__m4_duracion_reserva.sql` (nueva), `Reserva.java`, `ReservaService.java`, `SesionService.java`, `HorariosDisponiblesService.java`, `TarifaTutor.java`, `PagoService.java` (`actualizarTarifaTutor`), DTO de tarifa, `frontend` (`cuenta/precio`, `DynamicTimeSlotPicker`), `ReservasFlujosIntegracionTest.java`
 
-**Test obligatorio:** el que hoy no existe — franja 10:00–12:00, reserva A a las 10:00, reserva B a las 11:00 → la segunda debe dar 409/422. Los 3 tests actuales de FR-RES-007 usan siempre el mismo `horario`.
+**Cambio concreto (todos los "Implica" de D6):**
+1. **V25**: `ALTER TABLE reservas.reservas ADD COLUMN duracion_minutos INT NOT NULL` (múltiplo de 30), con backfill desde la franja. **NUNCA editar V9** (guardrail A1) — es migración nueva.
+2. Reemplazar la `EXCLUDE` de V9 por solapamiento de rangos: `EXCLUDE USING gist (tutor_id WITH =, tstzrange(horario, horario + duracion) WITH &&)`. Ahora es **crítico**: con bloques de 30', dos reservas contiguas del mismo Tutor son el caso NORMAL y hay que distinguirlas del solapamiento real. `btree_gist` ya está instalada por V9.
+3. `ReservaService.crearReserva` congela `duracionMinutos` (igual que ya congela `precio`, FR-PAG-013 — es la misma regla y el mismo motivo).
+4. `SesionService.programarSesion` usa `reserva.getDuracionMinutos()` en vez de recalcular desde la franja. Esto arregla de paso el `IllegalStateException` → 500 cuando el Tutor borró la franja, y el umbral del 50% de FR-AULA-005 pasa a ser estable.
+5. `TarifaTutor`: `precioSesion` → `precioHora`. Toca M5-H, `PagoService.actualizarTarifaTutor`, el DTO y la UI de `cuenta/precio`.
+6. `precios_referencia_regional.valor_sugerido` (M5-E) pasa a estar declarado en la misma unidad (por hora). Hoy no declara unidad ninguna.
+7. FR-RES-024 (franjas de 30 a 180 min) sigue valiendo como límite del contenedor.
+
+**Lo que VALIDA:** `HorariosDisponiblesService` y el `DynamicTimeSlotPicker` quedan correctos, y el parámetro `duracionMinutos` de T-M4-12 —que la propia tarea marcaba como "no está definido en ningún Spec, confirmar con producto antes de inventar"— por fin tiene fuente: es la selección del Estudiante, en múltiplos de 30.
+
+**Nota de scope:** "el tutor recomienda una hora" es un campo nuevo (duración recomendada, en el perfil del Tutor o por materia) que no está en ningún Spec. El Artículo VI obliga a decidir aparte si entra al alcance del MVP o queda fuera — no está resuelto por D6, hay que decidirlo antes de implementarlo.
+
+**Test obligatorio:** el que hoy no existe — franja 10:00–12:00, reserva A a las 10:00 (2 unidades), reserva B a las 11:00 → la segunda debe dar 409/422. Los 3 tests actuales de FR-RES-007 usan siempre el mismo `horario`.
 
 **NO tocar:** V9. Guardrail A1.
 
@@ -1129,7 +1158,15 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 **Prioridad dentro de la tarea:** `/verificar-dni` primero. Es público, no autenticado, y dispara Tesseract in-process (CPU-bound): es el DoS más barato del sistema.
 
-**Decisión del ADR:** Redis (Upstash) ya está en el Registro de Decisiones de la Constitución, así que el bucket distribuido no introduce tecnología nueva — solo una librería. Alternativa más simple bajo Artículo VII: bucket en memoria, dado que `isClustered: false` significa que hay **una sola instancia** (ADR-000-04). **Esa alternativa es probablemente la correcta y hay que evaluarla en serio antes de meter Redis.**
+**Decisión (D8, 2026-09-22): bucket en memoria del proceso.** Sin Redis, sin tabla en Postgres.
+
+**Fundamento:** `ADR-000-04` (ya escrito en FASE 0) formaliza que el sistema corre en una sola instancia (`isClustered: false`), así que un contador compartido no compra nada hoy. Artículo VII: la más simple que cumple el requisito. Y no mete una dependencia de red en el camino crítico del login — si Redis se cayera, el login no se cae con él.
+
+**Modo de falla aceptado:** un reinicio del proceso resetea los contadores. Benigno.
+
+**ADR:** si se implementa a mano con `ConcurrentHashMap` + ventana deslizante, **no hay dependencia nueva y no hace falta ADR**. Si se usa una librería, sí (guardrail A7) — evaluar cuál sale más barato antes de decidir.
+
+**Revisión futura a dejar escrita:** el día que `ADR-000-04` se revise por escalar a N≥2 instancias, este bucket deja de servir junto con el scheduler. Van atados.
 
 **Bloqueo por intentos de login:** reutilizar el patrón que ya existe y funciona en `OcrBackoffService` / `CredencialBackoffService`, no inventar uno nuevo.
 
@@ -1144,6 +1181,20 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 **Files:** `com.tinku.shared.notificacion` (puerto), implementación outbox, `V26__notificaciones_outbox.sql`, llamadores en `SesionService` y `DenunciaService`
 
 **El puerto se define ahora aunque el proveedor no exista.** El ADR del proveedor de email puede esperar; el puerto y los llamadores, no. Implementación inicial: tabla outbox persistida, consultable desde el panel de Admin.
+
+**Decisión de alcance (D2-bis, 2026-09-22):** el Adulto Responsable recibe **aviso inmediato** cuando se dispara el kill-switch, y el **clip recién si M9 resuelve fundado** la Alerta. Si M9 resuelve falso positivo, el AR nunca lo ve.
+
+**Los tres motivos por los que se acotó así:**
+1. El buffer de 30s es de una videollamada 1:1: contiene a los DOS participantes. Entregarlo al AR es entregarle video del Tutor a un tercero sin su consentimiento — el AR tiene base legítima sobre la imagen de su hijo, no sobre la del Tutor.
+2. La retención de ese clip hoy está justificada contra la Ley 25.326 por UN solo propósito: evidencia para M9 (BR-KS-01/02, 30 días desde la resolución). Enviarlo al AR sería un segundo propósito, y el Artículo V obliga a justificar toda nueva necesidad de retención **antes** de implementarla — acá no está justificado.
+3. Si la Alerta se resuelve como falso positivo, ya no hay vuelta atrás: un clip que no debía existir ya estaría en manos de un tercero.
+
+**Implica:**
+- El aviso es inmediato e incondicional. No depende de nada nuevo.
+- El clip queda reservado a M9 hasta la resolución del Admin; con `REACTIVAR` (falso positivo) el AR nunca lo ve, con `SANCIONAR` se le da acceso.
+- No agrega un propósito de retención nuevo: usa el que BR-KS-02 ya justifica.
+- Depende de T-M3-06 para que el clip exista siquiera (hoy ningún cliente lo produce).
+- Hueco del Spec a cerrar: `Spec_M3` US-6 dice "se notifica inmediatamente al Adulto Responsable" pero no dice QUÉ se le notifica ni qué puede ver después. Hay que escribirlo.
 
 **Mínimo indispensable antes de piloto, en este orden:**
 1. Kill-switch rama menor → Adulto Responsable. Es la obligación más importante del sistema hacia la familia (`Spec_M3:50`) y hoy no existe.
@@ -1187,13 +1238,22 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 ### Task 2.6: Baja de menor — AUD-017
 
-> **Requiere ADR previo:** borrado en cascada vs. anonimización. Con transacciones financieras de por medio (`reservas`, `pagos.transacciones`), la anonimización suele ser la correcta — conserva integridad contable y de auditoría y satisface el derecho de supresión de la Ley 25.326.
+> **Decisión (D7, 2026-09-22): anonimización.** La fila sobrevive, los datos personales se borran. Con transacciones financieras de por medio (`reservas`, `pagos.transacciones`) y con historial de sanciones de M9, la anonimización conserva integridad contable y de auditoría y satisface el derecho de supresión de la Ley 25.326.
 
 **Files:** `docs/adr/ADR-M1-04.md`, `UsuarioService.java:277-299`, migración si hace falta, `UsuarioServiceDarDeBajaTest` + test de integración nuevo
 
+**Implementación concreta:**
+- `UsuarioService.darDeBajaMenor()` deja de hacer `usuarioRepository.delete(menor)`. En su lugar reemplaza `nombre`, `apellido`, `dni`, `fechaNacimiento` y `email` por valores anónimos, y marca la fila como dada de baja (columna nueva o `estado_cuenta` nuevo valor).
+- El `dni` anónimo tiene que seguir cumpliendo el **UNIQUE de V2** — usar algo derivado del `id`, no un valor fijo ni un random que pueda colisionar.
+- La cuenta no puede volver a loguearse: `UsuarioDetailsService` ya rechaza lo que no está `ACTIVA`, así que alcanza con el estado.
+- Se conserva la integridad referencial de `reservas`, `solicitudes_sesion`, `denuncias`, `sanciones`, `calificaciones` y `pasarela_estado` — hoy cualquiera de esas FK hace fallar el `DELETE` con un 500 para todo menor que tuvo una reserva.
+- `autorizaciones_tutor` y `consentimientos_menor` se siguen borrando (ya se borran hoy).
+
+**Fundamento legal:** la Ley 25.326 da derecho de supresión **con excepciones donde la retención es legalmente exigible**. Acá hay transacciones de MercadoPago y hay historial de sanciones de M9: si ese menor estuvo en un incidente de seguridad, borrar la evidencia no es defendible. Requiere `ADR-M1-04` con esta justificación.
+
 **FKs que hoy no se limpian y hacen fallar el `DELETE`:** `reservas.reservas` (beneficiario_id, pagador_id, tutor_id), `reservas.solicitudes_sesion.menor_id`, `seguridad.denuncias`, `seguridad.sanciones`, `reputacion.calificaciones.autor_id`, `pagos.pasarela_estado.updated_by`.
 
-**Test obligatorio:** de **integración** con Testcontainers sobre un menor con historial real de reservas. El test actual es unitario con mocks y por eso nunca vio el problema.
+**Test obligatorio:** de **integración** con Testcontainers sobre un menor con historial real de reservas. El test actual (`UsuarioServiceDarDeBajaTest`) es unitario con mocks y por eso nunca ejecutó el DELETE contra el esquema — por eso el bug sobrevivió.
 
 ---
 
@@ -1272,7 +1332,7 @@ Ya iniciado en la Task 1.10 (`ADR-M3-02`). **Cerrarlo formalmente** con el resul
 | 3.5 | Distinguir la constraint violada antes de devolver 409 | AUD-023 | `ConstraintViolationException.getConstraintName()`. Solo `ex_reservas_sin_superposicion_*` → 409; el resto → 500 con log. |
 | 3.6 | `credentials_version` en el JWT + `sub` = UUID | AUD-027 | Invalida sesiones al resetear contraseña. **Toca `JwtUtil`, `UsuarioDetailsService`, `AdminModeracionGate`, `UsuarioActual` y todos los tests que generan tokens.** Plan detallado propio. |
 | 3.7 | Acotar el fallback a `catalogoMock` | AUD-026 | 404 estricto, o `NODE_ENV !== 'production'`. |
-| 3.8 | Una calificación pública por sesión | AUD-028 | **Decisión de producto — parar y preguntar.** Hoy el AR y el menor pueden calificar la misma sesión, y eso sesga el umbral de 5 de FR-REP-007. |
+| 3.8 | Una calificación pública por sesión | AUD-028 | **Decisión (D9, 2026-09-22): califica solo el pagador.** `derivarDireccion()` (línea ~135) hoy mapea `beneficiario` **O** `pagador` → `DIR_ESTUDIANTE_A_TUTOR`; pasa a mapear solo `pagador` (el beneficiario que no es pagador cae en `CalificacionNoPermitidaException` → 403). Para un Estudiante adulto reservando para sí mismo no cambia nada (`pagador == beneficiario`). Argumento de defensa: coherente con el patrón del Artículo II que ya rige M1/M4/M9 — el menor no paga, no autoriza Tutores, no denuncia; el AR lo hace en su nombre. Resuelve que hoy una sesión con menor pese el doble en el promedio del Tutor. Revisar el frontend para que no ofrezca calificar a un menor. Hueco del Spec a cerrar: `Spec_M7` no dice quién califica cuando pagador != beneficiario. |
 | 3.9 | Migración que dropee las tablas de CAP (V6) | AUD-035 | Migración **V29**, nunca editar V6 (guardrail A1). Comentario que referencie ADR-M1-02. |
 | 3.10 | Dependabot + actualizar Spring Boot | AUD-032 | Mejor relación costo/beneficio del informe. |
 | 3.11 | Middleware de Next.js: verificar firma o renombrar | AUD-016 | Si se verifica: `jose`, edge-compatible, comparte el secreto. Si no: renombrar el comentario y ser honesto. Ambas son válidas. |
