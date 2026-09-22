@@ -1,0 +1,14 @@
+# Perfil de producción: SOLO placeholders de variables de entorno, sin defaults.
+# Si falta una, el arranque falla al resolver el placeholder — nunca arranca con un
+# valor de desarrollo. El resto de las integraciones ya viene del entorno en
+# application.yml. ArranqueSeguroValidator rechaza además el OCR stub y el JWT
+# secret placeholder.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+tinku:
+  jwt:
+    secret: ${JWT_SECRET}

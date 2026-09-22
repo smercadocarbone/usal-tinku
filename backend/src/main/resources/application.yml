@@ -2,25 +2,16 @@ spring:
   application:
     name: tinku-backend
 
-  # Perfil por defecto para el arranque local: `dev`. Sin esto, `./mvnw
-  # spring-boot:run` no levanta porque StubOcrService (OCR falso para
-  # dev/test) esta gated a los perfiles dev/test y no habria ningun OcrService.
-  # Para otro ambiente se sobreescribe con SPRING_PROFILES_ACTIVE (ver
-  # backend/README.md). El perfil `dev` usa la BDs local (localhost + creds
-  # de docker-compose.yml) y el JWT secret de desarrollo — NUNCA ese set en prod.
-  # FIXME AUD-004 (auditoría 2026-09-21, severidad CRÍTICA): el comentario de arriba dice "NUNCA
-  # ese set en prod", pero el perfil `dev` de abajo viaja hardcodeado DENTRO del artefacto — no
-  # hay override de producción en el repo. En perfil `dev`, StubOcrService no hace OCR real: hace
-  # eco de lo declarado por el usuario. Se corrige en FASE 1 (Task 1.6).
-  profiles:
-    active: dev
+  # SIN perfil por defecto (AUD-004): el perfil viene SIEMPRE del entorno
+  # (SPRING_PROFILES_ACTIVE). Un default `dev` dentro del jar activaba el OCR falso
+  # en cualquier despliegue que se olvidara de definirlo. Local: `make backend`
+  # (pasa `dev`). Imagen Docker: `prod` salvo override. Ver ArranqueSeguroValidator.
 
   datasource:
     # Un solo motor PostgreSQL, schemas separados por modulo (Constitucion, Articulo VIII).
-    # Reemplazar por variables de entorno reales antes de cualquier despliegue.
-    url: jdbc:postgresql://localhost:5432/tinku
-    username: ${DB_USER:tinku_dev}
-    password: ${DB_PASSWORD:changeme}
+    # La URL viene del perfil (application-dev.yml) o de SPRING_DATASOURCE_URL.
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
 
   jpa:
     hibernate:

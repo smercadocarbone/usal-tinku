@@ -13,9 +13,9 @@
 | AUD-001 | CRÍTICA | El kill-switch no cierra la sala de LiveKit | CERRADO | 1 | c650018 — ADR-M3-03 | `KillswitchIntegracionTest.aud001_*` (4), `LiveKitServiceTest.eliminarSala*` (3) |
 | AUD-002 | CRÍTICA | Tokens de LiveKit con roomAdmin y roomCreate | CERRADO | 1 | 92375ee | `LiveKitServiceTest.tokenDeParticipanteSeVerificaYDeclaraLaSalaCorrecta` |
 | AUD-003 | CRÍTICA | El DNI se usa como identity de LiveKit y se expone en pantalla | CERRADO | 1 | 049fb8f | `SesionesIntegracionTest.tM3Token_participanteConSalaCreada_obtieneTokenYUrl`, `LiveKitServiceTest.tokenDeParticipanteLlevaElNombreVisibleEnElClaimName` |
-| AUD-004 | CRÍTICA | Perfil `dev` con OCR stub activo por defecto en el artefacto | ABIERTO | 1 | — | — |
+| AUD-004 | CRÍTICA | Perfil `dev` con OCR stub activo por defecto en el artefacto | CERRADO | 1 | (este commit) | `ArranqueSeguroValidatorTest` (elArtefactoNoTraePerfilActivoHardcodeado, prodConStubOcr, prodYDevJuntosConStubOcr) |
 | AUD-005 | CRÍTICA | Kill-switch disparable por cualquier participante sin evidencia | ABIERTO | 1 | — | — |
-| AUD-006 | ALTA | `ramaMenor` suspende siempre al Tutor, ignorando al detectado real | CERRADO | 1 | (este commit) | `KillswitchIntegracionTest.aud006_menor_detectadoEsElMenor_noSuspendeAlTutorYLaResolucionRevierte` |
+| AUD-006 | ALTA | `ramaMenor` suspende siempre al Tutor, ignorando al detectado real | CERRADO | 1 | 5834fb1 | `KillswitchIntegracionTest.aud006_menor_detectadoEsElMenor_noSuspendeAlTutorYLaResolucionRevierte` |
 | AUD-007 | CRÍTICA | No hay endpoint para ver el archivo de la Credencial Académica | ABIERTO | 1 | — | — |
 | AUD-008 | CRÍTICA | El token de reset de contraseña se loguea en claro junto al DNI | CERRADO | 1 | 676a6b8 | `NotificadorResetPasswordLogTest.notificarNoLoguearElTokenNiElDni` |
 | AUD-009 | ALTA | La constraint de reservas compara igualdad exacta, no solapamiento | ABIERTO | 2 | — | — |
@@ -43,6 +43,6 @@
 | AUD-031 | MEDIA | `matching-service` sin CI; E2E de Playwright mockean `/api` completo | ABIERTO | 2 | — | — |
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | ABIERTO | 3 | — | — |
 | AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | ABIERTO | 2 | — | — |
-| AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | ABIERTO | 1 | — | — |
+| AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | (este commit) | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
 | AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | ABIERTO | 3 | — | — |
 | AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) | ABIERTO | 4 | — | — |

@@ -209,14 +209,14 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-AUD-001: `VideoClaim(sala, true, **false**, **false**)` + aserciones negativas en `LiveKitServiceTest` (AUD-002) — CERRADO (92375ee)
 - [x] T-AUD-002: Cerrar la sala de LiveKit en `cortar()` (`RemoveParticipant` + `DeleteRoom`) y rechazar `/token` sobre sesiones cerradas (AUD-001) — CERRADO (c650018). Solo `DeleteRoom`, sin `RemoveParticipant`: ver ADR-M3-03
 - [x] T-AUD-003: Identity de LiveKit = UUID, no DNI; claim `name` para la etiqueta de UI (AUD-003) — CERRADO (049fb8f)
-- [ ] T-AUD-004: Quitar `profiles.active: dev` del artefacto y abortar el arranque si `StubOcrService` está activo fuera de `dev`/`test` (AUD-004)
+- [x] T-AUD-004: Quitar `profiles.active: dev` del artefacto y abortar el arranque si `StubOcrService` está activo fuera de `dev`/`test` (AUD-004) — CERRADO (Task 1.6, `ArranqueSeguroValidator`)
 - [x] T-AUD-005: Dejar de loguear el token de reset (y el DNI) (AUD-008) — CERRADO (676a6b8)
 - [x] T-AUD-006: `UNIQUE (mp_payment_id)` + `UNIQUE (reserva_id)` en `pagos.transacciones` (migración nueva) (AUD-010) — CERRADO (b6bd538)
 - [ ] T-AUD-007: Exigir participación en `DenunciaService.presentar` + rechazar auto-denuncia (AUD-011)
 - [x] T-AUD-008: `ramaMenor` suspende a `detectadoId`, no a `reserva.getTutor()` — o documentar la intención en el Spec y arreglar la resolución de la Alerta (AUD-006) — CERRADO: se suspende al detectado (D2), riesgo aceptado en Spec_M3 US-6
 - [ ] T-AUD-009: Endpoint de visualización del archivo de la Credencial, gateado por `requiereModeracion` (AUD-007)
 - [ ] T-AUD-010: Guard de sanción vigente antes de reactivar (`AlertaSeguridadService`, `CredencialService`) (AUD-013)
-- [ ] T-AUD-011: Fallar el arranque si `tinku.jwt.secret` es el placeholder fuera de `dev`/`test` (AUD-034)
+- [x] T-AUD-011: Fallar el arranque si `tinku.jwt.secret` es el placeholder fuera de `dev`/`test` (AUD-034) — CERRADO (Task 1.6, `ArranqueSeguroValidator`)
 
 ### FASE 2 — P1 Resolver antes de considerar el proyecto terminado
 - [ ] T-AUD-012: Congelar `duracion_minutos` en `reservas.reservas` y reemplazar la `EXCLUDE` por `tstzrange(...) &&`, con chequeo equivalente en aplicación (AUD-009 + AUD-020)
