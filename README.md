@@ -157,22 +157,30 @@ scripts/seed-sesion.sh      # una sesión lista para el aula (requiere LiveKit c
 
 ### Perfiles
 
-- `dev` es el **perfil por defecto** (`spring.profiles.active: dev` en
-  `application.yml`): BD local y `StubOcrService`, que **no hace OCR real**
-  (hace eco de lo declarado por el usuario).
-- `test` usa el mismo stub; cualquier otro perfil (ej. `prod`) activa
-  `TesseractOcrService`, que necesita el binario de Tesseract y
-  `spa.traineddata`.
+**El artefacto no trae perfil por defecto** (AUD-004): el perfil viene
+siempre de `SPRING_PROFILES_ACTIVE`.
+
+| Perfil | Quién lo usa | Qué implica |
+|--------|--------------|-------------|
+| `dev` | `make backend`, `docker-compose.yml` | BD local (`application-dev.yml`) y `StubOcrService`, que **no hace OCR real** (hace eco de lo declarado) |
+| `test` | la suite de tests | Mismo stub |
+| `prod` | la imagen Docker del backend si nadie lo sobreescribe | `TesseractOcrService` (necesita Tesseract y `spa.traineddata`) y `application-prod.yml`, que **no tiene defaults**: faltando una variable, no arranca |
+
+`ArranqueSeguroValidator` aborta el arranque fuera de `dev`/`test` (y siempre
+que `prod` esté activo, aunque se le sume `dev`) si el OCR activo es el stub o
+si `JWT_SECRET` está vacío o es el placeholder del repo. Por eso
+`./mvnw spring-boot:run` sin perfil **no levanta**, a propósito: usá
+`make backend` o `-Dspring-boot.run.profiles=dev`.
 
 ### Variables de entorno
 
-Nombres tal como los lee `backend/src/main/resources/application.yml`; los
+Nombres tal como los leen `backend/src/main/resources/application*.yml`; los
 valores **nunca** se commitean (`.env` está en `.gitignore`).
 
 | Área | Variables | Comportamiento si faltan |
 |------|-----------|--------------------------|
-| Base de datos | `DB_USER`, `DB_PASSWORD` (en Docker además `SPRING_DATASOURCE_*`) | Defaults de desarrollo |
-| Auth | `JWT_SECRET` | Default de desarrollo — **obligatorio cambiarlo fuera de local** |
+| Base de datos | `SPRING_DATASOURCE_URL`, `DB_USER`, `DB_PASSWORD` | `dev`: BD de docker-compose. `prod`: **no arranca** |
+| Auth | `JWT_SECRET` | `dev`/`test`: placeholder aceptado. Fuera de ahí: **no arranca** (AUD-034) |
 | CORS | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` |
 | LiveKit (M3) | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_TOKEN_TTL_SEGUNDOS` | El backend arranca; falla con mensaje claro recién al usar el aula |
 | MercadoPago (M5) | `MP_ACCESS_TOKEN`, `MP_BASE_URL`, `MP_NOTIFICATION_URL`, `MP_WEBHOOK_SECRET` | Sin `MP_WEBHOOK_SECRET` el webhook rechaza todo (fail-closed) |
@@ -182,7 +190,7 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 | Resumen (M6) | `LLM_PROVEEDOR`, `LLM_API_KEY` | Vacío = fail-closed, no sale nada hacia ningún modelo |
 | Matching | `MATCHING_SERVICE_URL` (backend); `TINKU_PG_HOST`, `TINKU_PG_PORT`, `TINKU_PG_DBNAME`, `TINKU_PG_USER`, `TINKU_PG_PASSWORD` (servicio Python) | Backend: `http://localhost:8000` |
 | Frontend | `NEXT_PUBLIC_API_URL` (build arg en Docker), `NEXT_PUBLIC_SITE_URL` | — |
-| Spring | `SPRING_PROFILES_ACTIVE` | `dev` |
+| Spring | `SPRING_PROFILES_ACTIVE` | Sin perfil no arranca con la config por defecto (ver Perfiles). La imagen Docker usa `prod` |
 
 > Ojo: `docker-compose.yml` solo le pasa al contenedor `backend` un
 > subconjunto de estas variables (BD, JWT, CORS, LiveKit, `MP_ACCESS_TOKEN`,
@@ -248,7 +256,7 @@ reemplazan los tests de integración del backend.
 | [`docs/Tabla_Tiempos_Tinku.md`](docs/Tabla_Tiempos_Tinku.md) | **Única fuente de verdad para cualquier plazo.** Si un número de tiempo no está ahí, no se inventa |
 | [`docs/Tasks_Tinku_Implementacion.md`](docs/Tasks_Tinku_Implementacion.md) | Checklist atómico de tareas — la fuente confiable sobre qué está hecho |
 | [`docs/Tasks_Tinku_Chunks.md`](docs/Tasks_Tinku_Chunks.md) | Las mismas tareas agrupadas en chunks (se actualiza junto con el anterior) |
-| [`docs/adr/`](docs/adr) | ADRs: Quartz en `public`, Java/Spring, acoplamiento aceptado, instancia única, OCR, retiro del CAP, storage local, pgvector, clasificador del kill-switch, Modo Bypass, anonimización de transcript, salud de infraestructura |
+| [`docs/adr/`](docs/adr) | ADRs: Quartz en `public`, Java/Spring, acoplamiento aceptado, instancia única, OCR, retiro del CAP, storage local, pgvector, clasificador del kill-switch y su modelo de amenaza, cierre de la sala de LiveKit en el corte, Modo Bypass, anonimización de transcript, salud de infraestructura |
 
 Si el Registro de Decisiones Técnicas de la Constitución y el código no
 coinciden, manda el ADR más reciente y lo que efectivamente está en el código
@@ -282,11 +290,14 @@ no se borran sin cerrar el finding.
   (T-M3-06 abierta). ADR-M3-01 eligió NSFWJS + TensorFlow.js, pero el frontend
   no tiene esa dependencia: el backend del kill-switch existe, la mitad que
   corre en el navegador y dispara el corte no.
-- **No hay canal real de notificaciones.** La única implementación
-  (`NotificadorResetPasswordLog`) deja el link de recuperación de contraseña
-  en el log del backend; elegir proveedor de email/SMS requiere ADR.
-- **OCR stub por defecto.** Como `dev` es el perfil por defecto del artefacto,
-  sin override explícito el registro no hace OCR real (ver AUD-004).
+- **No hay canal real de notificaciones** (AUD-014). La única implementación
+  (`NotificadorResetPasswordLog`) ya no loguea el token ni el DNI (AUD-008),
+  así que **"olvidé mi contraseña" hoy no funciona**: es fail-closed a
+  propósito hasta que exista un canal real. Elegir proveedor de email/SMS
+  requiere ADR. Tampoco se avisa al Adulto Responsable de un kill-switch.
+- **El kill-switch corta al instante, pero la plata espera** (ADR-M3-02): el
+  escrow queda en pausa hasta que un Admin resuelve la Alerta, y recién ahí se
+  reembolsa al Estudiante.
 - **M6 no genera resúmenes reales:** el proveedor de LLM (GPT-4o vs. Gemini
   2.0 Flash) sigue pendiente de ADR y el puerto `ResumenProveedor` es
   fail-closed.
