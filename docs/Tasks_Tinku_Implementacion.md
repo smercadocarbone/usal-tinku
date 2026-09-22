@@ -215,7 +215,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-AUD-007: Exigir participación en `DenunciaService.presentar` + rechazar auto-denuncia (AUD-011) — CERRADO (D5: la denuncia de perfil sigue abierta, FR-SEC-001bis)
 - [x] T-AUD-008: `ramaMenor` suspende a `detectadoId`, no a `reserva.getTutor()` — o documentar la intención en el Spec y arreglar la resolución de la Alerta (AUD-006) — CERRADO: se suspende al detectado (D2), riesgo aceptado en Spec_M3 US-6
 - [ ] T-AUD-009: Endpoint de visualización del archivo de la Credencial, gateado por `requiereModeracion` (AUD-007)
-- [ ] T-AUD-010: Guard de sanción vigente antes de reactivar (`AlertaSeguridadService`, `CredencialService`) (AUD-013)
+- [x] T-AUD-010: Guard de sanción vigente antes de reactivar (`AlertaSeguridadService`, `CredencialService`) (AUD-013) — CERRADO (incluye `ReactivacionCuentaJob`, tercer camino con el mismo bug)
 - [x] T-AUD-011: Fallar el arranque si `tinku.jwt.secret` es el placeholder fuera de `dev`/`test` (AUD-034) — CERRADO (Task 1.6, `ArranqueSeguroValidator`)
 
 ### FASE 2 — P1 Resolver antes de considerar el proyecto terminado
@@ -227,7 +227,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029)
 - [ ] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018)
 - [x] T-AUD-019: Reconciliar `Tasks_Tinku_Implementacion.md` con el código y elegir una sola fuente de verdad (AUD-030) — CERRADO, ver `REGISTRO_FINDINGS.md` (commits 8707da6, 64fe386, 352d065, 2d4e108)
-- [ ] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033)
+- [x] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033) — CERRADO en FASE 1 junto con AUD-013 (Task 1.8)
 - [ ] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031)
 - [ ] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021)
 - [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9)

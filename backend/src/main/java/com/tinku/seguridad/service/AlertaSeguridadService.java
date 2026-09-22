@@ -85,7 +85,7 @@ public class AlertaSeguridadService {
 
     /**
      * Resuelve la Alerta: {@code reactivar} restablece el matching del Tutor
-     * (acusación falsa, caso borde #4); {@code sancionar} persiste la sanción y
+     * (acusación falsa, caso borde #4) salvo que tenga otra sanción vigente (AUD-013); {@code sancionar} persiste la sanción y
      * publica {@code sancion.aplicada} (misma transacción que revierte la
      * suspensión preventiva de M3). Ambas fijan la retención del clip (BR-KS-02).
      */
@@ -102,8 +102,12 @@ public class AlertaSeguridadService {
 
         if (decision == DecisionAlerta.REACTIVAR) {
             alerta.setEstado(AlertaSeguridad.ESTADO_RESUELTA_REACTIVACION);
-            detectado.setActivoParaMatching(true);
-            detectado.setEstadoCuenta(EstadoCuenta.ACTIVA);
+            // AUD-013: la Alerta era un falso positivo, pero si el detectado tiene OTRA
+            // sanción vigente (ej. definitiva por una denuncia), esa manda.
+            if (!sancionRepo.existeSancionVigente(detectado.getId(), Instant.now())) {
+                detectado.setActivoParaMatching(true);
+                detectado.setEstadoCuenta(EstadoCuenta.ACTIVA);
+            }
         } else {
             alerta.setEstado(AlertaSeguridad.ESTADO_RESUELTA_BAJA);
             Sancion sancion = registrarSancion(alerta, adminId, detectado.getId(),

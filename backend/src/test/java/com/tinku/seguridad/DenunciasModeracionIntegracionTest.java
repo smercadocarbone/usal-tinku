@@ -113,6 +113,9 @@ class DenunciasModeracionIntegracionTest {
     @Autowired SancionRepository sancionRepository;
     @Autowired AlertaSeguridadRepository alertaRepository;
     @Autowired AdminRepository adminRepository;
+    @Autowired com.tinku.identidad.repository.CredencialAcademicaRepository credencialRepository;
+    @Autowired com.tinku.identidad.service.CredencialService credencialService;
+    @Autowired com.tinku.seguridad.jobs.ReactivacionCuentaJob reactivacionCuentaJob;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -612,5 +615,126 @@ class DenunciasModeracionIntegracionTest {
 
         // D5: sin sesionId no se exige vínculo (y no congela ningún escrow).
         postDenuncia(cualquiera, tutor.getId(), null).andExpect(status().isCreated());
+    }
+    // ------------------------- AUD-013: ninguna reactivación pisa una sanción vigente
+
+    /** Sanción real persistida (origen DENUNCIA de perfil: la fixture más chica que cumple los CHECK). */
+    private Sancion sancion(Usuario sancionado, TipoSancion tipo, Integer dias, Instant vigenteHasta) {
+        Usuario admin = admin();
+        com.tinku.seguridad.model.Denuncia d = new com.tinku.seguridad.model.Denuncia();
+        d.setDenuncianteId(admin.getId());
+        d.setDenunciadoId(sancionado.getId());
+        d.setMotivo(com.tinku.seguridad.model.MotivoDenuncia.FRAUDE);
+        d.setEstado(com.tinku.seguridad.model.EstadoDenuncia.EN_REVISION);
+        d.setDescargoVenceAt(Instant.now().plusSeconds(3600));
+        denunciaRepository.save(d);
+
+        Sancion s = new Sancion();
+        s.setUsuarioSancionadoId(sancionado.getId());
+        s.setOrigen(com.tinku.seguridad.model.OrigenSancion.DENUNCIA);
+        s.setDenunciaId(d.getId());
+        s.setAdminId(admin.getId());
+        s.setTipo(tipo);
+        s.setDiasSuspension(dias);
+        s.setVigenteHasta(vigenteHasta);
+        return sancionRepository.save(s);
+    }
+
+    private Usuario suspendido(Usuario u) {
+        u.setEstadoCuenta(EstadoCuenta.SUSPENDIDA);
+        u.setActivoParaMatching(false);
+        return usuarioRepository.save(u);
+    }
+
+    @Test
+    void aud013_alertaReactivar_conSuspensionDefinitivaVigente_noReactivaLaCuenta() throws Exception {
+        Usuario tutor = suspendido(usuario(TipoUsuario.TUTOR, false));
+        sancion(tutor, TipoSancion.SUSPENSION_DEFINITIVA, null, null);
+        Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
+        Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(cupo.sesionId());
+        alerta.setRama("menor");
+        alerta.setDetectadoId(tutor.getId());
+        alertaRepository.save(alerta);
+
+        mvc.perform(post("/api/admin/moderacion/alertas-seguridad/" + alerta.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + token(admin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "reactivar"))))
+                .andExpect(status().isOk());
+
+        // La Alerta se resuelve (era falso positivo), pero la sanción definitiva manda.
+        assertThat(alertaRepository.findById(alerta.getId()).orElseThrow().getEstado())
+                .isEqualTo(AlertaSeguridad.ESTADO_RESUELTA_REACTIVACION);
+        Usuario trasResolver = usuarioRepository.findById(tutor.getId()).orElseThrow();
+        assertThat(trasResolver.getEstadoCuenta()).isEqualTo(EstadoCuenta.SUSPENDIDA);
+        assertThat(trasResolver.isActivoParaMatching()).isFalse();
+    }
+
+    @Test
+    void aud013_credencialAprobada_tutorConSuspensionDefinitiva_noActivaElMatching() {
+        Usuario tutor = suspendido(usuario(TipoUsuario.TUTOR, false));
+        sancion(tutor, TipoSancion.SUSPENSION_DEFINITIVA, null, null);
+        UUID credencialId = credencialPendiente(tutor);
+
+        credencialService.marcarAprobada(credencialId, null);
+
+        assertThat(usuarioRepository.findById(tutor.getId()).orElseThrow().isActivoParaMatching())
+                .isFalse();
+    }
+
+    @Test
+    void aud013_credencialAprobada_suspensionTemporalVencida_siActivaElMatching() {
+        Usuario tutor = usuario(TipoUsuario.TUTOR, false);
+        sancion(tutor, TipoSancion.SUSPENSION_TEMPORAL, 7, Instant.now().minusSeconds(60));
+        UUID credencialId = credencialPendiente(tutor);
+
+        credencialService.marcarAprobada(credencialId, null);
+
+        assertThat(usuarioRepository.findById(tutor.getId()).orElseThrow().isActivoParaMatching())
+                .isTrue();
+    }
+
+    @Test
+    void aud013_finDeSuspensionTemporal_conDefinitivaPosterior_noReactiva() {
+        Usuario tutor = suspendido(usuario(TipoUsuario.TUTOR, false));
+        sancion(tutor, TipoSancion.SUSPENSION_TEMPORAL, 7, Instant.now().minusSeconds(1));
+        sancion(tutor, TipoSancion.SUSPENSION_DEFINITIVA, null, null);
+
+        reactivacionCuentaJob.execute(contextoReactivacion(tutor.getId()));
+
+        Usuario trasJob = usuarioRepository.findById(tutor.getId()).orElseThrow();
+        assertThat(trasJob.getEstadoCuenta()).isEqualTo(EstadoCuenta.SUSPENDIDA);
+        assertThat(trasJob.isActivoParaMatching()).isFalse();
+    }
+
+    @Test
+    void aud013_finDeSuspensionTemporal_sinOtraSancion_reactiva() {
+        Usuario tutor = suspendido(usuario(TipoUsuario.TUTOR, false));
+        sancion(tutor, TipoSancion.SUSPENSION_TEMPORAL, 7, Instant.now().minusSeconds(1));
+
+        reactivacionCuentaJob.execute(contextoReactivacion(tutor.getId()));
+
+        assertThat(usuarioRepository.findById(tutor.getId()).orElseThrow().getEstadoCuenta())
+                .isEqualTo(EstadoCuenta.ACTIVA);
+    }
+
+    private UUID credencialPendiente(Usuario tutor) {
+        com.tinku.identidad.model.CredencialAcademica c = new com.tinku.identidad.model.CredencialAcademica();
+        c.setTutor(tutor);
+        c.setTipoDocumento(com.tinku.identidad.model.TipoCredencial.TITULO);
+        c.setArchivoUrl("file:///tmp/titulo.pdf");
+        c.setEstado(com.tinku.identidad.model.EstadoCredencial.PENDIENTE);
+        c.setNumeroIntento(1);
+        return credencialRepository.save(c).getId();
+    }
+
+    private org.quartz.JobExecutionContext contextoReactivacion(UUID usuarioId) {
+        org.quartz.JobExecutionContext ctx = org.mockito.Mockito.mock(org.quartz.JobExecutionContext.class);
+        org.quartz.JobDataMap datos = new org.quartz.JobDataMap();
+        datos.put(com.tinku.seguridad.jobs.ReactivacionCuentaJob.PARAM_USUARIO_ID, usuarioId.toString());
+        org.mockito.Mockito.when(ctx.getMergedJobDataMap()).thenReturn(datos);
+        return ctx;
     }
 }

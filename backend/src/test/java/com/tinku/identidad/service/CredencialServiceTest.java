@@ -39,7 +39,8 @@ class CredencialServiceTest {
         credencialRepo = mock(CredencialAcademicaRepository.class);
         backoffService = mock(CredencialBackoffService.class);
         usuarioRepo = mock(UsuarioRepository.class);
-        service = new CredencialService(credencialRepo, backoffService, usuarioRepo);
+        service = new CredencialService(credencialRepo, backoffService, usuarioRepo,
+                usuarioId -> false);
     }
 
     private Usuario tutor() {

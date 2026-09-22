@@ -3,11 +3,13 @@ package com.tinku.seguridad.jobs;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.seguridad.repository.SancionRepository;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -23,9 +25,12 @@ public class ReactivacionCuentaJob implements Job {
     public static final String PARAM_USUARIO_ID = "usuarioId";
 
     private final UsuarioRepository usuarioRepository;
+    private final SancionRepository sancionRepository;
 
-    public ReactivacionCuentaJob(UsuarioRepository usuarioRepository) {
+    public ReactivacionCuentaJob(UsuarioRepository usuarioRepository,
+                                 SancionRepository sancionRepository) {
         this.usuarioRepository = usuarioRepository;
+        this.sancionRepository = sancionRepository;
     }
 
     @Override
@@ -36,9 +41,11 @@ public class ReactivacionCuentaJob implements Job {
     }
 
     private void reactivar(Usuario usuario) {
-        // Solo reactiva si sigue SUSPENDIDA: una sanción definitiva posterior
-        // no se pisa con el disparo viejo de una temporal (guard idempotente).
-        if (usuario.getEstadoCuenta() == EstadoCuenta.SUSPENDIDA) {
+        // Solo reactiva si sigue SUSPENDIDA y no queda otra sanción vigente: una
+        // definitiva (o una temporal más larga) posterior deja la cuenta también en
+        // SUSPENDIDA, así que el estado solo no alcanza para no pisarla (AUD-013).
+        if (usuario.getEstadoCuenta() == EstadoCuenta.SUSPENDIDA
+                && !sancionRepository.existeSancionVigente(usuario.getId(), Instant.now())) {
             usuario.setEstadoCuenta(EstadoCuenta.ACTIVA);
             usuario.setActivoParaMatching(true);
             usuarioRepository.save(usuario);

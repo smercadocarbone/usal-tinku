@@ -91,6 +91,11 @@ public class IdentidadExceptionHandler {
                         "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));
     }
 
+    @ExceptionHandler(CredencialNoPendienteException.class)
+    public ResponseEntity<Map<String, String>> handleCredencialNoPendiente(CredencialNoPendienteException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(YaExisteCredencialPendienteException.class)
     public ResponseEntity<Map<String, String>> handleCredencialPendiente(YaExisteCredencialPendienteException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));

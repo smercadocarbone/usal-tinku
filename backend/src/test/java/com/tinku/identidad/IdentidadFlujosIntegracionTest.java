@@ -13,6 +13,7 @@ import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.port.NotificadorResetPassword;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.identidad.service.CredencialNoPendienteException;
 import com.tinku.identidad.service.CredencialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -447,6 +449,20 @@ class IdentidadFlujosIntegracionTest {
                                 MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[]{9, 9}))
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isTooManyRequests()); // CredencialEnBackoffException -> 429
+    }
+
+    @Test
+    void aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar() throws Exception {
+        String token = registrarTutorYToken("55555566", "Lucia", "Paz");
+        UUID cred = cargarCredencial(token, 201);
+        credencialService.marcarRechazada(cred, null);
+
+        assertThatThrownBy(() -> credencialService.marcarAprobada(cred, null))
+                .isInstanceOf(CredencialNoPendienteException.class);
+        assertThatThrownBy(() -> credencialService.marcarRechazada(cred, null))
+                .isInstanceOf(CredencialNoPendienteException.class);
+        assertThat(credencialRepo.findById(cred).orElseThrow().getEstado())
+                .isEqualTo(EstadoCredencial.RECHAZADO);
     }
 
     private UUID cargarCredencial(String token, int expectedStatus) throws Exception {
