@@ -25,6 +25,7 @@ export default function RegistroTutorPage() {
   const [nombreDeclarado, setNombreDeclarado] = useState("");
   const [apellidoDeclarado, setApellidoDeclarado] = useState("");
   const [fechaNacimientoDeclarada, setFechaNacimientoDeclarada] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fotoDni, setFotoDni] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -47,6 +48,7 @@ export default function RegistroTutorPage() {
       nombreDeclarado,
       apellidoDeclarado,
       fechaNacimientoDeclarada,
+      email,
       password,
     };
 
@@ -146,6 +148,16 @@ export default function RegistroTutorPage() {
               required
               value={fechaNacimientoDeclarada}
               onChange={(e) => setFechaNacimientoDeclarada(e.target.value)}
+            />
+
+            <Campo
+              id="email"
+              etiqueta="Email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
 
             <Campo
