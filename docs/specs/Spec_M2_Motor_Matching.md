@@ -22,7 +22,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 ### US-2 — Búsqueda restringida para un perfil de menor
 *Como* Usuario con capacidad Adulto Responsable, *quiero* que la búsqueda de mi hijo/a solo muestre Tutores que ya autoricé, *para* tener control total sobre quién puede aparecer como opción.
 
-- **Dado** que la búsqueda la haga un menor logueado con su propia cuenta (creada por su Adulto Responsable, ver Spec de M1 — no autorregistrada), **cuando** se ejecute, **entonces** se filtra exclusivamente a los Tutores de la lista de Autorización de ese Adulto Responsable (FR-MATCH-004).
+- **Dado** que la búsqueda la haga un menor logueado con su propia cuenta (creada por su Adulto Responsable, ver Spec de M1 — no autorregistrada), **cuando** se ejecute, **entonces** se filtra exclusivamente a los Tutores de la lista de Autorización de ese Adulto Responsable **y habilitados para Menores** (CAP `aprobado` y vigente, FR-ID-026) (FR-MATCH-004).
 - **Dado** que no haya ningún Tutor autorizado todavía, **cuando** el menor busque desde su propia cuenta, **entonces** puede ver y buscar Tutores igual que cualquier perfil — sin distinción por edad —, y cada resultado no autorizado muestra un botón **"Solicitar autorización"** que notifica al Adulto Responsable (FR-MATCH-005).
 - **Dado** que un Tutor esté en la lista de Autorización, **cuando** un Adulto Responsable lo marque como "no confiable" (M1, FR-ID-009), **entonces** deja de aparecer en las búsquedas de esa cuenta específicamente — este filtro aplica solo cuando busca la capacidad Adulto Responsable, no cuando la misma cuenta busca con su capacidad Estudiante (FR-MATCH-009).
 - **Dado** que un Adulto Responsable revoque la autorización de un Tutor que tiene sesiones futuras agendadas con ese menor, **cuando** eso ocurra, **entonces** esas reservas se cancelan y reembolsan automáticamente (ver FR-RES-006 de M4) — este módulo deja de mostrar a ese Tutor de inmediato, sin esperar a que M4 procese la cancelación.
@@ -55,7 +55,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 | FR-MATCH-001 | Búsqueda de Tutores por materia, nivel y disponibilidad, sobre catálogo cerrado y curado. |
 | FR-MATCH-002 | Ordenamiento de resultados mediante motor de matching semántico basado en IA. |
 | FR-MATCH-003 | El orden pondera señales implícitas de reputación del Tutor, sin exponerlas. |
-| FR-MATCH-004 | Para un perfil de menor, solo se muestran Tutores de la lista de Autorización de su Adulto Responsable. |
+| FR-MATCH-004 | Para un perfil de menor, solo se muestran Tutores de la lista de Autorización de su Adulto Responsable y habilitados para Menores (CAP `aprobado` y vigente, FR-ID-026). |
 | FR-MATCH-005 | Búsqueda disponible para todos los perfiles de menor sin distinción de edad; botón "Solicitar autorización" en resultados no autorizados. |
 | FR-MATCH-006 | Catálogo cerrado de materias/niveles basado en niveles educativos oficiales de Argentina. |
 | FR-MATCH-007 | Tutores suspendidos o marcados "no confiables" se filtran antes del cálculo semántico. |

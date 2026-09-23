@@ -19,6 +19,7 @@
 | Recordatorio único de calificación pendiente      | 24 hs                    | Solo una vez, sin insistir                                                                                            | M7     |
 | Espera tras agotar intentos de OCR                | 24 hs                    | Antes de un nuevo ciclo de 3 fotos                                                                                    | M1     |
 | Espera tras agotar intentos de Credencial         | 24 hs, duplicándose      | 24 → 48 → 96...                                                                                                       | M1     |
+| Vigencia del CAP                                   | 12 meses desde la fecha de emisión | Un Tutor queda habilitado para Menores solo con CAP `aprobado` y vigente (FR-ID-026); vencido, se suspende la habilitación para Menores hasta recargar (FR-ID-025) | M1     |
 | Plazo de descargo (Denuncia estándar)             | 48 hs                    | No aplica al track de kill-switch (ver 12hs abajo)                                                                    | M9     |
 | Plazo de revisión de Credencial por intento       | 48 hs                    | —                                                                                                                     | M1     |
 | Ventana de edición de calificación pública        | 48 hs                    | Luego es definitiva                                                                                                   | M7     |

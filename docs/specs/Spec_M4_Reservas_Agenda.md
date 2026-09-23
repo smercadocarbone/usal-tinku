@@ -27,7 +27,7 @@ _Como_ Tutor, _quiero_ publicar mis franjas horarias disponibles, _para_ que sol
 
 _Como_ menor, con mi propia cuenta (creada por mi Adulto Responsable, no autorregistrada), _quiero_ pedirle a mi adulto que me consiga una clase con un Tutor autorizado, _para_ no depender de que él busque por mí, sin poder yo mismo pagar ni confirmar nada.
 
-- **Dado** que, logueado con mi propia cuenta de permisos restringidos, elijo un Tutor autorizado y un horario de una franja publicada, **cuando** genero la Solicitud, **entonces** queda registrada como `solicitud_pendiente` y notifica al Adulto Responsable — **no bloquea el horario, no genera cobro, no es una Reserva** (FR-RES-021).
+- **Dado** que, logueado con mi propia cuenta de permisos restringidos, elijo un Tutor autorizado y un horario de una franja publicada, **cuando** genero la Solicitud, **entonces** queda registrada como `solicitud_pendiente` y notifica al Adulto Responsable — **no bloquea el horario, no genera cobro, no es una Reserva** (FR-RES-021). El Tutor debe estar además habilitado para Menores (CAP `aprobado` y vigente, FR-ID-026).
 - **Dado** que el Adulto Responsable no procese la Solicitud, **cuando** pasen 48hs, **entonces** la Solicitud expira automáticamente sin generar ninguna consecuencia — simplemente deja de estar disponible para convertir (FR-RES-022).
 
 ### US-3 — Conversión de Solicitud en Reserva (o reserva directa)
@@ -35,7 +35,7 @@ _Como_ menor, con mi propia cuenta (creada por mi Adulto Responsable, no autorre
 _Como_ Usuario con capacidad Adulto Responsable, _quiero_ ser quien efectivamente reserva y paga, _para_ mantener control total del gasto y del calendario de mi menor a cargo.
 
 - **Dado** que exista una Solicitud pendiente de mi menor a cargo, **cuando** la revise, **entonces** puedo aprobarla (lo que crea la Reserva real y dispara el cobro, US-4) o rechazarla (la Solicitud se descarta, sin exponer motivo al Tutor — no llegó a ser una Reserva, así que ni siquiera lo notifica).
-- **Dado** que quiera reservar directamente para mi menor a cargo sin pasar por una Solicitud previa, **cuando** lo haga, **entonces** el sistema lo permite igual — la Solicitud es un atajo opcional para el menor, no un paso obligatorio del flujo.
+- **Dado** que quiera reservar directamente para mi menor a cargo sin pasar por una Solicitud previa, **cuando** lo haga, **entonces** el sistema lo permite igual — la Solicitud es un atajo opcional para el menor, no un paso obligatorio del flujo. En ambos caminos (Solicitud o directa) el Tutor debe estar habilitado para Menores (CAP `aprobado` y vigente, FR-ID-026).
 - **Dado** que sea un Estudiante adulto reservando para sí mismo, **cuando** seleccione un horario, **entonces** no hay Solicitud intermedia — reserva y paga directamente (FR-RES-001).
 
 ### US-4 — Reserva auto-confirmada y pago

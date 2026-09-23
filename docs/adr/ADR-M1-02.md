@@ -1,6 +1,10 @@
 # ADR-M1-02 — Retiro del Certificado de Antecedentes Penales (CAP) del onboarding de Tutores
 
 ## Estado
+**Reemplazado por ADR-M1-04** (2026-09-23): el CAP vuelve como requisito, **acotado a dictar
+clases a Menores**. Este documento queda como registro histórico del retiro; la decisión vigente
+es la de ADR-M1-04 (enmienda Constitución v2.3).
+
 Aceptado, formalizado **retroactivamente** (AGENTS.md §7 y §2). El código que implementa esta
 decisión (carga, revisión, vencimiento del CAP) fue eliminado en el commit `ebf6cc0`
 (2026-09-10) sin ADR ni enmienda constitucional acompañante. Este documento cierra esa deuda de
