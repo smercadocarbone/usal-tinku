@@ -153,6 +153,16 @@ segunda: 0.1 s. `matching-service` carga el modelo de embeddings en la primera r
 (`_cargar_embedder`). **[backend]** Precargarlo en el arranque del servicio. Detalle en
 `04-descubrir-reservar-pagar.md` §1.
 
+## B14 — El tutor no puede guardar su precio  🔴
+
+**Evidencia (reproducido):** `frontend/src/components/tutor/TabPrecio.tsx` manda
+`PUT /api/pagos/tarifa` con `{ precio_sesion: ... }` (snake_case), y `pagos/web/ActualizarTarifaTutorRequest`
+espera `precioSesion` → **400 siempre**. Ningún tutor pudo fijar su tarifa desde la UI.
+
+**Qué hacer:** si **FASE2-01** (tarifa por hora) ya está mergeada, lo arregló (el campo pasa a
+`precioHora` en los dos lados): solo verificá. Si no, corregí el nombre del campo en `TabPrecio.tsx` a
+`precioSesion` y agregá un test de contrato o E2E contra el backend real.
+
 ## Criterios de aceptación
 
 - B1 a B11 resueltos, un commit por ítem.
