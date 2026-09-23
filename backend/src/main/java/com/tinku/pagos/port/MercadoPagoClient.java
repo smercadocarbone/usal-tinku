@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * Puente hacia MercadoPago (T-M5-02). El dominio de pagos habla con conceptos
  * Tinku (reservaId, monto, comision) y la implementacion concreta traduce a el
- * contrato JSON del provider — asi la regla BR-PAG-01 (comision = 15%) nunca
+ * contrato JSON del provider — asi la regla BR-PAG-01 (comision = 27%) nunca
  * depende del formato del tercero y los tests pueden reemplazar el cliente
  * real sin tocar la capa de servicio.
  */

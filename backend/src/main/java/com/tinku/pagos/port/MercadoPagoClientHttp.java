@@ -18,7 +18,7 @@ import java.util.UUID;
 
 /**
  * Cliente HTTP de MercadoPago (T-M5-02) via Checkout Pro en modalidad
- * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 15%)
+ * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%)
  * para que el split quede definido al crear el pago (Plan M5 §3.1/§3.2) — al
  * liberar el escrow NO es una segunda transaccion.
  *

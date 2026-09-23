@@ -83,7 +83,7 @@ tinku:
     # rechaza TODO (fail-closed, patrón LiveKit) — una notificación sin verificar
     # jamás confirma un pago ni crea un escrow.
     webhook-secret: ${MP_WEBHOOK_SECRET:}
-    marketplace-fee-percent: 15 # BR-PAG-01
+    marketplace-fee-percent: 27 # BR-PAG-01 (calibración tesis, Cap. 5)
   ocr:
     # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta
     # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
