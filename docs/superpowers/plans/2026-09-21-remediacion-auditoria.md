@@ -1106,6 +1106,11 @@ Si hay duplicados en algún entorno, la migración necesita un paso de limpieza 
 
 # FASE 2 — P1 Integridad de datos y funcionalidad incompleta
 
+> **Actualización 2026-09-22 — no ejecutes FASE 2, 3 ni 4 desde este documento.** Tras cerrar FASE 1
+> se reescribieron como specs autocontenidas, verificadas contra el código actual y con las decisiones
+> pendientes explicitadas: `docs/superpowers/specs/remediacion/00-LEEME-opencode.md`. Lo que sigue
+> queda como registro histórico del plan original.
+
 **Branch:** `aud/fase2-p1-integridad`
 **Precondición:** FASE 1 cerrada y mergeada.
 **Criterio de salida:** 13 findings en `CERRADO` o `ACEPTADO` con ADR.
