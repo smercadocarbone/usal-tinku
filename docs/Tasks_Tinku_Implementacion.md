@@ -253,3 +253,12 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-039: `@JsonIgnore` en `Usuario.getEdad()` (AUD-036.6)
 - [ ] T-AUD-040: Lock en la carga lazy del embedder de Python (AUD-036.7)
 - [ ] T-AUD-041: Actuator con `/health` e `/info` (AUD-034)
+
+---
+
+## TESIS — Decisiones de la tesis (specs en `docs/superpowers/specs/tesis/`)
+
+> El piloto arranca el 27/10/2026 (Sprint 11). Todo lo marcado *Antes del piloto* es
+> bloqueante. Plan y orden: `docs/superpowers/specs/tesis/00-LEEME-tesis.md`.
+
+- [ ] T-TES-05: Comisión de plataforma al **27 %** (DT1, spec `T05-comision-27.md`) — BR-PAG-01, calibrada en el Cap. 5 de la tesis. `application.yml` (`marketplace-fee-percent`) → 27, default de `ComisionPlataforma` → 27, Spec_M5 y textos del frontend que muestren la comisión. _Antes del piloto._

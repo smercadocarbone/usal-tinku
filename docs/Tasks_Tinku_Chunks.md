@@ -141,6 +141,14 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 
 ---
 
+## TESIS — Decisiones de la tesis (specs en `docs/superpowers/specs/tesis/`)
+
+> Piloto el 27/10/2026. Orden y dependencias en `docs/superpowers/specs/ORDEN-GENERAL.md`.
+
+- [ ] **Chunk TESIS-A** — Comisión de plataforma al 27 % (T-TES-05, spec `tesis/T05-comision-27.md`, DT1) — _branch `tesis/comision-27`. Riesgo medio (dinero). Sin dependencias._
+
+---
+
 ## Nota de auditoría — 2026-09-18
 
 Este archivo y `README.md` estaban desactualizados desde ~72 commits atrás (última edición real
