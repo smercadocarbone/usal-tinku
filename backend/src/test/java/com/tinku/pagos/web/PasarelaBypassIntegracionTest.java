@@ -233,7 +233,7 @@ class PasarelaBypassIntegracionTest {
         assertThat(tx.getMpPaymentId()).isEqualTo("bypass-" + reserva.getId());
         assertThat(tx.getEstado()).isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
         assertThat(tx.getMontoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(tx.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("2250.00"));
+        assertThat(tx.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
 
         // La Reserva quedó confirmada por el MISMO camino que el webhook.
         assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())

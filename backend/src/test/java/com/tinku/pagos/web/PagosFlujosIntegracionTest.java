@@ -73,7 +73,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * El escenario de datos replica el de ReservasFlujosIntegracionTest: tarifa 15000
  * vía la implementación real de M5-H (fallback de dev en application-test.yml).
  * BR-PAG-01 se verifica con
- * ArgumentCaptor sobre la PreferenciaRequest: comisión = 15% del monto congelado.
+ * ArgumentCaptor sobre la PreferenciaRequest: comisión = 27% del monto congelado.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -274,13 +274,13 @@ class PagosFlujosIntegracionTest {
                 .andExpect(jsonPath("$.initPoint").value("https://mercadopago.com/mock"));
 
         // BR-PAG-01: la comisión de la plataforma llega como marketplace_fee sobre
-        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 2250.00 (15%).
+        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 4050.00 (27%).
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture());
         PreferenciaRequest pedido = captor.getValue();
         assertThat(pedido.reservaId()).isEqualTo(reservaId);
         assertThat(pedido.montoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("2250.00"));
+        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
     }
 
     @Test
