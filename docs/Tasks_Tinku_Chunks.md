@@ -150,6 +150,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 - [ ] **Chunk TESIS-CAP-C** — CAP frontend + moderación (T-TES-03, spec `tesis/T03-cap-frontend-moderacion.md`) — _Depends on T-TES-02._
 - [ ] T-TES-04 — firma digital del CAP (spec `tesis/T04-cap-firma-digital.md`): **OPCIONAL / no ejecutar** (PT2, manual en el MVP). Depends on T-TES-02.
 - [x] **Chunk TESIS-A** — Comisión de plataforma al 27 % (T-TES-05, spec `tesis/T05-comision-27.md`, DT1) — _branch `tesis/comision-27`. Riesgo medio (dinero). Sin dependencias. Cerrado 2026-09-23: 27 % en `application.yml` y default de `ComisionPlataforma`, javadocs y Spec_M5 alineados (historial 27 %, antes 15 %); `ComisionPlataformaTest` nuevo (RED 2250 → GREEN 4050) y 4 asserts de integración a 4050; suite 427 run/0 fail._
+- [ ] **Chunk TESIS-B** — Gate de menores del piloto (T-TES-10, spec `tesis/T10-gate-menores-piloto.md`, DT7) — _branch `tesis/gate-menores-piloto`. Riesgo bajo (corte fail-closed). Sin dependencias. Flag solo en true con T-M3-06 y T02 cerradas._
 
 ---
 

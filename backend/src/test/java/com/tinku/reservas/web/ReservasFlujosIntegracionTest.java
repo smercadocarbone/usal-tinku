@@ -637,6 +637,18 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
+    void crearReserva_beneficiarioMenor_conFlagTrue_ok() throws Exception {
+        // T-TES-10: con la flag en true (habilitada vía @TestPropertySource en
+        // esta clase) el gate deja pasar el flujo existente FR-RES-003.
+        Escenario e = escenarioBase();
+
+        UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
+
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getBeneficiario().getId())
+                .isEqualTo(e.menorId());
+    }
+
+    @Test
     void frRes021_arReservaParaMenor_conTutorNoAutorizado_queda403() throws Exception {
         String dniAr = dniUnico();
         String dniTutor = dniUnico();
