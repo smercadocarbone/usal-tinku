@@ -3,6 +3,7 @@
 **Módulo:** M5 (ver Constitución, Artículo VI)
 **Estado:** Borrador para revisión
 **Depende de:** M3 (eventos de finalización/no-show/corte de sesión, incluidos los de kill-switch), M4 (Reserva confirmada), M9 (pausa y reanudación de escrow por Denuncia, efectos de sanción)
+**Historial BR-PAG-01:** comisión de plataforma al **27 %** del monto bruto desde el 2026-09-23, calibrada en el Cap. 5 de la tesis (por debajo de 23,4 % el VAN del escenario base es negativo). Antes: **15 %**.
 
 ---
 
@@ -36,7 +37,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 ### US-2 — Liberación automática al Tutor
 *Como* Tutor, *quiero* cobrar automáticamente después de dar la clase, *para* no tener que reclamar el pago manualmente.
 
-- **Dado** que la Sesión finalice normalmente (`sesion.finalizada`), **cuando** pasen 24 horas, **entonces** se liberan los fondos al Tutor (FR-PAG-002), descontando la comisión del 15%.
+- **Dado** que la Sesión finalice normalmente (`sesion.finalizada`), **cuando** pasen 24 horas, **entonces** se liberan los fondos al Tutor (FR-PAG-002), descontando la comisión del 27%.
 - **Dado** que exista una Denuncia activa sobre esa sesión al cumplirse esas 24 horas, **cuando** eso ocurra, **entonces** la liberación se pausa hasta resolución — con un límite explícito: 48hs de descargo + hasta 5 días hábiles de revisión del Admin de Moderación y Seguridad (FR-SEC-010 de M9); si se excede, el caso escala con prioridad alta, así el escrow nunca queda pausado indefinidamente.
 - **Dado** que el corte de conectividad ocurra después del 50% de la duración, **cuando** eso pase, **entonces** la sesión se considera realizada y se libera el pago completo al Tutor con normalidad (consistente con US-5 de M3).
 
@@ -82,7 +83,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 ### US-7 — Transparencia de comisión
 *Como* Estudiante, *quiero* ver un precio final simple, *para* no hacer cuentas de cuánto se lleva la plataforma (Artículo III).
 
-- **Dado** que vea el precio de una sesión, **cuando** lo mire, **entonces** es el precio final — la comisión del 15% se descuenta del lado del Tutor, nunca aparece como línea aparte.
+- **Dado** que vea el precio de una sesión, **cuando** lo mire, **entonces** es el precio final — la comisión del 27% se descuenta del lado del Tutor, nunca aparece como línea aparte.
 
 ### US-8 — Resiliencia ante caída de MercadoPago
 *Como* Tutor, *quiero* cobrar aunque MercadoPago tenga una falla momentánea, *para* no perder plata por un problema ajeno.
@@ -100,7 +101,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 |---|---|
 | FR-PAG-001 | Cobro vía MercadoPago en escrow al confirmar la Reserva. |
 | FR-PAG-002 | Liberación automática al Tutor 24hs después de finalizada la Sesión, salvo Denuncia activa. |
-| FR-PAG-003 | Comisión de plataforma del 15%, a cargo del Tutor, no visible como línea aparte. |
+| FR-PAG-003 | Comisión de plataforma del 27%, a cargo del Tutor, no visible como línea aparte. |
 | FR-PAG-004 | Ejecución centralizada de todos los reembolsos automáticos (tabla de eventos, sección 2). |
 | FR-PAG-005 | Precio de referencia regional no vinculante, sugerido una vez. |
 | FR-PAG-006 | El precio de referencia es fijo; solo cambia con recálculo de toda la tabla regional. |
@@ -122,7 +123,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | 1 | Recálculo del precio de referencia | Fijo, solo cambia con recálculo de toda la tabla regional (FR-PAG-006). |
 | 2 | Caída de MercadoPago al liberar fondos | 3 reintentos con backoff + alerta inmediata al Admin de Soporte Financiero en paralelo (FR-PAG-007). |
 | 3 | Notificación de pagos/reembolsos múltiples | Individual, nunca agregada (FR-PAG-008). |
-| 4 | Métrica objetivo para revisar el 15% tras el piloto | **Diferido a propósito** — se define en el momento de esa revisión (BR-PAG-03). No bloquea este Spec. |
+| 4 | Métrica objetivo para revisar el 27% tras el piloto | **Diferido a propósito** — se define en el momento de esa revisión (BR-PAG-03). No bloquea este Spec. |
 | 5 | Quién absorbe la comisión de gateway en un reembolso | Tinku, siempre — reembolso total vía MP, costo real cero (FR-PAG-009/010). |
 | 6 | Fondos de un Tutor con sanción definitiva | Se libera lo de sesiones ya realizadas, se retiene y reembolsa lo futuro (FR-PAG-011). |
 | 7 _(agregado, auditoría 2026-09-18)_ | Titular de la tarjeta disputa el cargo directamente con su banco (contracargo), en paralelo o en vez de usar la Denuncia de Tinku | Cola de intervención manual de Soporte Financiero; pausa si el escrow sigue retenido, sin reversión automática si ya se liberó (FR-PAG-015/016). |

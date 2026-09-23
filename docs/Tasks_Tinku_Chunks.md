@@ -143,9 +143,13 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 
 ## TESIS — Decisiones de la tesis (specs en `docs/superpowers/specs/tesis/`)
 
-> Piloto el 27/10/2026. Orden y dependencias en `docs/superpowers/specs/ORDEN-GENERAL.md`.
+> Piloto el 27/10/2026. Orden y dependencias en `docs/superpowers/specs/tesis/00-LEEME-tesis.md`.
 
-- [ ] **Chunk TESIS-A** — Comisión de plataforma al 27 % (T-TES-05, spec `tesis/T05-comision-27.md`, DT1) — _branch `tesis/comision-27`. Riesgo medio (dinero). Sin dependencias._
+- [x] **Chunk TESIS-CAP-A** — ADR-M1-04 + enmienda Constitución v2.3 — el CAP vuelve acotado a Tutores de Menores (T-TES-01, spec `tesis/T01-cap-adr-enmienda.md`, DT6, _branch `tesis/cap-menores`_). Solo documentación; T-AUD-032 CANCELADA, AUD-035 `EN CURSO`.
+- [ ] **Chunk TESIS-CAP-B** — CAP backend (T-TES-02, spec `tesis/T02-cap-backend.md`) — _branch `tesis/cap-menores`. Riesgo alto (seguridad del menor). Depends on T-TES-01._
+- [ ] **Chunk TESIS-CAP-C** — CAP frontend + moderación (T-TES-03, spec `tesis/T03-cap-frontend-moderacion.md`) — _Depends on T-TES-02._
+- [ ] T-TES-04 — firma digital del CAP (spec `tesis/T04-cap-firma-digital.md`): **OPCIONAL / no ejecutar** (PT2, manual en el MVP). Depends on T-TES-02.
+- [x] **Chunk TESIS-A** — Comisión de plataforma al 27 % (T-TES-05, spec `tesis/T05-comision-27.md`, DT1) — _branch `tesis/comision-27`. Riesgo medio (dinero). Sin dependencias. Cerrado 2026-09-23: 27 % en `application.yml` y default de `ComisionPlataforma`, javadocs y Spec_M5 alineados (historial 27 %, antes 15 %); `ComisionPlataformaTest` nuevo (RED 2250 → GREEN 4050) y 4 asserts de integración a 4050; suite 427 run/0 fail._
 
 ---
 
