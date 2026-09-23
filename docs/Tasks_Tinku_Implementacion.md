@@ -231,7 +231,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031)
 - [ ] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021)
 - [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9)
-- [~] T-AUD-024: Anexo a ADR-M3-01: modelo de amenaza del clasificador on-device y controles compensatorios (AUD-005) — escrito en FASE 1 como `ADR-M3-02` (Task 1.10); se cierra formalmente en FASE 2 con el clasificador real y la colisión con Denuncias
+- [x] T-AUD-024: Anexo a ADR-M3-01: modelo de amenaza del clasificador on-device y controles compensatorios (AUD-005) — escrito en FASE 1 como `ADR-M3-02` (Task 1.10). CERRADO en FASE 2 por `FASE2-10-colision-alerta-denuncia.md` (2026-09-23): estado propio `pausado_alerta`, la Alerta manda sobre la Denuncia; regresión: `EscrowListenersIntegracionTest` (4 tests de colisión) + `AdminPanelIntegracionTest.reembolsoParcial_sobrePausadoAlerta_422`
 
 ### FASE 3 — P2 Mejoras recomendables
 - [ ] T-AUD-025: Romper el ciclo `shared ↔ admin`; mover `AlertaSeguridad` a `seguridad` (AUD-019)

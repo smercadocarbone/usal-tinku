@@ -215,6 +215,7 @@ class EscrowListenersIntegracionTest {
     @Test
     void sesionKillswitchMenor_pausaElEscrowSinReembolsar() {
         // ADR-M3-02 (D3): el corte es inmediato, la plata no. M9 decide al resolver la Alerta.
+        // FASE2-10: la pausa del kill-switch es pausado_alerta, no pausado_denuncia.
         Escena e = escena();
         Transaccion t0 = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
         t0.setLiberarAt(Instant.now().plusSeconds(60));
@@ -223,7 +224,7 @@ class EscrowListenersIntegracionTest {
         events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
-        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
         assertThat(t.getLiberarAt()).isNull();
         verifyNoInteractions(reembolso);
     }
@@ -235,7 +236,7 @@ class EscrowListenersIntegracionTest {
         events.publishEvent(new SesionKillswitchAdultosEvent("M3", e.reservaId(), e.pagadorId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
-        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
         verifyNoInteractions(reembolso);
     }
 

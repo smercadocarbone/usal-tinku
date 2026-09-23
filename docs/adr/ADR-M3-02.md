@@ -65,18 +65,31 @@ usuario a la vista.
 - **La suspensión preventiva del detectado sigue siendo inmediata.** Un Tutor puede quedar fuera del
   matching por un disparo falso hasta la resolución (12hs).
 
+## Actualización FASE 2 — FASE2-10 (2026-09-23)
+
+Cierra el **riesgo residual de la colisión** con Denuncias (T-AUD-024): los listeners de kill-switch
+pasaron de reusar `pausado_denuncia` a un estado propio **`pausado_alerta`** (V25, nueva migración,
+CHECK reemplazado sin tocar V11). La Alerta de seguridad manda sobre la Denuncia:
+
+- `sesion.killswitch_menor/adultos` → escrow a `pausado_alerta`, incluso si ya estaba
+  `pausado_denuncia` (la pausa por Alerta es más grave; no baja si la Denuncia llega después).
+- `alerta.resuelta` solo actúa sobre `pausado_alerta` (reembolso total al Estudiante).
+- `denuncia.resuelta` sobre un escrow `pausado_alerta` es no-op con log — M9 no puede liberar al
+  Tutor (ni reembolsar) mientras la Alerta siga sin resolver. Solo la resuelve la Alerta.
+- El reembolso parcial manual de Soporte Financiero sigue rechazando `pausado_alerta` (422), como
+  ya rechazaba `pausado_denuncia`.
+
+Queda vigente sin cambios: el reembolso total por kill-switch espera la resolución de M9
+(`reactivar` o `sancionar`, los dos reembolsan al Estudiante — FR-PAG-009/012).
+
 ## Riesgos aceptados
 
 - **Escrow congelado sin plazo automático.** Si el Admin no resuelve la Alerta, la plata queda en
-  `pausado_denuncia` indefinidamente. No hay job que la reembolse al vencer la ventana de 12hs. Es
+  `pausado_alerta` indefinidamente. No hay job que la reembolse al vencer la ventana de 12hs. Es
   preferible a liberar o reembolsar sin revisión, y el Soporte Financiero la ve en la cola.
-- **Colisión con una Denuncia sobre la misma sesión.** Kill-switch y `denuncia.registrada` usan el
-  mismo estado `pausado_denuncia`. Si se resuelve primero la Denuncia (`infundada` o `fundada`), M5
-  reanuda la liberación al Tutor aunque la Alerta siga pendiente, y cuando la Alerta se resuelva
-  después, el reembolso es no-op (la transacción ya salió de `pausado_denuncia`). Para cerrarlo hace
-  falta un estado propio (`pausado_alerta`, migración nueva) o que M5 consulte Alertas pendientes. Se
-  deja para FASE 2 (T-AUD-024): el caso exige dos procesos de moderación simultáneos sobre la misma
-  sesión, y el Admin ve las dos colas.
+- ~~**Colisión con una Denuncia sobre la misma sesión.**~~ **Resuelto en FASE 2 (FASE2-10,
+  2026-09-23):** estado propio `pausado_alerta` — la Alerta manda, `denuncia.resuelta` es no-op y
+  solo `alerta.resuelta` destraba el escrow. Ver "Actualización FASE 2" más abajo.
 
 ## Alternativas consideradas
 
