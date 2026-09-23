@@ -50,8 +50,8 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
   desde `backend/`. Con otra JVM el build falla en el enforcer y **no corre ni un test** —
   y si pipeás la salida, el exit code puede dar 0 y parecer éxito. Siempre leer la línea
   `Tests run:` antes de afirmar que algo pasa.
-- Baseline al 2026-09-21: **383 tests, 0 failures, 0 errors, 0 skipped**. Si tu cambio
-  baja ese número, borraste un test.
+- Baseline al 2026-09-23 (FASE 1 de la auditoría y fix de doble pago mergeados): **426 tests,
+  0 failures, 0 errors, 0 skipped**. Si tu cambio baja ese número, borraste un test.
 
 ## 6. Tamaño y disciplina de las tareas
 

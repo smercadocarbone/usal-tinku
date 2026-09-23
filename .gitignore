@@ -30,3 +30,6 @@ application-local.yml
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/worktrees/
+
+# CodeGraph (índice local de cada máquina, se regenera con `codegraph init`)
+.codegraph/
