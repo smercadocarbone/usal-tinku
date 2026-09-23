@@ -1,9 +1,9 @@
-# FASE3-02 — Integridad del esquema: franjas, 409 honesto y tablas huérfanas (AUD-025, AUD-023, AUD-035)
+# FASE3-02 — Integridad del esquema: franjas y 409 honesto (AUD-025, AUD-023)
 
 **Branch:** `aud/fase3-p2-calidad` · **Riesgo:** medio · **Precondición:** FASE2-01 mergeada
 (cambia las constraints de reservas y los nombres que busca el handler).
 
-Tres sub-tareas, **un commit cada una**, en este orden.
+Dos sub-tareas (A y B), **un commit cada una**. La C quedó cancelada por la tesis.
 
 ## A. Franjas que se superponen (AUD-025)
 
@@ -37,16 +37,14 @@ de superposición de reservas (los nombres que dejó FASE2-01, `ex_reservas_rang
 el mensaje actual. El resto → **500** con log `ERROR` (es un bug nuestro, no un conflicto del
 usuario). Tests: superposición → 409 (regresión); un CHECK violado forzado → 500.
 
-## C. Borrar las tablas del CAP retirado (AUD-035)
+## C. ~~Borrar las tablas del CAP retirado (AUD-035)~~ — CANCELADA
 
-**Hoy:** V6 creó `identidad.certificados_antecedentes_penales` (y lo que haya relacionado: verificá
-con `rg -n "CREATE TABLE" backend/src/main/resources/db/migration/V6__*.sql`), y ADR-M1-02 retiró
-el CAP del onboarding. Las tablas quedaron huérfanas en la base.
-
-**Qué hacer:** migración nueva `V<n>__m1_drop_tablas_cap.sql` con `DROP TABLE IF EXISTS …` y un
-comentario que cite ADR-M1-02. **Nunca editar V6** (A1). Antes: `rg -n "certificados_antecedentes|CertificadoAntecedentes" backend/src` tiene que dar cero usos en código. Si alguna entidad todavía la mapea, `ddl-auto: validate` va a fallar al arrancar: **PARAR** y reportar.
+**No la ejecutes.** La tesis decidió que el CAP vuelve a ser obligatorio para dictar clases a menores
+(DT6, `docs/superpowers/specs/tesis/T01-cap-adr-enmienda.md` y `T02-cap-backend.md`), así que las
+tablas de V6 **se vuelven a usar**. AUD-035 lo cierra T02. Si encontrás esta sección antes de que T01
+esté mergeado, igual **no** dropees nada.
 
 ## Criterios de aceptación
 
-- Suite verde en cada commit. `REGISTRO_FINDINGS.md`: AUD-025, AUD-023, AUD-035 → `CERRADO`.
+- Suite verde en cada commit. `REGISTRO_FINDINGS.md`: AUD-025 y AUD-023 → `CERRADO` (AUD-035 lo cierra T02 de la tesis).
 - `Spec_M4`: FR sobre franjas sin superposición.
