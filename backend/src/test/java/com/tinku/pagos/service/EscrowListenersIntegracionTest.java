@@ -17,11 +17,14 @@ import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.LiberacionProveedor;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
+import com.tinku.reservas.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
+import com.tinku.shared.ResolucionDenuncia;
 import org.junit.jupiter.api.Test;
+import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -42,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -79,6 +83,7 @@ class EscrowListenersIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
+    @Autowired Scheduler scheduler;
 
     @MockBean LiberacionProveedor liberacion;
     @MockBean ReembolsoProveedor reembolso;
@@ -210,6 +215,7 @@ class EscrowListenersIntegracionTest {
     @Test
     void sesionKillswitchMenor_pausaElEscrowSinReembolsar() {
         // ADR-M3-02 (D3): el corte es inmediato, la plata no. M9 decide al resolver la Alerta.
+        // FASE2-10: la pausa del kill-switch es pausado_alerta, no pausado_denuncia.
         Escena e = escena();
         Transaccion t0 = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
         t0.setLiberarAt(Instant.now().plusSeconds(60));
@@ -218,7 +224,7 @@ class EscrowListenersIntegracionTest {
         events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
-        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
         assertThat(t.getLiberarAt()).isNull();
         verifyNoInteractions(reembolso);
     }
@@ -230,7 +236,7 @@ class EscrowListenersIntegracionTest {
         events.publishEvent(new SesionKillswitchAdultosEvent("M3", e.reservaId(), e.pagadorId()));
 
         Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
-        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
         verifyNoInteractions(reembolso);
     }
 
@@ -273,6 +279,76 @@ class EscrowListenersIntegracionTest {
         assertThat(t.getLiberarAt()).isNull();
         verifyNoInteractions(liberacion, reembolso);
     }
+
+    // ------------------------- FASE2-10: la Alerta manda sobre la Denuncia
+
+    @Test
+    void denunciaResueltaInfundada_conAlertaPendiente_noLiberaAlTutor() throws Exception {
+        // FASE2-10 (riesgo abierto aceptado en ADR-M3-02): kill-switch con menor →
+        // escrow en pausa → además presentan una Denuncia sobre la misma sesión →
+        // un Admin la resuelve INFUNDADA. La Alerta de seguridad sigue sin revisar:
+        // el Tutor NO debe cobrar antes de que M9 resuelva la Alerta (Art. II).
+        Escena e = escena();
+        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
+        events.publishEvent(new DenunciaRegistradaEvent("M9", e.reservaId()));
+        events.publishEvent(new DenunciaResueltaEvent("M9", UUID.randomUUID(), e.tutorId(),
+                e.reservaId(), ResolucionDenuncia.INFUNDADA));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
+        assertThat(t.getLiberarAt()).isNull();
+        assertThat(triggerExiste(e.transaccion().getId())).isFalse();
+        verify(liberacion, never()).liberarAlTutor(any(Transaccion.class));
+        verifyNoInteractions(reembolso);
+    }
+
+    @Test
+    void alertaResuelta_trasDenunciaResueltaAntes_igualReembolsa() {
+        // FASE2-10: la Denuncia se resolvió ANTES que la Alerta; la Alerta manda.
+        // Cuando el Admin resuelva la Alerta, igual se reembolsa el total (D3).
+        Escena e = escena();
+        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
+        events.publishEvent(new DenunciaRegistradaEvent("M9", e.reservaId()));
+        events.publishEvent(new DenunciaResueltaEvent("M9", UUID.randomUUID(), e.tutorId(),
+                e.reservaId(), ResolucionDenuncia.INFUNDADA));
+
+        events.publishEvent(new AlertaResueltaEvent("M9", e.reservaId()));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
+        assertThat(t.getLiberarAt()).isNull();
+        verify(reembolso).reembolsarTotal(any(Transaccion.class));
+        verify(liberacion, never()).liberarAlTutor(any(Transaccion.class));
+    }
+
+    @Test
+    void killswitchSobreEscrowYaPausadoPorDenuncia_pasaAPausadoAlerta() {
+        // FASE2-10: la pausa por Alerta es más grave — un kill-switch posterior a
+        // una Denuncia sube el estado, no convive en un nivel menor.
+        Escena e = escena();
+        events.publishEvent(new DenunciaRegistradaEvent("M9", e.reservaId()));
+        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
+        assertThat(t.getLiberarAt()).isNull();
+        verifyNoInteractions(reembolso, liberacion);
+    }
+
+    @Test
+    void denunciaRegistradaSobrePausadoAlerta_noCambiaElEstado() {
+        // FASE2-10: la Denuncia posterior no baja la gravedad de la pausa.
+        Escena e = escena();
+        events.publishEvent(new SesionKillswitchMenorEvent("M3", e.reservaId(), e.tutorId()));
+        events.publishEvent(new DenunciaRegistradaEvent("M9", e.reservaId()));
+
+        Transaccion t = transaccionRepository.findById(e.transaccion().getId()).orElseThrow();
+        assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
+        assertThat(t.getLiberarAt()).isNull();
+        verifyNoInteractions(reembolso, liberacion);
+    }
+
+    // ---------------------------------------------------------------- /FASE2-10
 
     @Test
     void eventoDeReservaSinEscrow_noHaceNada() {
@@ -351,5 +427,9 @@ class EscrowListenersIntegracionTest {
         assertThat(t.getEstado()).isEqualTo(EstadoTransaccion.REEMBOLSADO);
         verify(reembolso).reembolsarTotal(any(Transaccion.class));
         verifyNoInteractions(liberacion);
+    }
+
+    private boolean triggerExiste(UUID transaccionId) throws Exception {
+        return scheduler.checkExists(LiberacionEscrowService.triggerLiberacion(transaccionId));
     }
 }

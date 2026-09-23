@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -618,6 +619,40 @@ class AdminPanelIntegracionTest {
         assertThat(auditoriaDe(
                 "POST /api/admin/financiero/transacciones/" + enEscrow.getId() + "/reembolso-parcial"))
                 .hasSize(1);
+    }
+
+    @Test
+    void reembolsoParcial_sobrePausadoAlerta_422() throws Exception {
+        // FASE2-10: un reembolso parcial manual sobre dinero congelado por una
+        // Alerta de seguridad adelantaría la decisión de M9 — el estado de la
+        // pausa por Alerta no es parcializable (la resuelve el track de seguridad).
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(usuario(TipoUsuario.TUTOR));
+        reserva.setHorario(Instant.now().plusSeconds(3600));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(reserva);
+
+        Transaccion pausadaPorAlerta = new Transaccion();
+        pausadaPorAlerta.setReservaId(reserva.getId());
+        pausadaPorAlerta.setMpPaymentId("mp-alerta-" + CONTADOR.incrementAndGet());
+        pausadaPorAlerta.setMontoBruto(new BigDecimal("15000.00"));
+        pausadaPorAlerta.setComisionPlataforma(new BigDecimal("2250.00"));
+        pausadaPorAlerta.setEstado(EstadoTransaccion.PAUSADO_ALERTA);
+        transaccionRepository.save(pausadaPorAlerta);
+
+        mvc.perform(post("/api/admin/financiero/transacciones/"
+                        + pausadaPorAlerta.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isUnprocessableEntity());
+        verifyNoInteractions(reembolsoParcial);
     }
 
     @Test
