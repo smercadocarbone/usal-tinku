@@ -1,0 +1,290 @@
+[
+  {
+    "rol": "anonimo",
+    "ruta": "/",
+    "final": "/",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/login",
+    "final": "/login",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/registro",
+    "final": "/registro",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/registro/tutor",
+    "final": "/registro/tutor",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/recuperar-password",
+    "final": "/recuperar-password",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/resetear-password?token=x",
+    "final": "/resetear-password?token=x",
+    "errores": [
+      "pageerror: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/buscar",
+    "final": "/login?siguiente=%2Fbuscar",
+    "errores": []
+  },
+  {
+    "rol": "anonimo",
+    "ruta": "/tutores/2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "final": "/login?siguiente=%2Ftutores%2F2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/cuenta",
+    "final": "/cuenta",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/cuenta/reservas",
+    "final": "/cuenta/reservas",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/cuenta/reservas/ee059478-adb3-46aa-9d30-affd544c87df",
+    "final": "/cuenta/reservas/ee059478-adb3-46aa-9d30-affd544c87df",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/cuenta/seguridad",
+    "final": "/cuenta/seguridad",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/cuenta/acceso",
+    "final": "/cuenta/acceso",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/buscar",
+    "final": "/buscar",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/tutores/2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "final": "/tutores/2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "final": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/pagar",
+    "final": "/pagar",
+    "errores": []
+  },
+  {
+    "rol": "estudiante",
+    "ruta": "/aula/c11f62db-cacc-44fd-bc4b-504143229a4f",
+    "final": "/aula/c11f62db-cacc-44fd-bc4b-504143229a4f",
+    "errores": []
+  },
+  {
+    "rol": "adultoResponsable",
+    "ruta": "/cuenta",
+    "final": "/cuenta",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "adultoResponsable",
+    "ruta": "/cuenta/menores",
+    "final": "/cuenta/menores",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "adultoResponsable",
+    "ruta": "/cuenta/reservas",
+    "final": "/cuenta/reservas",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "adultoResponsable",
+    "ruta": "/cuenta/reservas/1499cc3f-d480-4259-b0a0-5383cc6905c5",
+    "final": "/cuenta/reservas/1499cc3f-d480-4259-b0a0-5383cc6905c5",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "HTTP 404 /api/sesiones/por-reserva/1499cc3f-d480-4259-b0a0-5383cc6905c5",
+      "console: Failed to load resource: the server responded with a status of 404 ()"
+    ]
+  },
+  {
+    "rol": "adultoResponsable",
+    "ruta": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "final": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "errores": []
+  },
+  {
+    "rol": "menor",
+    "ruta": "/cuenta",
+    "final": "/cuenta",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "menor",
+    "ruta": "/buscar",
+    "final": "/buscar",
+    "errores": []
+  },
+  {
+    "rol": "menor",
+    "ruta": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "final": "/reservar?tutorId=2d20d99e-10c7-4877-8d34-f9ccc6ef34c3",
+    "errores": []
+  },
+  {
+    "rol": "menor",
+    "ruta": "/cuenta/reservas",
+    "final": "/cuenta/reservas",
+    "errores": []
+  },
+  {
+    "rol": "tutor",
+    "ruta": "/cuenta",
+    "final": "/cuenta",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "tutor",
+    "ruta": "/cuenta/horarios",
+    "final": "/cuenta/horarios",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "HTTP 403 /api/tutores/30224455/franjas",
+      "console: Failed to load resource: the server responded with a status of 403 ()"
+    ]
+  },
+  {
+    "rol": "tutor",
+    "ruta": "/cuenta/materias",
+    "final": "/cuenta/materias",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "tutor",
+    "ruta": "/cuenta/precio",
+    "final": "/cuenta/precio",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "HTTP 404 /api/pagos/precio-referencia/Buenos%20Aires",
+      "console: Failed to load resource: the server responded with a status of 404 ()"
+    ]
+  },
+  {
+    "rol": "tutor",
+    "ruta": "/cuenta/reservas",
+    "final": "/cuenta/reservas",
+    "errores": [
+      "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+      "pageerror: Minified React error #422; visit https://react.dev/errors/422 for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    ]
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin",
+    "final": "/admin/alertas",
+    "errores": []
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/credenciales",
+    "final": "/admin/credenciales",
+    "errores": []
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/alertas",
+    "final": "/admin/alertas",
+    "errores": []
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/denuncias",
+    "final": "/admin/denuncias",
+    "errores": []
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/pagos",
+    "final": "/admin/pagos",
+    "errores": [
+      "HTTP 403 /api/admin/financiero/pagos-fallidos",
+      "console: Failed to load resource: the server responded with a status of 403 ()"
+    ]
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/precios",
+    "final": "/admin/precios",
+    "errores": []
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/salud",
+    "final": "/admin/salud",
+    "errores": [
+      "HTTP 403 /api/admin/financiero/pasarela",
+      "console: Failed to load resource: the server responded with a status of 403 ()"
+    ]
+  },
+  {
+    "rol": "admin",
+    "ruta": "/admin/tickets",
+    "final": "/admin/tickets",
+    "errores": []
+  }
+]
