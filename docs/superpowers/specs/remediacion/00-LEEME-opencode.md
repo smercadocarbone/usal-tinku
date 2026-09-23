@@ -33,7 +33,7 @@ Orden recomendado (hay dependencias reales, no lo cambies sin motivo):
 | 9 | `FASE2-01-disponibilidad-bloques-30.md` | **P1** | **ALTO** (modelo de datos) |
 | 10 | `FASE2-08-ci-matching-e2e.md` | **P3** | Bajo |
 | 11 | `FASE3-01-limites-modulo.md` | FASE 2 mergeada | Medio (refactor) |
-| 12 | `FASE3-02-integridad-esquema.md` | FASE2-01 | Medio |
+| 12 | `FASE3-02-integridad-esquema.md` (sin la parte C, cancelada) | FASE2-01 | Medio |
 | 13 | `FASE3-03-jwt-uuid-credentials-version.md` | — | **ALTO** (auth) |
 | 14 | `FASE3-04-frontend-honestidad.md` | **P6** | Bajo |
 | 15 | `FASE3-05-calificacion-pagador.md` | — | Bajo |
@@ -44,6 +44,16 @@ Branches: todas las tareas de una fase van en su branch de fase —
 `aud/fase2-p1-integridad`, `aud/fase3-p2-calidad`, `aud/fase4-p3-opcional` — con **un commit
 por tarea como mínimo**. Si una tarea es grande (FASE2-01, FASE3-03), sub-branch
 `aud/fase2-<slug>` que se mergea a la de fase.
+
+---
+
+### Convivencia con las specs de la tesis
+
+Hay un segundo paquete, `docs/superpowers/specs/tesis/` (T01–T14), con decisiones de producto de la
+tesis y un piloto que arranca el **27/10/2026**. Los dos paquetes comparten protocolo y guardrails.
+El orden combinado recomendado está en `docs/superpowers/specs/ORDEN-GENERAL.md`. Choques ya
+resueltos: FASE3-02 **no** dropea las tablas del CAP (la tesis las reusa), y el ADR de la baja de
+menor usa el **siguiente** número `ADR-M1` libre (el `ADR-M1-04` es del CAP).
 
 ---
 

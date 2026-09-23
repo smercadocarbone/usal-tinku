@@ -31,7 +31,7 @@ supresión de los datos identificatorios.
 
 ## 3. Archivos
 
-- **Nuevo:** `docs/adr/ADR-M1-04.md` — **escribilo primero**, antes del código (AGENTS §2:
+- **Nuevo:** `docs/adr/ADR-M1-<siguiente>.md` (el próximo número libre: `ADR-M1-04` lo toma el CAP de la tesis, T01, así que probablemente sea `ADR-M1-05`; verificá con `eza docs/adr`) — **escribilo primero**, antes del código (AGENTS §2:
   desviación del comportamiento documentado en FR-ID-014).
 - **Nuevo:** `V<siguiente>__m1_estado_cuenta_baja.sql`
 - `identidad/model/EstadoCuenta.java`, `identidad/service/UsuarioService.java`
@@ -40,7 +40,7 @@ supresión de los datos identificatorios.
 
 ## 4. Pasos
 
-1. **ADR-M1-04:** decisión, fundamento legal (arriba), qué se borra, qué se conserva y por qué,
+1. **ADR-M1-<siguiente>:** decisión, fundamento legal (arriba), qué se borra, qué se conserva y por qué,
    y el riesgo aceptado: el `id` del menor sigue vinculado a sus reservas y a su Adulto Responsable.
 2. **Migración:** el CHECK de `estado_cuenta` de V2 es anónimo (esperado
    `usuarios_estado_cuenta_check`; verificalo con `pg_constraint` como en FASE2-10). La migración
@@ -82,7 +82,7 @@ supresión de los datos identificatorios.
 ## 6. Criterios de aceptación
 
 - Suite verde. `REGISTRO_FINDINGS.md` AUD-017 → `CERRADO`.
-- `Spec_M1` FR-ID-014: nota de que la baja es por anonimización, con referencia a ADR-M1-04.
+- `Spec_M1` FR-ID-014: nota de que la baja es por anonimización, con referencia a ADR-M1-<siguiente>.
 - Tasks: T-AUD-016 tildada en los dos archivos.
 
 ## 7. NO tocar
