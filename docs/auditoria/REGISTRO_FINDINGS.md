@@ -44,5 +44,5 @@
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | ABIERTO | 3 | — | — |
 | AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | 5ddaa1d | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
 | AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
-| AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | ABIERTO | 3 | — | — |
+| AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | EN CURSO | 3 | — | — |
 | AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) | ABIERTO | 4 | — | — |

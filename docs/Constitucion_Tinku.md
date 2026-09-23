@@ -4,16 +4,16 @@
 >
 > **Distinción importante:** los Artículos son principios durables — cambiarlos requiere una enmienda formal. La sección final ("Registro de Decisiones Técnicas Actuales") son elecciones de proveedor/tecnología concretas — pueden cambiar vía un ADR normal, sin tocar este documento.
 
-**Versión:** 2.2
+**Versión:** 2.3
 **Contexto del equipo (informativo, no es una regla en sí misma):** actualmente 1 desarrollador, presupuesto de infraestructura USD 0-100/mes durante desarrollo. Los principios de abajo están pensados para este contexto, pero siguen siendo buena práctica aunque el equipo crezca.
 
 ---
 
 ## Parte I — Principios de Negocio
 
-### Artículo I — La confianza se refuerza con verificación documental, no reemplaza a la ausencia de acceso estatal directo _(enmendado v2.2)_
+### Artículo I — La confianza se refuerza con verificación documental, no reemplaza a la ausencia de acceso estatal directo _(enmendado v2.3)_
 
-Tinku no tiene acceso a un sistema de verificación de antecedentes penales en tiempo real ni a una integración directa con el Registro Nacional de Reincidencia. **El mecanismo de confianza vigente hoy es la Credencial Académica del Tutor, la calificación explícita y el kill-switch — no incluye verificación de antecedentes penales** (ver Historial de Enmiendas, v2.1 → v2.2: el Certificado de Antecedentes Penales, CAP, se exigió entre la enmienda v2.1 y el ADR-M1-02, que lo retiró). Esta es una decisión de producto explícita, no un vacío no considerado: prioriza velocidad de onboarding y ausencia de riesgo de criterio legal sin respaldo profesional, por sobre el nivel de verificación documental que la versión v2.1 de este Artículo exigía. Se acepta expresamente el riesgo de que un Tutor sin antecedentes verificados quede habilitado para sesiones 1:1 con un Menor (ver ADR-M1-02, sección "Riesgo aceptado"). Esta decisión se revisa obligatoriamente (no de forma optativa) antes de salir de piloto cerrado o de escalar el volumen de Tutores activos.
+Tinku no tiene acceso a un sistema de verificación de antecedentes penales en tiempo real ni a una integración directa con el Registro Nacional de Reincidencia. **El mecanismo de confianza para sesiones 1:1 con un Menor incluye el Certificado de Antecedentes Penales (CAP), obligatorio y vigente para que un Tutor quede habilitado a dictar clases a Menores** (ADR-M1-04, que reemplaza a ADR-M1-02). Los Tutores que solo enseñan a adultos no cargan el CAP: su habilitación para matching se apoya en la Credencial Académica, la calificación explícita y el kill-switch, mientras que la habilitación para Menores agrega el CAP `aprobado` con un máximo de vigencia de 12 meses (FR-ID-026, Tabla de Tiempos). El criterio de rechazo fuera de la lista automática (BR-CAP-02) es **fail-closed**: no habilita hasta que la asesoría legal defina la política interna de descalificación (PT1). Se acepta el riesgo residual de un documento adulterado o mal evaluado, mitigado con revisión manual del Admin de Moderación y Seguridad y con la verificación de firma digital del CAP diferida a futuro (T04, PT2).
 
 ### Artículo II — La seguridad del menor prevalece sobre cualquier feature o métrica de negocio
 
@@ -126,6 +126,20 @@ marcados `RETIRADO`), Plan_M1_Identidad_Perfiles.md (sección 2.4 y filas de API
 `RETIRADO`). El texto original se conserva en ambos documentos como registro histórico, no se
 borra.
 
+### Enmienda v2.2 → v2.3 — Artículo I (retorno del CAP, acotado a Menores)
+
+**Motivo:** la tesis (Cap. 6, riesgo R-10) retoma la alternativa que ADR-M1-02 había descartado —
+CAP obligatorio solo para sesiones con Menores — porque resuelve los dos motivos del retiro:
+los Tutores que solo enseñan a adultos se registran sin trámite adicional, y el criterio de
+rechazo de BR-CAP-02 pasa a fail-closed (no habilita) hasta la asesoría legal presupuestada
+(PT1, 2026-09-23). Justificación completa, riesgo residual y alternativas en **ADR-M1-04**.
+**Cambia:** Artículo I (texto de arriba, reemplaza el retiro total de la v2.2 por un retorno
+acotado a la habilitación para Menores).
+**No cambia:** el resto de los Artículos — en particular, el **Artículo II** (la seguridad del menor
+prevalece) sigue vigente sin excepción —, el Registro de Decisiones Técnicas, los NFRs.
+**Bajado a Spec/Plan en:** Spec_M1_Identidad_Perfiles.md (US-6, FR-ID-021 a 026 y BR-CAP-01/02),
+Tabla_Tiempos_Tinku.md (fila "Vigencia del CAP"), Specs M2 y M4 (referencias a FR-ID-026).
+
 ---
 
-_Fin de la Constitución v2.2._
+_Fin de la Constitución v2.3._

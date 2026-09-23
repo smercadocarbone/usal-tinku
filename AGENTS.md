@@ -70,7 +70,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 
 ## 8. Gobernanza de este archivo
 
-Este archivo refleja la Constitución v2.2. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
+Este archivo refleja la Constitución v2.3. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
 
 `docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan juntos o no se actualiza ninguno — la divergencia entre los dos fue AUD-030.
 

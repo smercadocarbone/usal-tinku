@@ -241,7 +241,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-029: `credentials_version` en el JWT para invalidar sesiones al resetear contraseña (AUD-027)
 - [ ] T-AUD-030: Acotar el fallback a `catalogoMock` a 404 estricto o a no-producción (AUD-026)
 - [ ] T-AUD-031: Decidir una calificación pública por sesión (o documentar el sesgo) (AUD-028)
-- [ ] T-AUD-032: Migración que dropee las tablas de CAP (V6) referenciando ADR-M1-02 (AUD-035)
+- [-] T-AUD-032: ~~Migración que dropee las tablas de CAP (V6) referenciando ADR-M1-02 (AUD-035)~~ — **CANCELADA — cancelada por ADR-M1-04**: las tablas de V6 vuelven a usarse (tesis T02). AUD-035 pasa a `EN CURSO` en T01 y lo cierra T02.
 - [ ] T-AUD-033: Dependabot + actualización de Spring Boot (AUD-032)
 - [x] T-AUD-034: Declarar el transcript de M6 como pendiente explícito en los chunks (AUD-024) — hecho por FASE 0 Task 0.4 (`Tasks_Tinku_Chunks.md`) y Task 0.6 (bloqueante real de M6)
 - [ ] T-AUD-035: Middleware de Next.js: verificar firma, o renombrarlo honestamente como redirección de UX (AUD-016)
@@ -261,4 +261,8 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 > El piloto arranca el 27/10/2026 (Sprint 11). Todo lo marcado *Antes del piloto* es
 > bloqueante. Plan y orden: `docs/superpowers/specs/tesis/00-LEEME-tesis.md`.
 
+- [x] T-TES-01: ADR-M1-04 + enmienda Constitución v2.3 — el CAP vuelve como requisito acotado a Tutores de Menores (DT6, spec `T01-cap-adr-enmienda.md`). FR-ID-021 a 025 dejan de estar `RETIRADO`, nuevo FR-ID-026; vuelven BR-CAP-01 y BR-CAP-02 (fail-closed, PT1); fila "Vigencia del CAP" en la Tabla de Tiempos; T-AUD-032 CANCELADA; AUD-035 `EN CURSO`. Solo documentación.
+- [ ] T-TES-02: CAP para tutores de menores: backend (spec `T02-cap-backend.md`) — restaura el modelo/endpoints retirados en `ebf6cc0`, habilidad para Menores separada de `activoParaMatching`, BR-CAP-02 fail-closed (PT1), vencimiento cancela clases con menores y reembolsa (PT10). _Antes de habilitar menores._ Depends on T-TES-01.
+- [ ] T-TES-03: CAP: frontend y moderación (spec `T03-cap-frontend-moderacion.md`) — carga del CAP opcional en el registro, cola de moderación con visor de PDF. _Antes de habilitar menores._ Depends on T-TES-02.
+- [ ] T-TES-04: Verificación automática de la firma digital del CAP (spec `T04-cap-firma-digital.md`) — **OPCIONAL / no ejecutar**: manual en el MVP (PT2), queda como mejora futura. Depends on T-TES-02.
 - [ ] T-TES-05: Comisión de plataforma al **27 %** (DT1, spec `T05-comision-27.md`) — BR-PAG-01, calibrada en el Cap. 5 de la tesis. `application.yml` (`marketplace-fee-percent`) → 27, default de `ComisionPlataforma` → 27, Spec_M5 y textos del frontend que muestren la comisión. _Antes del piloto._

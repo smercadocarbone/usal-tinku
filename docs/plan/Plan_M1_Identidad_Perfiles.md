@@ -64,7 +64,7 @@ _Índice único sugerido: (`adulto_responsable_id`, `menor_id`, `tutor_id`) — 
 | aceptado_at           | timestamp               |                                                                                                    |
 | revocado_at           | timestamp, nullable     | FR-ID-006.                                                                                         |
 
-### `certificados_antecedentes_penales` _(RETIRADO — ver ADR-M1-02 y enmienda Constitución v2.2. La migración `V6` no se elimina, AGENTS.md §7: la tabla queda en la base sin uso. Texto conservado como registro histórico.)_
+### `certificados_antecedentes_penales` _(RETIRADO en v2.2 por ADR-M1-02; **revertido por ADR-M1-04**: el CAP vuelve como requisito acotado a Tutores de Menores, enmienda Constitución v2.3. La migración `V6` no se elimina, AGENTS.md §7: la tabla vuelve a usarse en la tesis T02. Texto conservado como registro histórico.)_
 
 | Campo                   | Tipo                                                                       | Notas                                                                                                                                   |
 | ----------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -119,7 +119,7 @@ Job persistido (Quartz, Constitución Artículo IV/X) que:
 - Al agotar el intento N (N ≤ 3) sin aprobación, calcula `ciclo_espera_hasta = now() + 24h * 2^(ciclo_actual - 1)` (24h, 48h, 96h...).
 - Antes de aceptar una nueva carga, el endpoint valida `now() >= ciclo_espera_hasta`.
 
-### 2.4 Carga y vencimiento del CAP (US-6) _(RETIRADO — ver ADR-M1-02. Texto conservado como registro histórico.)_
+### 2.4 Carga y vencimiento del CAP (US-6) _(RETIRADO en v2.2 por ADR-M1-02; **revertido por ADR-M1-04**: acotado a Tutores de Menores, enmienda Constitución v2.3. Texto conservado como registro histórico.)_
 
 1. Tutor sube el PDF del CAP → estado `pendiente`, mismo backoff de reintentos que la Credencial Académica (reutilizar el job de Chunk M1-E, no duplicar la lógica).
 2. Admin revisa manualmente (interfaz de M8, no de este módulo): si no hay antecedentes → `aprobado`. Si hay un antecedente de BR-CAP-01 → `rechazado`, sin reintento posible para ese motivo. Si hay un antecedente de BR-CAP-02 o un proceso en trámite → `en_revision_legal` (nunca auto-resuelto; requiere decisión manual documentada, ver nota legal pendiente en el Spec).
@@ -142,9 +142,9 @@ Job persistido (Quartz, Constitución Artículo IV/X) que:
 | `POST`   | `/api/autorizaciones`                             | Autorizar un Tutor para un menor.                                                                                                         |
 | `PATCH`  | `/api/autorizaciones/{id}/no-confiable`           | Marcar/desmarcar (FR-ID-009).                                                                                                             |
 | `DELETE` | `/api/usuarios/menores/{id}`                      | Con confirmación explícita si hay reservas futuras (FR-ID-014) — el frontend debe mostrar la advertencia antes de llamar a este endpoint. |
-| `POST`   | `/api/tutores/antecedentes-penales`               | _RETIRADO (ADR-M1-02)._ Carga del CAP (respeta backoff, igual patrón que credenciales).                                                                           |
-| `GET`    | `/api/admin/moderacion/antecedentes-penales`      | _RETIRADO (ADR-M1-02)._ Cola de M8 — pendientes y `en_revision_legal`.                                                                                            |
-| `PATCH`  | `/api/admin/moderacion/antecedentes-penales/{id}` | _RETIRADO (ADR-M1-02)._ Aprobar / rechazar (BR-CAP-01) / marcar `en_revision_legal` (BR-CAP-02), con `categoria_antecedente` en el body para trazabilidad.        |
+| `POST`   | `/api/tutores/antecedentes-penales`               | _RETIRADO (ADR-M1-02; **revertido por ADR-M1-04**: vuelven con T02, acotados a Menores)._ Carga del CAP (respeta backoff, igual patrón que credenciales).                                                                           |
+| `GET`    | `/api/admin/moderacion/antecedentes-penales`      | _RETIRADO (ADR-M1-02; **revertido por ADR-M1-04**: vuelven con T02, acotados a Menores)._ Cola de M8 — pendientes y `en_revision_legal`.                                                                                            |
+| `PATCH`  | `/api/admin/moderacion/antecedentes-penales/{id}` | _RETIRADO (ADR-M1-02; **revertido por ADR-M1-04**: vuelven con T02, acotados a Menores)._ Aprobar / rechazar (BR-CAP-01) / marcar `en_revision_legal` (BR-CAP-02), con `categoria_antecedente` en el body para trazabilidad.        |
 
 ## 4. ADRs de este Módulo (pendientes, no bloquean el resto del Plan)
 
