@@ -10,7 +10,6 @@ import com.tinku.reservas.service.ReservaNoEncontradaException;
 import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -60,11 +59,5 @@ public class PagoExceptionHandler {
         // que MercadoPago reintente y el caso quede visible, nunca confirmado.
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidacion(MethodArgumentNotValidException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error",
-                ex.getBindingResult().getFieldErrors().getFirst().getDefaultMessage()));
     }
 }

@@ -364,6 +364,23 @@ class IdentidadFlujosIntegracionTest {
         assertThat(usuarioPorDni("22222222").getTipo()).isEqualTo(TipoUsuario.TUTOR);
     }
 
+    @Test
+    void registroTutor_sinEmail_responde400ConElCampo() throws Exception {
+        // UX-02 B2: un body inválido le llegaba al usuario como 403 ("no
+        // autorizado") — spring reenviaba MethodArgumentNotValidException a
+        // /error, que no está en el permitAll de SecurityConfig, así que la
+        // cadena de seguridad lo cortaba. Un 400 de validación no puede
+        // convertirse en "no autorizado".
+        mockMvc.perform(multipart("/api/tutores/registro")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroTutorRequest(
+                                "22222222", "Carlos", "Ruiz", LocalDate.of(1980, 1, 1),
+                                null, PASSWORD)))
+                        .file(foto()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").isString())
+                .andExpect(jsonPath("$.campos.email").exists());
+    }
+
     // ------------------------------------------------ US-3: menor (por su Adulto Responsable)
 
     @Test

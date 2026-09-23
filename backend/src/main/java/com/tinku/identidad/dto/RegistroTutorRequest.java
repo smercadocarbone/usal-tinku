@@ -17,7 +17,7 @@ public record RegistroTutorRequest(
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
-        @NotBlank @Email String email,
+        @NotBlank(message = "es obligatorio") @Email(message = "debe ser un email válido") String email,
         @NotBlank @Size(min = 8) String password
 ) {
 }

@@ -30,12 +30,23 @@ export default function RegistroTutorPage() {
   const [fotoDni, setFotoDni] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [erroresCampos, setErroresCampos] = useState<Record<string, string>>({});
   const [bloqueado, setBloqueado] = useState(false);
+
+  function limpiarErrorCampo(campo: string) {
+    setErroresCampos((prev) => {
+      if (!prev[campo]) return prev;
+      const resto = { ...prev };
+      delete resto[campo];
+      return resto;
+    });
+  }
 
   async function onSubmitRegistro(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setEnviando(true);
     setError(null);
+    setErroresCampos({});
 
     if (!fotoDni) {
       setError("Subi una foto de tu DNI.");
@@ -61,20 +72,22 @@ export default function RegistroTutorPage() {
       setPaso(2);
     } catch (err) {
       if (err instanceof ApiError) {
-        switch (err.status) {
-          case 403:
-            setBloqueado(true);
-            break;
-          case 409:
-            setError(err.message || "Ya existe un tutor con ese DNI.");
-            break;
-          case 429:
-            setError(
-              `${err.message} (${err.detalles?.espera_restante_hs ?? "?"} hs de espera).`
-            );
-            break;
-          default:
-            setError(err.message || "No se pudo completar el registro.");
+        if (err.status === 403) {
+          setBloqueado(true);
+        } else if (err.status === 409) {
+          setError(err.message || "Ya existe un tutor con ese DNI.");
+        } else if (err.status === 429) {
+          setError(
+            `${err.message} (${err.detalles?.espera_restante_hs ?? "?"} hs de espera).`
+          );
+        } else {
+          // B2: el backend responde 400 con {"error", "campos"} — el error de
+          // cada campo vive junto a su input.
+          const campos = err.detalles?.campos;
+          if (campos && typeof campos === "object") {
+            setErroresCampos(campos as Record<string, string>);
+          }
+          setError(err.message || "No se pudo completar el registro.");
         }
       } else {
         setError("No se pudo completar el registro. Intenta de nuevo.");
@@ -115,7 +128,11 @@ export default function RegistroTutorPage() {
               inputMode="numeric"
               required
               value={dniDeclarado}
-              onChange={(e) => setDniDeclarado(e.target.value)}
+              error={erroresCampos.dniDeclarado}
+              onChange={(e) => {
+                setDniDeclarado(e.target.value);
+                limpiarErrorCampo("dniDeclarado");
+              }}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -126,7 +143,11 @@ export default function RegistroTutorPage() {
                 autoComplete="given-name"
                 required
                 value={nombreDeclarado}
-                onChange={(e) => setNombreDeclarado(e.target.value)}
+                error={erroresCampos.nombreDeclarado}
+                onChange={(e) => {
+                  setNombreDeclarado(e.target.value);
+                  limpiarErrorCampo("nombreDeclarado");
+                }}
               />
 
               <Campo
@@ -136,7 +157,11 @@ export default function RegistroTutorPage() {
                 autoComplete="family-name"
                 required
                 value={apellidoDeclarado}
-                onChange={(e) => setApellidoDeclarado(e.target.value)}
+                error={erroresCampos.apellidoDeclarado}
+                onChange={(e) => {
+                  setApellidoDeclarado(e.target.value);
+                  limpiarErrorCampo("apellidoDeclarado");
+                }}
               />
             </div>
 
@@ -147,7 +172,11 @@ export default function RegistroTutorPage() {
               autoComplete="bday"
               required
               value={fechaNacimientoDeclarada}
-              onChange={(e) => setFechaNacimientoDeclarada(e.target.value)}
+              error={erroresCampos.fechaNacimientoDeclarada}
+              onChange={(e) => {
+                setFechaNacimientoDeclarada(e.target.value);
+                limpiarErrorCampo("fechaNacimientoDeclarada");
+              }}
             />
 
             <Campo
@@ -157,7 +186,11 @@ export default function RegistroTutorPage() {
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              error={erroresCampos.email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                limpiarErrorCampo("email");
+              }}
             />
 
             <Campo
@@ -168,7 +201,11 @@ export default function RegistroTutorPage() {
               required
               minLength={8}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              error={erroresCampos.password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                limpiarErrorCampo("password");
+              }}
             />
 
             <Campo

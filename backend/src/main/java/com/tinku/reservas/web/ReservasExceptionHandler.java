@@ -24,7 +24,6 @@ import com.tinku.reservas.service.VentanaMinimaException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -65,12 +64,6 @@ public class ReservasExceptionHandler {
     @ExceptionHandler(SolicitudDuplicadaException.class)
     public ResponseEntity<Map<String, String>> handleDuplicada(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidacion(MethodArgumentNotValidException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error",
-                ex.getBindingResult().getFieldErrors().getFirst().getDefaultMessage()));
     }
 
     /** FR-RES-007: la constraint EXCLUDE de V9 ganó la condición de carrera. */
