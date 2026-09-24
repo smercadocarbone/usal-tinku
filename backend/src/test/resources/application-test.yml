@@ -4,6 +4,16 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  quartz:
+    properties:
+      org:
+        quartz:
+          scheduler:
+            # Quartz duerme hasta idleWaitTime (default 30 s) cuando no ve triggers. Si el aviso
+            # de "hay un trigger nuevo" le llega antes del commit que lo guarda, no lo ve y vuelve
+            # a dormir 23-30 s: los tests que esperan un job real se quedaban sin tiempo
+            # (LiberacionDenunciaPausaIntegracionTest, run 36070120076). 1 s acota esa espera.
+            idleWaitTime: 1000
 
 tinku:
   # FASE2-02: la suite hace cientos de registros/logins desde 127.0.0.1. Límites
