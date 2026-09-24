@@ -154,6 +154,12 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 
 ---
 
+## FASE 2 — Remediación de auditoría (sessiones/branches por spec)
+
+- [x] **Chunk FASE2-06** — Baja de menor por anonimización, no DELETE (AUD-017, T-AUD-016, spec `superpowers/specs/remediacion/FASE2-06-baja-menor-anonimizacion.md`) — _branch `aud/fase2-baja-menor`. Riesgo medio (datos de menores, Ley 25.326). Cerrado 2026-09-24: ADR-M1-05 (decisión D7), migración V27 (`estado_cuenta` admite `BAJA`, se dropea el CHECK anónimo de V2), `darDeBajaMenor` anonimiza (dni determinístico `BAJA-` + 14 chars del UUID, nombre/apellido/email/fecha/password reemplazados, `activo_para_matching` false) y `listarMenores` excluye `BAJA`. RED: 500 por FK `reservas_beneficiario_id_fkey` → GREEN: suite 444 run/0 fail (440 previos + 4 de `BajaMenorAnonimizacionIntegracionTest`). PARAR reportado: no se cancelan las reservas futuras confirmadas — no existe método de cancelación por sistema que cubra el rol `beneficiario` del menor (ver spec §4)._
+
+---
+
 ## Nota de auditoría — 2026-09-18
 
 Este archivo y `README.md` estaban desactualizados desde ~72 commits atrás (última edición real

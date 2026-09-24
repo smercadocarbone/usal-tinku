@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Base64;
 import java.util.UUID;
+import java.security.SecureRandom;
 
 /**
  * Servicio de alta de Usuario adulto. Implementa el flujo de
@@ -40,6 +42,10 @@ public class UsuarioService {
     private static final int EDAD_MINIMA_MENOR = 6;
     private static final int MAX_MENORES_POR_ADULTO = 5; // FR-ID-013
     private static final String VERSION_CONSENTIMIENTO_DEFAULT = "v1";
+
+    // FASE2-06 / AUD-017 (ADR-M1-05): fecha fija de la anonimización. La tabla
+    // no tiene CHECK de edad sobre fecha_nacimiento (solo NOT NULL en V2).
+    private static final LocalDate FECHA_ANONIMIZADA = LocalDate.of(1900, 1, 1);
 
     private final UsuarioRepository usuarioRepository;
     private final OcrService ocrService;
@@ -262,17 +268,23 @@ public class UsuarioService {
 
     /** Menores a cargo del Adulto Responsable autenticado (auditoría 2026-09-18,
      *  ver darDeBajaMenor arriba). Nunca de OTRO Adulto Responsable — el filtro
-     *  de pertenencia es el propio parámetro de la consulta, no un chequeo aparte. */
+     *  de pertenencia es el propio parámetro de la consulta, no un chequeo aparte.
+     *  FASE2-06 / AUD-017: excluye menores en BAJA (anonimizados). */
     public java.util.List<Usuario> listarMenores(Usuario adultoResponsable) {
-        return usuarioRepository.findByAdultoResponsableIdAndTipoOrderByNombre(
-                adultoResponsable.getId(), TipoUsuario.MENOR);
+        return usuarioRepository.findByAdultoResponsableIdAndTipoAndEstadoCuentaNotOrderByNombre(
+                adultoResponsable.getId(), TipoUsuario.MENOR, EstadoCuenta.BAJA);
     }
 
     /**
      * Baja definitiva de un perfil de MENOR, solo por su Adulto Responsable
      * (FR-ID-014, T-M1-12). Si el menor tiene reservas futuras, exige
-     * confirmación explícita (si la tiene, se procede igualmente). Se elimina
-     * el menor y sus datos dependientes (autorizaciones y consentimientos).
+     * confirmación explícita (si la tiene, se procede igualmente).
+     *
+     * FASE2-06 / AUD-017 (ADR-M1-05): ya NO se borra la fila — se anonimiza.
+     * Las FKs de reservas/seguridad/reputacion siguen apuntando al `id`, así
+     * que el DELETE era un 500 en cuanto el menor tuvo actividad real. La Ley
+     * 25.326 exige supresión de los datos identificatorios, no la destrucción
+     * de los registros contables que los referencian.
      */
     @Transactional
     public void darDeBajaMenor(Usuario adultoResponsable, UUID menorId, boolean confirmarBaja) {
@@ -293,9 +305,36 @@ public class UsuarioService {
             throw new ReservasFuturasPendientesException(reservasFuturas);
         }
 
+        // FASE2-06: PARAR documentado (spec §4) — las reservas FUTURAS que el
+        // AR confirmó no se cancelan acá. No existe un método de cancelación por
+        // sistema que cubra el rol @beneficiario de un menor:
+        // ReservaService.cancelarFuturasPorSancion solo opera sobre tutor_id y
+        // pagador_id (motivo SANCION); un menor nunca es ninguno de los dos
+        // (Artículo II: no paga, no dicta). Inventar una cancelación acá
+        // saltearía el reembolso de M5 — se reportó como bloqueo.
+
+        // Vínculos de confianza operativos del menor: se siguen borrando (FK limpia).
         autorizacionRepo.deleteByMenorId(menorId);
         consentimientoRepo.deleteByMenorId(menorId);
-        usuarioRepository.delete(menor);
+
+        // Anonimización determinística (ADR-M1-05) — el DNI original queda irrecuperable.
+        menor.setDni(dniAnonimo(menor.getId()));
+        menor.setNombre("Perfil");
+        menor.setApellido("dado de baja");
+        menor.setEmail(null);
+        menor.setFechaNacimiento(FECHA_ANONIMIZADA);
+        byte[] secreto = new byte[32];
+        new SecureRandom().nextBytes(secreto);
+        menor.setPasswordHash(passwordEncoder.encode(Base64.getEncoder().encodeToString(secreto)));
+        menor.setEstadoCuenta(EstadoCuenta.BAJA);
+        menor.setActivoParaMatching(false);
+        usuarioRepository.save(menor);
+    }
+
+    /** "BAJA-" + primeros 14 chars del UUID sin guiones: determinístico y único
+     *  por menor, respeta VARCHAR(20) UNIQUE de V2 (ADR-M1-05). */
+    private String dniAnonimo(UUID id) {
+        return "BAJA-" + id.toString().replace("-", "").substring(0, 14);
     }
 
     /**
