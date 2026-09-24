@@ -33,6 +33,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -90,6 +91,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
+// T-TES-10/DT7: confirma pagos de Reservas con beneficiario menor; la flag en
+// true mantiene el escenario activo (el corte por defecto lo cubre
+// GateMenoresPilotoIntegracionTest).
+@TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class PagosWebhookIntegracionTest {
 
     @Container

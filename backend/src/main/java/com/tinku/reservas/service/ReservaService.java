@@ -75,6 +75,7 @@ public class ReservaService {
     private final ReputacionBloqueoProveedor reputacionBloqueo;
     private final ApplicationEventPublisher events;
     private final Scheduler scheduler;
+    private final PoliticaSesionesMenores politicaMenores;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
@@ -84,7 +85,8 @@ public class ReservaService {
                           TarifaProveedor tarifaProveedor,
                           ReputacionBloqueoProveedor reputacionBloqueo,
                           ApplicationEventPublisher events,
-                          Scheduler scheduler) {
+                          Scheduler scheduler,
+                          PoliticaSesionesMenores politicaMenores) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -94,6 +96,7 @@ public class ReservaService {
         this.reputacionBloqueo = reputacionBloqueo;
         this.events = events;
         this.scheduler = scheduler;
+        this.politicaMenores = politicaMenores;
     }
 
     /**
@@ -339,6 +342,11 @@ public class ReservaService {
     }
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor, Instant horario) {
+        // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
+        // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
+        if (beneficiario.getTipo() == TipoUsuario.MENOR) {
+            politicaMenores.validarSesionesHabilitadas();
+        }
         // FR-REP-006 (T-M4-10): Tutor con calificación pendiente no toma reservas nuevas.
         if (reputacionBloqueo.tutoresConCalificacionPendiente().contains(tutor.getId())) {
             throw new TutorPendienteCalificacionException();

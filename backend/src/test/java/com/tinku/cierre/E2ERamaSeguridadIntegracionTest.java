@@ -49,6 +49,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -96,6 +97,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
+// T-TES-10/DT7: la rama de seguridad incluye la Solicitud del menor y su
+// aprobación; se corre con la flag en true para no deshabilitar esa rama del
+// E2E (el corte por defecto lo cubre GateMenoresPilotoIntegracionTest).
+// La flag solo se abre con T-M3-06 y T02 cerradas (AGENTS §3).
+@TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class E2ERamaSeguridadIntegracionTest {
 
     @Container
@@ -354,7 +360,7 @@ class E2ERamaSeguridadIntegracionTest {
                 .andExpect(status().isOk());
 
         // Corte directo + Alerta rama menor + suspensión preventiva + escrow en pausa
-        // (ADR-M3-02: el reembolso espera a la resolución de la Alerta).
+        // por Alerta (ADR-M3-02 + FASE2-10: el reembolso espera la resolución de la Alerta).
         SesionAprendizaje cortada = sesionRepository.findById(sesionActual).orElseThrow();
         assertThat(cortada.getEstado()).isEqualTo(SesionAprendizaje.ESTADO_FINALIZADA);
         assertThat(reservaRepository.findById(reservaActual).orElseThrow().getEstado())
@@ -365,7 +371,7 @@ class E2ERamaSeguridadIntegracionTest {
         assertThat(alerta.getEstado()).isEqualTo(AlertaSeguridad.ESTADO_PENDIENTE_REVISION);
         assertThat(usuarioPorDni(dniTutor).isActivoParaMatching()).isFalse();
         assertThat(transaccionRepository.findByReservaId(reservaActual).orElseThrow().getEstado())
-                .isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+                .isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
 
         // M8 — la Alerta entra a la cola de moderación (admin de moderación real).
         Usuario admin = adminModeracion();

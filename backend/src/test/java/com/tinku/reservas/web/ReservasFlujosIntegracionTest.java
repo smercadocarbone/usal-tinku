@@ -37,6 +37,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -85,6 +86,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
+// T-TES-10/DT7: ejercita el flujo existente de sesiones con menores (US-2/US-3,
+// FR-RES-003), que el gate del piloto bloquea salvo que la flag esté en true.
+// La flag solo se abre con T-M3-06 y T02 cerradas (AGENTS §3) — ver el test
+// crearReserva_beneficiarioMenor_conFlagTrue_ok y GateMenoresPilotoIntegracionTest.
+@TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class ReservasFlujosIntegracionTest {
 
     @Container
@@ -634,6 +640,18 @@ class ReservasFlujosIntegracionTest {
         assertThat(r.getBeneficiario().getId()).isEqualTo(e.menorId());
         // El pagador es el AR del menor (mismo que creó el escenario).
         assertThat(r.getPagador().getId()).isEqualTo(usuarioPorDni(e.dniAr()).getId());
+    }
+
+    @Test
+    void crearReserva_beneficiarioMenor_conFlagTrue_ok() throws Exception {
+        // T-TES-10: con la flag en true (habilitada vía @TestPropertySource en
+        // esta clase) el gate deja pasar el flujo existente FR-RES-003.
+        Escenario e = escenarioBase();
+
+        UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
+
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getBeneficiario().getId())
+                .isEqualTo(e.menorId());
     }
 
     @Test

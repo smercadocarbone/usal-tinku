@@ -250,11 +250,13 @@ public class EscrowService {
     /** {@code sesion.killswitch_menor}: el corte es inmediato, la plata no
      * (ADR-M3-02, AUD-005). El escrow se pausa hasta que M9 resuelva la Alerta
      * ({@link #onAlertaResuelta}); antes se reembolsaba acá, sin revisión, y eso
-     * premiaba disparar el kill-switch al final de una clase ya dada. */
+     * premiaba disparar el kill-switch al final de una clase ya dada. FASE2-10: la
+     * pausa es {@code pausado_alerta}, separada de la de Denuncia y con prioridad
+     * sobre ella (ver {@link #pausarPorAlerta}). */
     @EventListener
     @Transactional
     public void onSesionKillswitchMenor(SesionKillswitchMenorEvent evento) {
-        pausarSiRetenida(evento.getReservaId());
+        pausarPorAlerta(evento.getReservaId());
     }
 
     /** {@code sesion.killswitch_adultos}: igual que la rama menor (ADR-M3-02). El
@@ -263,18 +265,17 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onSesionKillswitchAdultos(SesionKillswitchAdultosEvent evento) {
-        pausarSiRetenida(evento.getReservaId());
+        pausarPorAlerta(evento.getReservaId());
     }
 
     /** {@code alerta.resuelta} (M9 → M5, ADR-M3-02): cierra la pausa del kill-switch
      * con reembolso total al Estudiante, sea {@code reactivar} o {@code sancionar}.
-     * Si la transacción ya no está en pausa (una Alerta previa a ADR-M3-02, o una
-     * Denuncia sobre la misma sesión que se resolvió antes), es no-op. */
+     * FASE2-10 (AUD-005): solo actúa sobre {@code pausado_alerta}. */
     @EventListener
     @Transactional
     public void onAlertaResuelta(AlertaResueltaEvent evento) {
         transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
-            if (t.getEstado() != EstadoTransaccion.PAUSADO_DENUNCIA) {
+            if (t.getEstado() != EstadoTransaccion.PAUSADO_ALERTA) {
                 return;
             }
             t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
@@ -303,6 +304,25 @@ public class EscrowService {
         });
     }
 
+    /** FASE2-10 (AUD-005, riesgo abierto aceptado en ADR-M3-02): pausa por ALERTA
+     * de seguridad, el track del menor (Artículo II) — manda sobre la Denuncia:
+     * aparta el escrow en {@code pausado_alerta} si está {@code retenido_escrow}
+     * O ya {@code pausado_denuncia}, y cancela la ventana de liberación. Sobre la
+     * pausa de Alerta solo cierra {@link #onAlertaResuelta}; una Denuncia
+     * posterior ni lo re-baja ni una resolución de Denuncia lo destraba
+     * ({@link #onDenunciaResuelta}). */
+    private void pausarPorAlerta(UUID reservaId) {
+        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+            if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
+                    || t.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA) {
+                t.setEstado(EstadoTransaccion.PAUSADO_ALERTA);
+                t.setLiberarAt(null);
+                transaccionRepo.save(t);
+                liberacionEscrow.cancelarLiberacion(t.getId());
+            }
+        });
+    }
+
     /** {@code denuncia.resuelta} (Spec_M5 §2, T-M9-04): cierra la pausa del
      * escrow de ESA sesión puntual (FR-SEC-011 — cada denuncia libera su propio
      * escrow, sin esperar a denuncias cruzadas). Todas las ramas vuelven
@@ -312,7 +332,9 @@ public class EscrowService {
      * 24hs (FR-SEC-011); fundada → se paga el trabajo ya realizado al Tutor
      * (FR-PAG-011); escalada → reembolso total al Estudiante (FR-PAG-009). Un
      * evento sin {@code reservaId} (denuncia de perfil) o sin resolución
-     * (contrato mínimo del stub) no mueve dinero. */
+     * (contrato mínimo del stub) no mueve dinero. FASE2-10: sobre una pausa por
+     * ALERTA ({@code pausado_alerta}) es no-op con log — la Alerta de seguridad
+     * manda y la destraba {@link #onAlertaResuelta}. */
     @EventListener
     @Transactional
     public void onDenunciaResuelta(DenunciaResueltaEvent evento) {
@@ -322,6 +344,12 @@ public class EscrowService {
             return;
         }
         transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+            if (t.getEstado() == EstadoTransaccion.PAUSADO_ALERTA) {
+                LOG.info("Denuncia {} resuelta como {} sin tocar el escrow: la reserva {} sigue "
+                        + "pausada por Alerta de seguridad (FASE2-10)", evento.getDenunciaId(),
+                        resolucion, reservaId);
+                return;
+            }
             if (t.getEstado() != EstadoTransaccion.PAUSADO_DENUNCIA) {
                 return; // ya resuelta por otra vía → no-op
             }

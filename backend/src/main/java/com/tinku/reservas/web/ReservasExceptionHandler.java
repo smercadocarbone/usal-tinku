@@ -13,6 +13,7 @@ import com.tinku.reservas.service.SoloAdultoResponsableException;
 import com.tinku.reservas.service.SoloMenorException;
 import com.tinku.reservas.service.SoloPagadorReservaException;
 import com.tinku.reservas.service.SoloTutorException;
+import com.tinku.reservas.service.SesionesConMenoresDeshabilitadasException;
 import com.tinku.reservas.service.SolicitudDuplicadaException;
 import com.tinku.reservas.service.SolicitudMenorNoPerteneceException;
 import com.tinku.reservas.service.SolicitudNoPendienteException;
@@ -61,8 +62,9 @@ public class ReservasExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(SolicitudDuplicadaException.class)
-    public ResponseEntity<Map<String, String>> handleDuplicada(RuntimeException ex) {
+    /** 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate del piloto (T-TES-10). */
+    @ExceptionHandler({SolicitudDuplicadaException.class, SesionesConMenoresDeshabilitadasException.class})
+    public ResponseEntity<Map<String, String>> handleConflicto(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
 
