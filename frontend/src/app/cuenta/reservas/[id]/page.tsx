@@ -68,21 +68,26 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
       setCargando(false);
     }
 
-    // Un 404 acá es el caso normal (la Reserva nunca se confirmó, o el
-    // job de T-5 no creó la Sesión todavía) — no es un error para mostrar.
+    // Estados que por construcción no pueden tener Sesión: no pedirla (B11) —
+    // un 404 esperado en cada carga de una reserva cancelada no es un error.
+    // Para confirmada en adelante, un 404 puntual SÍ es el caso normal (job
+    // T-5 que todavía no creó la Sesión), y se trata igual: nada que mostrar.
+    const ESTADOS_SIN_SESION = new Set(["pendiente_pago", "cancelada"]);
     let sesionActual: SesionInfo | null = null;
-    try {
-      sesionActual = await getSesionPorReserva(params.id);
-      setSesion(sesionActual);
-    } catch {
-      setSesion(null);
-    }
-
-    if (sesionActual) {
+    if (!ESTADOS_SIN_SESION.has(r.estado)) {
       try {
-        setResumen(await getResumenSesion(sesionActual.id));
+        sesionActual = await getSesionPorReserva(params.id);
+        setSesion(sesionActual);
       } catch {
-        setResumen(null);
+        setSesion(null);
+      }
+
+      if (sesionActual) {
+        try {
+          setResumen(await getResumenSesion(sesionActual.id));
+        } catch {
+          setResumen(null);
+        }
       }
     }
   }
@@ -105,6 +110,9 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
     try {
       const actualizada = await api.post<Reserva>(`/api/reservas/${reserva.id}/cancelar`);
       setReserva(actualizada);
+      // Al cancelar ya no hay clase a la que entrar ni sesión que calificar.
+      setSesion(null);
+      setResumen(null);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

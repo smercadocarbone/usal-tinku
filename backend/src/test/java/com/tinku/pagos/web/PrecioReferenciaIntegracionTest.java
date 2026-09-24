@@ -191,15 +191,15 @@ class PrecioReferenciaIntegracionTest {
     }
 
     @Test
-    void us6_provinciaSinReferencia_404_noVinculante() throws Exception {
+    void us6_provinciaSinReferencia_204_sinCuerpo() throws Exception {
         String token = registrarTutorYToken(dniUnico());
 
         // FR-PAG-005: la sugerencia es no vinculante y opcional — sin fila, el
-        // Tutor configura su precio igual (404 con mensaje claro, no falla).
+        // Tutor configura su precio igual. 204 (estado vacío esperado, B11),
+        // no un 404 que ensucia la red de cada /cuenta/precio.
         mockMvc.perform(get("/api/pagos/precio-referencia/{provincia}", "Chubut")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").isNotEmpty());
+                .andExpect(status().isNoContent());
     }
 
     @Test

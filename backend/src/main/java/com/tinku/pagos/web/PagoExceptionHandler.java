@@ -41,10 +41,12 @@ public class PagoExceptionHandler {
     }
 
     @ExceptionHandler(ProvinciaSinPrecioReferenciaException.class)
-    public ResponseEntity<Map<String, String>> handleProvinciaSinReferencia(RuntimeException ex) {
+    public ResponseEntity<Void> handleProvinciaSinReferencia(RuntimeException ex) {
         // La sugerencia es no vinculante y opcional (FR-PAG-005): sin fila para la
-        // provincia, el Tutor configura su precio igual — 404, no un error grave.
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+        // provincia, el Tutor configura su precio igual. Es un estado vacío
+        // esperado, no un error (B11) — 204 sin cuerpo para no pintar un 4xx en
+        // la red cada vez que alguien abre /cuenta/precio sin referencia.
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler({MercadoPagoNoConfiguradoException.class, MercadoPagoNoDisponibleException.class})

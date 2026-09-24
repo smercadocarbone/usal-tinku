@@ -87,7 +87,14 @@ export default function TabPrecio() {
       .get<ReferenciaRegional>(`/api/pagos/precio-referencia/${encodeURIComponent(provincia)}`)
       .then((r) => {
         if (!activo) return;
-        setReferencia(r);
+        if (r) {
+          setReferencia(r);
+        } else {
+          // 204 = sin referencia para la provincia (B11): estado vacío
+          // esperado, no un error.
+          setReferencia(null);
+          setReferenciaAusente(true);
+        }
       })
       .catch(() => {
         if (!activo) return;

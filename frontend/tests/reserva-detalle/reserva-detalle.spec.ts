@@ -244,9 +244,16 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
   );
 
   test(
-    "una reserva cancelada muestra el motivo en lenguaje humano, no el enum (B6)",
+    "una reserva cancelada muestra el motivo en lenguaje humano y no pide la sesión (B6, B11)",
     { tag: ["@e2e", "@RESERVA-DETALLE-E2E-004"] },
     async ({ page }) => {
+      const llamadasALaSesion: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes("/api/sesiones/por-reserva/")) {
+          llamadasALaSesion.push(req.url());
+        }
+      });
+
       await mockApi(page, {
         [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, {
           ...reserva("cancelada"),
@@ -264,6 +271,8 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
         page.getByText("No se completó el pago a tiempo")
       ).toBeVisible();
       await expect(page.getByText("timeout_pago")).toHaveCount(0);
+      // B11: una reserva cancelada no puede tener sesión — ni se pregunta.
+      expect(llamadasALaSesion).toHaveLength(0);
     }
   );
 });
