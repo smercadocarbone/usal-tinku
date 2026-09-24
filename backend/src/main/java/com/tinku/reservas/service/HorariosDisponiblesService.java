@@ -31,6 +31,9 @@ public class HorariosDisponiblesService {
     /** FR-RES-013 — no se reserva a menos de 15 min del inicio (Tabla_Tiempos_Tinku.md). */
     private static final Duration VENTANA_MINIMA = Duration.ofMinutes(15);
 
+    /** D6: la agenda se parte en bloques de 30 minutos. */
+    private static final int PASO_MINUTOS = 30;
+
     private final FranjaService franjaService;
     private final ReservaRepository reservaRepo;
 
@@ -40,8 +43,9 @@ public class HorariosDisponiblesService {
     }
 
     public List<TimeSlotResponse> horariosDelDia(UUID tutorId, LocalDate fecha, int duracionMinutos) {
-        if (duracionMinutos <= 0) {
-            throw new DuracionMinutosInvalidaException("duracionMinutos debe ser positivo.");
+        if (!FranjaService.duracionValida(duracionMinutos)) {
+            throw new DuracionMinutosInvalidaException(
+                    "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
         }
         List<FranjaDisponibilidad> franjas = franjaService.franjasQueAplicanA(tutorId, fecha);
         if (franjas.isEmpty()) {
@@ -63,27 +67,21 @@ public class HorariosDisponiblesService {
                 Instant finBloque = inicioBloque.plus(duracion);
 
                 boolean ocupado = reservasDelDia.stream()
-                        .anyMatch(r -> seSuperponen(r, inicioBloque, finBloque, tutorId, duracion));
+                        .anyMatch(r -> seSuperponen(r, inicioBloque, finBloque));
                 boolean dentroDeVentanaMinima = ahora.plus(VENTANA_MINIMA).isAfter(inicioBloque);
 
                 slots.add(new TimeSlotResponse(inicioBloque.toString(), inicioBloque.toString(),
                         finBloque.toString(), !ocupado && !dentroDeVentanaMinima));
-                cursor = cursor.plusMinutes(duracionMinutos);
+                // D6: los inicios van cada 30 min aunque el bloque pedido sea más largo.
+                cursor = cursor.plusMinutes(PASO_MINUTOS);
             }
         }
         return slots;
     }
 
-    /** La duración real de una Reserva existente es la de la franja que la
-     *  originó (FR-RES-023); si esa franja ya no existe (el Tutor la borró
-     *  después), se aproxima con el tamaño de bloque pedido — conservador:
-     *  sigue marcando el horario de inicio como ocupado, nunca lo libera. */
-    private boolean seSuperponen(Reserva r, Instant inicioBloque, Instant finBloque,
-                                 UUID tutorId, Duration duracionPorDefecto) {
-        Instant inicioReserva = r.getHorario();
-        Duration duracionReserva = franjaService.duracionFranjaQueCubre(tutorId, inicioReserva)
-                .orElse(duracionPorDefecto);
-        Instant finReserva = inicioReserva.plus(duracionReserva);
-        return inicioBloque.isBefore(finReserva) && inicioReserva.isBefore(finBloque);
+    /** Mismo criterio que la EXCLUDE de V30 (AUD-009): rangos semiabiertos
+     *  {@code [horario, horarioFin)} — las contiguas no se superponen. */
+    private boolean seSuperponen(Reserva r, Instant inicioBloque, Instant finBloque) {
+        return inicioBloque.isBefore(r.getHorarioFin()) && r.getHorario().isBefore(finBloque);
     }
 }

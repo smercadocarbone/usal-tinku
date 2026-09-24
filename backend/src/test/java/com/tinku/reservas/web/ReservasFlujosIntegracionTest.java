@@ -807,6 +807,47 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
+    void horariosDelDia_bloqueDe60_ofreceInicioCada30Minutos() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", dia.toString())
+                        .param("duracionMinutos", "60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].startTime").value(a(dia, 10, 0).toString()))
+                .andExpect(jsonPath("$[1].startTime").value(a(dia, 10, 30).toString()))
+                .andExpect(jsonPath("$[2].startTime").value(a(dia, 11, 0).toString()));
+
+        // Una reserva de 30 min a las 10:30 ocupa [10:30, 11:00): tapa los bloques de
+        // 60 que empiezan 10:00 y 10:30, pero el de 11:00 queda libre (contigua).
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 30), 30).andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", dia.toString())
+                        .param("duracionMinutos", "60"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].isAvailable").value(false))
+                .andExpect(jsonPath("$[1].isAvailable").value(false))
+                .andExpect(jsonPath("$[2].isAvailable").value(true));
+    }
+
+    @Test
+    void horariosDelDia_duracionNoMultiploDe30_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+
+        mockMvc.perform(get("/api/tutores/{id}/horarios", e.tutorId())
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
+                        .param("fecha", e.fecha().toString())
+                        .param("duracionMinutos", "45"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
     void frRes001_estudianteAdulto_reservaParaSiMismo() throws Exception {
         EscenarioAdulto e = escenarioAdulto();
 

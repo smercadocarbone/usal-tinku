@@ -99,9 +99,9 @@ public class FranjaService {
     }
 
     /**
-     * Devuelve la franja activa que cubre {@code horario}, si existe. La
-     * reutilizan ReservaService/SolicitudService (decisión booleana) y M3
-     * (T-M3-03/05: la duración de la franja define el fin agendado).
+     * Devuelve la franja activa que cubre {@code horario}, si existe. Base de
+     * {@link #franjaQueContiene} (desde AUD-020 la duración sale de la Reserva,
+     * no de la franja).
      */
     public Optional<FranjaDisponibilidad> franjaQueCubre(UUID tutorId, Instant horario) {
         LocalDateTime punto = horario.atZone(ReservasZonaHoraria.ZONA).toLocalDateTime();
@@ -109,15 +109,6 @@ public class FranjaService {
         return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
                 .filter(f -> cubre(f, diaSemana, punto))
                 .findFirst();
-    }
-
-    /**
-     * Duración planificada de la franja que cubre {@code horario} — el job de
-     * corte automático (T-M3-05) se programa en {@code horario + duración + 5min}.
-     */
-    public Optional<Duration> duracionFranjaQueCubre(UUID tutorId, Instant horario) {
-        return franjaQueCubre(tutorId, horario)
-                .map(f -> Duration.between(f.getHoraInicio(), f.getHoraFin()));
     }
 
     /** T-M4-12: franjas activas del Tutor que aplican a una fecha del calendario
