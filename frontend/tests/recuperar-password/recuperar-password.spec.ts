@@ -4,23 +4,25 @@ import { mockApi, jsonRoute } from "../helpers";
 
 test.describe("Recuperar contraseña — solicitud", () => {
   test(
-    "el flujo automático está deshabilitado y no promete un email que no sale (B9)",
+    "pide el DNI, lo manda al backend y no confirma si el DNI existe (FASE2-03, FR-ID-018)",
     { tag: ["@critical", "@e2e", "@RECUPERAR-PASSWORD-E2E-001"] },
     async ({ page }) => {
+      let cuerpo: unknown = null;
       await mockApi(page, {
-        "POST /api/usuarios/recuperar-password": (_route) => {
-          throw new Error("El flujo deshabilitado no debe llamar al backend");
+        "POST /api/usuarios/recuperar-password": async (route) => {
+          cuerpo = route.request().postDataJSON();
+          await route.fulfill({ status: 204, body: "" });
         },
       });
 
       const recuperar = new RecuperarPasswordPage(page);
       await recuperar.goto();
+      await page.getByLabel("DNI", { exact: true }).fill("30123456");
+      await page.getByRole("button", { name: "Mandarme el enlace" }).click();
 
-      await expect(
-        page.getByText("Todavía no mandamos emails de recuperación")
-      ).toBeVisible();
-      await expect(page.getByLabel("DNI", { exact: true })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Enviar enlace de recuperación" })).toHaveCount(0);
+      await expect(page.getByText("Revisá tu email")).toBeVisible();
+      await expect(page.getByText(/Si ese DNI tiene una cuenta con email/)).toBeVisible();
+      expect(cuerpo).toMatchObject({ dni: "30123456" });
     }
   );
 });

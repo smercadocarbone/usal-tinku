@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { clearSession } from "@/lib/auth";
+import { getNoLeidas } from "@/lib/notificaciones";
 import { useSesion } from "@/lib/useSesion";
 import { usePerfilPropio, useRolAdmin } from "@/lib/usePerfil";
 import { itemActivo, navegacionPorRol } from "@/lib/navegacion";
@@ -108,6 +110,7 @@ function CabeceraUsuario() {
           })}
         </ul>
       </nav>
+      <CampanaAvisos key={pathname} />
       <Menu
         etiqueta="Menú de tu cuenta"
         disparador={
@@ -129,5 +132,45 @@ function CabeceraUsuario() {
         ]}
       />
     </div>
+  );
+}
+
+/** FASE2-03: acceso a la bandeja con el contador de no leídos. Se refresca al navegar
+ *  (se remonta con `key={pathname}`) y cuando la bandeja marca avisos como leídos; si el backend no responde, no molesta. */
+function CampanaAvisos() {
+  const [noLeidas, setNoLeidas] = useState(0);
+
+  useEffect(() => {
+    let vivo = true;
+    const actualizar = () =>
+      getNoLeidas()
+        .then((r) => vivo && setNoLeidas(r?.cantidad ?? 0))
+        .catch(() => undefined);
+    const alLeer = () => void actualizar();
+    actualizar();
+    window.addEventListener("tinku:notificaciones-leidas", alLeer);
+    return () => {
+      vivo = false;
+      window.removeEventListener("tinku:notificaciones-leidas", alLeer);
+    };
+  }, []);
+
+  const etiqueta = noLeidas > 0 ? `Avisos, ${noLeidas} sin leer` : "Avisos";
+  return (
+    <Link
+      href="/cuenta/notificaciones"
+      aria-label={etiqueta}
+      className="relative inline-flex size-11 items-center justify-center rounded-full text-tinta no-underline hover:bg-superficie-hundida"
+    >
+      <Bell className="size-5" aria-hidden />
+      {noLeidas > 0 && (
+        <span
+          aria-hidden
+          className="absolute right-1.5 top-1.5 flex min-w-[18px] items-center justify-center rounded-full bg-peligro px-1 text-[11px] font-bold leading-[18px] text-white"
+        >
+          {noLeidas > 9 ? "9+" : noLeidas}
+        </span>
+      )}
+    </Link>
   );
 }

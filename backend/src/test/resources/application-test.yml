@@ -27,6 +27,10 @@ tinku:
     # M5-B: el webhook de pagos requiere el secret de firma (fail-closed si no).
     # Solo de prueba — jamás usar en produccion.
     webhook-secret: test-mercadopago-webhook-secret
+  notificaciones:
+    email:
+      # FASE2-03: los tests llaman a EnvioEmailNotificacionesService directo.
+      barrido-habilitado: false
   tarifa:
     # T06: piso bajo en tests para que los casos de precio (999, 1000/h...) sigan
     # siendo válidos; los tests del piso lo leen de esta property.

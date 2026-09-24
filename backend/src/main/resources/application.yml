@@ -106,6 +106,20 @@ tinku:
     # Directorio local para credenciales de Tutor (AlmacenamientoLocal). Cuando
     # haya storage real (ADR), se reemplaza el bean sin tocar el puerto.
     directorio: ${ALMACENAMIENTO_DIRECTORIO:${java.io.tmpdir}/tinku}
+  app:
+    # URL pública del frontend: los emails llevan enlaces a ella (reset de contraseña,
+    # bandeja). En prod es obligatoria (application-prod.yml).
+    url-publica: ${APP_URL_PUBLICA:http://localhost:3000}
+  email:
+    # ADR-000-06 (Resend, plan gratuito). Vacíos = email apagado (fail-closed: los
+    # avisos quedan en la bandeja in-app y pendientes para email).
+    resend-api-key: ${RESEND_API_KEY:}
+    remitente: ${EMAIL_REMITENTE:}
+  notificaciones:
+    email:
+      # FASE2-03: barrido del outbox (Tabla de Tiempos, cada 1 min).
+      barrido-habilitado: true
+      intervalo-segundos: 60
   tarifa:
     # T06 / DT2 (tesis Cap. 5): piso de USD 4 por hora expresado en ARS. PT3: valor
     # fijo, lo revisa un Admin una vez por mes (variable de entorno en Coolify);

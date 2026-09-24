@@ -64,8 +64,11 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
   decisión fail-open y sus riesgos aceptados. Los tokens ya emitidos no se pueden revocar en
   LiveKit; valen hasta su TTL contra una sala ya cerrada.
 
-  **NO IMPLEMENTADO (AUD-014, 2026-09-21):** no existe infraestructura de notificación en el
-  sistema. El Adulto Responsable no recibe ningún aviso. Ver FASE 2.
+  **Implementado (FASE2-03, AUD-014, D2-bis):** al cortar, el Adulto Responsable recibe un aviso
+  `KILLSWITCH_MENOR` inmediato e incondicional, en su bandeja in-app y por email: que una clase de
+  su hijo/a se cortó por seguridad y que el equipo lo está revisando. **No** incluye el nombre del
+  Tutor, el clip ni qué se detectó (datos: sesión y fecha). El clip solo se habilita al resolverse
+  `SANCIONAR` (FASE2-09). Si el aviso falla, el corte se persiste igual (Artículo II).
 
   **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
   existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.

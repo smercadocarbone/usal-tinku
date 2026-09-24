@@ -24,6 +24,8 @@ import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
+import com.tinku.shared.notificacion.Notificador;
+import com.tinku.shared.notificacion.TipoNotificacion;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -34,6 +36,8 @@ import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +46,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -81,6 +86,9 @@ public class SesionService {
     private final CierreSalaService cierreSalaService;
     private final Scheduler scheduler;
     private final ApplicationEventPublisher events;
+    private final Notificador notificador;
+
+    private static final Logger log = LoggerFactory.getLogger(SesionService.class);
 
     public SesionService(SesionAprendizajeRepository sesionRepo,
                          ReservaRepository reservaRepo,
@@ -90,7 +98,8 @@ public class SesionService {
                          LiveKitService liveKitService,
                          CierreSalaService cierreSalaService,
                          Scheduler scheduler,
-                         ApplicationEventPublisher events) {
+                         ApplicationEventPublisher events,
+                         Notificador notificador) {
         this.sesionRepo = sesionRepo;
         this.reservaRepo = reservaRepo;
         this.usuarioRepo = usuarioRepo;
@@ -100,6 +109,7 @@ public class SesionService {
         this.cierreSalaService = cierreSalaService;
         this.scheduler = scheduler;
         this.events = events;
+        this.notificador = notificador;
     }
 
     // ------------------------------------------------ creación y agenda (T-M3-03)
@@ -530,7 +540,30 @@ public class SesionService {
         cortar(sesion, reserva);
         events.publishEvent(new SesionKillswitchMenorEvent(this, reserva.getId(), detectadoId));
         cancelarNoShow(sesion.getId());
+        avisarAdultoResponsable(sesion, reserva);
         return sesion;
+    }
+
+    /**
+     * FASE2-03 / D2-bis (Spec_M3 US-6): aviso inmediato e incondicional al Adulto
+     * Responsable del menor. Solo qué sesión y cuándo: ni el Tutor, ni el clip, ni lo
+     * detectado. Nunca aborta el corte (Artículo II): si el aviso falla, log ERROR.
+     */
+    private void avisarAdultoResponsable(SesionAprendizaje sesion, Reserva reserva) {
+        Usuario adultoResponsable = reserva.getBeneficiario().getAdultoResponsable();
+        if (adultoResponsable == null) {
+            log.error("Kill-switch con menor en la sesión {} sin Adulto Responsable cargado (FR-ID-020): "
+                    + "no hay a quién avisar", sesion.getId());
+            return;
+        }
+        try {
+            notificador.notificar(adultoResponsable.getId(), TipoNotificacion.KILLSWITCH_MENOR, Map.of(
+                    "sesionId", sesion.getId().toString(),
+                    "fecha", Instant.now().toString()));
+        } catch (RuntimeException e) {
+            log.error("No se pudo registrar el aviso de kill-switch de la sesión {} al Adulto Responsable",
+                    sesion.getId(), e);
+        }
     }
 
     /**

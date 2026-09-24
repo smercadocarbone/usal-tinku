@@ -163,6 +163,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 
 ## FASE 2 — Remediación de auditoría (sessiones/branches por spec)
 
+- [x] **Chunk FASE2-03** — Notificaciones: outbox, bandeja in-app y email (AUD-014, T-AUD-014, D2-bis, ADR-000-06) — _branch `claude/lucid-lovelace-htlv4z`. Cerrado 2026-09-24: V32, `Notificador` en `shared`, avisos de kill-switch al AR y de denuncia al denunciado, bandeja + campana, Resend con backoff 5/15/60 y reset de contraseña por email. Suite 517/0; E2E 79/79._
 - [x] **Chunk FASE2-01** — Disponibilidad en bloques de 30 min y tarifa por hora (AUD-009 + AUD-020, T-AUD-012, D6) — _branch `claude/lucid-lovelace-htlv4z`. Cerrado 2026-09-24: V29 (duración + fin, backfill), V30 (EXCLUDE por `tstzrange`), V31 (`precio_hora`); `franjaQueContiene`, precio por minuto, M3 con la duración de la Reserva, horarios cada 30; `/reservar` con selector de duración y precio en vivo. Suite 492/0; E2E 76/76._
 - [x] **Chunk FASE2-07** — Modo Bypass solo fuera de `prod` (AUD-018, T-AUD-018, P2 opción a) — _branch `claude/lucid-lovelace-htlv4z`. Cerrado 2026-09-24: 409 en prod, `bypassPermitido`, log WARN, banner en `/admin`; ADR-M5-01 con subsección de actualización._
 - [x] **Chunk FASE2-02** — Rate limiting, bloqueo de login y política de contraseña (AUD-012, T-AUD-013, P4) — _branch `claude/lucid-lovelace-htlv4z` (la sesión no podía crear `aud/*`). Cerrado 2026-09-24: filtro por IP en memoria (D8), bloqueo por DNI, `@PasswordSegura`; filas nuevas en la Tabla de Tiempos; ADR-000-04 actualizado._

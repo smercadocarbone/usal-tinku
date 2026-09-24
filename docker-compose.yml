@@ -63,6 +63,10 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       RESERVAS_TARIFA_STUB: ${RESERVAS_TARIFA_STUB:-}
+      # FASE2-03 / ADR-000-06: email por Resend. Vacíos = sin email (avisos solo en la app).
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_REMITENTE: ${EMAIL_REMITENTE:-}
+      APP_URL_PUBLICA: ${APP_URL_PUBLICA:-http://localhost:3000}
     ports:
       - "8080:8080"
     depends_on:
