@@ -78,7 +78,10 @@ test.describe("Hidratación SSR — rutas de /cuenta y /resetear-password", () =
     { path: "/cuenta", handlers: { "GET /api/usuarios/me": jsonRoute(200, PERFIL_TUTOR) } },
     {
       path: "/cuenta/horarios",
-      handlers: { "GET /api/tutores/12345678/franjas": jsonRoute(200, []) },
+      handlers: {
+        "GET /api/usuarios/me": jsonRoute(200, PERFIL_TUTOR),
+        "GET /api/tutores/u-1/franjas": jsonRoute(200, []),
+      },
     },
     {
       path: "/cuenta/precio",
