@@ -43,10 +43,14 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 
 - **Dado** que la sesión se corte por completo (ambas partes desconectadas, sin reconexión) antes de cumplirse el 50% de la duración agendada, **cuando** el sistema lo determine, **entonces** emite el evento `sesion.interrumpida` y M5 reembolsa al Estudiante (FR-AULA-005, BR-CONN-02).
 
-  **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
-  `participant_joined`. La duración efectiva se calcula contra `Instant.now()` del job de corte,
-  no contra la última desconexión real, lo que puede liberar el escrow por una sesión de minutos.
-  El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
+  **Implementado (AUD-029, 2026-09-24, FASE2-05):** el webhook de LiveKit procesa
+  `participant_left`/`room_finished` (flags `tutor_conectado`/`estudiante_conectado` +
+  `par_roto_at`). El corte automático a fin agendado + 5 min mide la duración efectiva contra
+  `par_roto_at` (última desconexión del par, si nadie la recompone), no contra `Instant.now()`
+  del job. **No hay cierre inmediato al salir ambos**: un microcorte de red de los dos no
+  termina la clase (Spec FASE2-05 §2); el hecho queda registrado y lo decide el corte ya
+  existente. El estado final de un corte por desconexión previo al fin agendado es
+  `finalizada_anticipada` (US-8 caso borde #6).
 - **Dado** que el corte ocurra después del 50%, **cuando** eso ocurra, **entonces** la sesión emite el mismo evento `sesion.finalizada` que cualquier cierre normal (no un evento especial) — así M5 libera los fondos con normalidad, M6 genera el resumen si hubo ≥10 min efectivos, y M7 habilita la calificación, sin reglas separadas para este caso (resuelve E-09 del informe de QA).
 
 ### US-6 — Kill-switch, contraparte menor (rama 1)
@@ -97,10 +101,11 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 - **Dado** que nadie finalice manualmente, **cuando** se cumpla el fin del horario agendado más una tolerancia de gracia de 5 minutos, **entonces** el sistema corta la sala y marca la sesión `finalizada` automáticamente, emitiendo el mismo evento.
 - **Dado** que un participante corte antes del fin agendado sin presionar "Finalizar", **cuando** eso ocurra, **entonces** la sesión queda `finalizada_anticipada` cuando la otra parte también salga o al agotarse la tolerancia; ese outcome alimenta la regla de corte <50% de US-5.
 
-  **NO IMPLEMENTADO (AUD-029, 2026-09-21):** el webhook de LiveKit solo procesa
-  `participant_joined`. La duración efectiva se calcula contra `Instant.now()` del job de corte,
-  no contra la última desconexión real, lo que puede liberar el escrow por una sesión de minutos.
-  El estado `finalizada_anticipada` hoy solo se asigna en `ejecutarNoShow`.
+  **Implementado (AUD-029, 2026-09-24, FASE2-05):** el webhook procesa `participant_left`/
+  `room_finished` (`par_roto_at` = instante en que salió el último: si uno se va y el otro se queda, no hay corte — US-5) y el corte
+  automático deja el estado `finalizada_anticipada` cuando `par_roto_at` es anterior al fin
+  agendado — y la duración efectiva se mide contra ese instante. Cualquier reconexión
+  limpia `par_roto_at`: el microcorte de ambos no cuenta como corte.
 
 ## 3. Requisitos Funcionales
 

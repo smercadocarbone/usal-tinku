@@ -49,23 +49,31 @@ public class LiveKitWebhookService {
             return;
         }
         boolean nuevoJoin = false;
+        boolean rolMatched = false;
         if (mismaPersona(reserva.getTutor(), identity)) {
-            if (sesion.getTutorJoinedAt() == null) {
+            rolMatched = true;
+            nuevoJoin = sesion.getTutorJoinedAt() == null;
+            if (nuevoJoin) {
                 sesion.setTutorJoinedAt(Instant.now());
-                nuevoJoin = true;
             }
+            sesion.setTutorConectado(true); // FASE2-05 (AUD-029)
         } else if (mismaPersona(reserva.getBeneficiario(), identity)) {
-            if (sesion.getEstudianteJoinedAt() == null) {
+            rolMatched = true;
+            nuevoJoin = sesion.getEstudianteJoinedAt() == null;
+            if (nuevoJoin) {
                 sesion.setEstudianteJoinedAt(Instant.now());
-                nuevoJoin = true;
             }
+            sesion.setEstudianteConectado(true); // FASE2-05 (AUD-029)
         }
-        if (!nuevoJoin) {
-            return; // reconexión del mismo participante: no cambia el estado
+        if (!rolMatched) {
+            return; // tercero: no forma el par de la clase (FASE2-05 §4.3)
         }
-        // Primer join real: la sesión arranca (US-2) — inicio_real alimenta el
-        // cálculo de duración efectiva al finalizar (US-5/M6).
-        if (SesionAprendizaje.ESTADO_NO_INICIADA.equals(sesion.getEstado())) {
+        // Alguien volvió: ya no están los dos afuera, así que el corte anterior
+        // deja de contar como fin efectivo (Spec_M3 US-5: "sin reconexión").
+        sesion.setParRotoAt(null);
+        if (nuevoJoin && SesionAprendizaje.ESTADO_NO_INICIADA.equals(sesion.getEstado())) {
+            // Primer join real: la sesión arranca (US-2) — inicio_real alimenta el
+            // cálculo de duración efectiva al finalizar (US-5/M6).
             sesion.setEstado(SesionAprendizaje.ESTADO_EN_CURSO);
             sesion.setInicioReal(Instant.now());
         }
@@ -75,6 +83,73 @@ public class LiveKitWebhookService {
             // el job T+10, NO se deja correr y descartar su resultado.
             sesionService.cancelarNoShow(sesion.getId());
         }
+    }
+
+    /**
+     * FASE2-05 (AUD-029) — {@code participant_left}: marca el flag del rol en
+     * {@code false} y, si con esta salida no queda nadie conectado, fija
+     * {@code par_roto_at} en este instante (el "fin efectivo" para el corte).
+     * Spec_M3 US-5: el corte exige AMBAS partes desconectadas; si uno se va y el
+     * otro se queda esperando, no hay corte. Un tercero no cuenta y una sesión ya
+     * cortada no se toca.
+     */
+    @Transactional
+    public void registrarSalida(String livekitRoomId, String identity) {
+        if (livekitRoomId == null || identity == null || identity.isBlank()) {
+            return;
+        }
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        if (sesion == null) {
+            return;
+        }
+        if (yaCerrada(sesion)) {
+            return; // left tardío del corte (kill-switch o automático): no toca nada
+        }
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId()).orElse(null);
+        if (reserva == null) {
+            return;
+        }
+        boolean habiaAlguien = sesion.isTutorConectado() || sesion.isEstudianteConectado();
+        if (mismaPersona(reserva.getTutor(), identity)) {
+            sesion.setTutorConectado(false);
+        } else if (mismaPersona(reserva.getBeneficiario(), identity)) {
+            sesion.setEstudianteConectado(false);
+        } else {
+            return; // tercero: no forma el par
+        }
+        if (habiaAlguien && !sesion.isTutorConectado() && !sesion.isEstudianteConectado()) {
+            sesion.setParRotoAt(Instant.now());
+        }
+        sesionRepo.save(sesion);
+    }
+
+    /**
+     * FASE2-05 (AUD-029) — {@code room_finished}: la sala terminó, así que quedan
+     * los dos desconectados. Si quedaba alguien conectado, {@code par_roto_at}
+     * queda en este instante. No-op si la sesión ya cerró.
+     */
+    @Transactional
+    public void registrarSalaTerminada(String livekitRoomId) {
+        if (livekitRoomId == null) {
+            return;
+        }
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        if (sesion == null || yaCerrada(sesion)) {
+            return;
+        }
+        boolean habiaAlguien = sesion.isTutorConectado() || sesion.isEstudianteConectado();
+        sesion.setTutorConectado(false);
+        sesion.setEstudianteConectado(false);
+        if (habiaAlguien) {
+            sesion.setParRotoAt(Instant.now());
+        }
+        sesionRepo.save(sesion);
+    }
+
+    private boolean yaCerrada(SesionAprendizaje sesion) {
+        return SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado());
     }
 
     // La rama del DNI es compatibilidad con tokens emitidos antes de AUD-003 (identity = DNI).

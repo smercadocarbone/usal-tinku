@@ -56,6 +56,22 @@ public class SesionAprendizaje {
     @Column(name = "tutor_joined_at")
     private Instant tutorJoinedAt;
 
+    /** Si el tutor está conectado AHORA (V26, AUD-029/FASE2-05). */
+    @Column(name = "tutor_conectado", nullable = false)
+    private boolean tutorConectado;
+
+    /** Si el beneficiario está conectado AHORA (V26, AUD-029/FASE2-05). */
+    @Column(name = "estudiante_conectado", nullable = false)
+    private boolean estudianteConectado;
+
+    /**
+     * Instante desde el que el par está roto (no están los dos conectados).
+     * {@code null} = están los dos o todavía no empezó. Es el "fin efectivo"
+     * que el corte automático usa para la duración real (V26, AUD-029).
+     */
+    @Column(name = "par_roto_at")
+    private Instant parRotoAt;
+
     /** Momento real de inicio (primer join de cualquiera de los dos). */
     @Column(name = "inicio_real")
     private Instant inicioReal;
