@@ -47,6 +47,10 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
     long countByEstadoInAndHorarioAfterAndBeneficiario_Id(
             Collection<EstadoReserva> estados, Instant despuesDe, UUID beneficiarioId);
 
+    /** FR-ID-014: las mismas reservas, para cancelarlas cuando la baja se confirma. */
+    List<Reserva> findByEstadoInAndHorarioAfterAndBeneficiario_Id(
+            Collection<EstadoReserva> estados, Instant despuesDe, UUID beneficiarioId);
+
     /** T-M4-12: reservas NO canceladas de un Tutor en un rango horario (para
      *  marcar bloques ocupados) — mismo criterio de exclusión que la EXCLUDE
      *  constraint de FR-RES-007 (V9): {@code estado <> 'cancelada'}. */

@@ -46,10 +46,15 @@ public class LiveKitWebhookController {
         }
 
         JsonNode evento = objectMapper.readTree(cuerpo);
-        if ("participant_joined".equals(evento.path("event").asText())) {
-            String sala = evento.path("room").path("name").asText();
-            String identidad = evento.path("participant").path("identity").asText();
-            webhookService.registrarJoin(sala, identidad);
+        String nombreEvento = evento.path("event").asText();
+        String sala = evento.path("room").path("name").asText();
+        switch (nombreEvento) {
+            case "participant_joined" -> webhookService.registrarJoin(sala,
+                    evento.path("participant").path("identity").asText());
+            case "participant_left" -> webhookService.registrarSalida(sala,
+                    evento.path("participant").path("identity").asText());
+            case "room_finished" -> webhookService.registrarSalaTerminada(sala);
+            default -> { /* evento de LiveKit que no usamos: 2xx igual (reintentos) */ }
         }
         return ResponseEntity.ok().build();
     }
