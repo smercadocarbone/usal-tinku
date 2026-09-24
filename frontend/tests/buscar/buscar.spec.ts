@@ -33,6 +33,9 @@ test.describe("Búsqueda de tutores", () => {
 
       await expect(buscar.tarjetaTutor("Martín Gómez")).toBeVisible();
       await expect(page.getByText("Ver perfil")).toBeVisible();
+      await expect(
+        page.getByText("Tutores recomendados para lo que necesitás")
+      ).toBeVisible();
     }
   );
 

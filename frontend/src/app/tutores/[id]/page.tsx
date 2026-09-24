@@ -127,7 +127,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
       setNoConfiable(nuevoValor);
       setMensajeNoConfiable(
         nuevoValor
-          ? "Tutor marcado como no confiable. Ya no aparece en los resultados de matching de tu cuenta."
+          ? "Tutor marcado como no confiable. Ya no aparece en los resultados de búsqueda de tu cuenta."
           : "Tutor desmarcado como no confiable."
       );
     } catch (err) {
