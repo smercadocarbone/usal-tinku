@@ -31,4 +31,11 @@
 | Edad mínima de todos los adultos                  | 18 años                  | Verificado por OCR                                                                                                    | M1     |
 | Umbral mínimo de calificaciones públicas          | 5                        | Antes se muestra "Tutor nuevo"                                                                                        | M7     |
 | Reintentos de liberación de pago                  | 3, backoff 5min/15min/1h | Luego, intervención manual del Admin                                                                                  | M5     |
+| Reintentos de email de notificaciones _(FASE2-03)_ | 3, backoff 5min/15min/1h | Agotados o sin email del destinatario, se descarta con log; el aviso sigue en la bandeja in-app                        | Admin  |
+| Barrido del outbox para email _(FASE2-03)_        | Cada 1 min               | Job de Quartz persistido; sin proveedor configurado no envía (ADR-000-06)                                               | Admin  |
 | Reintentos de cierre de sala LiveKit tras corte   | 3, backoff 5min/15min/1h | El corte en la base no espera al cierre; agotados, log ERROR (ADR-M3-03)                                              | M3     |
+| Rate limit por IP, endpoints públicos _(FASE2-02, P4)_ | 20 requests / 1 min      | Registro, login, recuperar/resetear contraseña. Excedido → 429 con `Retry-After`                                       | M1     |
+| Rate limit por IP, `/verificar-dni` _(FASE2-02, P4)_ | 5 requests / 1 min       | Adulto y tutor. Dispara OCR in-process: es el DoS más barato                                                          | M1     |
+| Rate limit por IP, webhooks _(FASE2-02, P4)_      | 120 requests / 1 min     | LiveKit y MercadoPago. Solo volumen: la firma sigue siendo la autenticación                                           | M3, M5 |
+| Intentos fallidos de login antes del bloqueo _(FASE2-02, P4)_ | 5 por DNI        | Exista o no el DNI (no enumeración). Un login exitoso resetea el contador                                             | M1     |
+| Bloqueo por intentos de login _(FASE2-02, P4)_    | 15 min, duplicándose, tope 24 hs | En memoria del proceso (D8): un reinicio lo olvida                                                          | M1     |

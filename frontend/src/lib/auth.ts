@@ -13,7 +13,10 @@ export const TOKEN_KEY = "tinku_jwt";
 export const COOKIE_NAME = "tinku_jwt";
 
 export interface PayloadSesion {
+  /** Id (UUID) del usuario — nunca el DNI (AUD-027). */
   sub?: string;
+  /** Versión de credenciales: cambia al cambiar/resetear la contraseña (AUD-027). */
+  cv?: number;
   tipo?: "ADULTO" | "MENOR" | "TUTOR";
   cap_est?: boolean;
   cap_ar?: boolean;

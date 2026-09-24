@@ -15,6 +15,7 @@ import {
 export default function AdminSaludPage() {
   const [salud, setSalud] = useState<SystemHealthDTO | null>(null);
   const [pasarela, setPasarela] = useState<boolean | null>(null);
+  const [bypassPermitido, setBypassPermitido] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +26,7 @@ export default function AdminSaludPage() {
         if (!activo) return;
         setSalud(saludSistema);
         setPasarela(pasarelaEstado.habilitada);
+        setBypassPermitido(pasarelaEstado.bypassPermitido !== false);
       })
       .catch((err) => {
         if (activo) setError(mensajeDeError(err, "No se pudo consultar el estado de infraestructura."));
@@ -59,6 +61,7 @@ export default function AdminSaludPage() {
           <AdminInfrastructurePanel
             healthData={salud}
             isPaymentGatewayEnabled={pasarela}
+            bypassPermitido={bypassPermitido}
             onTogglePaymentGateway={alternarPasarela}
           />
         )}

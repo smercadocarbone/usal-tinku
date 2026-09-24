@@ -30,7 +30,7 @@ Este módulo orquesta el flujo de Denuncias y de las Alertas de Seguridad del ki
 ### US-3 — Puesta a disposición del denunciado (Denuncia estándar)
 *Como* usuario denunciado, *quiero* conocer la denuncia y poder defenderme, *para* que la decisión no sea unilateral.
 
-- **Dado** que se registró una Denuncia estándar (no derivada de kill-switch), **cuando** pasa a `en_revision`, **entonces** el denunciado recibe el motivo (sin identidad del denunciante, FR-SEC-006) y tiene 48hs para su descargo antes de que el Admin de Moderación y Seguridad decida.
+- **Dado** que se registró una Denuncia estándar (no derivada de kill-switch), **cuando** pasa a `en_revision`, **entonces** el denunciado recibe el motivo (sin identidad del denunciante, FR-SEC-006) y tiene 48hs para su descargo antes de que el Admin de Moderación y Seguridad decida. _(FASE2-03: aviso `DENUNCIA_RECIBIDA` en la bandeja y por email con el vencimiento del descargo; el motivo se ve en "Casos y reportes". Si el denunciado es menor, el aviso va a su Adulto Responsable.)_
 - **Dado** que no presente descargo en 48hs, **cuando** el plazo venza, **entonces** el caso avanza igual a decisión del Admin de Moderación y Seguridad. Si el Admin de Moderación y Seguridad no resuelve dentro de los **5 días hábiles** siguientes al vencimiento del descargo, **cuando** eso ocurra, **entonces** el caso escala automáticamente con prioridad alta — el escrow pausado no puede quedar indefinido (FR-SEC-010).
 
 ### US-4 — Resolución del Admin de Moderación y Seguridad

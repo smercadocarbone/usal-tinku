@@ -20,8 +20,8 @@ export interface TutorPerfil {
   tieneFoto: boolean;
   /** Tiene al menos una credencial académica aprobada. */
   verificado: boolean;
-  /** Tarifa por clase que configuró el tutor; `null` = todavía no la definió. */
-  precioSesion: number | null;
+  /** Tarifa POR HORA que configuró el tutor (D6); `null` = todavía no la definió. */
+  precioHora: number | null;
 }
 
 export function getTutor(id: string): Promise<TutorPerfil> {
@@ -41,7 +41,7 @@ export function normalizarTutor(t: Partial<TutorPerfil> & { id: string }): Tutor
     bio: t.bio ?? null,
     tieneFoto: t.tieneFoto ?? false,
     verificado: t.verificado ?? false,
-    precioSesion: t.precioSesion ?? null,
+    precioHora: t.precioHora ?? null,
   };
 }
 

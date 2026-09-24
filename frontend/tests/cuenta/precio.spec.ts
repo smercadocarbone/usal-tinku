@@ -34,12 +34,48 @@ test.describe("Configuración de Precio del tutor", () => {
       await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
       await mockApi(page, {
         "GET /api/pagos/tarifa": async (route) =>
-          route.fulfill({ status: 200, contentType: "application/json", body: '{"tutorId":"t-1","precioSesion":12000}' }),
+          route.fulfill({ status: 200, contentType: "application/json", body: '{"tutorId":"t-1","precioHora":12000}' }),
       });
 
       await page.goto("/cuenta/precio");
-      await expect(page.getByLabel("Precio por clase (ARS)")).toHaveValue("12000");
+      await expect(page.getByLabel("Precio por hora (ARS)")).toHaveValue("12000");
       await expect(page.getByText("Así lo ven las familias")).toBeVisible();
+    }
+  );
+
+  test(
+    "T06: el piso por hora se muestra, bloquea valores menores y avisa si la tarifa vigente quedó abajo (PT4)",
+    { tag: ["@e2e", "@CUENTA-PRECIO-T06-E2E-001"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
+      let puts = 0;
+      await mockApi(page, {
+        "GET /api/pagos/tarifa": async (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: '{"tutorId":"t-1","precioHora":5000,"pisoHora":6140}',
+          }),
+        "PUT /api/pagos/tarifa": async (route) => {
+          puts++;
+          await route.fulfill({ status: 200, contentType: "application/json", body: '{"tutorId":"t-1","precioHora":7000,"pisoHora":6140}' });
+        },
+      });
+
+      await page.goto("/cuenta/precio");
+      const input = page.getByLabel("Precio por hora (ARS)");
+      await expect(input).toHaveValue("5000");
+      await expect(page.getByText(/Tu precio actual quedó por debajo del mínimo/)).toBeVisible();
+      await expect(page.getByText(/El mínimo es/)).toBeVisible();
+
+      await input.fill("6000");
+      await expect(page.getByText(/No se guardó: el precio por hora no puede ser menor a/)).toBeVisible();
+      await page.waitForTimeout(1000);
+      expect(puts).toBe(0);
+
+      await input.fill("7000");
+      await expect(page.getByText("Guardamos tu precio")).toBeVisible();
+      expect(puts).toBe(1);
     }
   );
 });

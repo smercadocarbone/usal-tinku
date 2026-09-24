@@ -171,7 +171,7 @@ export default function PerfilTutorPage() {
       <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
         {[
           { href: "/cuenta/materias", icono: BookOpen, titulo: "Mis materias", texto: "Qué temas enseñás" },
-          { href: "/cuenta/precio", icono: CircleDollarSign, titulo: "Mi precio", texto: "Cuánto cobrás por clase" },
+          { href: "/cuenta/precio", icono: CircleDollarSign, titulo: "Mi precio", texto: "Cuánto cobrás por hora" },
         ].map(({ href, icono: I, titulo, texto }) => (
           <li key={href}>
             <Link href={href} className="flex min-h-16 items-center gap-4 rounded-tarjeta border border-borde bg-superficie p-5 text-tinta no-underline hover:border-borde-fuerte">

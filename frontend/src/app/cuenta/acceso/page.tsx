@@ -1,5 +1,6 @@
 "use client";
 
+import { LARGO_MINIMO_PASSWORD } from "@/lib/password";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   actualizarEmail,
@@ -8,7 +9,7 @@ import {
   mensajeDeError,
   type PerfilPropio,
 } from "@/lib/api";
-import { Alerta, Boton, Campo, Cargando, Tarjeta } from "@/components/ui";
+import { RequisitosPassword, Alerta, Boton, Campo, Cargando, Tarjeta } from "@/components/ui";
 
 export default function CuentaAccesoPage() {
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);
@@ -122,10 +123,11 @@ export default function CuentaAccesoPage() {
               variante="password"
               autoComplete="new-password"
               required
-              minLength={8}
+              minLength={LARGO_MINIMO_PASSWORD}
               value={passwordNueva}
               onChange={(e) => setPasswordNueva(e.target.value)}
             />
+            {passwordNueva && <RequisitosPassword password={passwordNueva} />}
             {errorPassword && <Alerta tono="peligro">{errorPassword}</Alerta>}
             {exitoPassword && <Alerta tono="exito">Contraseña actualizada.</Alerta>}
             <Boton

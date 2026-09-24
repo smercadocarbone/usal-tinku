@@ -135,11 +135,11 @@ preguntale al usuario. La recomendación es del arquitecto; la decisión es del 
 
 | ID | Pregunta | Recomendación | Respuesta del usuario |
 |----|----------|---------------|------------------------|
-| P1 | ¿"El Tutor recomienda una duración" entra al MVP? (campo nuevo, no está en ningún Spec — Artículo VI) | **Fuera del MVP.** D6 funciona sin él; se agrega después como mejora. | _pendiente_ |
-| P2 | ¿Cómo se acota el Modo Bypass? | **Solo habilitable fuera de `prod`** + banner persistente en el panel + log de auditoría. Es la más simple y cierra el riesgo real (marketplace gratis en producción). | _pendiente_ |
+| P1 | ¿"El Tutor recomienda una duración" entra al MVP? (campo nuevo, no está en ningún Spec — Artículo VI) | **Fuera del MVP.** D6 funciona sin él; se agrega después como mejora. | **Fuera del MVP** (2026-09-24). |
+| P2 | ¿Cómo se acota el Modo Bypass? | **Solo habilitable fuera de `prod`** + banner persistente en el panel + log de auditoría. Es la más simple y cierra el riesgo real (marketplace gratis en producción). | **Opción (a), la recomendada** (2026-09-24, delegada por el usuario). |
 | P3 | ¿Smoke E2E contra el stack real o tests de contrato de DTOs? | **Tests de contrato** (baratos, corren en cada PR) + smoke E2E **nocturno y opcional**. | _pendiente_ |
-| P4 | Valores de rate limit y de bloqueo por intentos de login (no hay filas en la Tabla de Tiempos) | 20 req/min por IP en públicos; 5 req/min en `/verificar-dni`; 120 req/min en webhooks; bloqueo tras 5 logins fallidos por DNI: 15 min, duplicando hasta 24 hs. Se agregan a la Tabla. | _pendiente_ |
-| P5 | ¿Qué proveedor de email se usa? (desbloquea "olvidé mi contraseña"; requiere ADR) | **Resend** o **Brevo** en su plan gratuito: API HTTP simple, sin SDK obligatorio, entran en USD 0/mes con el volumen de un piloto. Hasta decidirlo, FASE2-03 entrega la bandeja in-app. | _pendiente_ |
+| P4 | Valores de rate limit y de bloqueo por intentos de login (no hay filas en la Tabla de Tiempos) | 20 req/min por IP en públicos; 5 req/min en `/verificar-dni`; 120 req/min en webhooks; bloqueo tras 5 logins fallidos por DNI: 15 min, duplicando hasta 24 hs. Se agregan a la Tabla. | **Los valores recomendados** (2026-09-24, delegados por el usuario). |
+| P5 | ¿Qué proveedor de email se usa? (desbloquea "olvidé mi contraseña"; requiere ADR) | **Resend** o **Brevo** en su plan gratuito: API HTTP simple, sin SDK obligatorio, entran en USD 0/mes con el volumen de un piloto. Hasta decidirlo, FASE2-03 entrega la bandeja in-app. | **Resend, plan gratuito** (3.000/mes, 100/día), con el dominio que el usuario ya tiene en Cloudflare solo para los registros DNS (SPF/DKIM). Cloudflare Email Service no es gratis (exige Workers Paid, USD 5/mes). `ADR-000-06` (2026-09-24). |
 | P6 | Middleware de Next.js: ¿verificar la firma del JWT o renombrarlo honestamente? | **Renombrar y documentar** que es UX, no seguridad. Verificar la firma exige compartir el secreto del JWT con el runtime edge del frontend y una dependencia nueva (`jose` + ADR), para proteger algo que el backend ya protege. | _pendiente_ |
 
 ---

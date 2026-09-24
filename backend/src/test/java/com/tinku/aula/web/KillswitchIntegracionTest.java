@@ -106,6 +106,9 @@ class KillswitchIntegracionTest {
     @Autowired Scheduler scheduler;
     // Sin credenciales de LiveKit en CI (T-000-06): se mockea el borde HTTP.
     @MockBean LiveKitService liveKitService;
+    // FASE2-03: espía del outbox para forzar su falla (el corte no puede depender del aviso).
+    @org.springframework.boot.test.mock.mockito.SpyBean com.tinku.admin.notificacion.NotificadorOutbox notificador;
+    @Autowired com.tinku.admin.notificacion.NotificacionRepository notificacionRepository;
 
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 
@@ -158,8 +161,7 @@ class KillswitchIntegracionTest {
     }
 
     private String tokenDe(Usuario u) {
-        return jwtUtil.generateToken(u.getDni(), u.getTipo().name(),
-                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable());
+        return jwtUtil.generateToken(u);
     }
 
     /** Sesión CONFIRMADA con beneficiario = {@code usuario} (adulto o menor). */
@@ -197,6 +199,50 @@ class KillswitchIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().is2xxSuccessful());
+    }
+
+    // ------------------------------------------------ FASE2-03 (AUD-014, D2-bis): aviso al AR
+
+    @Test
+    void killswitchMenor_notificaAlAdultoResponsable_sinDatosDelContenido() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
+        Reserva reserva = reservaConfirmada(ar, menor, tutor);
+        SesionAprendizaje sesion = sesionDirecta(reserva, 3600);
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", tutor.getId().toString()));
+
+        List<com.tinku.admin.notificacion.Notificacion> avisos = notificacionRepository.findByDestinatarioId(ar.getId());
+        assertThat(avisos).hasSize(1);
+        com.tinku.admin.notificacion.Notificacion aviso = avisos.get(0);
+        assertThat(aviso.getTipo()).isEqualTo(com.tinku.shared.notificacion.TipoNotificacion.KILLSWITCH_MENOR);
+        // D2-bis: solo qué sesión y cuándo; nada del Tutor ni de lo detectado.
+        assertThat(aviso.getDatos()).containsOnlyKeys("sesionId", "fecha");
+        assertThat(aviso.getDatos().get("sesionId")).isEqualTo(sesion.getId().toString());
+        assertThat(aviso.getDatos().values()).noneMatch(v -> v.contains(tutor.getId().toString())
+                || v.contains(tutor.getNombre()) || v.contains(tutor.getApellido()));
+        // Ni el tutor ni el menor reciben este aviso.
+        assertThat(notificacionRepository.findByDestinatarioId(tutor.getId())).isEmpty();
+        assertThat(notificacionRepository.findByDestinatarioId(menor.getId())).isEmpty();
+    }
+
+    @Test
+    void killswitchMenor_siFallaLaNotificacion_elCorteIgualSePersiste() throws Exception {
+        Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
+        Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
+        Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
+        Reserva reserva = reservaConfirmada(ar, menor, tutor);
+        SesionAprendizaje sesion = sesionDirecta(reserva, 3600);
+        org.mockito.Mockito.doThrow(new IllegalStateException("outbox caído"))
+                .when(notificador).notificar(org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        postKillswitch(sesion.getId(), tokenDe(ar), Map.of("detectadoId", tutor.getId().toString()));
+
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado()).isEqualTo("finalizada");
+        assertThat(alertaRepository.findBySesionId(sesion.getId())).isPresent();
+        assertThat(tutorConId(tutor.getId()).isActivoParaMatching()).isFalse();
     }
 
     // ------------------------------------------------ T-M3-11 — la rama la decide el backend

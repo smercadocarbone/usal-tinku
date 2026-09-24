@@ -3,6 +3,7 @@ package com.tinku.config.security;
 import com.tinku.identidad.dto.LoginRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.TokenResponse;
+import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.identidad.service.AuthService;
 import com.tinku.identidad.service.UsuarioService;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,9 @@ class JwtAuthTest {
     }
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
     UsuarioService usuarioService;
 
     @Autowired
@@ -73,7 +77,10 @@ class JwtAuthTest {
         assertNotNull(response.token());
         assertEquals("ADULTO", response.tipo());
         assertTrue(jwtUtil.isTokenValid(response.token()));
-        assertEquals("00000000", jwtUtil.extractDni(response.token()));
+        // AUD-027: el sub es el UUID del usuario (nunca el DNI) y el token lleva su cv.
+        assertEquals(usuarioRepository.findByDni("00000000").orElseThrow().getId(),
+                jwtUtil.extractUsuarioId(response.token()));
+        assertEquals(0, jwtUtil.extractCredentialsVersion(response.token()));
     }
 
     @Test
@@ -99,7 +106,9 @@ class JwtAuthTest {
                 new LoginRequest("00000000", "password123"));
 
         var claims = jwtUtil.validateToken(response.token());
-        assertEquals("00000000", claims.getSubject());
+        // AUD-027: el subject es el UUID del usuario, no el DNI (A7: el test codificaba el DNI).
+        assertEquals(usuarioRepository.findByDni("00000000").orElseThrow().getId().toString(), claims.getSubject());
+        assertEquals(0, claims.get("cv"));
         assertEquals("ADULTO", claims.get("tipo"));
         assertEquals(true, claims.get("cap_est"));
         assertEquals(false, claims.get("cap_ar"));

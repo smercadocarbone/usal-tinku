@@ -4,7 +4,8 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, resetearPassword } from "@/lib/api";
-import { Alerta, Boton, Campo } from "@/components/ui";
+import { Alerta, Boton, Campo, RequisitosPassword } from "@/components/ui";
+import { LARGO_MINIMO_PASSWORD } from "@/lib/password";
 import PantallaAuth from "@/components/auth/PantallaAuth";
 
 export default function ResetearPasswordPage() {
@@ -78,17 +79,18 @@ export default function ResetearPasswordPage() {
                 variante="password"
                 autoComplete="new-password"
                 required
-                minLength={8}
+                minLength={LARGO_MINIMO_PASSWORD}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              {password && <RequisitosPassword password={password} />}
               <Campo
                 id="passwordConfirmacion"
                 etiqueta="Repetí la contraseña"
                 variante="password"
                 autoComplete="new-password"
                 required
-                minLength={8}
+                minLength={LARGO_MINIMO_PASSWORD}
                 value={confirmacion}
                 onChange={(e) => setConfirmacion(e.target.value)}
               />

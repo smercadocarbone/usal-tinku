@@ -125,10 +125,3 @@ export function tiempoRelativo(iso: string | Date, ahora: Date = new Date()): st
   if (abs < 86400000 * 2) return rtf.format(h, "hour");
   return rtf.format(Math.round(ms / 86400000), "day");
 }
-
-/** DNI enmascarado: `••.•••.233`. Nunca el DNI completo si no hace falta. */
-export function dniEnmascarado(dni: string | null | undefined): string {
-  if (!dni) return "—";
-  const d = dni.replace(/\D/g, "");
-  return `••.•••.${d.slice(-3)}`;
-}

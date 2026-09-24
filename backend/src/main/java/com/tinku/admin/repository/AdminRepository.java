@@ -16,8 +16,11 @@ import java.util.UUID;
 public interface AdminRepository extends JpaRepository<Admin, UUID> {
 
     /** Admin activo con ese rol para un DNI — fail-closed: sin fila → 403. */
-    Optional<Admin> findByUsuario_DniAndRolAndActivoTrue(String dni, RolAdmin rol);
+    Optional<Admin> findByUsuario_IdAndRolAndActivoTrue(UUID usuarioId, RolAdmin rol);
 
     /** Admin activo (cualquier rol) — para atribución en auditoría y tickets. */
+    /** Solo para el seed por configuración (AdminSeedRunner), que conoce DNIs. */
     Optional<Admin> findByUsuario_DniAndActivoTrue(String dni);
+
+    Optional<Admin> findByUsuario_IdAndActivoTrue(UUID usuarioId);
 }

@@ -6,6 +6,15 @@ spring:
     enabled: true
 
 tinku:
+  # FASE2-02: la suite hace cientos de registros/logins desde 127.0.0.1. Límites
+  # altos para no depender del filtro; RateLimitYBloqueoLoginIntegracionTest los
+  # prueba con valores bajos propios. NUNCA subir los de producción por esto.
+  rate-limit:
+    publicos-por-minuto: 100000
+    verificar-dni-por-minuto: 100000
+    webhooks-por-minuto: 100000
+  login:
+    intentos-antes-de-bloqueo: 100000
   jwt:
     secret: test-secret-nunca-usar-en-produccion
   livekit:
@@ -18,6 +27,14 @@ tinku:
     # M5-B: el webhook de pagos requiere el secret de firma (fail-closed si no).
     # Solo de prueba — jamás usar en produccion.
     webhook-secret: test-mercadopago-webhook-secret
+  notificaciones:
+    email:
+      # FASE2-03: los tests llaman a EnvioEmailNotificacionesService directo.
+      barrido-habilitado: false
+  tarifa:
+    # T06: piso bajo en tests para que los casos de precio (999, 1000/h...) sigan
+    # siendo válidos; los tests del piso lo leen de esta property.
+    piso-hora-ars: 500
   reservas:
     # Fallback del puerto TarifaProveedor (M5-H) cuando el Tutor no configuró su
     # tarifa en pagos.tarifas_tutor. Valor en pesos para poder ejercitar la

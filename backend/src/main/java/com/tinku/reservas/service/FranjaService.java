@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -65,15 +66,42 @@ public class FranjaService {
         return franjaQueCubre(tutorId, horario).isPresent();
     }
 
+    /** D6 regla 1: una reserva dura de 30 a 180 minutos, en bloques de 30. */
+    public static boolean duracionValida(Integer duracionMinutos) {
+        return duracionMinutos != null
+                && duracionMinutos >= DURACION_MINIMA.toMinutes()
+                && duracionMinutos <= DURACION_MAXIMA.toMinutes()
+                && duracionMinutos % 30 == 0;
+    }
+
+    /**
+     * D6 reglas 2 y 3: franja activa que contiene ENTERO {@code [inicio, inicio+duracion)}
+     * con {@code inicio} alineado a un bloque de 30 minutos desde el comienzo de la franja.
+     */
+    public Optional<FranjaDisponibilidad> franjaQueContiene(UUID tutorId, Instant inicio, int duracionMinutos) {
+        if (!duracionValida(duracionMinutos)) {
+            return Optional.empty();
+        }
+        return franjaQueCubre(tutorId, inicio).filter(f -> {
+            LocalTime ini = inicio.atZone(ReservasZonaHoraria.ZONA).toLocalTime();
+            long desdeInicio = Duration.between(f.getHoraInicio(), ini).toMinutes();
+            LocalTime fin = ini.plusMinutes(duracionMinutos);
+            boolean alineado = desdeInicio % 30 == 0;
+            // fin.isAfter(ini): la reserva no cruza la medianoche.
+            boolean cabe = !fin.isAfter(f.getHoraFin()) && fin.isAfter(ini);
+            return alineado && cabe;
+        });
+    }
+
     /** Franjas activas publicadas por el Tutor (GET /api/tutores/{id}/franjas). */
     public List<FranjaDisponibilidad> franjasActivas(UUID tutorId) {
         return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId);
     }
 
     /**
-     * Devuelve la franja activa que cubre {@code horario}, si existe. La
-     * reutilizan ReservaService/SolicitudService (decisión booleana) y M3
-     * (T-M3-03/05: la duración de la franja define el fin agendado).
+     * Devuelve la franja activa que cubre {@code horario}, si existe. Base de
+     * {@link #franjaQueContiene} (desde AUD-020 la duración sale de la Reserva,
+     * no de la franja).
      */
     public Optional<FranjaDisponibilidad> franjaQueCubre(UUID tutorId, Instant horario) {
         LocalDateTime punto = horario.atZone(ReservasZonaHoraria.ZONA).toLocalDateTime();
@@ -81,15 +109,6 @@ public class FranjaService {
         return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
                 .filter(f -> cubre(f, diaSemana, punto))
                 .findFirst();
-    }
-
-    /**
-     * Duración planificada de la franja que cubre {@code horario} — el job de
-     * corte automático (T-M3-05) se programa en {@code horario + duración + 5min}.
-     */
-    public Optional<Duration> duracionFranjaQueCubre(UUID tutorId, Instant horario) {
-        return franjaQueCubre(tutorId, horario)
-                .map(f -> Duration.between(f.getHoraInicio(), f.getHoraFin()));
     }
 
     /** T-M4-12: franjas activas del Tutor que aplican a una fecha del calendario

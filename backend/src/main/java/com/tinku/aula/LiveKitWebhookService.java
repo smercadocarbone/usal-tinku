@@ -152,9 +152,8 @@ public class LiveKitWebhookService {
                 || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado());
     }
 
-    // La rama del DNI es compatibilidad con tokens emitidos antes de AUD-003 (identity = DNI).
-    // Se borra en FASE 3 (plan de remediación, Task 3.12). No agregar usos nuevos.
+    /** La identity de LiveKit es el UUID del usuario (AUD-003); el DNI ya no se acepta (FASE3-03). */
     private boolean mismaPersona(Usuario usuario, String identity) {
-        return usuario.getId().toString().equals(identity) || usuario.getDni().equals(identity);
+        return usuario.getId().toString().equals(identity);
     }
 }

@@ -15,12 +15,14 @@ import java.util.UUID;
 public record SolicitudResponse(UUID id, UUID tutorId, Instant horarioPropuesto,
                                 EstadoSolicitud estado, Instant expiraAt,
                                 UUID menorId, String menorNombre,
-                                String tutorNombre, String tutorApellido) {
+                                String tutorNombre, String tutorApellido,
+                                Integer duracionMinutos) {
 
     public static SolicitudResponse from(SolicitudSesion s) {
         return new SolicitudResponse(s.getId(), s.getTutor().getId(), s.getHorarioPropuesto(),
                 s.getEstado(), s.getExpiraAt(),
                 s.getMenor().getId(), s.getMenor().getNombre(),
-                s.getTutor().getNombre(), s.getTutor().getApellido());
+                s.getTutor().getNombre(), s.getTutor().getApellido(),
+                s.getDuracionMinutos());
     }
 }

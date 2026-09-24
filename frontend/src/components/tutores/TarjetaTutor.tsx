@@ -57,8 +57,8 @@ export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, o
 
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-borde pt-4">
           <div>
-            <Precio valor={tutor.precioSesion} tamano="md" />
-            {tutor.precioSesion !== null && <span className="ml-1 text-sm text-tinta-tenue">por clase</span>}
+            <Precio valor={tutor.precioHora} tamano="md" />
+            {tutor.precioHora !== null && <span className="ml-1 text-sm text-tinta-tenue">por hora</span>}
           </div>
           <span className="inline-flex items-center gap-0.5 text-sm font-bold text-tinta" aria-hidden>
             Ver perfil <ChevronRight className="size-4" />

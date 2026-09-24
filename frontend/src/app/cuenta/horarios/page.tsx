@@ -7,7 +7,7 @@ import { Skeleton, Tarjeta } from "@/components/ui";
 
 /** "Mi agenda": la home del tutor (UX-06 §1–2): qué le falta y su disponibilidad. */
 export default function CuentaHorariosPage() {
-  // B4: el id del Tutor sale de GET /api/usuarios/me, no del `sub` del JWT (DNI).
+  // B4: el id del Tutor sale de GET /api/usuarios/me (antes el `sub` era el DNI; desde AUD-027 es el UUID).
   const tutorId = useIdPropio();
 
   return (

@@ -1,0 +1,25 @@
+name: CI - matching-service
+
+# En `main` los tests los corre deploy.yml antes de publicar; acá, los PR.
+on:
+  pull_request:
+    branches: [main]
+    paths: ["matching-service/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: matching-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencias (PyTorch solo CPU, igual que la imagen)
+        run: |
+          uv venv
+          uv pip install --index-url https://download.pytorch.org/whl/cpu torch
+          uv pip install -r requirements.txt
+      - run: uv run --no-sync pytest -q

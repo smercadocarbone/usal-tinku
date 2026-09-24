@@ -89,9 +89,14 @@ public class SolicitudService {
         if (!horario.isAfter(Instant.now())) {
             throw new HorarioFueraDeFranjaException("El horario propuesto ya pasó.");
         }
-        if (!franjaService.estaDentroDeFranjaActiva(tutor.getId(), horario)) {
+        int duracion = request.duracionMinutos();
+        if (!FranjaService.duracionValida(duracion)) {
+            throw new DuracionMinutosInvalidaException(
+                    "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
+        }
+        if (franjaService.franjaQueContiene(tutor.getId(), horario, duracion).isEmpty()) {
             throw new HorarioFueraDeFranjaException(
-                    "El horario no cae dentro de una franja de disponibilidad activa del Tutor (FR-RES-012).");
+                    "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
         if (solicitudRepo.existsByMenorIdAndTutorIdAndHorarioPropuestoAndEstado(
                 menor.getId(), tutor.getId(), horario, EstadoSolicitud.PENDIENTE)) {
@@ -102,6 +107,7 @@ public class SolicitudService {
         solicitud.setMenor(menor);
         solicitud.setTutor(tutor);
         solicitud.setHorarioPropuesto(horario);
+        solicitud.setDuracionMinutos(duracion);
         solicitud.setExpiraAt(Instant.now().plus(EXPIRACION_SOLICITUD));
         solicitud.setEstado(EstadoSolicitud.PENDIENTE);
         SolicitudSesion guardada = solicitudRepo.save(solicitud);

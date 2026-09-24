@@ -237,7 +237,8 @@ class GateMenoresPilotoIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
                                 "beneficiarioId", e.menorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isConflict());
 
         assertThat(reservaRepo.count()).isEqualTo(reservasAntes);
@@ -283,7 +284,8 @@ class GateMenoresPilotoIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
-                                "horario", dentroDeFranja(fecha).toString()))))
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated());
     }
 
@@ -297,7 +299,8 @@ class GateMenoresPilotoIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horarioPropuesto", e.horario().toString()))))
+                                "horarioPropuesto", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isConflict());
 
         assertThat(solicitudRepo.count()).isEqualTo(solicitudesAntes);

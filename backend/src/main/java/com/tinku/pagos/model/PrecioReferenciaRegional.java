@@ -40,6 +40,7 @@ public class PrecioReferenciaRegional {
     @Column(nullable = false)
     private Integer version;
 
+    /** Valor sugerido POR HORA de clase (D6, FASE2-01): misma unidad que la tarifa del Tutor. */
     @Column(name = "valor_sugerido", nullable = false, precision = 10, scale = 2)
     private BigDecimal valorSugerido;
 

@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UsuarioDetailsService implements UserDetailsService {
@@ -36,5 +37,22 @@ public class UsuarioDetailsService implements UserDetailsService {
                 usuario.getDni(),
                 usuario.getPasswordHash(),
                 List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getTipo().name())));
+    }
+
+    /**
+     * Para el filtro JWT (AUD-027): carga por id, exige cuenta ACTIVA y que la versión de
+     * credenciales del token sea la vigente. El principal queda con el UUID como nombre.
+     */
+    public UserDetails cargarParaToken(UUID usuarioId, Integer cvDelToken) throws UsernameNotFoundException {
+        Usuario u = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario del token inexistente"));
+        if (u.getEstadoCuenta() != EstadoCuenta.ACTIVA) {
+            throw new UsernameNotFoundException("Cuenta inactiva");
+        }
+        if (cvDelToken == null || cvDelToken != u.getCredentialsVersion()) {
+            throw new UsernameNotFoundException("Token emitido antes de un cambio de credenciales");
+        }
+        return new User(u.getId().toString(), u.getPasswordHash(),
+                List.of(new SimpleGrantedAuthority("ROLE_" + u.getTipo().name())));
     }
 }

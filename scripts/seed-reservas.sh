@@ -60,7 +60,7 @@ for dni in "$JORGE_DNI" "$MARIA_DNI"; do
     token=$(login "$dni")
     code=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$BASE/api/pagos/tarifa" \
         -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-        -d "{\"precioSesion\":$PRECIO}")
+        -d "{\"precioHora\":$PRECIO}")
     echo "  tutor $dni: $PRECIO → HTTP $code"
 done
 
@@ -100,7 +100,7 @@ else
     token=$(login "$ANA_DNI")
     code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/reservas" \
         -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-        -d "{\"tutorId\":\"$JORGE_ID\",\"horario\":\"$RES_ISO\"}")
+        -d "{\"tutorId\":\"$JORGE_ID\",\"horario\":\"$RES_ISO\",\"duracionMinutos\":30}")
     echo "  Ana → Jorge → HTTP $code"
 fi
 
@@ -112,7 +112,7 @@ else
     token_sofia=$(login "$SOFIA_DNI")
     sol_resp=$(curl -s -X POST "$BASE/api/solicitudes" \
         -H "Authorization: Bearer $token_sofia" -H 'Content-Type: application/json' \
-        -d "{\"tutorId\":\"$JORGE_ID\",\"horarioPropuesto\":\"$SOL_ISO\"}")
+        -d "{\"tutorId\":\"$JORGE_ID\",\"horarioPropuesto\":\"$SOL_ISO\",\"duracionMinutos\":30}")
     SOL_ID=$(echo "$sol_resp" | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])' 2>/dev/null || true)
 
     if [ -z "$SOL_ID" ]; then
@@ -129,7 +129,7 @@ fi
 echo ""
 echo "==> Tarifas"
 $COMPOSE exec -T db psql -U tinku_dev -d tinku -c \
-  "SELECT u.dni, t.precio_sesion FROM pagos.tarifas_tutor t JOIN identidad.usuarios u ON u.id=t.tutor_id;"
+  "SELECT u.dni, t.precio_hora FROM pagos.tarifas_tutor t JOIN identidad.usuarios u ON u.id=t.tutor_id;"
 
 echo "==> Franjas activas"
 $COMPOSE exec -T db psql -U tinku_dev -d tinku -c \

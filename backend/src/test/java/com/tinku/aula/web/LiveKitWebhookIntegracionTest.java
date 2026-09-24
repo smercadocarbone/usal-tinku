@@ -141,8 +141,8 @@ class LiveKitWebhookIntegracionTest {
                         .content(bodyTutor))
                 .andExpect(status().isOk());
 
-        // Estudiante (beneficiario) entra con identity = DNI.
-        String bodyEst = cuerpo("participant_joined", dniDel(esc.beneficiarioId()), esc.nombreSala());
+        // Estudiante (beneficiario) entra (identity = id del usuario; el DNI ya no se acepta, AUD-003).
+        String bodyEst = cuerpo("participant_joined", esc.beneficiarioId().toString(), esc.nombreSala());
         mockMvc.perform(post("/api/webhooks/livekit")
                         .contentType("application/webhook+json")
                         .header("Authorization", "Bearer " + firmar(bodyEst.getBytes(StandardCharsets.UTF_8)))
@@ -152,6 +152,22 @@ class LiveKitWebhookIntegracionTest {
         SesionAprendizaje sesion = sesionRepository.findByLivekitRoomId(esc.nombreSala()).orElseThrow();
         assertThat(sesion.getTutorJoinedAt()).isNotNull();
         assertThat(sesion.getEstudianteJoinedAt()).isNotNull();
+    }
+
+    /** Limpieza de AUD-003 (FASE3-03): el DNI como identity era compatibilidad con tokens
+     *  previos a FASE 1 (TTL 1 h, vencidos hace rato). Ya no registra el join. */
+    @Test
+    void aud003_identityConDni_noRegistraElJoin() throws Exception {
+        EscenarioWebhook esc = prepararSesionConReserva();
+
+        String body = cuerpo("participant_joined", dniDel(esc.tutorId()), esc.nombreSala());
+        mockMvc.perform(post("/api/webhooks/livekit")
+                        .contentType("application/webhook+json")
+                        .header("Authorization", "Bearer " + firmar(body.getBytes(StandardCharsets.UTF_8)))
+                        .content(body))
+                .andExpect(status().isOk());
+
+        assertThat(sesionRepository.findByLivekitRoomId(esc.nombreSala()).orElseThrow().getTutorJoinedAt()).isNull();
     }
 
     @Test

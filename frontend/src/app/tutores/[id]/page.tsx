@@ -217,8 +217,8 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
         <aside className="hidden lg:sticky lg:top-24 lg:block">
           <Tarjeta className="flex flex-col gap-5">
             <div>
-              <Precio valor={perfil.precioSesion} tamano="lg" />
-              {perfil.precioSesion !== null && <p className="text-sm text-tinta-tenue">por clase</p>}
+              <Precio valor={perfil.precioHora} tamano="lg" />
+              {perfil.precioHora !== null && <p className="text-sm text-tinta-tenue">por hora</p>}
             </div>
             <Link href={hrefReservar} className={clasesBoton("primario", "lg", "w-full")}>
               {cta}
@@ -241,8 +241,8 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-borde bg-superficie/95 px-4 py-3 shadow-barra backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
           <div>
-            <Precio valor={perfil.precioSesion} tamano="md" />
-            {perfil.precioSesion !== null && <p className="text-[13px] text-tinta-tenue">por clase</p>}
+            <Precio valor={perfil.precioHora} tamano="md" />
+            {perfil.precioHora !== null && <p className="text-[13px] text-tinta-tenue">por hora</p>}
           </div>
           <Link href={hrefReservar} className={clasesBoton("primario", "lg", "flex-1 max-w-56")}>
             {cta}

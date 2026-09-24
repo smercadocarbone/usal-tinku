@@ -96,6 +96,14 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(LoginBloqueadoException.class)
+    public ResponseEntity<Map<String, String>> handleLoginBloqueado(LoginBloqueadoException ex) {
+        // FASE2-02: mismo cuerpo exista o no el DNI (no enumeración).
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(Math.max(1, ex.getEspera().toSeconds())))
+                .body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(FotoPerfilInvalidaException.class)
     public ResponseEntity<Map<String, String>> handleFotoPerfilInvalida(FotoPerfilInvalidaException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));

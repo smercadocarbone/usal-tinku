@@ -2,6 +2,10 @@ package com.tinku.pagos.service;
 
 import com.tinku.pagos.model.EstadoPasarela;
 import com.tinku.pagos.repository.PasarelaEstadoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +23,22 @@ import java.util.UUID;
 public class PasarelaService {
 
     private static final short FILA_UNICA = 1;
+    private static final Logger LOG = LoggerFactory.getLogger(PasarelaService.class);
 
     private final PasarelaEstadoRepository repo;
+    private final Environment environment;
 
-    public PasarelaService(PasarelaEstadoRepository repo) {
+    public PasarelaService(PasarelaEstadoRepository repo, Environment environment) {
         this.repo = repo;
+        this.environment = environment;
+    }
+
+    /**
+     * FASE2-07 / AUD-018 (P2, opción a): el Modo Bypass solo existe fuera de
+     * {@code prod}. En producción la pasarela se puede reactivar, nunca apagar.
+     */
+    public boolean bypassPermitido() {
+        return !environment.acceptsProfiles(Profiles.of("prod"));
     }
 
     public boolean estaHabilitada() {
@@ -37,6 +52,12 @@ public class PasarelaService {
      * quién lo hizo como dato de la propia fila). */
     @Transactional
     public boolean establecerHabilitada(boolean habilitada, UUID adminUsuarioId) {
+        if (!habilitada) {
+            if (!bypassPermitido()) {
+                throw new BypassNoPermitidoException();
+            }
+            LOG.warn("Modo Bypass ACTIVADO por el admin {}: las reservas se confirman sin cobro real.", adminUsuarioId);
+        }
         EstadoPasarela estado = repo.findById(FILA_UNICA).orElseGet(EstadoPasarela::new);
         estado.setId(FILA_UNICA);
         estado.setHabilitada(habilitada);

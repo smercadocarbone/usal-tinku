@@ -40,6 +40,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -90,6 +91,7 @@ class IdentidadFlujosIntegracionTest {
 
     @MockBean OcrService ocrService;
     @MockBean NotificadorResetPassword notificadorResetPassword;
+    @org.springframework.beans.factory.annotation.Value("${tinku.jwt.secret}") String jwtSecret;
 
     private static final String PASSWORD = "password123";
 
@@ -636,6 +638,64 @@ class IdentidadFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(
                                 new com.tinku.identidad.dto.LoginRequest("22222299", "nuevaPassword1"))))
                 .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------------ AUD-027 (FASE3-03): el JWT sin DNI y con cv
+
+    @Test
+    void aud027_tokenEmitido_noContieneElDni() throws Exception {
+        String dni = "55556601";
+        String token = registrarAdultoYToken(dni, "Ana", "Test", false);
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(payload).doesNotContain(dni);
+        assertThat(payload).contains(usuarioPorDni(dni).getId().toString());
+    }
+
+    @Test
+    void aud027_cambiarPassword_invalidaElTokenAnterior() throws Exception {
+        String token = registrarAdultoYToken("55556602", "Ana", "Test", false);
+        mockMvc.perform(patch("/api/usuarios/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"passwordActual\":\"" + PASSWORD + "\",\"passwordNueva\":\"OtraClave123\"}"))
+                .andExpect(status().isNoContent());
+        // Sin sesión válida la app responde 403 (no configura authenticationEntryPoint).
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aud027_resetearPassword_invalidaElTokenAnterior() throws Exception {
+        String token = registrarAdultoYToken("55556603", "Ana", "Test", false);
+        mockMvc.perform(post("/api/usuarios/recuperar-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.SolicitarResetPasswordRequest("55556603"))))
+                .andExpect(status().isNoContent());
+        ArgumentCaptor<String> tokenReset = ArgumentCaptor.forClass(String.class);
+        verify(notificadorResetPassword, atLeastOnce()).notificar(any(), tokenReset.capture());
+
+        mockMvc.perform(post("/api/usuarios/resetear-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ResetearPasswordRequest(tokenReset.getValue(), "OtraClave456"))))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aud027_tokenConSubjectDni_quedaSinSesionY403() throws Exception {
+        registrarAdultoYToken("55556604", "Ana", "Test", false);
+        // Un token con el formato viejo (sub = DNI, sin cv), bien firmado.
+        String viejo = io.jsonwebtoken.Jwts.builder().subject("55556604").claim("tipo", "ADULTO")
+                .expiration(new java.util.Date(System.currentTimeMillis() + 60_000))
+                .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(
+                        jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .compact();
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + viejo))
+                .andExpect(status().isForbidden());
     }
 
     // ------------------------------------------------ "Olvidé mi contraseña"

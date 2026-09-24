@@ -1,5 +1,7 @@
 package com.tinku.identidad.service;
 
+import com.tinku.identidad.validacion.PoliticaPassword;
+
 import com.tinku.identidad.dto.ActualizarCapacidadesRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
@@ -88,6 +90,8 @@ public class UsuarioService {
 
     @Transactional
     public Usuario registrarAdulto(RegistroAdultoRequest request, byte[] fotoDni) {
+        // FASE2-02: antes del OCR, así una contraseña inválida no consume intentos.
+        PoliticaPassword.exigirDistintaDelDni(request.password(), request.dniDeclarado());
         ResultadoOcr ocr = compuertaRegistroAdulto(request.dniDeclarado(),
                 request.nombreDeclarado(), request.apellidoDeclarado(),
                 request.fechaNacimientoDeclarada(), fotoDni);
@@ -123,6 +127,8 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario registrarMenor(RegistroMenorRequest request, byte[] fotoDni, Usuario adultoResponsable) {
+        // FASE2-02: antes del OCR, así una contraseña inválida no consume intentos.
+        PoliticaPassword.exigirDistintaDelDni(request.password(), request.dniDeclarado());
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
 
         // BR-CONSENT-01: consentimiento explícito y separado, obligatorio.
@@ -186,6 +192,8 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario registrarTutor(RegistroTutorRequest request, byte[] fotoDni) {
+        // FASE2-02: antes del OCR, así una contraseña inválida no consume intentos.
+        PoliticaPassword.exigirDistintaDelDni(request.password(), request.dniDeclarado());
         ResultadoOcr ocr = compuertaRegistroAdulto(request.dniDeclarado(),
                 request.nombreDeclarado(), request.apellidoDeclarado(),
                 request.fechaNacimientoDeclarada(), fotoDni);
@@ -266,7 +274,9 @@ public class UsuarioService {
         if (!passwordEncoder.matches(passwordActual, usuario.getPasswordHash())) {
             throw new PasswordActualIncorrectaException();
         }
+        PoliticaPassword.exigirDistintaDelDni(passwordNueva, usuario.getDni());
         usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
+        usuario.invalidarCredenciales(); // AUD-027: las sesiones abiertas dejan de valer
         usuarioRepository.save(usuario);
     }
 
@@ -328,6 +338,7 @@ public class UsuarioService {
         new SecureRandom().nextBytes(secreto);
         menor.setPasswordHash(passwordEncoder.encode(Base64.getEncoder().encodeToString(secreto)));
         menor.setEstadoCuenta(EstadoCuenta.BAJA);
+        menor.invalidarCredenciales(); // AUD-027: además de BAJA, ningún token suyo vuelve a valer
         menor.setActivoParaMatching(false);
         usuarioRepository.save(menor);
     }

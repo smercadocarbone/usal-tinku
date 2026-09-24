@@ -179,7 +179,7 @@ class DenunciasModeracionIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return jwtUtil.generateToken(u.getDni(), u.getTipo().name(), true, true);
+        return jwtUtil.generateToken(u);
     }
 
     private record Cupo(UUID reservaId, UUID sesionId, UUID transaccionId) {

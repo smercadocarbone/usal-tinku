@@ -118,6 +118,7 @@ class SesionesIntegracionTest {
     @Autowired SesionAprendizajeRepository sesionRepository;
     @Autowired SesionService sesionService;
     @Autowired Scheduler scheduler;
+    @Autowired com.tinku.reservas.repository.FranjaDisponibilidadRepository franjaRepository;
 
     @MockBean OcrService ocrService;
     @MockBean MatchingServiceClient matchingClient;
@@ -330,6 +331,51 @@ class SesionesIntegracionTest {
                         .header("Authorization", "Bearer " + firmar(body.getBytes(StandardCharsets.UTF_8)))
                         .content(body))
                 .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------------ FASE2-01 (AUD-020): la duración es de la Reserva
+
+    /** Regresión de AUD-020: si el Tutor desactiva la franja después de confirmada la
+     *  Reserva, antes programarSesion tiraba IllegalStateException (500). */
+    @Test
+    void programarSesion_conLaFranjaBorrada_usaLaDuracionDeLaReserva() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e); // 15:30, 30 min (default de D6)
+        franjaRepository.findByTutorIdAndActivaTrueOrderByHoraInicio(e.tutorId()).forEach(f -> {
+            f.setActiva(false);
+            franjaRepository.save(f);
+        });
+
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        assertThat(sesion.getDuracionAgendadaSegundos()).isEqualTo(30 * 60);
+        Instant corte = scheduler.getTrigger(SesionService.triggerCorte(sesion.getId()))
+                .getStartTime().toInstant();
+        assertThat(corte).isEqualTo(e.horario().plus(java.time.Duration.ofMinutes(30 + 5)));
+    }
+
+    /** El umbral del 50% (FR-AULA-005) se mide contra lo reservado: reserva de 60 min
+     *  en una franja de 120 → la duración agendada es 60 (el 50% son 30 min), no 120. */
+    @Test
+    void corteAntesDel50_seMideContraLaDuracionReservada() throws Exception {
+        Escenario e = escenarioBase();
+        LocalDate otroDia = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(3);
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + e.tokenTutor())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", otroDia.toString(),
+                                "horaInicio", "10:00",
+                                "horaFin", "12:00"))))
+                .andExpect(status().isCreated());
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        reserva.definirHorario(
+                ZonedDateTime.of(otroDia, LocalTime.of(10, 0), ReservasZonaHoraria.ZONA).toInstant(), 60);
+        reserva = reservaRepository.save(reserva);
+
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        assertThat(sesion.getDuracionAgendadaSegundos()).isEqualTo(60 * 60);
     }
 
     // ------------------------------------------------ FASE2-05 (AUD-029): desconexión real
@@ -842,7 +888,8 @@ class SesionesIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horarioPropuesto", horario.toString()))))
+                                "horarioPropuesto", horario.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(

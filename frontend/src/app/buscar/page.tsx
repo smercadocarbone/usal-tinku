@@ -185,7 +185,7 @@ export default function BuscarPage() {
     if (!resultados) return null;
     const copia = [...resultados];
     if (orden === "precio") {
-      copia.sort((a, b) => (a.tutor.precioSesion ?? Infinity) - (b.tutor.precioSesion ?? Infinity));
+      copia.sort((a, b) => (a.tutor.precioHora ?? Infinity) - (b.tutor.precioHora ?? Infinity));
     } else if (orden === "calificacion") {
       copia.sort((a, b) => (b.tutor.calificacionPromedio ?? -1) - (a.tutor.calificacionPromedio ?? -1));
     }

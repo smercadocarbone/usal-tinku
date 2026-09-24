@@ -45,6 +45,10 @@ public class SolicitudSesion {
     @Column(name = "horario_propuesto", nullable = false)
     private Instant horarioPropuesto;
 
+    /** D6 (FASE2-01, T3): la duración pedida; se congela en la Reserva al aprobarla. */
+    @Column(name = "duracion_minutos", nullable = false)
+    private Integer duracionMinutos = 30;
+
     @Convert(converter = EstadoSolicitudConverter.class)
     @Column(nullable = false, length = 20)
     private EstadoSolicitud estado = EstadoSolicitud.PENDIENTE;

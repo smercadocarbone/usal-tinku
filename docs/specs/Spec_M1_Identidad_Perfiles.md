@@ -115,6 +115,7 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 | FR-ID-024 | _Acotado a Tutores de Menores (ADR-M1-04)._ CAP con antecedente fuera de esa lista, o proceso en trámite sin sentencia firme → estado `en_revision_legal`, **no habilita** (fail-closed, BR-CAP-02), decisión manual documentada del Admin hasta que la asesoría legal defina el criterio (PT1). |
 | FR-ID-025 | _Acotado a Tutores de Menores (ADR-M1-04)._ Vencimiento del CAP a los 12 meses de emisión → suspensión de la habilitación para Menores (no de la cuenta ni del matching a adultos) hasta recarga de un CAP vigente. |
 | FR-ID-026 | Un Tutor queda habilitado para Menores solo con un CAP `aprobado` y vigente (12 meses desde la emisión, Tabla_Tiempos_Tinku.md). |
+| FR-ID-030 | Contraseña de al menos 10 caracteres, con letras y números, que no contenga el DNI (registro de adulto, menor y tutor; cambio y reseteo). Tras 5 intentos fallidos de login para un mismo DNI, bloqueo de 15 min que se duplica hasta 24 hs, con el mismo mensaje exista o no el DNI (FASE2-02, Tabla de Tiempos). |
 | FR-ID-027 | Presentación ("bio") opcional del Tutor, hasta 500 caracteres, visible en su perfil público (U1). |
 | FR-ID-028 | Foto opcional del Tutor en su perfil público: solo JPG o PNG verificado por contenido, mismo tamaño máximo que la Credencial; se sirve autenticada y nunca como URL pública del almacenamiento (U1). |
 | FR-ID-029 | El Admin de Moderación y Seguridad puede quitar la presentación y/o la foto de un Tutor (U1). |

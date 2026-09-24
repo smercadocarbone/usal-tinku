@@ -153,7 +153,7 @@ public class ColasFinancieroController {
     @GetMapping("/pasarela")
     public ResponseEntity<PasarelaEstadoResponse> pasarela(Authentication authentication) {
         gate.requiereSoporteFinanciero(authentication);
-        return ResponseEntity.ok(PasarelaEstadoResponse.from(pasarela.estaHabilitada()));
+        return ResponseEntity.ok(PasarelaEstadoResponse.from(pasarela.estaHabilitada(), pasarela.bypassPermitido()));
     }
 
     /**
@@ -167,7 +167,7 @@ public class ColasFinancieroController {
             Authentication authentication) {
         UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
         return ResponseEntity.ok(PasarelaEstadoResponse.from(
-                pasarela.establecerHabilitada(request.habilitada(), adminUsuarioId)));
+                pasarela.establecerHabilitada(request.habilitada(), adminUsuarioId), pasarela.bypassPermitido()));
     }
 
     /** Auditoría 2026-09-18 (gap del frontend): la tabla vigente completa, una

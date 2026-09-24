@@ -13,8 +13,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Tarifa por sesión del Tutor (US-6, FR-PAG-006, Plan M5-H): una fila por Tutor
- * con el precio vigente que cobra por sesión. La crea/actualiza el propio Tutor
+ * Tarifa POR HORA del Tutor (US-6, FR-PAG-006, Plan M5-H; D6 de FASE2-01): una
+ * fila por Tutor con el precio vigente por hora de clase. La Reserva cotiza
+ * {@code precioHora × duracionMinutos / 60}. La crea/actualiza el propio Tutor
  * desde su perfil (Chunk M5-H); la Reserva lo congela al crearse (FR-PAG-013) —
  * un cambio de tarifa jamás afecta una Reserva ya confirmada.
  */
@@ -29,8 +30,8 @@ public class TarifaTutor {
     @Column(name = "tutor_id", nullable = false)
     private UUID tutorId;
 
-    @Column(name = "precio_sesion", nullable = false, precision = 10, scale = 2)
-    private BigDecimal precioSesion;
+    @Column(name = "precio_hora", nullable = false, precision = 10, scale = 2)
+    private BigDecimal precioHora;
 
     @Column(name = "updated_at", nullable = false, updatable = false)
     private Instant updatedAt = Instant.now();

@@ -16,5 +16,7 @@ import java.util.UUID;
 public record NuevaReservaDirectaRequest(
         @NotNull UUID tutorId,
         UUID beneficiarioId,
-        @NotNull Instant horario) {
+        @NotNull Instant horario,
+        /** D6: 30 a 180 minutos, en bloques de 30 (lo valida el servicio → 422). */
+        @NotNull Integer duracionMinutos) {
 }

@@ -31,6 +31,8 @@ import com.tinku.seguridad.model.TipoSancion;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.seguridad.repository.SancionRepository;
 import com.tinku.shared.ResolucionDenuncia;
+import com.tinku.shared.notificacion.Notificador;
+import com.tinku.shared.notificacion.TipoNotificacion;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -48,6 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -77,13 +80,15 @@ public class DenunciaService {
     private final TransaccionRepository transaccionRepo;
     private final DiasHabilesService diasHabiles;
     private final ApplicationEventPublisher events;
+    private final Notificador notificador;
     private final Scheduler scheduler;
 
     public DenunciaService(DenunciaRepository denunciaRepo, SancionRepository sancionRepo,
                            UsuarioRepository usuarioRepo, SesionAprendizajeRepository sesionRepo,
                            SesionService sesionService,
                            TransaccionRepository transaccionRepo, DiasHabilesService diasHabiles,
-                           ApplicationEventPublisher events, Scheduler scheduler) {
+                           ApplicationEventPublisher events, Scheduler scheduler,
+                           Notificador notificador) {
         this.denunciaRepo = denunciaRepo;
         this.sancionRepo = sancionRepo;
         this.usuarioRepo = usuarioRepo;
@@ -93,6 +98,7 @@ public class DenunciaService {
         this.diasHabiles = diasHabiles;
         this.events = events;
         this.scheduler = scheduler;
+        this.notificador = notificador;
     }
 
     // ------------------------------------------------------ presentación (US-1)
@@ -144,11 +150,27 @@ public class DenunciaService {
         denunciaRepo.save(denuncia);
         programar(denuncia.getId(), "descargo", DescargoVencimientoJob.class,
                 DescargoVencimientoJob.PARAM_DENUNCIA_ID, denuncia.getDescargoVenceAt());
+        avisarDenunciado(denunciado, denuncia);
 
         if (reservaId != null && tieneEscrowActivo(reservaId)) {
             events.publishEvent(new DenunciaRegistradaEvent(this, reservaId));
         }
         return denuncia;
+    }
+
+    /**
+     * FASE2-03 / FR-SEC-010: el denunciado se entera de que corre su plazo de descargo.
+     * Nada del denunciante (FR-SEC-006). Outbox: en la misma transacción — si la
+     * denuncia no se registra, el aviso tampoco. Si el denunciado es un menor, el
+     * aviso va a su Adulto Responsable (Artículo II: el menor no gestiona denuncias).
+     */
+    private void avisarDenunciado(Usuario denunciado, Denuncia denuncia) {
+        Usuario destinatario = denunciado.getTipo() == TipoUsuario.MENOR && denunciado.getAdultoResponsable() != null
+                ? denunciado.getAdultoResponsable()
+                : denunciado;
+        notificador.notificar(destinatario.getId(), TipoNotificacion.DENUNCIA_RECIBIDA, Map.of(
+                "denunciaId", denuncia.getId().toString(),
+                "descargoVenceAt", denuncia.getDescargoVenceAt().toString()));
     }
 
     private boolean tieneEscrowActivo(UUID reservaId) {

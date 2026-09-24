@@ -2,6 +2,7 @@ package com.tinku.config;
 
 import com.tinku.config.security.AdminActivoAuthorizationManager;
 import com.tinku.config.security.JwtAuthenticationFilter;
+import com.tinku.config.security.RateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -78,6 +79,18 @@ public class SecurityConfig {
         return source;
     }
 
+    @Value("${tinku.rate-limit.verificar-dni-por-minuto:5}")
+    private int limiteVerificarDni;
+    @Value("${tinku.rate-limit.publicos-por-minuto:20}")
+    private int limitePublicos;
+    @Value("${tinku.rate-limit.webhooks-por-minuto:120}")
+    private int limiteWebhooks;
+
+    /** No es un @Bean: si lo fuera, Spring Boot además lo registraría como filtro de servlet y correría dos veces. */
+    private RateLimitFilter rateLimitFilter() {
+        return new RateLimitFilter(limiteVerificarDni, limitePublicos, limiteWebhooks, java.time.Clock.systemUTC());
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -88,6 +101,8 @@ public class SecurityConfig {
         http
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable) // API stateless con JWT, sin sesiones de servidor
+            // FASE2-02: el límite por IP corre antes que cualquier autenticación.
+            .addFilterBefore(rateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth

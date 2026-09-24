@@ -15,3 +15,6 @@ tinku:
   matching-service:
     # AUD-015: sin default — si falta, el arranque falla (nunca "abierto").
     token: ${MATCHING_SERVICE_TOKEN}
+  app:
+    # FASE2-03: los enlaces de los emails no pueden apuntar a localhost.
+    url-publica: ${APP_URL_PUBLICA}

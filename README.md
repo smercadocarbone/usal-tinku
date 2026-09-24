@@ -185,13 +185,15 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 | Área | Variables | Comportamiento si faltan |
 |------|-----------|--------------------------|
 | Base de datos | `SPRING_DATASOURCE_URL`, `DB_USER`, `DB_PASSWORD` | `dev`: BD de docker-compose. `prod`: **no arranca** |
-| Auth | `JWT_SECRET` | `dev`/`test`: placeholder aceptado. Fuera de ahí: **no arranca** (AUD-034) |
+| Auth | `JWT_SECRET` | `dev`/`test`: placeholder aceptado. Fuera de ahí: **no arranca** (AUD-034). Desde FASE3-03 el `sub` del JWT es el UUID del usuario y lleva `cv`: **tras ese deploy todos los usuarios vuelven a iniciar sesión una vez** |
 | CORS | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` |
 | LiveKit (M3) | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_TOKEN_TTL_SEGUNDOS` | El backend arranca; falla con mensaje claro recién al usar el aula |
 | MercadoPago (M5) | `MP_ACCESS_TOKEN`, `MP_BASE_URL`, `MP_NOTIFICATION_URL`, `MP_WEBHOOK_SECRET` | Sin `MP_WEBHOOK_SECRET` el webhook rechaza todo (fail-closed) |
 | OCR (M1) | `TESSDATA_PREFIX`, `OCR_IDIOMA`, `OCR_BACKOFF_HORAS`, `CREDENCIAL_BACKOFF_HORAS` | Solo aplica fuera de `dev`/`test` |
 | Almacenamiento | `ALMACENAMIENTO_DIRECTORIO` | Directorio temporal del sistema (ADR-M1-03) |
 | Reservas (M4) | `RESERVAS_TARIFA_STUB` | — |
+| Pagos (M5) | `TARIFA_PISO_HORA_ARS` | 6140 (piso por hora, T06; revisión mensual) |
+| Email / avisos | `RESEND_API_KEY`, `EMAIL_REMITENTE`, `APP_URL_PUBLICA` | Sin key/remitente: sin email (avisos solo en la bandeja in-app; reset de contraseña no llega). `APP_URL_PUBLICA`: `prod` **no arranca** sin ella |
 | Resumen (M6) | `LLM_PROVEEDOR`, `LLM_API_KEY` | Vacío = fail-closed, no sale nada hacia ningún modelo |
 | Matching | `MATCHING_SERVICE_URL`, `MATCHING_SERVICE_TOKEN` (backend); `TINKU_PG_HOST`, `TINKU_PG_PORT`, `TINKU_PG_DBNAME`, `TINKU_PG_USER`, `TINKU_PG_PASSWORD`, `TINKU_MATCHING_TOKEN` (servicio Python) | Backend: `http://localhost:8000`. **AUD-015:** `TINKU_MATCHING_TOKEN`/`MATCHING_SERVICE_TOKEN` son el mismo token compartido; vacío = fail-closed (503) en `/match` y `/recompute-embeddings`. Fuera de dev/test el backend **no arranca** sin él |
 | Frontend | `NEXT_PUBLIC_API_URL` (build arg en Docker), `NEXT_PUBLIC_SITE_URL` | — |
@@ -203,6 +205,12 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 > OCR…) hay que agregarlas al servicio si las necesitás en Docker.
 
 ---
+
+## Producción
+
+Todo corre en un VPS con Coolify y se despliega solo al mergear a `main` (tests → imágenes en GHCR →
+webhook de Coolify). Decisión: `docs/adr/ADR-000-07.md`. Paso a paso, variables, vuelta atrás y
+backups: `docs/operacion/RUNBOOK_produccion.md`.
 
 ## Tests
 

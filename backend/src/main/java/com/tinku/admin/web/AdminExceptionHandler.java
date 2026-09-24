@@ -24,6 +24,12 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.tinku.admin")
 public class AdminExceptionHandler {
 
+    /** FASE2-07: apagar la pasarela en prod → 409. */
+    @ExceptionHandler(com.tinku.pagos.service.BypassNoPermitidoException.class)
+    public ResponseEntity<Map<String, String>> bypassNoPermitido(com.tinku.pagos.service.BypassNoPermitidoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(AccesoModeracionDenegadoException.class)
     public ResponseEntity<Map<String, String>> accesoDenegado() {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

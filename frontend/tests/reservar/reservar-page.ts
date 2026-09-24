@@ -19,6 +19,11 @@ export class ReservarPage extends BasePage {
     return this.page.getByRole("button", { name: etiqueta });
   }
 
+  /** D6: la duración se elige antes del horario (por defecto, 1 h si entra). */
+  async elegirDuracion(etiqueta: string): Promise<void> {
+    await this.page.getByRole("radio", { name: new RegExp(`^${etiqueta}`) }).click();
+  }
+
   /** Paso "Cuándo": el primer día con horarios ya viene elegido; se toca el horario. */
   async elegirHorario(etiquetaHorario: string): Promise<void> {
     await this.page.getByRole("button", { name: new RegExp(etiquetaHorario) }).click();

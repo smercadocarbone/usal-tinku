@@ -8,7 +8,6 @@ import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.service.ReservaService;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -38,9 +37,10 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                               Instant pagoVenceAt,
                               boolean puedePagar,
                               boolean puedeCancelar,
-                              Boolean cancelarReembolsaTotal) {
+                              Boolean cancelarReembolsaTotal,
+                              Instant horarioFin) {
 
-    public static ReservaResponse from(Reserva r, Usuario quienMira, Duration duracion, Instant ahora) {
+    public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora) {
         boolean pendiente = r.getEstado() == EstadoReserva.PENDIENTE_PAGO;
         Instant vence = pendiente ? r.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO) : null;
         UUID yo = quienMira == null ? null : quienMira.getId();
@@ -59,7 +59,7 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                 r.getMotivoCancelacion(),
                 r.getTutor().getNombre(), r.getTutor().getApellido(),
                 beneficiario.getNombre(), beneficiario.getApellido(),
-                duracion == null ? null : (int) duracion.toMinutes(),
-                vence, puedePagar, puedeCancelar, reembolsaTotal);
+                r.getDuracionMinutos(),
+                vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin());
     }
 }

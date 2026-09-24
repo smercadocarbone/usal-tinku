@@ -11,7 +11,7 @@ import java.util.UUID;
 
 /**
  * Implementación real del puerto {@code TarifaProveedor} (Spec M5 US-6,
- * FR-PAG-006, Chunk M5-H): el precio por sesión vigente del Tutor viven en
+ * FR-PAG-006, Chunk M5-H): el precio por hora vigente del Tutor vive en
  * {@code pagos.tarifas_tutor}, que el Tutor actualiza desde su perfil.
  *
  * Fallback de desarrollo/pruebas: si el Tutor todavía no configuró su tarifa
@@ -36,13 +36,13 @@ public class TarifaProveedorTutor implements TarifaProveedor {
     }
 
     @Override
-    public BigDecimal tarifaPorSesion(UUID tutorId) {
+    public BigDecimal precioHora(UUID tutorId) {
         return tarifaRepo.findByTutorId(tutorId)
-                .map(t -> t.getPrecioSesion())
+                .map(t -> t.getPrecioHora())
                 .orElseGet(() -> {
                     if (tarifaStub == null) {
                         throw new TarifaNoConfiguradaException(
-                                "El Tutor todavía no configuró su tarifa por sesión (Spec M5 US-6 / FR-PAG-006). "
+                                "El Tutor todavía no configuró su tarifa por hora (Spec M5 US-6 / FR-PAG-006). "
                                         + "Para desarrollo, definí tinku.reservas.tarifa-stub (o RESERVAS_TARIFA_STUB).");
                     }
                     return tarifaStub;

@@ -1335,13 +1335,13 @@ Ya iniciado en la Task 1.10 (`ADR-M3-02`). **Cerrarlo formalmente** con el resul
 | 3.3 | Mover cada evento al módulo que lo publica | AUD-022 | Refactor mecánico de imports. **Los nombres de los eventos NO cambian** (guardrail A2) — solo el paquete. Commit propio. |
 | 3.4 | `EXCLUDE` de superposición en `franjas_disponibilidad` + `franjaQueCubre` como query | AUD-025 | Migración V28. Hoy `findFirst()` resuelve la ambigüedad por orden arbitrario. |
 | 3.5 | Distinguir la constraint violada antes de devolver 409 | AUD-023 | `ConstraintViolationException.getConstraintName()`. Solo `ex_reservas_sin_superposicion_*` → 409; el resto → 500 con log. |
-| 3.6 | `credentials_version` en el JWT + `sub` = UUID | AUD-027 | Invalida sesiones al resetear contraseña. **Toca `JwtUtil`, `UsuarioDetailsService`, `AdminModeracionGate`, `UsuarioActual` y todos los tests que generan tokens.** Plan detallado propio. |
+| 3.6 | `credentials_version` en el JWT + `sub` = UUID **HECHA (FASE3-03, 2026-09-24)** | AUD-027 | Invalida sesiones al resetear contraseña. **Toca `JwtUtil`, `UsuarioDetailsService`, `AdminModeracionGate`, `UsuarioActual` y todos los tests que generan tokens.** Plan detallado propio. |
 | 3.7 | Acotar el fallback a `catalogoMock` | AUD-026 | 404 estricto, o `NODE_ENV !== 'production'`. |
 | 3.8 | Una calificación pública por sesión | AUD-028 | **Decisión (D9, 2026-09-22): califica solo el pagador.** `derivarDireccion()` (línea ~135) hoy mapea `beneficiario` **O** `pagador` → `DIR_ESTUDIANTE_A_TUTOR`; pasa a mapear solo `pagador` (el beneficiario que no es pagador cae en `CalificacionNoPermitidaException` → 403). Para un Estudiante adulto reservando para sí mismo no cambia nada (`pagador == beneficiario`). Argumento de defensa: coherente con el patrón del Artículo II que ya rige M1/M4/M9 — el menor no paga, no autoriza Tutores, no denuncia; el AR lo hace en su nombre. Resuelve que hoy una sesión con menor pese el doble en el promedio del Tutor. Revisar el frontend para que no ofrezca calificar a un menor. Hueco del Spec a cerrar: `Spec_M7` no dice quién califica cuando pagador != beneficiario. |
 | 3.9 | Migración que dropee las tablas de CAP (V6) | AUD-035 | Migración **V29**, nunca editar V6 (guardrail A1). Comentario que referencie ADR-M1-02. |
 | 3.10 | Dependabot + actualizar Spring Boot | AUD-032 | Mejor relación costo/beneficio del informe. |
 | 3.11 | Middleware de Next.js: verificar firma o renombrar | AUD-016 | Si se verifica: `jose`, edge-compatible, comparte el secreto. Si no: renombrar el comentario y ser honesto. Ambas son válidas. |
-| 3.12 | Borrar la rama DNI de `LiveKitWebhookService.mismaPersona()` | AUD-003 (limpieza) | Desde Task 1.3 el identity de LiveKit es el UUID. La rama `usuario.getDni().equals(identity)` solo sobrevive para tokens emitidos antes del deploy de 1.3 (TTL de `tinku.livekit.token-ttl-segundos`, default 1h). Borrarla cuando ese TTL haya vencido en todos los entornos. |
+| 3.12 | Borrar la rama DNI de `LiveKitWebhookService.mismaPersona()` **HECHA (FASE3-03, 2026-09-24)** | AUD-003 (limpieza) | Desde Task 1.3 el identity de LiveKit es el UUID. La rama `usuario.getDni().equals(identity)` solo sobrevive para tokens emitidos antes del deploy de 1.3 (TTL de `tinku.livekit.token-ttl-segundos`, default 1h). Borrarla cuando ese TTL haya vencido en todos los entornos. |
 
 ---
 
@@ -1355,7 +1355,7 @@ Ya iniciado en la Task 1.10 (`ADR-M3-02`). **Cerrarlo formalmente** con el resul
 | 4.2 | Unificar `@Transactional` en el de Spring (hoy hay `jakarta` en 3 servicios de `identidad`) | AUD-036.3 |
 | 4.3 | Subpaquetes de capa en `matching` (40 clases planas) | AUD-036.2 |
 | 4.4 | `@JsonIgnore` en `Usuario.getEdad()` | AUD-036.6 |
-| 4.5 | Limpiar la rama del DNI en `LiveKitWebhookService.mismaPersona()` (la dejó viva la Task 1.3) | AUD-003 |
+| 4.5 | Limpiar la rama del DNI en `LiveKitWebhookService.mismaPersona()` (la dejó viva la Task 1.3) **HECHA (FASE3-03, 2026-09-24)** | AUD-003 |
 | 4.6 | Actuator con `/health` e `/info` | AUD-034 |
 
 ---

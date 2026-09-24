@@ -158,7 +158,7 @@ class PasarelaBypassIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return jwtUtil.generateToken(u.getDni(), u.getTipo().name(), true, true);
+        return jwtUtil.generateToken(u);
     }
 
     private Reserva reservaEn(Usuario pagador, EstadoReserva estado) {

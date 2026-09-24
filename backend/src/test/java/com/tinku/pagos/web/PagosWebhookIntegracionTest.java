@@ -201,7 +201,8 @@ class PagosWebhookIntegracionTest {
     }
 
     private Instant dentroDeFranja(LocalDate fecha) {
-        return ZonedDateTime.of(fecha, LocalTime.of(15, 30), ReservasZonaHoraria.ZONA).toInstant();
+        // D6: 15:00 por 60 min ocupa la franja 15-16 entera → precio = tarifa por hora.
+        return ZonedDateTime.of(fecha, LocalTime.of(15, 0), ReservasZonaHoraria.ZONA).toInstant();
     }
 
     private String registrarAdultoYToken(String dni, String nombre, String apellido) throws Exception {
@@ -247,7 +248,8 @@ class PagosWebhookIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "beneficiarioId", menorId.toString(),
-                                "horario", dentroDeFranja(fecha).toString()))))
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 60))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());

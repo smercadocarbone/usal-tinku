@@ -76,3 +76,5 @@ export type { ItemAcordeon } from "./Acordeon";
 /** @deprecated Reemplazado por `Toast` (UX-01 §3). Alias hasta migrar sus dos usos. */
 export { default as IndicadorGuardado } from "./IndicadorGuardado";
 export type { IndicadorGuardadoProps, EstadoGuardado } from "./IndicadorGuardado";
+
+export { default as RequisitosPassword } from "./RequisitosPassword";
