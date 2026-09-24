@@ -586,7 +586,8 @@ class AdminPanelIntegracionTest {
         reservaLiberada.setPagador(pagador);
         reservaLiberada.setBeneficiario(pagador);
         reservaLiberada.setTutor(usuario(TipoUsuario.TUTOR));
-        reservaLiberada.setHorario(Instant.now().plusSeconds(3600));
+        // AUD-009: mismo beneficiario → no puede superponerse con la reserva de arriba.
+        reservaLiberada.setHorario(Instant.now().plusSeconds(3 * 3600));
         reservaLiberada.setPrecio(BigDecimal.valueOf(15000));
         reservaLiberada.setEstado(EstadoReserva.CONFIRMADA);
         reservaRepository.save(reservaLiberada);
