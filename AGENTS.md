@@ -24,7 +24,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 
 ## 2. Cuándo un ADR es obligatorio (no seguir sin uno)
 
-- Elegir o cambiar: proveedor de OCR, backend del índice semántico (pgvector vs. en memoria), proveedor de LLM (GPT-4o vs. Gemini 2.0 Flash), cualquier fila de la "Registro de Decisiones Técnicas" de la Constitución.
+- Elegir o cambiar: proveedor de OCR, backend del índice semántico (pgvector vs. en memoria), proveedor de LLM (Gemini 3.5 Flash-Lite, ADR-M6-03), cualquier fila de la "Registro de Decisiones Técnicas" de la Constitución.
 - Cualquier desviación de las reglas de la sección 1.
 - El ADR se documenta como archivo (`/docs/adr/ADR-M{n}-{seq}.md`), nunca como comentario en código ni como decisión implícita en un PR.
 
