@@ -35,6 +35,8 @@ export interface SystemHealthDTO {
 export interface Props {
   healthData: SystemHealthDTO;
   isPaymentGatewayEnabled: boolean;
+  /** FASE2-07: false en producción — el Modo Bypass solo se activa fuera de `prod`. */
+  bypassPermitido?: boolean;
   onTogglePaymentGateway: (enabled: boolean) => Promise<void>;
 }
 
@@ -97,6 +99,7 @@ function TarjetaServicio({
 export default function AdminInfrastructurePanel({
   healthData,
   isPaymentGatewayEnabled,
+  bypassPermitido = true,
   onTogglePaymentGateway,
 }: Props) {
   const [pagosHabilitados, setPagosHabilitados] = useState(isPaymentGatewayEnabled);
@@ -165,7 +168,8 @@ export default function AdminInfrastructurePanel({
             role="switch"
             aria-checked={pagosHabilitados}
             aria-label="Habilitar la pasarela de pagos"
-            disabled={togglingPagos}
+            // En producción solo se puede reactivar (apagarla daría el marketplace gratis).
+            disabled={togglingPagos || (pagosHabilitados && !bypassPermitido)}
             onClick={alternarPasarela}
             className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${pagosHabilitados ? "bg-teal-600" : "bg-slate-300"}`}
           >
@@ -175,6 +179,11 @@ export default function AdminInfrastructurePanel({
             />
           </button>
         </div>
+        {!bypassPermitido && pagosHabilitados && (
+          <p className="mt-3 text-sm text-tinta-suave">
+            En producción la pasarela no se puede apagar: el Modo Bypass solo existe para entornos de prueba.
+          </p>
+        )}
         {togglingPagos && <Cargando className="mt-3">Aplicando cambio…</Cargando>}
         {!pagosHabilitados && (
           // `rol="alert"` explícito: que la plataforma esté cobrando en falso

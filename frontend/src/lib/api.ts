@@ -263,6 +263,8 @@ export interface SystemHealthDTO {
 
 export interface PasarelaEstado {
   habilitada: boolean;
+  /** FASE2-07: false en producción. Ausente en respuestas viejas = permitido. */
+  bypassPermitido?: boolean;
 }
 
 export function getSaludSistema(): Promise<SystemHealthDTO> {

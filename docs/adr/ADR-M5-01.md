@@ -87,6 +87,19 @@ memoria, lo que garantiza el efecto inmediato e uniforme del toggle.
   vía el servicio, conservando la regla de que la transacción de pagos es
   responsabilidad de `pagos`.
 
+## Actualización 2026-09-24 — ámbito acotado (FASE2-07, AUD-018, P2 opción a)
+
+El Modo Bypass **solo se puede activar fuera del perfil `prod`**. En producción
+`PasarelaService.establecerHabilitada(false, …)` lanza `BypassNoPermitidoException` → **409**;
+reactivar la pasarela se permite siempre. `GET /api/admin/financiero/pasarela` suma
+`bypassPermitido` para que el panel deshabilite el control con una explicación.
+
+Controles compensatorios fuera de `prod`: log `WARN` con el id del admin cada vez que se apaga la
+pasarela (además de la auditoría del interceptor de M8) y un **banner persistente** en todo `/admin`
+mientras esté apagada. Se descartaron el TTL con Quartz (opción b: un plazo más en la Tabla de
+Tiempos y un job, para un riesgo que la opción a ya elimina en producción) y la doble confirmación
+(opción c: no evita un toggle olvidado).
+
 ## Registro de Decisiones Técnicas (Constitución)
 No aplica: no existe fila del Registro que cubra el flag de pasarela. La
 decisión queda documentada en este ADR (decisión de producto/técnica del
