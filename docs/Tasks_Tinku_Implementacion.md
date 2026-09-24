@@ -230,7 +230,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033) — CERRADO en FASE 1 junto con AUD-013 (Task 1.8)
 - [ ] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031)
 - [ ] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021)
-- [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9)
+- [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9). _2026-09-24: ya no hacen falta — las dos decisiones se revirtieron (FASE3-03: `sub` = UUID; FASE2-03: notificador por email, ADR-000-06)._
 - [x] T-AUD-024: Anexo a ADR-M3-01: modelo de amenaza del clasificador on-device y controles compensatorios (AUD-005) — escrito en FASE 1 como `ADR-M3-02` (Task 1.10). CERRADO en FASE 2 por `FASE2-10-colision-alerta-denuncia.md` (2026-09-23): estado propio `pausado_alerta`, la Alerta manda sobre la Denuncia; regresión: `EscrowListenersIntegracionTest` (4 tests de colisión) + `AdminPanelIntegracionTest.reembolsoParcial_sobrePausadoAlerta_422`
 
 ### FASE 3 — P2 Mejoras recomendables
@@ -238,7 +238,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-026: Mover cada evento al módulo que lo publica (o a `shared.evento`) (AUD-022)
 - [ ] T-AUD-027: `EXCLUDE` de superposición en `franjas_disponibilidad` + `franjaQueCubre` como query (AUD-025)
 - [ ] T-AUD-028: Distinguir la constraint violada antes de devolver 409 "horario ocupado" (AUD-023)
-- [ ] T-AUD-029: `credentials_version` en el JWT para invalidar sesiones al resetear contraseña (AUD-027)
+- [x] T-AUD-029: `credentials_version` en el JWT para invalidar sesiones al resetear contraseña (AUD-027) — _FASE3-03, 2026-09-24: V33, `sub` = UUID, claim `cv`; cambiar/resetear la contraseña (y la baja de un menor) invalidan los tokens anteriores; principal = UUID en filtro, `UsuarioActual`, gates de admin y tickets; limpieza de la rama DNI de LiveKit (AUD-003). Tras el deploy todos vuelven a iniciar sesión una vez. Suite 522/0; E2E 79/79._
 - [ ] T-AUD-030: Acotar el fallback a `catalogoMock` a 404 estricto o a no-producción (AUD-026)
 - [ ] T-AUD-031: Decidir una calificación pública por sesión (o documentar el sesgo) (AUD-028)
 - [-] T-AUD-032: ~~Migración que dropee las tablas de CAP (V6) referenciando ADR-M1-02 (AUD-035)~~ — **CANCELADA — cancelada por ADR-M1-04**: las tablas de V6 vuelven a usarse (tesis T02). AUD-035 pasa a `EN CURSO` en T01 y lo cierra T02.
