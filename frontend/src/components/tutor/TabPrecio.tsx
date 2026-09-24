@@ -122,7 +122,7 @@ export default function TabPrecio() {
     setEstado("guardando");
     const id = setTimeout(() => {
       api
-        .put("/api/pagos/tarifa", { precio_sesion: precioNumerico })
+        .put("/api/pagos/tarifa", { precioSesion: precioNumerico })
         .then(() => {
           setMensajeError("");
           setEstado("ok");
