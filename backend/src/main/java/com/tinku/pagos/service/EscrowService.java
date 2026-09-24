@@ -16,6 +16,7 @@ import com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago;
 import com.tinku.pagos.port.ReembolsoProveedor;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
+import com.tinku.reservas.model.PoliticaCancelacion;
 import com.tinku.reservas.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
@@ -70,9 +71,6 @@ public class EscrowService {
 
     /** FR-PAG-002: liberación al Tutor 24hs después de finalizada la Sesión. */
     static final Duration VENTANA_LIBERACION = Duration.ofHours(24);
-
-    /** FR-RES-008/016: ventana de cancelación sin penalidad — ≥24hs al horario. */
-    static final Duration VENTANA_CANCELACION = Duration.ofHours(24);
 
     private final TransaccionRepository transaccionRepo;
     private final ReservaRepository reservaRepo;
@@ -402,11 +400,8 @@ public class EscrowService {
                     if (reserva == null) {
                         return; // invariable: no hay Reserva sin escrow confirmado
                     }
-                    boolean conMargen = !Instant.now().plus(VENTANA_CANCELACION)
-                            .isAfter(reserva.getHorario());
-                    boolean canceloElPagador = reserva.getPagador() != null
-                            && reserva.getPagador().getId().equals(evento.getCanceladaPorUsuarioId());
-                    if (conMargen || !canceloElPagador) {
+                    if (PoliticaCancelacion.reembolsoTotal(
+                            reserva, evento.getCanceladaPorUsuarioId(), Instant.now())) {
                         reembolsarSiRetenida(evento.getReservaId());
                     } else {
                         // Liberación inmediata, mismo camino resiliente que el

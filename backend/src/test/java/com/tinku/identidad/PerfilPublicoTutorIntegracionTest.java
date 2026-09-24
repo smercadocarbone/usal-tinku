@@ -262,4 +262,30 @@ class PerfilPublicoTutorIntegracionTest {
         adminRepository.save(fila);
         return u;
     }
+
+    @Test
+    void estadoPerfil_diceQueLeFaltaAlTutor_yNoAplicaAOtrosTipos() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+
+        mvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", token(tutor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibleEnBusquedas").value(false))
+                .andExpect(jsonPath("$.ultimaCredencial").doesNotExist())
+                .andExpect(jsonPath("$.tienePrecio").value(false))
+                .andExpect(jsonPath("$.tieneBio").value(false));
+
+        mvc.perform(put("/api/tutores/me/perfil").header("Authorization", token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON).content(bio("Hola")))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/pagos/tarifa").header("Authorization", token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"precioSesion\": 9000}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", token(tutor)))
+                .andExpect(jsonPath("$.tienePrecio").value(true))
+                .andExpect(jsonPath("$.tieneBio").value(true));
+
+        mvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", token(usuario(TipoUsuario.ADULTO))))
+                .andExpect(status().isForbidden());
+    }
 }

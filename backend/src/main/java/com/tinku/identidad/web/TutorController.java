@@ -3,6 +3,7 @@ package com.tinku.identidad.web;
 import com.tinku.identidad.dto.ActualizarPerfilPublicoRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
+import com.tinku.identidad.dto.EstadoPerfilTutorResponse;
 import com.tinku.identidad.dto.MateriasNivel;
 import com.tinku.identidad.dto.RegistroTutorRequest;
 import com.tinku.identidad.dto.ReputacionTutor;
@@ -109,6 +110,24 @@ public class TutorController {
         return TutorPerfilResponse.of(tutor, materiasNivel.orElse(null), reputacion,
                 credencialService.existeAprobada(id),
                 tarifaPerfilProvider.tarifaConfigurada(id).orElse(null));
+    }
+
+    /** UX-06 §1: checklist de "qué me falta para recibir alumnos". Solo Tutores. */
+    @GetMapping("/me/estado-perfil")
+    public ResponseEntity<EstadoPerfilTutorResponse> estadoPerfil(Authentication authentication) {
+        Usuario tutor = usuarioActual.obtener(authentication);
+        if (tutor.getTipo() != com.tinku.identidad.model.TipoUsuario.TUTOR) {
+            throw new com.tinku.identidad.service.SoloTutorException();
+        }
+        UUID id = tutor.getId();
+        return ResponseEntity.ok(new EstadoPerfilTutorResponse(
+                tutor.isActivoParaMatching(),
+                credencialService.obtenerUltima(id).map(CredencialAcademica::getEstado).orElse(null),
+                credencialService.existeAprobada(id),
+                perfilMatchingProvider.materiasYNivel(id).map(m -> !m.materias().isEmpty()).orElse(false),
+                tarifaPerfilProvider.tarifaConfigurada(id).isPresent(),
+                tutor.getBio() != null,
+                tutor.getFotoRef() != null));
     }
 
     /** U1: el Tutor autenticado actualiza la bio de su perfil público (≤ 500 caracteres). */

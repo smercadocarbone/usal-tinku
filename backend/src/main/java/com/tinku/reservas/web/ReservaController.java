@@ -37,23 +37,21 @@ public class ReservaController {
 
     @GetMapping
     public ResponseEntity<List<ReservaResponse>> listar(Authentication authentication) {
-        List<ReservaResponse> reservas = reservaService.listarDe(usuarioActual.obtener(authentication))
-                .stream().map(ReservaResponse::from).toList();
-        return ResponseEntity.ok(reservas);
+        return ResponseEntity.ok(reservaService.vistas(usuarioActual.obtener(authentication)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ReservaResponse> obtener(@PathVariable UUID id, Authentication authentication) {
-        Reserva reserva = reservaService.obtener(usuarioActual.obtener(authentication), id);
-        return ResponseEntity.ok(ReservaResponse.from(reserva));
+        return ResponseEntity.ok(reservaService.vista(usuarioActual.obtener(authentication), id));
     }
 
     @PostMapping
     public ResponseEntity<ReservaResponse> crear(
             @Valid @RequestBody NuevaReservaDirectaRequest request,
             Authentication authentication) {
-        Reserva reserva = reservaService.crearDirecta(usuarioActual.obtener(authentication), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ReservaResponse.from(reserva));
+        Usuario yo = usuarioActual.obtener(authentication);
+        Reserva reserva = reservaService.crearDirecta(yo, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.vista(yo, reserva.getId()));
     }
 
     @PostMapping("/{id}/reprogramar")
@@ -61,15 +59,17 @@ public class ReservaController {
             @PathVariable UUID id,
             @Valid @RequestBody ReprogramarReservaRequest request,
             Authentication authentication) {
-        Reserva reserva = reservaService.reprogramar(usuarioActual.obtener(authentication), id, request.nuevoHorario());
-        return ResponseEntity.ok(ReservaResponse.from(reserva));
+        Usuario yo = usuarioActual.obtener(authentication);
+        reservaService.reprogramar(yo, id, request.nuevoHorario());
+        return ResponseEntity.ok(reservaService.vista(yo, id));
     }
 
     @PostMapping("/{id}/cancelar")
     public ResponseEntity<ReservaResponse> cancelar(
             @PathVariable UUID id,
             Authentication authentication) {
-        Reserva reserva = reservaService.cancelar(usuarioActual.obtener(authentication), id);
-        return ResponseEntity.ok(ReservaResponse.from(reserva));
+        Usuario yo = usuarioActual.obtener(authentication);
+        reservaService.cancelar(yo, id);
+        return ResponseEntity.ok(reservaService.vista(yo, id));
     }
 }
