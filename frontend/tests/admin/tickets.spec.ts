@@ -23,6 +23,7 @@ test.describe("Panel de Administración — Tickets de soporte", () => {
     async ({ page, context, baseURL }) => {
       await setFakeSession(context, baseURL!);
       await mockApi(page, {
+        "GET /api/admin/yo": jsonRoute(200, { rol: "soporte_financiero" }),
         "GET /api/admin/tickets": jsonRoute(200, [ticket()]),
         "PATCH /api/admin/tickets/t-1": jsonRoute(200, ticket({ estado: "en_proceso" })),
       });
@@ -45,6 +46,7 @@ test.describe("Panel de Administración — Tickets de soporte", () => {
     async ({ page, context, baseURL }) => {
       await setFakeSession(context, baseURL!);
       await mockApi(page, {
+        "GET /api/admin/yo": jsonRoute(200, { rol: "soporte_financiero" }),
         "GET /api/admin/tickets": jsonRoute(200, [ticket()]),
         "PATCH /api/admin/tickets/t-1": jsonRoute(403, {
           error: "No autorizado para esta acción de administración.",

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { setFakeSession } from "../helpers";
+import { mockApi, jsonRoute, setFakeSession } from "../helpers";
 
 /**
  * Cubre la navegación del `SettingsShell` en su hábitat real: la sección
@@ -15,6 +15,9 @@ test.describe("Panel de Administración — navegación del SettingsShell", () =
     { tag: ["@a11y", "@TABS-E2E-001"] },
     async ({ page, context, baseURL }) => {
       await setFakeSession(context, baseURL!);
+      await mockApi(page, {
+        "GET /api/admin/yo": jsonRoute(200, { rol: "moderacion_seguridad" }),
+      });
       await page.goto("/admin/alertas");
 
       const nav = page.getByRole("navigation", { name: "Secciones" });
@@ -29,6 +32,33 @@ test.describe("Panel de Administración — navegación del SettingsShell", () =
       await expect(page).toHaveURL(/\/admin\/denuncias$/);
       await expect(linkDenuncias).toHaveAttribute("aria-current", "page");
       await expect(linkAlertas).not.toHaveAttribute("aria-current", "page");
+    }
+  );
+
+  test(
+    "el menú oculta las secciones que el rol no puede usar (B10)",
+    { tag: ["@e2e", "@ADMIN-MENU-B10-E2E-001"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSession(context, baseURL!);
+
+      // Moderación: ve Seguridad + Soporte, no Financiero.
+      await mockApi(page, {
+        "GET /api/admin/yo": jsonRoute(200, { rol: "moderacion_seguridad" }),
+      });
+      await page.goto("/admin/denuncias");
+      const nav = page.getByRole("navigation", { name: "Secciones" });
+      await expect(nav.getByRole("link", { name: "Denuncias" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Tickets de soporte" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Pagos fallidos" })).toHaveCount(0);
+
+      // Soporte financiero: ve Financiero + Soporte, no Seguridad.
+      await mockApi(page, {
+        "GET /api/admin/yo": jsonRoute(200, { rol: "soporte_financiero" }),
+      });
+      await page.goto("/admin/pagos");
+      await expect(nav.getByRole("link", { name: "Pagos fallidos" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Tickets de soporte" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Denuncias" })).toHaveCount(0);
     }
   );
 });
