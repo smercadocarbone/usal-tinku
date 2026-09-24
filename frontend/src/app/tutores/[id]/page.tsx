@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, autorizarTutor, getMenores, mensajeDeError, type Menor } from "@/lib/api";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import { formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
@@ -39,7 +39,7 @@ const NOMBRE_TIPO: Record<string, string> = {
 };
 
 export default function TutorPerfilPage({ params }: { params: { id: string } }) {
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
 
   const [perfil, setPerfil] = useState<TutorPerfil | null>(null);
@@ -199,7 +199,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   </div>
                 )}
                 <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Calificacion</dt>
+                  <dt className="font-semibold">Calificación</dt>
                   <dd className="m-0 text-right">
                     {perfil.calificacionPromedio !== null &&
                     perfil.cantidadCalificaciones >= 5
@@ -315,7 +315,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
             {payload && (
               <p className="text-xs text-slate-500">
-                Sesion de {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
+                Tu cuenta: {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
               </p>
             )}
           </div>

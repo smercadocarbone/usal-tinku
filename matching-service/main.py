@@ -24,6 +24,7 @@ Endpoints:
 import os
 from collections.abc import Callable, Iterable
 
+import logging
 import psycopg
 from fastapi import FastAPI
 from pgvector import Vector
@@ -31,6 +32,8 @@ from pgvector.psycopg import register_vector
 from pydantic import BaseModel
 
 app = FastAPI(title="tinku-matching-service", version="0.2.0")
+
+logger = logging.getLogger("tinku-matching-service")
 
 # Modelo multilingual (espanol incluido) de 384 dims — coincide con la
 # columna `embedding VECTOR(384)` de la migracion V7 (ADR-M2-01).
@@ -169,6 +172,18 @@ def _cargar_embedder() -> Callable[[str], list[float]]:
         modelo = SentenceTransformer(MODELO)
         _embedder = lambda texto: modelo.encode(texto).tolist()
     return _embedder
+
+
+@app.on_event("startup")
+def _precargar_embedder() -> None:
+    """B13: baja el modelo en el arranque, no en la primera búsqueda — la
+    primera búsqueda tras levantar el stack tardaba ~34s. Si acá falla (p. ej.
+    sin acceso a HuggingFace), no se tira abajo el servicio: la primera request
+    reintenta con la carga lazy de `_cargar_embedder`."""
+    try:
+        _cargar_embedder()
+    except Exception as exc:  # noqa: BLE001 — degradar a lazy, no morir
+        logger.warning("no se pudo precargar el embedder en el arranque: %s", exc)
 
 
 class MatchError(RuntimeError):

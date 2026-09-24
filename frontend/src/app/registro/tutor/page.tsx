@@ -25,16 +25,28 @@ export default function RegistroTutorPage() {
   const [nombreDeclarado, setNombreDeclarado] = useState("");
   const [apellidoDeclarado, setApellidoDeclarado] = useState("");
   const [fechaNacimientoDeclarada, setFechaNacimientoDeclarada] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fotoDni, setFotoDni] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [erroresCampos, setErroresCampos] = useState<Record<string, string>>({});
   const [bloqueado, setBloqueado] = useState(false);
+
+  function limpiarErrorCampo(campo: string) {
+    setErroresCampos((prev) => {
+      if (!prev[campo]) return prev;
+      const resto = { ...prev };
+      delete resto[campo];
+      return resto;
+    });
+  }
 
   async function onSubmitRegistro(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setEnviando(true);
     setError(null);
+    setErroresCampos({});
 
     if (!fotoDni) {
       setError("Subi una foto de tu DNI.");
@@ -47,6 +59,7 @@ export default function RegistroTutorPage() {
       nombreDeclarado,
       apellidoDeclarado,
       fechaNacimientoDeclarada,
+      email,
       password,
     };
 
@@ -59,20 +72,22 @@ export default function RegistroTutorPage() {
       setPaso(2);
     } catch (err) {
       if (err instanceof ApiError) {
-        switch (err.status) {
-          case 403:
-            setBloqueado(true);
-            break;
-          case 409:
-            setError(err.message || "Ya existe un tutor con ese DNI.");
-            break;
-          case 429:
-            setError(
-              `${err.message} (${err.detalles?.espera_restante_hs ?? "?"} hs de espera).`
-            );
-            break;
-          default:
-            setError(err.message || "No se pudo completar el registro.");
+        if (err.status === 403) {
+          setBloqueado(true);
+        } else if (err.status === 409) {
+          setError(err.message || "Ya existe un tutor con ese DNI.");
+        } else if (err.status === 429) {
+          setError(
+            `${err.message} (${err.detalles?.espera_restante_hs ?? "?"} hs de espera).`
+          );
+        } else {
+          // B2: el backend responde 400 con {"error", "campos"} — el error de
+          // cada campo vive junto a su input.
+          const campos = err.detalles?.campos;
+          if (campos && typeof campos === "object") {
+            setErroresCampos(campos as Record<string, string>);
+          }
+          setError(err.message || "No se pudo completar el registro.");
         }
       } else {
         setError("No se pudo completar el registro. Intenta de nuevo.");
@@ -92,10 +107,10 @@ export default function RegistroTutorPage() {
         <div className="mb-6 text-lg font-bold text-slate-800">
           Tinku<span className="text-teal-700">.</span>
         </div>
-        <h1 className="mb-1 text-xl tracking-tight">Registrate como tutor</h1>
+        <h1 className="mb-1 text-xl tracking-tight">Regístrate como tutor</h1>
         <p className="mb-6 text-slate-500">
           Verificamos tu identidad con la foto de tu DNI y que seas mayor de 18
-          anos para poder dar clases en Tinku.
+          años para poder dar clases en Tinku.
         </p>
 
         {bloqueado && (
@@ -113,7 +128,11 @@ export default function RegistroTutorPage() {
               inputMode="numeric"
               required
               value={dniDeclarado}
-              onChange={(e) => setDniDeclarado(e.target.value)}
+              error={erroresCampos.dniDeclarado}
+              onChange={(e) => {
+                setDniDeclarado(e.target.value);
+                limpiarErrorCampo("dniDeclarado");
+              }}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -124,7 +143,11 @@ export default function RegistroTutorPage() {
                 autoComplete="given-name"
                 required
                 value={nombreDeclarado}
-                onChange={(e) => setNombreDeclarado(e.target.value)}
+                error={erroresCampos.nombreDeclarado}
+                onChange={(e) => {
+                  setNombreDeclarado(e.target.value);
+                  limpiarErrorCampo("nombreDeclarado");
+                }}
               />
 
               <Campo
@@ -134,7 +157,11 @@ export default function RegistroTutorPage() {
                 autoComplete="family-name"
                 required
                 value={apellidoDeclarado}
-                onChange={(e) => setApellidoDeclarado(e.target.value)}
+                error={erroresCampos.apellidoDeclarado}
+                onChange={(e) => {
+                  setApellidoDeclarado(e.target.value);
+                  limpiarErrorCampo("apellidoDeclarado");
+                }}
               />
             </div>
 
@@ -145,18 +172,40 @@ export default function RegistroTutorPage() {
               autoComplete="bday"
               required
               value={fechaNacimientoDeclarada}
-              onChange={(e) => setFechaNacimientoDeclarada(e.target.value)}
+              error={erroresCampos.fechaNacimientoDeclarada}
+              onChange={(e) => {
+                setFechaNacimientoDeclarada(e.target.value);
+                limpiarErrorCampo("fechaNacimientoDeclarada");
+              }}
+            />
+
+            <Campo
+              id="email"
+              etiqueta="Email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              error={erroresCampos.email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                limpiarErrorCampo("email");
+              }}
             />
 
             <Campo
               id="password"
-              etiqueta="Contrasena"
+              etiqueta="Contraseña"
               type="password"
               autoComplete="new-password"
               required
               minLength={8}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              error={erroresCampos.password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                limpiarErrorCampo("password");
+              }}
             />
 
             <Campo
@@ -177,7 +226,7 @@ export default function RegistroTutorPage() {
         )}
 
         <p className="mt-5 text-center text-sm text-slate-500">
-          Ya tenes cuenta? <Link href="/login">Iniciar sesion</Link>
+          Ya tenés cuenta? <Link href="/login">Iniciar sesión</Link>
         </p>
       </Tarjeta>
     </main>
@@ -267,7 +316,7 @@ function PasoDos() {
 
           {okCredencial && (
             <Alerta tono="exito">
-              Credencial subida. Queda en revision por el equipo de Tinku.
+              Credencial subida. Queda en revisión por el equipo de Tinku.
             </Alerta>
           )}
 
@@ -282,8 +331,8 @@ function PasoDos() {
         </form>
 
         <Alerta tono="aviso" className="mt-4">
-          Los documentos quedan pendientes de revision. Podes completarlos
-          despues desde tu cuenta.
+          Los documentos quedan pendientes de revisión. Podés completarlos
+          después desde tu cuenta.
         </Alerta>
 
         <Boton

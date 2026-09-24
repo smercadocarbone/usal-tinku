@@ -12,11 +12,12 @@ import {
   type SesionInfo,
 } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import { ETIQUETA_MOTIVO_CANCELACION, etiqueta } from "@/lib/etiquetas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
 
-const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 interface Franja {
   id: string;
@@ -49,8 +50,9 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   async function cargar() {
     setCargando(true);
     setError(null);
+    let r: Reserva | null = null;
     try {
-      const r = await api.get<Reserva>(`/api/reservas/${params.id}`);
+      r = await api.get<Reserva>(`/api/reservas/${params.id}`);
       setReserva(r);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -67,21 +69,26 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
       setCargando(false);
     }
 
-    // Un 404 acá es el caso normal (la Reserva nunca se confirmó, o el
-    // job de T-5 no creó la Sesión todavía) — no es un error para mostrar.
+    // Estados que por construcción no pueden tener Sesión: no pedirla (B11) —
+    // un 404 esperado en cada carga de una reserva cancelada no es un error.
+    // Para confirmada en adelante, un 404 puntual SÍ es el caso normal (job
+    // T-5 que todavía no creó la Sesión), y se trata igual: nada que mostrar.
+    const ESTADOS_SIN_SESION = new Set(["pendiente_pago", "cancelada"]);
     let sesionActual: SesionInfo | null = null;
-    try {
-      sesionActual = await getSesionPorReserva(params.id);
-      setSesion(sesionActual);
-    } catch {
-      setSesion(null);
-    }
-
-    if (sesionActual) {
+    if (r && !ESTADOS_SIN_SESION.has(r.estado)) {
       try {
-        setResumen(await getResumenSesion(sesionActual.id));
+        sesionActual = await getSesionPorReserva(params.id);
+        setSesion(sesionActual);
       } catch {
-        setResumen(null);
+        setSesion(null);
+      }
+
+      if (sesionActual) {
+        try {
+          setResumen(await getResumenSesion(sesionActual.id));
+        } catch {
+          setResumen(null);
+        }
       }
     }
   }
@@ -98,12 +105,15 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
   async function cancelar() {
     if (!reserva) return;
-    if (!window.confirm("Seguro que queres cancelar esta reserva?")) return;
+    if (!window.confirm("¿Seguro que querés cancelar esta reserva?")) return;
     setConfirmando(true);
     setError(null);
     try {
       const actualizada = await api.post<Reserva>(`/api/reservas/${reserva.id}/cancelar`);
       setReserva(actualizada);
+      // Al cancelar ya no hay clase a la que entrar ni sesión que calificar.
+      setSesion(null);
+      setResumen(null);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -273,9 +283,9 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 </div>
                 {reserva.motivoCancelacion && (
                   <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                    <dt className="font-semibold">Motivo de cancelacion</dt>
+                    <dt className="font-semibold">Motivo de cancelación</dt>
                     <dd className="m-0 text-right">
-                      {reserva.motivoCancelacion}
+                      {etiqueta(ETIQUETA_MOTIVO_CANCELACION, reserva.motivoCancelacion)}
                     </dd>
                   </div>
                 )}
@@ -293,7 +303,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
               {puedeReprogramar && (
                 <Boton variante="secundario" onClick={abrirReprogramar}>
-                  {editandoHorario ? "Cancelar edicion" : "Reprogramar"}
+                  {editandoHorario ? "Cancelar edición" : "Reprogramar"}
                 </Boton>
               )}
 
@@ -316,8 +326,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
               >
                 {faltanMenosDe24hs && (
                   <Alerta tono="aviso" className="mb-4">
-                    Faltan menos de 24 horas para esta clase. La reprogramacion se va a tratar
-                    como cancelacion tardia.
+                    Faltan menos de 24 horas para esta clase. La reprogramación se va a tratar
+                    como cancelación tardía.
                   </Alerta>
                 )}
 
@@ -326,7 +336,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && franjasPendiente && (
                   <>
                     <Alerta tono="aviso" className="mb-4">
-                      El listado de franjas del tutor esta pendiente en backend.
+                      No pudimos cargar las franjas del tutor. Probá de nuevo en unos minutos.
                     </Alerta>
                     <Campo
                       id="nuevoHorario"
@@ -342,8 +352,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && !franjasPendiente && franjas?.length === 0 && (
                   <>
                     <Alerta tono="aviso" className="mb-4">
-                      Este tutor no publico disponibilidad todavia. Elegi un horario manual o
-                      cerra el panel.
+                      Este tutor no publicó disponibilidad todavía. Elegí un horario manual o
+                      cerrá el panel.
                     </Alerta>
                     <Campo
                       id="nuevoHorario"
@@ -383,7 +393,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                           onChange={(e) => elegirFranja(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <option value="">Elegi una franja</option>
+                          <option value="">Elegí una franja</option>
                           {franjasAplicables.map((f) => (
                             <option key={f.id} value={f.id}>
                               {f.fechaEspecifica
@@ -404,7 +414,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                         value={horaElegida}
                         onChange={(e) => setHoraElegida(e.target.value)}
                       >
-                        <option value="">Elegi un horario</option>
+                        <option value="">Elegí un horario</option>
                         {horas.map((h) => (
                           <option key={h} value={h}>
                             {h}

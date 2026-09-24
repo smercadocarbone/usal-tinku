@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import Cabecera from "@/components/Cabecera";
 import SettingsShell, { type GrupoNavAjustes } from "@/components/settings/SettingsShell";
 
 export default function CuentaLayout({ children }: { children: ReactNode }) {
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
 
   const grupos: GrupoNavAjustes[] = [

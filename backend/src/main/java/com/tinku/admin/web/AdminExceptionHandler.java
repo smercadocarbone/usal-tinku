@@ -6,7 +6,6 @@ import com.tinku.identidad.service.CredencialNoPendienteException;
 import com.tinku.shared.AccesoModeracionDenegadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -19,7 +18,8 @@ import java.util.Map;
  *     sus propios endpoints de admin — acá cubre los de {@code com.tinku.admin}).
  *   - {@link OrigenMapNoDefinidoException} → 422: el ticket no se enruta y no se
  *     persiste (fail-closed).
- *   - {@link MethodArgumentNotValidException} → 400 de validación de body.
+ *   - La validación de body ({@code MethodArgumentNotValidException}) → 400 es
+ *     global, en {@code com.tinku.config.ValidacionErrorHandler}.
  */
 @RestControllerAdvice(basePackages = "com.tinku.admin")
 public class AdminExceptionHandler {
@@ -44,13 +44,5 @@ public class AdminExceptionHandler {
     @ExceptionHandler(TicketNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> ticketNoEncontrado(TicketNoEncontradoException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> argumentoInvalido(MethodArgumentNotValidException e) {
-        String campo = e.getBindingResult().getFieldErrors().stream()
-                .findFirst().map(f -> f.getField() + ": " + f.getDefaultMessage())
-                .orElse("Cuerpo inválido.");
-        return ResponseEntity.badRequest().body(Map.of("error", campo));
     }
 }

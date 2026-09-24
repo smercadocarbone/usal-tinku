@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, resetearPassword } from "@/lib/api";
@@ -14,8 +14,15 @@ export default function ResetearPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
 
-  const query = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const token = query?.get("token") ?? "";
+  // B3: leer window.location en el render produce mismatch de hidratación
+  // (el servidor pinta sin token → el cliente pinta con token). Con
+  // useSyncExternalStore el snapshot de servidor es estable ("") y recién en
+  // el cliente se lee el query string, sin error de hidratación.
+  const token = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("token") ?? "",
+    () => "",
+  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

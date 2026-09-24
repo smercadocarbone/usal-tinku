@@ -110,7 +110,8 @@ public class TutorController {
     public ResponseEntity<CredencialResponse> miCredencial(Authentication authentication) {
         Usuario tutor = usuarioActual.obtener(authentication);
         return credencialService.obtenerUltima(tutor.getId())
-                .map(c -> ResponseEntity.ok(toResponse(c)))
+                .map(c -> ResponseEntity.ok(CredencialResponse.from(
+                        c, credencialService.existeAprobada(tutor.getId()))))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
@@ -134,11 +135,7 @@ public class TutorController {
         String archivoUrl = almacenamiento.guardar(contenido, archivo.getOriginalFilename());
         CredencialAcademica credencial =
                 credencialService.cargarCredencial(tutor, request.tipoDocumento(), archivoUrl);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(credencial));
-    }
-
-    private CredencialResponse toResponse(CredencialAcademica c) {
-        return new CredencialResponse(c.getId(), c.getTipoDocumento(), c.getEstado(),
-                c.getNumeroIntento(), c.getCreatedAt());
+        return ResponseEntity.status(HttpStatus.CREATED).body(CredencialResponse.from(
+                credencial, credencialService.existeAprobada(tutor.getId())));
     }
 }

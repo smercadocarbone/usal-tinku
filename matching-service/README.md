@@ -39,7 +39,9 @@ uvicorn main:app --reload --port 8000
 ```
 
 El modelo `paraphrase-multilingual-MiniLM-L12-v2` (384 dims, español incluido)
-se descarga la primera vez y se carga de forma perezosa en el primer `/match`.
+se descarga la primera vez y se precarga en el arranque del servicio (B13) —
+si la precarga falla (sin red a HuggingFace), la primera request lo reintenta
+con la carga lazy sin tumbar el servicio.
 
 ## Lint y formato
 

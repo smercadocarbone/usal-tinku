@@ -47,7 +47,12 @@ export default function SettingsShell({ base, grupos, children }: SettingsShellP
               </p>
               <ul className="mt-2 flex list-none flex-col gap-1 p-0">
                 {grupo.items.map((item) => {
-                  const activo = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  // La ruta raíz del shell (p. ej. "/cuenta" = "Perfil") solo
+                  // está activa en esa ruta exacta; si no, "Perfil" quedaría
+                  // marcado en todas las sub-rutas (B10).
+                  const activo =
+                    pathname === item.href ||
+                    (item.href !== base && pathname.startsWith(`${item.href}/`));
                   return (
                     <li key={item.href}>
                       <Link

@@ -10,7 +10,6 @@ import com.tinku.reservas.service.ReservaNoEncontradaException;
 import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -42,10 +41,12 @@ public class PagoExceptionHandler {
     }
 
     @ExceptionHandler(ProvinciaSinPrecioReferenciaException.class)
-    public ResponseEntity<Map<String, String>> handleProvinciaSinReferencia(RuntimeException ex) {
+    public ResponseEntity<Void> handleProvinciaSinReferencia(RuntimeException ex) {
         // La sugerencia es no vinculante y opcional (FR-PAG-005): sin fila para la
-        // provincia, el Tutor configura su precio igual — 404, no un error grave.
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+        // provincia, el Tutor configura su precio igual. Es un estado vacío
+        // esperado, no un error (B11) — 204 sin cuerpo para no pintar un 4xx en
+        // la red cada vez que alguien abre /cuenta/precio sin referencia.
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler({MercadoPagoNoConfiguradoException.class, MercadoPagoNoDisponibleException.class})
@@ -60,11 +61,5 @@ public class PagoExceptionHandler {
         // que MercadoPago reintente y el caso quede visible, nunca confirmado.
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidacion(MethodArgumentNotValidException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error",
-                ex.getBindingResult().getFieldErrors().getFirst().getDefaultMessage()));
     }
 }

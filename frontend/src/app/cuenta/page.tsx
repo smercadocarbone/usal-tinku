@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import {
   actualizarCapacidades,
   getPerfilPropio,
@@ -18,7 +18,7 @@ const NOMBRE_TIPO: Record<string, string> = {
 };
 
 export default function CuentaPerfilPage() {
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
 
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);
@@ -79,7 +79,7 @@ export default function CuentaPerfilPage() {
           </dd>
         </div>
         <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
-          <dt className="text-sm font-semibold text-slate-800">Capacidad Estudiante</dt>
+          <dt className="text-sm font-semibold text-slate-800">Estudiante</dt>
           <dd className="m-0 text-right text-sm text-slate-600 capitalize">
             {payload?.cap_est ? "Activa" : "Inactiva"}
           </dd>

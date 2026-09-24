@@ -40,5 +40,9 @@ gestione la reserva por sí mismo — debe hacerlo el Adulto Responsable.
 1. Entrar a `/reservar?tutor=t-1` autenticado como Menor.
 
 ### Expected Result:
-- Se ve el aviso "Tu Adulto Responsable debe reservar por vos."
+- Se ve el aviso "Podés pedir esta clase, pero la confirma tu Adulto Responsable."
+  con un botón "Copiar este mensaje" (B5: el aviso tiene una acción concreta, no
+  es un callejón sin salida).
+- Copiar el mensaje pega en el portapapeles un texto listo para enviarle al AR
+  que menciona el nombre del tutor.
 - El botón "Reservar y pagar" no existe en el DOM (no solo está oculto por CSS).

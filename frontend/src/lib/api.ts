@@ -720,6 +720,8 @@ export interface CredencialPropia {
   estado: EstadoCredencial;
   numeroIntento: number;
   createdAt: string;
+  /** B12: true si el Tutor tiene ALGUNA aprobada aunque la última siga en revisión. */
+  tieneAprobada: boolean;
 }
 
 /** null = todavía no cargó ninguna credencial (204 del backend). */

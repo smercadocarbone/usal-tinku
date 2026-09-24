@@ -33,8 +33,7 @@ const PROVINCIAS = [
 ];
 
 const PROVINCIA_POR_DEFECTO = "Buenos Aires";
-const ESTADO_INICIAL =
-  typeof localStorage === "undefined" ? null : localStorage.getItem("tinku_precio");
+const CLAVE_PRECIO_LOCAL = "tinku_precio";
 
 type EstadoGuardado = "idle" | "guardando" | "ok" | "error";
 
@@ -55,14 +54,29 @@ function rangoSugerido(valor: number): [number, number] {
 }
 
 export default function TabPrecio() {
-  const [precio, setPrecio] = useState<string | null>(ESTADO_INICIAL);
+  const [precio, setPrecio] = useState<string | null>(null);
   const [estado, setEstado] = useState<EstadoGuardado>("idle");
   const [mensajeError, setMensajeError] = useState("");
   const [provincia, setProvincia] = useState(PROVINCIA_POR_DEFECTO);
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
   const [cargandoReferencia, setCargandoReferencia] = useState(false);
   const [referenciaAusente, setReferenciaAusente] = useState(false);
-  const primeraCarga = useRef(true);
+  // B3: localStorage solo se lee tras el montaje, nunca en el render.
+  // `listo` evita que el auto-guardado corra por el setPrecio del restore.
+  const listo = useRef(false);
+  const precioRestaurado = useRef<number | null>(null);
+
+  useEffect(() => {
+    const guardado = localStorage.getItem(CLAVE_PRECIO_LOCAL);
+    if (guardado !== null) {
+      const n = Number(guardado);
+      if (Number.isFinite(n)) {
+        precioRestaurado.current = n;
+        setPrecio(guardado);
+      }
+    }
+    listo.current = true;
+  }, []);
 
   // Sugerencia regional por provincia (M5 US-6).
   useEffect(() => {
@@ -73,7 +87,14 @@ export default function TabPrecio() {
       .get<ReferenciaRegional>(`/api/pagos/precio-referencia/${encodeURIComponent(provincia)}`)
       .then((r) => {
         if (!activo) return;
-        setReferencia(r);
+        if (r) {
+          setReferencia(r);
+        } else {
+          // 204 = sin referencia para la provincia (B11): estado vacío
+          // esperado, no un error.
+          setReferencia(null);
+          setReferenciaAusente(true);
+        }
       })
       .catch(() => {
         if (!activo) return;
@@ -91,8 +112,7 @@ export default function TabPrecio() {
   // Auto-guardado del precio (PU /api/pagos/tarifa, FR-PAG-006).
   const precioNumerico = precio === null || precio === "" ? null : Number(precio);
   useEffect(() => {
-    if (primeraCarga.current) {
-      primeraCarga.current = false;
+    if (!listo.current || precioNumerico === precioRestaurado.current) {
       return;
     }
     if (precioNumerico === null || !Number.isFinite(precioNumerico)) {
@@ -102,7 +122,7 @@ export default function TabPrecio() {
     setEstado("guardando");
     const id = setTimeout(() => {
       api
-        .put("/api/pagos/tarifa", { precio_sesion: precioNumerico })
+        .put("/api/pagos/tarifa", { precioSesion: precioNumerico })
         .then(() => {
           setMensajeError("");
           setEstado("ok");

@@ -794,4 +794,26 @@ class AdminPanelIntegracionTest {
                         .header("Authorization", "Bearer " + token(moderador)))
                 .andExpect(status().isForbidden());
     }
+
+    /**
+     * {@code GET /api/admin/yo}: el rol del Admin logueado, para que el menú del
+     * panel oculte lo que ese rol no puede usar (B10). Gateado como el resto de
+     * /api/admin/** (admin activo de CUALQUIER rol); un usuario común → 403.
+     */
+    @Test
+    void adminYo_exponeElRol_gateadoComoElRestoDeAdmin() throws Exception {
+        mvc.perform(get("/api/admin/yo")
+                        .header("Authorization", "Bearer " + token(admin(RolAdmin.SOPORTE_FINANCIERO))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rol").value("soporte_financiero"));
+
+        mvc.perform(get("/api/admin/yo")
+                        .header("Authorization", "Bearer " + token(admin(RolAdmin.MODERACION_SEGURIDAD))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rol").value("moderacion_seguridad"));
+
+        mvc.perform(get("/api/admin/yo")
+                        .header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
+                .andExpect(status().isForbidden());
+    }
 }

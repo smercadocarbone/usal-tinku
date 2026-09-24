@@ -364,6 +364,23 @@ class IdentidadFlujosIntegracionTest {
         assertThat(usuarioPorDni("22222222").getTipo()).isEqualTo(TipoUsuario.TUTOR);
     }
 
+    @Test
+    void registroTutor_sinEmail_responde400ConElCampo() throws Exception {
+        // UX-02 B2: un body inválido le llegaba al usuario como 403 ("no
+        // autorizado") — spring reenviaba MethodArgumentNotValidException a
+        // /error, que no está en el permitAll de SecurityConfig, así que la
+        // cadena de seguridad lo cortaba. Un 400 de validación no puede
+        // convertirse en "no autorizado".
+        mockMvc.perform(multipart("/api/tutores/registro")
+                        .file(jsonPart("datos", new com.tinku.identidad.dto.RegistroTutorRequest(
+                                "22222222", "Carlos", "Ruiz", LocalDate.of(1980, 1, 1),
+                                null, PASSWORD)))
+                        .file(foto()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").isString())
+                .andExpect(jsonPath("$.campos.email").exists());
+    }
+
     // ------------------------------------------------ US-3: menor (por su Adulto Responsable)
 
     @Test
@@ -695,6 +712,22 @@ class IdentidadFlujosIntegracionTest {
         mockMvc.perform(get("/api/tutores/me/credencial")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("PENDIENTE"));
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tieneAprobada").value(false));
+    }
+
+    @Test
+    void credencialPropia_conAprobadaMasAntigua_yPendienteActual_diceQueEstaVerificado() throws Exception {
+        // B12: el tutor Jorge verificado que vuelve a subir una credencial nueva.
+        String token = registrarTutorYToken("26262626", "Jorge", "Estrada");
+        UUID aprobada = cargarCredencial(token, 201);
+        credencialService.marcarAprobada(aprobada, null);
+        cargarCredencial(token, 201); // la nueva, en revisión
+
+        mockMvc.perform(get("/api/tutores/me/credencial")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tieneAprobada").value(true));
     }
 }

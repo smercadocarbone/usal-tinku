@@ -19,6 +19,7 @@ import {
   Insignia,
   Tarjeta,
 } from "@/components/ui";
+import { ETIQUETA_ESTADO_PAGO } from "@/lib/etiquetas";
 
 function formatFecha(iso: string | null): string {
   if (!iso) return "—";
@@ -84,7 +85,7 @@ function FilaPago({
             automáticos agotados · Debía liberarse {formatFecha(pago.liberarAt)}
           </p>
         </div>
-        <Insignia tono="peligro">{pago.estado}</Insignia>
+        <Insignia tono="peligro">{ETIQUETA_ESTADO_PAGO[pago.estado] ?? pago.estado}</Insignia>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">

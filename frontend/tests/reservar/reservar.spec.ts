@@ -51,7 +51,7 @@ test.describe("Reserva de una clase", () => {
   );
 
   test(
-    "un Estudiante Menor no ve el formulario de reserva (Artículo II)",
+    "un Estudiante Menor no ve el formulario de reserva y le queda una acción concreta (Artículo II)",
     { tag: ["@critical", "@e2e", "@reserva", "@seguridad-menor", "@RESERVAR-E2E-002"] },
     async ({ page, context, baseURL }) => {
       // JWT real de un Menor: header.payload.signature con tipo=MENOR en el payload.
@@ -61,6 +61,13 @@ test.describe("Reserva de una clase", () => {
       await context.addInitScript(
         (t) => window.localStorage.setItem("tinku_jwt", t),
         tokenMenor
+      );
+
+      // B5: el "pedile a tu adulto responsable" no es un callejón — copia un
+      // mensaje listo para enviarle.
+      await context.grantPermissions(
+        ["clipboard-read", "clipboard-write"],
+        { origin: baseURL! }
       );
 
       await mockApi(page, {
@@ -82,8 +89,26 @@ test.describe("Reserva de una clase", () => {
       const reservar = new ReservarPage(page);
       await reservar.goto(TUTOR_ID);
 
-      await expect(page.getByText("Tu Adulto Responsable debe reservar por vos.")).toBeVisible();
+      const copiar = page.getByRole("button", { name: "Copiar este mensaje" });
+      await expect(copiar).toBeVisible();
       await expect(page.getByRole("button", { name: "Reservar y pagar" })).toHaveCount(0);
+
+      await copiar.click();
+      await expect(page.getByText("Mensaje copiado")).toBeVisible();
+      const copiado = await page.evaluate(() => navigator.clipboard.readText());
+      expect(copiado).toContain("Martín Gómez");
+      expect(copiado).toContain("¿Me la reservás?");
+    }
+  );
+
+  test(
+    "sin parámetro de tutor, redirige a la búsqueda (B9)",
+    { tag: ["@e2e", "@reserva", "@RESERVAR-E2E-003"] },
+    async ({ page }) => {
+      await page.goto("/reservar");
+
+      await expect(page).toHaveURL(/\/buscar/);
+      await expect(page.getByRole("heading", { name: "Reservar una clase" })).toHaveCount(0);
     }
   );
 });

@@ -1,7 +1,4 @@
-"use client";
-
 import { CreditCard, IdCard, Video, type LucideIcon } from "lucide-react";
-import { useIntersectionObserver } from "@/lib/useIntersectionObserver";
 import { Tarjeta } from "@/components/ui";
 
 const GARANTIAS: { icono: LucideIcon; titulo: string; texto: string }[] = [
@@ -26,21 +23,10 @@ const GARANTIAS: { icono: LucideIcon; titulo: string; texto: string }[] = [
 ];
 
 export default function TarjetasSeguridad() {
-  const { ref, inView } = useIntersectionObserver<HTMLDivElement>();
-
   return (
-    <div ref={ref} className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
-      {GARANTIAS.map((g, i) => (
-        <Tarjeta
-          key={g.titulo}
-          as="article"
-          className="p-7 transition-transform duration-700 ease-out motion-reduce:transition-none"
-          style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "none" : "translateY(24px)",
-            transitionDelay: inView ? `${i * 150}ms` : "0ms",
-          }}
-        >
+    <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
+      {GARANTIAS.map((g) => (
+        <Tarjeta key={g.titulo} as="article" className="p-7">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-600/10 text-teal-700">
             <g.icono className="h-6 w-6" />
           </div>

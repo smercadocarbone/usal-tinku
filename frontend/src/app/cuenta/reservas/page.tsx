@@ -55,8 +55,8 @@ export default function ReservasPage() {
 
         {reservas && reservas.length === 0 && (
           <EstadoVacio>
-            No tenes reservas todavia.{" "}
-            <Link href="/buscar">Busca un tutor</Link> para empezar.
+            No tenés reservas todavía.{" "}
+            <Link href="/buscar">Buscá un tutor</Link> para empezar.
           </EstadoVacio>
         )}
 

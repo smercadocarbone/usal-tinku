@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -20,13 +20,22 @@ export default function LoginPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const query = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const expirado = query?.get("expirado") === "1";
-  const registrado = query?.get("registrado") === "1";
-  const tutorRegistrado = query?.get("tutorRegistrado") === "1";
+  // B3: leer window.location en el render produce mismatch de hidratación
+  // (el servidor pinta sin query → el cliente con query). Con
+  // useSyncExternalStore el snapshot de servidor es estable ("") y recién en
+  // el cliente se lee el query string, sin error de hidratación.
+  const queryParams = useSyncExternalStore(
+    () => () => {},
+    () => window.location.search,
+    () => "",
+  );
+  const query = new URLSearchParams(queryParams);
+  const expirado = query.get("expirado") === "1";
+  const registrado = query.get("registrado") === "1";
+  const tutorRegistrado = query.get("tutorRegistrado") === "1";
 
   function destinoSiguiente(): string {
-    const siguiente = query?.get("siguiente");
+    const siguiente = query.get("siguiente");
     return siguiente && siguiente.startsWith("/")
       ? siguiente
       : "/cuenta";
@@ -117,7 +126,7 @@ export default function LoginPage() {
         </p>
 
         <p className="mt-2 text-center text-sm text-slate-500">
-          ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
+          ¿No tenés cuenta? <Link href="/registro">Regístrate</Link>
         </p>
       </Tarjeta>
     </main>

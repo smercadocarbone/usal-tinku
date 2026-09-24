@@ -2,13 +2,14 @@ import { test, expect } from "@playwright/test";
 import { CuentaPage } from "./cuenta-page";
 import { mockApi, jsonRoute, setFakeSessionConPayload } from "../helpers";
 
-function credencial(estado: string) {
+function credencial(estado: string, tieneAprobada = false) {
   return {
     id: "cred-1",
     tipoDocumento: "TITULO",
     estado,
     numeroIntento: 1,
     createdAt: "2026-01-01T00:00:00Z",
+    tieneAprobada,
   };
 }
 
@@ -64,6 +65,30 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       await cuenta.goto();
 
       await expect(page.getByText("Tu credencial académica fue aprobada.")).toBeVisible();
+    }
+  );
+
+  test(
+    "verificado con una credencial nueva en revisión: no dice que está 'en revisión' (B12)",
+    { tag: ["@e2e", "@CREDENCIAL-TUTOR-E2E-005"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
+      await mockApi(page, {
+        "GET /api/tutores/me/credencial": jsonRoute(
+          200,
+          credencial("PENDIENTE", true)
+        ),
+      });
+
+      const cuenta = new CuentaPage(page);
+      await cuenta.goto();
+
+      await expect(
+        page.getByText("Tu perfil está verificado. Tu nueva credencial está en revisión.")
+      ).toBeVisible();
+      await expect(
+        page.getByText("Tu credencial está en revisión por el equipo de Tinku.")
+      ).toHaveCount(0);
     }
   );
 

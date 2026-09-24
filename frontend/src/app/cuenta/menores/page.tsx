@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta } from "@/components/ui";
-
-const LABEL_ESTADO_SOLICITUD: Record<string, string> = {
-  pendiente: "Pendiente",
-  convertida: "Convertida en reserva",
-  expirada: "Expirada",
-  rechazada: "Rechazada",
-};
+import { ETIQUETA_ESTADO_SOLICITUD as LABEL_ESTADO_SOLICITUD } from "@/lib/etiquetas";
 
 interface Solicitud {
   id: string;
@@ -37,6 +31,7 @@ function formatFechaHoraEsAr(iso: string): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
   });
 }
 
@@ -150,7 +145,7 @@ export default function CuentaMenoresPage() {
       .post<ReservaResponse>(`/api/solicitudes/${id}/aprobar`)
       .then((res) => {
         setSolicitudes((prev) => prev.map((s) => (s.id === id ? { ...s, estado: "convertida" } : s)));
-        setExito(`Solicitud aprobada. Se creo la reserva.`);
+        setExito(`Solicitud aprobada. Se creó la reserva.`);
         window.location.href = `/pagar?reserva=${res.id}`;
       })
       .catch((err) => {
@@ -239,7 +234,7 @@ export default function CuentaMenoresPage() {
           />
           <Campo
             id="passMenor"
-            etiqueta="Contrasena"
+            etiqueta="Contraseña"
             type="password"
             minLength={8}
             value={password}
