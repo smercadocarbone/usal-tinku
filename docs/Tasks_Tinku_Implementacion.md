@@ -223,7 +223,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-013: Rate limiting en los 7 endpoints públicos + bloqueo escalado por intentos de login (reutilizar el patrón de `OcrBackoffService`) (AUD-012)
 - [ ] T-AUD-014: Puerto `Notificador` + outbox persistido; implementar como mínimo kill-switch rama menor → Adulto Responsable (AUD-014)
 - [ ] T-AUD-015: Autenticación en `matching-service` + quitar `ports:` del compose + pool de conexiones (AUD-015)
-- [ ] T-AUD-016: Decidir y documentar (ADR) baja de menor: cascada o anonimización; test de integración real (AUD-017)
+- [x] T-AUD-016: Decidir y documentar (ADR) baja de menor: cascada o anonimización; test de integración real (AUD-017) — CERRADO 2026-09-24 (espec `FASE2-06-baja-menor-anonimizacion.md`): anonimización D7, ADR-M1-05; RED `reservas_beneficiario_id_fkey` (500 FK) → GREEN; suite 444 run/0 fail. Requiere V27 y admite `estado_cuenta = BAJA`
 - [ ] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029)
 - [ ] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018)
 - [x] T-AUD-019: Reconciliar `Tasks_Tinku_Implementacion.md` con el código y elegir una sola fuente de verdad (AUD-030) — CERRADO, ver `REGISTRO_FINDINGS.md` (commits 8707da6, 64fe386, 352d065, 2d4e108)
