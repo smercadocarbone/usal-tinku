@@ -206,3 +206,22 @@ def test_recompute_503_cuando_modelo_no_disponible(monkeypatch):
         resp.status_code == 503
     )  # misma firma que /match, nunca fabrica un embedding falso
     assert "detail" in resp.json()
+
+
+def test_precarga_el_embedder_en_el_arranque(monkeypatch):
+    llamado = []
+
+    def espia() -> None:
+        llamado.append(True)
+
+    monkeypatch.setattr(srv, "_cargar_embedder", espia)
+    srv._precargar_embedder()
+    assert llamado == [True]
+
+
+def test_precarga_tolerante_si_el_modelo_no_esta_disponible(monkeypatch):
+    def roto():  # sin red a HuggingFace, por ejemplo
+        raise RuntimeError("sin red")
+
+    monkeypatch.setattr(srv, "_cargar_embedder", roto)
+    srv._precargar_embedder()  # no lanza: la primera request reintenta el lazy
