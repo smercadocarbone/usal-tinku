@@ -2,7 +2,8 @@
 # M2-F: deja a los tutores del seed listos para /api/busquedas — aprueba la
 # credencial, activa matching, les carga tema_ids (PUT /api/tutores/me/temas)
 # y repuebla embeddings desde el servicio Python (/recompute-embeddings, 2c).
-# Idempotente. Requiere: app corriendo (perfil dev) + contenedor `matching`.
+# Idempotente. Requiere: app corriendo (perfil dev) + contenedor `matching` +
+# TINKU_MATCHING_TOKEN con el mismo valor que MATCHING_SERVICE_TOKEN del .env.
 # Uso: scripts/seed-matching.sh [base_url]   (default http://localhost:8080)
 set -euo pipefail
 
@@ -52,7 +53,13 @@ for spec in \
 done
 
 echo "==> Recomputed de embeddings (contrato 2c, contenedor matching)"
-recompute=$(curl -s -w '\n%{http_code}' -X POST "$MOTOR/recompute-embeddings")
+# AUD-015: el servicio exige el token compartido (TINKU_MATCHING_TOKEN).
+# Si no esta configurado y el servicio tiene token -> 401; sin token -> 503.
+motorauth=()
+if [ -n "${TINKU_MATCHING_TOKEN:-}" ]; then
+    motorauth=(-H "X-Matching-Token: $TINKU_MATCHING_TOKEN")
+fi
+recompute=$(curl -s -w '\n%{http_code}' -X POST "$MOTOR/recompute-embeddings" "${motorauth[@]}")
 body=${recompute%$'\n'*}; http=${recompute##*$'\n'}
 if [ "$http" != "200" ]; then
     echo "  ERROR: recompute devolvió HTTP $http — $body (¿el contenedor matching está levantado y el modelo descargado?)"

@@ -24,9 +24,9 @@
 | AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
 | AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | 5ddaa1d | `DenunciasModeracionIntegracionTest.aud013_*` (5) |
 | AUD-014 | ALTA | No existe infraestructura real de notificaciones | ABIERTO | 2 | — | — |
-| AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | ABIERTO | 2 | — | — |
+| AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | CERRADO | 2 | 5d504f3 (Python), fe5c367 (backend), db2a9f0 (compose/docs) | `test_main.py` (sin/incorrecto 401, correcto 200, sin token configurado 503, health público), `MatchingServiceClientTest.matchEnviaElTokenCompartidoEnElHeader`, `ArranqueSeguroValidatorTest.prodConMatchingTokenVacio_abortaElArranque` |
 | AUD-016 | MEDIA | El middleware de Next.js sólo verifica que exista la cookie JWT | ABIERTO | 3 | — | — |
-| AUD-017 | ALTA | `darDeBajaMenor` hace DELETE físico sin limpiar FKs dependientes | ABIERTO | 2 | — | — |
+| AUD-017 | ALTA | `darDeBajaMenor` hace DELETE físico sin limpiar FKs dependientes | CERRADO | 2 | b218f39 + 8fb1a81 — ADR-M1-05 (anonimización D7: la fila sobrevive, se reemplazan DNI/nombre/apellido/email/fecha/password; lista `BAJA`; migración V27) + df2e46e y 849c122 (PARAR de la spec §4 resuelto por el usuario, opción a: la baja confirmada cancela las reservas futuras como cancelación `voluntaria` del AR —FR-RES-008 sin cambios— y rechaza las Solicitudes pendientes) | `BajaMenorAnonimizacionIntegracionTest` (8: baja con Reserva finalizada + Transacción no falla y anonimiza, login 401, no aparece en listarMenores, dni anónimo único; reserva futura con margen → reembolso, sin margen → cobra el Tutor, `pendiente_pago` → cancelada sin transacción, Solicitud pendiente → rechazada y no aprobable), `UsuarioServiceDarDeBajaTest` (2, contrato sin DELETE) |
 | AUD-018 | ALTA | Modo Bypass deja el marketplace gratis sin TTL ni alerta | ABIERTO | 2 | — | — |
 | AUD-019 | ALTA | Límites de módulo organizativos, no reales: imports cruzados y ciclos | ABIERTO | 3 | — | — |
 | AUD-020 | ALTA | La duración de la sesión no se persiste, se deriva de la franja | ABIERTO | 2 | — | — |
@@ -38,11 +38,11 @@
 | AUD-026 | MEDIA | `getCatalogos` cae a un mock local ante cualquier error, no sólo 404 | ABIERTO | 3 | — | — |
 | AUD-027 | MEDIA | JWT con DNI como subject y sin invalidación al resetear password | ABIERTO | 3 | — | — |
 | AUD-028 | MEDIA | Pagador y beneficiario pueden calificar dos veces la misma sesión | ABIERTO | 3 | — | — |
-| AUD-029 | MEDIA | El webhook de LiveKit sólo procesa `participant_joined` | ABIERTO | 2 | — | — |
+| AUD-029 | MEDIA | El webhook de LiveKit sólo procesa `participant_joined` | CERRADO | 2 | 1fa9772 (FASE2-05) | `SesionesIntegracionTest.ambosSeDesconectanALos5min_corteAutomatico_emiteInterrumpidaYFinalizadaAnticipada`, `seVaUnoYVuelve_elParSeRecompone_noCuentaComoCorte`, `participantLeftSobreSesionYaCortada_noModificaNada`, `webhookParticipantLeft_sinFirmaValida_401` |
 | AUD-030 | MEDIA | `Tasks_Tinku_Implementacion.md` desactualizado y contradice los chunks | CERRADO | 2 | 8707da6, 64fe386, 352d065, 2d4e108 | n/a (documentación) |
 | AUD-031 | MEDIA | `matching-service` sin CI; E2E de Playwright mockean `/api` completo | ABIERTO | 2 | — | — |
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | ABIERTO | 3 | — | — |
 | AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | 5ddaa1d | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
 | AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
 | AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | EN CURSO | 3 | — | — |
-| AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) | ABIERTO | 4 | — | — |
+| AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) — sub-ítem 7 (N+1 de conexiones en `RecomputeRepo` + lock de carga lazy del embedder) resuelto en FASE2-04 (5d504f3) | ABIERTO | 4 | — | `test_main.py::test_carga_lazy_concurrente_carga_el_modelo_una_sola_vez`, `persistir_embeddings` en una transacción |

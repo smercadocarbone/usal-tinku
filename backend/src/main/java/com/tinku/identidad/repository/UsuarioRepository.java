@@ -1,5 +1,6 @@
 package com.tinku.identidad.repository;
 
+import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,8 +28,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     /** T-M1-13bis (auditoría 2026-09-18): listado de esos mismos perfiles —
      *  antes solo existía el alta (POST) y la baja por id (DELETE), sin forma
-     *  de volver a listarlos tras cerrar la sesión del navegador. */
-    List<Usuario> findByAdultoResponsableIdAndTipoOrderByNombre(UUID adultoResponsableId, TipoUsuario tipo);
+     *  de volver a listarlos tras cerrar la sesión del navegador. FASE2-06 /
+     *  AUD-017: excluye menores en BAJA (anonimizados) — su perfil dejó de
+     *  ser administrable. */
+    List<Usuario> findByAdultoResponsableIdAndTipoAndEstadoCuentaNotOrderByNombre(
+            UUID adultoResponsableId, TipoUsuario tipo, EstadoCuenta estadoCuentaExcluido);
 
     /**
      * FR-MATCH-007 / Plan_M2 paso 4: universo de candidatos para búsqueda sin

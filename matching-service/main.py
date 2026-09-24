@@ -21,12 +21,14 @@ Endpoints:
   los perfiles desde sus `tema_ids` (idempotente, sin reglas de negocio).
 """
 
+import hmac
 import os
+import threading
 from collections.abc import Callable, Iterable
 
 import logging
 import psycopg
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pgvector import Vector
 from pgvector.psycopg import register_vector
 from pydantic import BaseModel
@@ -56,6 +58,29 @@ class MatchRequest(BaseModel):
 class MatchResult(BaseModel):
     tutor_id: str
     score: float
+
+
+def _token_esperado() -> str | None:
+    """Token compartido con el backend (AUD-015). Vacio/ausente = fail-closed."""
+    token = os.environ.get("TINKU_MATCHING_TOKEN", "")
+    return token if token else None
+
+
+def _requiere_token(x_matching_token: str | None = Header(default=None)) -> None:
+    """Dependencia de auth de /match y /recompute-embeddings (AUD-015).
+
+    Token compartido entre dos procesos propios, en un header (Articulo VII:
+    nada de OAuth, usuarios ni JWT). Fail-closed: sin token configurado en el
+    servicio, TODO responde 503 salvo /health. Se compara con hmac.compare_digest
+    para no filtrar el valor por timing (nunca `==`).
+    """
+    esperado = _token_esperado()
+    if esperado is None:
+        raise Unavailable(
+            "matching-service sin TINKU_MATCHING_TOKEN configurado (fail-closed)"
+        )
+    if x_matching_token is None or not hmac.compare_digest(x_matching_token, esperado):
+        raise HTTPException(status_code=401, detail="X-Matching-Token ausente o incorrecto")
 
 
 def _conectar() -> psycopg.Connection:
@@ -145,16 +170,21 @@ class RecomputeRepo:
         finally:
             conn.close()
 
-    def guardar_embedding(self, tutor_id: str, vector: list[float] | None) -> None:
-        """Persiste el embedding de 384 dims del tutor (NULL si el perfil no tiene temas)."""
+    def persistir_embeddings(
+        self, actualizaciones: Iterable[tuple[str, list[float] | None]]
+    ) -> None:
+        """Persiste TODAS las actualizaciones en UNA conexion y UNA transaccion
+        (AUD-015): un fallo a mitad revierte todo, no deja el indice en estado
+        parcial — antes era una conexion nueva por perfil (N+1)."""
         conn = _conectar()
         try:
             register_vector(conn)
             with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE matching.perfiles_tutor_matching SET embedding = %s WHERE tutor_id = %s::uuid",
-                    (None if vector is None else Vector(vector), tutor_id),
-                )
+                for tutor_id, vector in actualizaciones:
+                    cur.execute(
+                        "UPDATE matching.perfiles_tutor_matching SET embedding = %s WHERE tutor_id = %s::uuid",
+                        (None if vector is None else Vector(vector), tutor_id),
+                    )
             conn.commit()
         finally:
             conn.close()
@@ -163,14 +193,31 @@ class RecomputeRepo:
 _recompute_repo: RecomputeRepo = RecomputeRepo()
 
 
+def _crear_modelo() -> Callable[[str], list[float]]:
+    """Baja y construye el modelo sentence-transformers (MISMO modelo lazy de /match)."""
+    from sentence_transformers import SentenceTransformer  # import tardio: pesado
+
+    modelo = SentenceTransformer(MODELO)
+    return lambda texto: modelo.encode(texto).tolist()
+
+
+_embedder_lock = threading.Lock()
+
+
 def _cargar_embedder() -> Callable[[str], list[float]]:
-    """Carga el modelo sentence-transformers una sola vez (lazy)."""
+    """Carga el modelo sentence-transformers una sola vez (lazy, hilo seguro —
+    AUD-036.7).
+
+    B13 precarga el modelo en el arranque y cubre el caso normal; este lock con
+    doble chequeo protege el fallback documentado de B13 (precarga fallida -> la
+    primera request reintenta el lazy): dos requests concurrentes en ese caso no
+    pueden cargar el modelo dos veces (~34s de descarga/modelo por request).
+    """
     global _embedder
     if _embedder is None:
-        from sentence_transformers import SentenceTransformer  # import tardio: pesado
-
-        modelo = SentenceTransformer(MODELO)
-        _embedder = lambda texto: modelo.encode(texto).tolist()
+        with _embedder_lock:
+            if _embedder is None:
+                _embedder = _crear_modelo()
     return _embedder
 
 
@@ -222,7 +269,7 @@ def health():
     return {"status": "ok", "service": "tinku-matching-service"}
 
 
-@app.post("/match", response_model=list[MatchResult])
+@app.post("/match", response_model=list[MatchResult], dependencies=[Depends(_requiere_token)])
 def match(request: MatchRequest) -> list[MatchResult]:
     """
     Ranking por similitud semantica (T-M2-04, ADR-M2-01).
@@ -250,7 +297,7 @@ class Unavailable(Exception):
     """Respuesta 503: el ranking real no se puede computar en este momento."""
 
 
-@app.post("/recompute-embeddings")
+@app.post("/recompute-embeddings", dependencies=[Depends(_requiere_token)])
 def recompute_embeddings() -> dict:
     """Repopula `embedding` de TODOS los perfiles desde sus `tema_ids` (2c).
 
@@ -260,13 +307,16 @@ def recompute_embeddings() -> dict:
     {descripcion}' de cada tema ('. ' entre temas), lo embeddea con el MISMO
     modelo lazy de /match y escribe el vector — NULL si el perfil no tiene
     temas. Si el modelo o la base no estan disponibles se responde 503 de
-    forma explicita; nunca fabrica un embedding falso.
+    forma explicita; nunca fabrica un embedding falso. Todos los embeddings se
+    embebedean primero y se persisten despues en UNA transaccion (AUD-015).
     """
     try:
         perfiles = _recompute_repo.perfiles_con_temas()
-        for tutor_id, temas in perfiles:
-            vector = None if not temas else _embed(texto_fuente(temas))
-            _recompute_repo.guardar_embedding(tutor_id, vector)
+        actualizaciones = [
+            (tutor_id, None if not temas else _embed(texto_fuente(temas)))
+            for tutor_id, temas in perfiles
+        ]
+        _recompute_repo.persistir_embeddings(actualizaciones)
     except MatchError as exc:
         raise Unavailable(str(exc)) from exc
     except Exception as exc:
