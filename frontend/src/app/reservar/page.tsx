@@ -74,6 +74,20 @@ function ReservarForm() {
   const session = useSesion();
   const payload = session?.payload;
   const esMenor = payload?.tipo === "MENOR";
+  const [copiado, setCopiado] = useState(false);
+
+  // B5: el menor no tiene el picker conectado todavía (04-descubrir…); que el
+  // aviso tenga una acción concreta (copiar el pedido) en vez de un callejón.
+  async function copiarPedido() {
+    if (!perfil) return;
+    const texto = `¡Hola! Quiero tomar una clase con ${perfil.nombre}${perfil.apellido ? ` ${perfil.apellido}` : ""} en Tinku. ¿Me la reservás?`;
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  }
 
   function cargar() {
     if (!tutorId) {
@@ -198,7 +212,25 @@ function ReservarForm() {
 
       {esMenor && (
         <Alerta tono="aviso" className="mb-4">
-          Tu Adulto Responsable debe reservar por vos.
+          <p>Podés pedir esta clase, pero la confirma tu Adulto Responsable.</p>
+          {perfil && (
+            <div className="mt-2 flex flex-col items-start gap-2">
+              <p className="text-xs">
+                Sugerencia para enviarle: “¡Hola! Quiero tomar una clase con{" "}
+                {perfil.nombre}
+                {perfil.apellido ? ` ${perfil.apellido}` : ""} en Tinku. ¿Me la
+                reservás?”
+              </p>
+              <Boton
+                type="button"
+                tamano="sm"
+                onClick={copiarPedido}
+                aria-live="polite"
+              >
+                {copiado ? "Mensaje copiado" : "Copiar este mensaje"}
+              </Boton>
+            </div>
+          )}
         </Alerta>
       )}
 
