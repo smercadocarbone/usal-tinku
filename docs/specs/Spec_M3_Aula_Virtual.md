@@ -115,7 +115,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | FR-AULA-002 | Degradación automática y continua de calidad (video → audio → texto), sin "modo degradado" visible. |
 | FR-AULA-003 | Clasificador de contenido en tiempo real (kill-switch), on-device, según BR-KS-01 a BR-KS-06. Sin botón de pánico manual en el MVP — solo detección automática. |
 | FR-AULA-004 | Buffer local rotativo de 30 segundos de video, no persistente; se sube solo si el kill-switch se dispara. |
-| FR-AULA-005 | Corte total antes del 50% de la duración agendada → evento `sesion.interrumpida` → reembolso automático (vía M5). |
+| FR-AULA-005 | Corte total antes del 50% de la duración agendada → evento `sesion.interrumpida` → reembolso automático (vía M5). _(FASE2-01/AUD-020: la duración agendada es la `duracion_minutos` de la Reserva, no la de la franja.)_ |
 | FR-AULA-006 | No-show: timeout automático a T+10 + marcado manual (habilitado también desde T+10). No reversible desde la app; revisión es caso de soporte del Admin. |
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
