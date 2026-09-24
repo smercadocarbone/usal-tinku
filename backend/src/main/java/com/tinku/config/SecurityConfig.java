@@ -86,9 +86,15 @@ public class SecurityConfig {
     @Value("${tinku.rate-limit.webhooks-por-minuto:120}")
     private int limiteWebhooks;
 
+    /** Header con la IP real del cliente cuando hay un proxy de confianza adelante
+     *  (Cloudflare Tunnel: {@code CF-Connecting-IP}). Vacío = {@code remoteAddr}. */
+    @Value("${tinku.rate-limit.header-ip-cliente:}")
+    private String headerIpCliente;
+
     /** No es un @Bean: si lo fuera, Spring Boot además lo registraría como filtro de servlet y correría dos veces. */
     private RateLimitFilter rateLimitFilter() {
-        return new RateLimitFilter(limiteVerificarDni, limitePublicos, limiteWebhooks, java.time.Clock.systemUTC());
+        return new RateLimitFilter(limiteVerificarDni, limitePublicos, limiteWebhooks, headerIpCliente,
+                java.time.Clock.systemUTC());
     }
 
     @Bean

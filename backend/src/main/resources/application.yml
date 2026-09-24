@@ -72,6 +72,9 @@ tinku:
     publicos-por-minuto: 20
     verificar-dni-por-minuto: 5
     webhooks-por-minuto: 120
+    # IP real del cliente detrás de un proxy de confianza (Cloudflare Tunnel:
+    # CF-Connecting-IP). Vacío = remoteAddr. Ver RateLimitFilter y ADR-000-07.
+    header-ip-cliente: ${RATE_LIMIT_HEADER_IP:}
   # Bloqueo por intentos fallidos de login, por DNI (Tabla de Tiempos).
   login:
     intentos-antes-de-bloqueo: 5

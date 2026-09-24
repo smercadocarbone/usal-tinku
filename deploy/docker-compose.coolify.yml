@@ -3,14 +3,28 @@
 # - Las imágenes las construye y publica GitHub Actions en GHCR (.github/workflows/deploy.yml);
 #   el VPS nunca compila. TINKU_TAG elige la versión (default `latest`); para volver atrás
 #   se pone el hash del commit anterior y se redespliega (ver docs/operacion/RUNBOOK_produccion.md).
-# - Dominios: Coolify los asigna con las variables SERVICE_FQDN_* (frontend → tinku.site,
-#   backend → api.tinku.site). db y matching NO tienen dominio ni puertos publicados (TD2).
+# - Entrada: Cloudflare Tunnel (servidor en casa, sin IP fija ni puertos abiertos en el router).
+#   El contenedor `cloudflared` saca el tráfico hacia Cloudflare; en el panel de Cloudflare el túnel
+#   manda tinku.site → http://frontend:3000 y api.tinku.site → http://backend:8080. HTTPS lo pone
+#   Cloudflare: en Coolify NO se asignan dominios. Ningún servicio publica puertos (TD2).
 # - Secretos: los SERVICE_PASSWORD_* los genera Coolify la primera vez y los guarda; el resto
 #   se carga en la pestaña "Environment Variables" del recurso. Nunca en este archivo (TD3).
-# - Memoria (VPS de 8 GB, ~1 GB para Coolify): db 1 GB, matching 3 GB, backend 1,5 GB,
-#   frontend 512 MB, backup 128 MB. Total ~6,2 GB; queda margen para picos y para el sistema.
+# - Memoria (8 GB, ~1 GB para Coolify): db 1 GB, matching 3 GB, backend 1,5 GB, frontend 512 MB,
+#   backup y cloudflared 128 MB c/u. Total ~6,3 GB; queda margen para picos y para el sistema.
 
 services:
+  # Cloudflare Tunnel (ADR-000-07): única entrada desde internet.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?falta CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+      - backend
+    mem_limit: 128m
+
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
@@ -73,7 +87,6 @@ services:
     image: ghcr.io/smercadocarbone/tinku-backend:${TINKU_TAG:-latest}
     restart: unless-stopped
     environment:
-      SERVICE_FQDN_BACKEND_8080: /
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tinku
       DB_USER: ${SERVICE_USER_POSTGRES}
@@ -98,6 +111,9 @@ services:
       LLM_PROVEEDOR: ${LLM_PROVEEDOR:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       TARIFA_PISO_HORA_ARS: ${TARIFA_PISO_HORA_ARS:-6140}
+      # Detrás del túnel todo llega desde cloudflared: la IP real del cliente viaja en este
+      # header. Seguro solo porque el backend no es alcanzable por otro camino.
+      RATE_LIMIT_HEADER_IP: CF-Connecting-IP
     volumes:
       - tinku-archivos:/data
     depends_on:
@@ -110,8 +126,6 @@ services:
   frontend:
     image: ghcr.io/smercadocarbone/tinku-frontend:${TINKU_TAG:-latest}
     restart: unless-stopped
-    environment:
-      SERVICE_FQDN_FRONTEND_3000: /
     depends_on:
       - backend
     mem_limit: 512m

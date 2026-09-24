@@ -193,6 +193,7 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 | Almacenamiento | `ALMACENAMIENTO_DIRECTORIO` | Directorio temporal del sistema (ADR-M1-03) |
 | Reservas (M4) | `RESERVAS_TARIFA_STUB` | — |
 | Pagos (M5) | `TARIFA_PISO_HORA_ARS` | 6140 (piso por hora, T06; revisión mensual) |
+| Rate limit detrás de proxy | `RATE_LIMIT_HEADER_IP` | Vacío = IP del socket. En producción (Cloudflare Tunnel) `CF-Connecting-IP`: solo si el backend no es alcanzable por otro camino |
 | Email / avisos | `RESEND_API_KEY`, `EMAIL_REMITENTE`, `APP_URL_PUBLICA` | Sin key/remitente: sin email (avisos solo en la bandeja in-app; reset de contraseña no llega). `APP_URL_PUBLICA`: `prod` **no arranca** sin ella |
 | Resumen (M6) | `LLM_PROVEEDOR`, `LLM_API_KEY` | Vacío = fail-closed, no sale nada hacia ningún modelo |
 | Matching | `MATCHING_SERVICE_URL`, `MATCHING_SERVICE_TOKEN` (backend); `TINKU_PG_HOST`, `TINKU_PG_PORT`, `TINKU_PG_DBNAME`, `TINKU_PG_USER`, `TINKU_PG_PASSWORD`, `TINKU_MATCHING_TOKEN` (servicio Python) | Backend: `http://localhost:8000`. **AUD-015:** `TINKU_MATCHING_TOKEN`/`MATCHING_SERVICE_TOKEN` son el mismo token compartido; vacío = fail-closed (503) en `/match` y `/recompute-embeddings`. Fuera de dev/test el backend **no arranca** sin él |

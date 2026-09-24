@@ -23,12 +23,9 @@ import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.pagos.service.LiberacionEscrowService;
 import com.tinku.pagos.service.PasarelaService;
 import com.tinku.reservas.model.EstadoReserva;
-import com.tinku.reservas.model.FranjaDisponibilidad;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
-import com.tinku.reservas.repository.FranjaDisponibilidadRepository;
 import com.tinku.reservas.repository.ReservaRepository;
-import com.tinku.reservas.service.ReservasZonaHoraria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -48,7 +45,6 @@ import org.testcontainers.utility.DockerImageName;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -106,7 +102,6 @@ class PasarelaBypassIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired AdminRepository adminRepository;
     @Autowired ReservaRepository reservaRepository;
-    @Autowired FranjaDisponibilidadRepository franjaRepository;
     @Autowired TransaccionRepository transaccionRepository;
     @Autowired PasarelaEstadoRepository pasarelaEstadoRepository;
     @Autowired LogAuditoriaAdminRepository auditoriaRepository;
@@ -183,19 +178,6 @@ class PasarelaBypassIntegracionTest {
         return t;
     }
 
-    /** Franja puntual del Tutor que cubre el horario de la Reserva — requisito
-     * del listener M3 (T-M3-03: sin franja no se agendan los jobs de la Sesión y
-     * la confirmación se aborta). 1h: horario ± 30min. */
-    private void franjaQueCubre(Reserva r, Usuario tutor) {
-        LocalDateTime punto = LocalDateTime.ofInstant(r.getHorario(), ReservasZonaHoraria.ZONA);
-        FranjaDisponibilidad f = new FranjaDisponibilidad();
-        f.setTutor(tutor);
-        f.setFechaEspecifica(punto.toLocalDate());
-        f.setHoraInicio(punto.toLocalTime().minusMinutes(30));
-        f.setHoraFin(punto.toLocalTime().plusMinutes(30));
-        franjaRepository.save(f);
-    }
-
     // ------------------------------------------------------------------ tests
 
     @Test
@@ -212,7 +194,6 @@ class PasarelaBypassIntegracionTest {
         reserva.setPrecio(BigDecimal.valueOf(15000));
         reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
         reservaRepository.save(reserva);
-        franjaQueCubre(reserva, tutor);
 
         mockMvc.perform(post("/api/pagos/preferencia")
                         .header("Authorization", "Bearer " + token(pagador))

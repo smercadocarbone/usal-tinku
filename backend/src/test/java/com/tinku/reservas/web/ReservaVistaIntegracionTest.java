@@ -5,9 +5,7 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.reservas.model.EstadoReserva;
-import com.tinku.reservas.model.FranjaDisponibilidad;
 import com.tinku.reservas.model.Reserva;
-import com.tinku.reservas.repository.FranjaDisponibilidadRepository;
 import com.tinku.reservas.repository.ReservaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +63,6 @@ class ReservaVistaIntegracionTest {
     @Autowired JwtUtil jwtUtil;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
-    @Autowired FranjaDisponibilidadRepository franjaRepository;
 
     private Usuario usuario(TipoUsuario tipo, String nombre, String apellido) {
         Usuario u = new Usuario();
@@ -85,29 +82,21 @@ class ReservaVistaIntegracionTest {
         return "Bearer " + jwtUtil.generateToken(u);
     }
 
-    /** Reserva de 90 min (la franja puntual que la cubre define la duración, FR-RES-023). */
+    /** Reserva de 90 min. Desde D6/AUD-020 la duración es de la Reserva y la vista no lee la
+     *  franja: no hace falta crear una (antes se armaba desde la hora actual y, cerca de la
+     *  medianoche, cruzaba el día y violaba el CHECK de franjas_disponibilidad). */
     private Reserva reserva(Usuario pagador, Usuario tutor, Instant horario, EstadoReserva estado) {
-        ZonedDateTime local = horario.atZone(AR);
-        FranjaDisponibilidad f = new FranjaDisponibilidad();
-        f.setTutor(tutor);
-        f.setFechaEspecifica(local.toLocalDate());
-        f.setHoraInicio(local.toLocalTime());
-        f.setHoraFin(local.toLocalTime().plusMinutes(90));
-        f.setActiva(true);
-        franjaRepository.save(f);
-
         Reserva r = new Reserva();
         r.setPagador(pagador);
         r.setBeneficiario(pagador);
         r.setTutor(tutor);
-        // D6/AUD-020: la duración es de la Reserva (antes se leía de la franja de 90).
         r.definirHorario(horario, 90);
         r.setPrecio(BigDecimal.valueOf(15000));
         r.setEstado(estado);
         return reservaRepository.save(r);
     }
 
-    /** Mediodía en Argentina dentro de N días: evita que la franja cruce la medianoche. */
+    /** Mediodía en Argentina dentro de N días. */
     private Instant enDias(int dias) {
         return ZonedDateTime.now(AR).plusDays(dias).withHour(12).truncatedTo(ChronoUnit.HOURS).toInstant();
     }

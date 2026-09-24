@@ -7,8 +7,9 @@
 
 | Qué | Dónde | Público |
 |---|---|---|
-| Frontend (Next.js) | VPS, contenedor `frontend` | `https://tinku.site` |
-| Backend (Spring Boot) | VPS, contenedor `backend` | `https://api.tinku.site` |
+| Entrada | Cloudflare Tunnel, contenedor `cloudflared` | (servidor en casa, sin puertos abiertos) |
+| Frontend (Next.js) | VPS, contenedor `frontend` | `https://tinku.site` (vía túnel) |
+| Backend (Spring Boot) | VPS, contenedor `backend` | `https://api.tinku.site` (vía túnel) |
 | Matching (Python) | VPS, contenedor `matching` | **No** (solo red interna) |
 | Postgres 16 + pgvector | VPS, contenedor `db` (volumen `tinku-pgdata`) | **No** |
 | Backup diario cifrado | VPS, contenedor `backup` → bucket en Cloudflare R2 | — |
@@ -40,10 +41,19 @@ Las imágenes son privadas. En el VPS (terminal de Coolify o SSH), con un token 
 echo "<TOKEN>" | docker login ghcr.io -u <usuario-github> --password-stdin
 ```
 
-### 2.3 DNS en Cloudflare
-- Registros `A`: `tinku.site` y `api.tinku.site` → IP del VPS. **Proxy en gris (DNS only)** para que
-  Coolify saque los certificados de Let's Encrypt. Si después se activa el proxy naranja, SSL en
-  "Full (strict)".
+### 2.3 Cloudflare Tunnel (en lugar de registros A: el servidor está en casa, sin IP fija)
+1. Cloudflare → **Zero Trust** → **Networks → Tunnels** → **Create a tunnel** → tipo
+   **Cloudflared** → nombre `tinku`.
+2. En "Install connector" elegir **Docker** y copiar **solo el token** (lo que va después de
+   `--token`). Ese valor es la variable `CLOUDFLARE_TUNNEL_TOKEN` en Coolify (§3). No correr el comando:
+   el conector lo levanta el propio compose.
+3. **Public Hostnames** del túnel:
+   - `tinku.site` (subdominio vacío) → Service **HTTP** → `frontend:3000`
+   - `api.tinku.site` → Service **HTTP** → `backend:8080`
+4. Si existían registros `A`/`AAAA`/`CNAME` para `tinku.site` o `api` (p. ej. de Vercel), borrarlos
+   antes: Cloudflare crea los CNAME del túnel solo.
+5. **SSL/TLS → Edge Certificates → Always Use HTTPS: On.**
+6. **No** abrir ni redirigir puertos en el router.
 - Resend (email): agregar en Cloudflare los registros SPF/DKIM (y DMARC) que muestra Resend al agregar
   el dominio, y verificarlo. El remitente (`EMAIL_REMITENTE`) tiene que ser de ese dominio, p. ej.
   `Tinku <avisos@tinku.site>`.
@@ -53,8 +63,9 @@ echo "<TOKEN>" | docker login ghcr.io -u <usuario-github> --password-stdin
    `main`, **Build Pack: Docker Compose**, archivo `/deploy/docker-compose.coolify.yml`.
 2. **Desactivar "Auto Deploy"** del recurso: el deploy lo dispara GitHub Actions *después* de publicar
    las imágenes (si Coolify desplegara con el push, bajaría las imágenes viejas).
-3. **Dominios**: servicio `frontend` → `https://tinku.site`; servicio `backend` → `https://api.tinku.site`.
-   `db`, `matching` y `backup` **sin dominio**.
+3. **Dominios: ninguno.** Los pone Cloudflare Tunnel (§2.3). Si Coolify sugiere dominios
+   generados (`*.sslip.io`), borrarlos: no hacen falta y abrirían otra entrada que no pasa por
+   Cloudflare.
 4. **Environment Variables** (tabla §3). Los `SERVICE_USER_*`/`SERVICE_PASSWORD_*` los genera Coolify:
    no los toques.
 5. **Deploy** una vez a mano. Mirar logs del backend (§4).
@@ -78,6 +89,7 @@ El admin tiene que volver a iniciar sesión.
 | `SERVICE_USER_POSTGRES`, `SERVICE_PASSWORD_POSTGRES` | auto | Usuario y clave de Postgres (Coolify) |
 | `SERVICE_PASSWORD_64_JWT` | auto | Secreto del JWT (Coolify). Cambiarlo cierra todas las sesiones |
 | `SERVICE_PASSWORD_64_MATCHING` | auto | Token compartido backend ↔ matching (AUD-015) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | **sí** | Token del conector del túnel (§2.3) |
 | `APP_URL_PUBLICA` | sí (default `https://tinku.site`) | Enlaces de los emails y CORS |
 | `BACKUP_PASSPHRASE` | **sí** | Clave de cifrado de los backups. Guardarla en el gestor de contraseñas: sin ella no se restaura |
 | `BACKUP_S3_ENDPOINT` | **sí** | `https://<account-id>.r2.cloudflarestorage.com` |
