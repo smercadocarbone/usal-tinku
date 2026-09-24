@@ -70,6 +70,15 @@ public class Usuario {
     @Column(length = 255)
     private String email;
 
+    /** AUD-027: versión de credenciales; viaja en el JWT como {@code cv}. Al cambiar o
+     *  resetear la contraseña sube y los tokens emitidos antes dejan de valer. */
+    @Column(name = "credentials_version", nullable = false)
+    private int credentialsVersion = 0;
+
+    public void invalidarCredenciales() {
+        this.credentialsVersion++;
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_cuenta", nullable = false, length = 20)
     private EstadoCuenta estadoCuenta = EstadoCuenta.ACTIVA;
