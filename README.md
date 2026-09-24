@@ -131,9 +131,14 @@ make up                  # = docker compose up -d --build
 | Servicio | Puerto |
 |----------|--------|
 | `db` (Postgres 16 + pgvector) | 5432 |
-| `matching` (FastAPI) | 8000 |
+| `matching` (FastAPI) | 8000 (solo `127.0.0.1`, AUD-015) |
 | `backend` (Spring Boot) | 8080 |
 | `frontend` (Next.js) | 3000 |
+
+> Auditoría AUD-015: `/match` y `/recompute-embeddings` exigen el header
+> `X-Matching-Token`; sin `TINKU_MATCHING_TOKEN` configurado el servicio responde
+> `503` (fail-closed). Seteá el mismo valor en `TINKU_MATCHING_TOKEN` y
+> `MATCHING_SERVICE_TOKEN` en tu `.env` para que el stack funcione end-to-end.
 
 Otros targets útiles: `make down`, `make logs`, `make ps`, `make db-reset`
 (borra el volumen). Para trabajar una pieza con hot reload en el host:
@@ -188,7 +193,7 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 | Almacenamiento | `ALMACENAMIENTO_DIRECTORIO` | Directorio temporal del sistema (ADR-M1-03) |
 | Reservas (M4) | `RESERVAS_TARIFA_STUB` | — |
 | Resumen (M6) | `LLM_PROVEEDOR`, `LLM_API_KEY` | Vacío = fail-closed, no sale nada hacia ningún modelo |
-| Matching | `MATCHING_SERVICE_URL` (backend); `TINKU_PG_HOST`, `TINKU_PG_PORT`, `TINKU_PG_DBNAME`, `TINKU_PG_USER`, `TINKU_PG_PASSWORD` (servicio Python) | Backend: `http://localhost:8000` |
+| Matching | `MATCHING_SERVICE_URL`, `MATCHING_SERVICE_TOKEN` (backend); `TINKU_PG_HOST`, `TINKU_PG_PORT`, `TINKU_PG_DBNAME`, `TINKU_PG_USER`, `TINKU_PG_PASSWORD`, `TINKU_MATCHING_TOKEN` (servicio Python) | Backend: `http://localhost:8000`. **AUD-015:** `TINKU_MATCHING_TOKEN`/`MATCHING_SERVICE_TOKEN` son el mismo token compartido; vacío = fail-closed (503) en `/match` y `/recompute-embeddings`. Fuera de dev/test el backend **no arranca** sin él |
 | Frontend | `NEXT_PUBLIC_API_URL` (build arg en Docker), `NEXT_PUBLIC_SITE_URL` | — |
 | Spring | `SPRING_PROFILES_ACTIVE` | Sin perfil no arranca con la config por defecto (ver Perfiles). La imagen Docker usa `prod` |
 

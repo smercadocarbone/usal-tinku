@@ -12,3 +12,6 @@ spring:
 tinku:
   jwt:
     secret: ${JWT_SECRET}
+  matching-service:
+    # AUD-015: sin default — si falta, el arranque falla (nunca "abierto").
+    token: ${MATCHING_SERVICE_TOKEN}

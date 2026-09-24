@@ -117,3 +117,6 @@ tinku:
       api-key: ${LLM_API_KEY:}       # clave del proveedor elegido por el ADR
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
+    # AUD-015: token compartido con el servicio Python. En dev/test puede quedar
+    # vacio; fuera de ahi ArranqueSeguroValidator exige que exista.
+    token: ${MATCHING_SERVICE_TOKEN:}

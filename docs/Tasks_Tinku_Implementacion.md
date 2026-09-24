@@ -222,7 +222,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-012: Congelar `duracion_minutos` en `reservas.reservas` y reemplazar la `EXCLUDE` por `tstzrange(...) &&`, con chequeo equivalente en aplicación (AUD-009 + AUD-020)
 - [ ] T-AUD-013: Rate limiting en los 7 endpoints públicos + bloqueo escalado por intentos de login (reutilizar el patrón de `OcrBackoffService`) (AUD-012)
 - [ ] T-AUD-014: Puerto `Notificador` + outbox persistido; implementar como mínimo kill-switch rama menor → Adulto Responsable (AUD-014)
-- [ ] T-AUD-015: Autenticación en `matching-service` + quitar `ports:` del compose + pool de conexiones (AUD-015)
+- [x] T-AUD-015: Autenticación en `matching-service` + quitar `ports:` del compose + pool de conexiones (AUD-015) — CERRADO en FASE2-04 (2026-09-24): token compartido `X-Matching-Token` (fail-closed 503/401, header obligatorio en `/match` y `/recompute-embeddings`), bind `127.0.0.1`, validación de `tinku.matching-service.token` en `ArranqueSeguroValidator` fuera de dev/test, `/recompute-embeddings` en una sola transacción (sin pool nuevo: 1 conexión por request)
 - [ ] T-AUD-016: Decidir y documentar (ADR) baja de menor: cascada o anonimización; test de integración real (AUD-017)
 - [ ] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029)
 - [ ] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018)
@@ -251,7 +251,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-037: Unificar `@Transactional` en el de Spring (AUD-036.3)
 - [ ] T-AUD-038: Subpaquetes de capa en `matching` (AUD-036.2)
 - [ ] T-AUD-039: `@JsonIgnore` en `Usuario.getEdad()` (AUD-036.6)
-- [ ] T-AUD-040: Lock en la carga lazy del embedder de Python (AUD-036.7)
+- [x] T-AUD-040: Lock en la carga lazy del embedder de Python (AUD-036.7) — CERRADO (verificado en FASE2-04): lock + doble chequeo ya presente para el fallback de precarga; la precarga fallida reintenta en la primera request sin cargar el modelo 2 veces (test concurrente)
 - [ ] T-AUD-041: Actuator con `/health` e `/info` (AUD-034)
 
 ---

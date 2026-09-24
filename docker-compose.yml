@@ -31,8 +31,13 @@ services:
       TINKU_PG_DBNAME: tinku
       TINKU_PG_USER: tinku_dev
       TINKU_PG_PASSWORD: changeme
+      # AUD-015: token compartido con el backend. Vacio = fail-closed (503) en
+      # /match y /recompute-embeddings. Mismo valor que MATCHING_SERVICE_TOKEN.
+      TINKU_MATCHING_TOKEN: ${TINKU_MATCHING_TOKEN:-}
     ports:
-      - "8000:8000"
+      # AUD-015: solo el host, no la red del compose (el backend lo alcanza por
+      # http://matching:8000). Sin esto quedaba publico en la LAN.
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -48,6 +53,7 @@ services:
       SPRING_DATASOURCE_USERNAME: tinku_dev
       SPRING_DATASOURCE_PASSWORD: changeme
       MATCHING_SERVICE_URL: http://matching:8000
+      MATCHING_SERVICE_TOKEN: ${MATCHING_SERVICE_TOKEN:-}
       CORS_ALLOWED_ORIGINS: http://localhost:3000
       DB_USER: tinku_dev
       DB_PASSWORD: changeme
