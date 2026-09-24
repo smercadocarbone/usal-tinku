@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ChevronRight, GraduationCap, Lock } from "lucide-react";
 import { useSesion } from "@/lib/useSesion";
 import { actualizarCapacidades, getPerfilPropio, mensajeDeError, type PerfilPropio } from "@/lib/api";
-import { dniEnmascarado } from "@/lib/formatos";
 import { Avatar, Interruptor, Skeleton, Tarjeta, useToast } from "@/components/ui";
 
 export default function CuentaPerfilPage() {
@@ -66,7 +65,6 @@ export default function CuentaPerfilPage() {
             <div className="min-w-0">
               <h2 className="text-2xl font-bold">{perfil ? `${perfil.nombre} ${perfil.apellido}` : "Tu perfil"}</h2>
               {perfil?.email && <p className="truncate text-[15px] text-tinta-suave">{perfil.email}</p>}
-              <p className="tabular mt-1 text-sm text-tinta-tenue">DNI {dniEnmascarado(payload?.sub)}</p>
             </div>
           </>
         )}
