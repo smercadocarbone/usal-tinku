@@ -304,8 +304,28 @@ public class ReservaService {
                 .forEach(r -> aCancelar.putIfAbsent(r.getId(), r));
         reservaRepo.findByEstadoInAndHorarioAfterAndPagador_Id(cancelables, ahora, usuarioSancionadoId)
                 .forEach(r -> aCancelar.putIfAbsent(r.getId(), r));
-        aCancelar.values().forEach(r -> cancelarPorSancion(r, usuarioSancionadoId));
+        aCancelar.values().forEach(r ->
+                cancelarPorSistema(r, MotivoCancelacion.SANCION, usuarioSancionadoId));
         return aCancelar.size();
+    }
+
+    /**
+     * FR-ID-014 — baja confirmada de un menor: se cancelan sus reservas futuras
+     * (él es siempre el beneficiario). Es un acto del Adulto Responsable, que es el
+     * pagador, así que el motivo es {@code voluntaria} y {@code reserva.cancelada}
+     * sale con él como quien cancela: M5 aplica FR-RES-008 igual que en su
+     * cancelación tardía (con &lt;24hs el Tutor cobra), para que dar de baja al
+     * menor no sea la vía para esquivar la penalidad. Misma mecánica que la
+     * sanción: {@code pendiente_pago} sin evento, {@code confirmada} con evento.
+     */
+    @Transactional
+    public int cancelarFuturasPorBajaDeMenor(UUID menorId, UUID adultoResponsableId) {
+        List<Reserva> futuras = reservaRepo.findByEstadoInAndHorarioAfterAndBeneficiario_Id(
+                List.of(EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA),
+                Instant.now(), menorId);
+        futuras.forEach(r ->
+                cancelarPorSistema(r, MotivoCancelacion.VOLUNTARIA, adultoResponsableId));
+        return futuras.size();
     }
 
     /** {@code denuncia.resuelta} ← M9 (FR-SEC-008/012, Chunk M4-E): listener del
@@ -323,15 +343,16 @@ public class ReservaService {
         }
     }
 
-    private Reserva cancelarPorSancion(Reserva reserva, UUID usuarioSancionadoId) {
+    private Reserva cancelarPorSistema(Reserva reserva, MotivoCancelacion motivo,
+                                       UUID canceladaPorUsuarioId) {
         boolean estabaConfirmada = reserva.getEstado() == EstadoReserva.CONFIRMADA;
         reserva.setEstado(EstadoReserva.CANCELADA);
-        reserva.setMotivoCancelacion(MotivoCancelacion.SANCION);
+        reserva.setMotivoCancelacion(motivo);
         reservaRepo.save(reserva);
         cancelarTimeoutPago(reserva.getId());
         if (estabaConfirmada) {
             events.publishEvent(new ReservaCanceladaEvent(
-                    this, reserva.getId(), usuarioSancionadoId));
+                    this, reserva.getId(), canceladaPorUsuarioId));
         }
         return reserva;
     }
