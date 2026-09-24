@@ -24,7 +24,7 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
           materias: ["Matemática"],
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioSesion: 5000,
+          precioHora: 5000,
         }),
         "POST /api/busquedas/guardadas": jsonRoute(201, {
           id: "g-1",
@@ -66,7 +66,7 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
           materias: ["Física"],
           calificacionPromedio: 4.5,
           cantidadCalificaciones: 8,
-          precioSesion: 4500,
+          precioHora: 4500,
         }),
       });
 

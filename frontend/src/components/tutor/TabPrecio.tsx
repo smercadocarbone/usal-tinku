@@ -39,14 +39,14 @@ interface ReferenciaRegional {
 }
 
 interface Tarifa {
-  precioSesion: number;
+  precioHora: number;
 }
 
 /**
- * Precio por clase del tutor (M5 US-6, UX-06 §4). Se guarda solo (PUT
- * /api/pagos/tarifa, `precioSesion` en camelCase — B14) y se congela en cada
- * reserva. El valor actual sale del backend (GET /api/pagos/tarifa), nunca de
- * localStorage. "Por clase": hasta FASE2-01 la tarifa es por sesión, no por hora.
+ * Precio POR HORA del tutor (M5 US-6, UX-06 §4, D6). Se guarda solo (PUT
+ * /api/pagos/tarifa, `precioHora` en camelCase) y cada reserva congela
+ * precioHora × minutos / 60. El valor actual sale del backend
+ * (GET /api/pagos/tarifa), nunca de localStorage.
  */
 export default function TabPrecio() {
   const toast = useToast();
@@ -61,9 +61,9 @@ export default function TabPrecio() {
     api
       .get<Tarifa | undefined>("/api/pagos/tarifa")
       .then((t) => {
-        if (t?.precioSesion) {
-          guardado.current = Number(t.precioSesion);
-          setPrecio(String(Number(t.precioSesion)));
+        if (t?.precioHora) {
+          guardado.current = Number(t.precioHora);
+          setPrecio(String(Number(t.precioHora)));
         }
       })
       .catch(() => undefined)
@@ -91,7 +91,7 @@ export default function TabPrecio() {
     if (!cargado || numero === null || !Number.isFinite(numero) || numero <= 0 || numero === guardado.current) return;
     const id = window.setTimeout(() => {
       api
-        .put("/api/pagos/tarifa", { precioSesion: numero })
+        .put("/api/pagos/tarifa", { precioHora: numero })
         .then(() => {
           guardado.current = numero;
           setError(null);
@@ -106,7 +106,7 @@ export default function TabPrecio() {
     <section aria-label="Precio" className="flex flex-col gap-6">
       <div>
         <label htmlFor="precio" className="text-sm font-bold">
-          Precio por clase (ARS)
+          Precio por hora (ARS)
         </label>
         <div className="mt-2 flex max-w-xs items-center rounded-control border border-borde-control bg-superficie px-4 focus-within:border-marca-700 focus-within:ring-4 focus-within:ring-marca-100">
           <span aria-hidden className="text-3xl font-extrabold text-tinta-tenue">
@@ -127,7 +127,7 @@ export default function TabPrecio() {
           />
         </div>
         <p id="precio-ayuda" className="mt-2 text-[13px] text-tinta-tenue">
-          Se guarda solo. Cada reserva congela el precio del momento en que se hizo.
+          Se guarda solo. Una clase de 30 minutos cobra la mitad; cada reserva congela el precio del momento en que se hizo.
         </p>
         {error && (
           <Alerta tono="peligro" className="mt-3">
@@ -140,7 +140,7 @@ export default function TabPrecio() {
         <div className="flex items-start gap-3 rounded-2xl bg-fondo p-4">
           <Eye className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
           <p className="text-[15px]">
-            Así lo ven las familias: <strong>{formatearPesos(numero)} por clase</strong>.
+            Así lo ven las familias: <strong>{formatearPesos(numero)} por hora</strong>.
           </p>
         </div>
       )}
@@ -158,7 +158,7 @@ export default function TabPrecio() {
       {referencia && (
         <Alerta tono="info" titulo={`Precio de referencia en ${referencia.provincia}`} sinIcono>
           <span className="flex items-center gap-2">
-            <TrendingUp className="size-4" aria-hidden /> Ronda los {formatearPesos(referencia.valorSugerido)} por clase.
+            <TrendingUp className="size-4" aria-hidden /> Ronda los {formatearPesos(referencia.valorSugerido)} por hora.
           </span>
         </Alerta>
       )}

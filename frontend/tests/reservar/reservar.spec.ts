@@ -25,7 +25,7 @@ test.describe("Reserva de una clase", () => {
           nivel: "secundario",
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioSesion: 5000,
+          precioHora: 5000,
         }),
         [`GET /api/tutores/${TUTOR_ID}/franjas`]: jsonRoute(200, [
           {
@@ -44,10 +44,17 @@ test.describe("Reserva de una clase", () => {
 
       const reservar = new ReservarPage(page);
       await reservar.goto(TUTOR_ID);
+      // D6: bloques de 30 min — con 1 h (por defecto) se ofrecen 10:00, 10:30 y 11:00.
+      await expect(page.getByRole("button", { name: /^10:30 a 11:30/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^11:30/ })).toHaveCount(0);
+      await reservar.elegirDuracion("2 h");
       await reservar.elegirHorario("10:00 a 12:00");
-      // Resumen antes de pagar: precio y duración a la vista (UX-04 §3).
+      // Resumen antes de pagar: precio y duración a la vista (UX-04 §3); 5000/h × 2 h.
       await expect(page.getByText("2 h", { exact: true })).toBeVisible();
+      await expect(page.getByRole("main").getByText(/10\.000/).first()).toBeVisible();
+      const pedido = page.waitForRequest((r) => r.url().endsWith("/api/reservas") && r.method() === "POST");
       await reservar.confirmar();
+      expect((await pedido).postDataJSON()).toMatchObject({ tutorId: TUTOR_ID, duracionMinutos: 120 });
 
       await expect(page).toHaveURL(/\/pagar\?reserva=r-1/);
     }

@@ -6,7 +6,7 @@ import { Tarjeta } from "@/components/ui";
 
 export default function CuentaPrecioPage() {
   return (
-    <SubpaginaTutor titulo="Mi precio" descripcion="Cuánto cobrás por clase.">
+    <SubpaginaTutor titulo="Mi precio" descripcion="Cuánto cobrás por hora.">
       <Tarjeta>
         <TabPrecio />
       </Tarjeta>

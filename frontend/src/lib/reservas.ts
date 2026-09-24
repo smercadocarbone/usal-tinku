@@ -22,6 +22,8 @@ export interface Reserva {
   beneficiarioNombre?: string | null;
   beneficiarioApellido?: string | null;
   duracionMinutos?: number | null;
+  /** Fin de la clase (D6: `horario + duracionMinutos`). */
+  horarioFin?: string | null;
   pagoVenceAt?: string | null;
   puedePagar?: boolean;
   puedeCancelar?: boolean;
@@ -40,10 +42,13 @@ export interface Solicitud {
   menorNombre?: string | null;
   tutorNombre?: string | null;
   tutorApellido?: string | null;
+  /** D6: la Reserva hereda esta duración al aprobarse. */
+  duracionMinutos?: number | null;
 }
 
 /** Fin agendado de la clase, si se conoce la duración. */
 export function finDe(r: Reserva): string | null {
+  if (r.horarioFin) return r.horarioFin;
   if (!r.duracionMinutos) return null;
   return new Date(new Date(r.horario).getTime() + r.duracionMinutos * 60000).toISOString();
 }

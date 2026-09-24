@@ -117,7 +117,7 @@ test.describe("Accesibilidad", () => {
           materias: ["Matemática"],
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioSesion: 5000,
+          precioHora: 5000,
         }),
       });
 

@@ -2,13 +2,13 @@ import { test, expect } from "@playwright/test";
 import { mockApi, jsonRoute, setFakeSessionConPayload } from "../helpers";
 
 /**
- * B14: el auto-guardado de /cuenta/precio manda `precioSesion` (camelCase) al
+ * B14: el auto-guardado de /cuenta/precio manda `precioHora` (camelCase) al
  * backend; antes mandaba `precio_sesion` y `ActualizarTarifaTutorRequest`
  * respondía 400 siempre — ningún tutor pudo fijar su tarifa desde la UI.
  */
 test.describe("Configuración de Precio del tutor — contrato de tarifa", () => {
   test(
-    "el auto-guardado manda precioSesion en camelCase, no precio_sesion",
+    "el auto-guardado manda precioHora en camelCase, no precio_sesion",
     { tag: ["@e2e", "@CUENTA-PRECIO-B14-E2E-001"] },
     async ({ page, context, baseURL }) => {
       await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
@@ -22,13 +22,13 @@ test.describe("Configuración de Precio del tutor — contrato de tarifa", () =>
         "GET /api/pagos/tarifa": async (route) => route.fulfill({ status: 204 }),
         "PUT /api/pagos/tarifa": jsonRoute(200, {
           tutorId: "t-1",
-          precioSesion: 10000,
+          precioHora: 10000,
           updatedAt: "2026-01-01T00:00:00Z",
         }),
       });
       await page.goto("/cuenta/precio");
 
-      const input = page.getByLabel("Precio por clase (ARS)");
+      const input = page.getByLabel("Precio por hora (ARS)");
       await expect(input).toBeEnabled();
       const [req] = await Promise.all([
         page.waitForRequest((r) => r.url().includes("/api/pagos/tarifa")),
@@ -36,7 +36,7 @@ test.describe("Configuración de Precio del tutor — contrato de tarifa", () =>
       ]);
 
       const body = req.postDataJSON();
-      expect(body.precioSesion).toBe(10000);
+      expect(body.precioHora).toBe(10000);
       expect(body.precio_sesion).toBeUndefined();
     }
   );

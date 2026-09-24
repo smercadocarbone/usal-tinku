@@ -65,3 +65,35 @@ export function proximosDias(franjas: Franja[], cantidad = 14, ahora: Date = new
   }
   return dias;
 }
+
+/** "HH:MM" desde minutos del día. */
+export function horaDesdeMinutos(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** D6: una clase dura de 30 a 180 minutos, en bloques de 30. */
+export const DURACIONES_CLASE = [30, 60, 90, 120, 150, 180] as const;
+
+/** D6: la agenda se parte en bloques de 30 minutos. */
+export const PASO_AGENDA_MINUTOS = 30;
+
+/**
+ * Inicios posibles de una clase de `duracion` minutos dentro de una franja:
+ * cada 30 minutos desde el comienzo, mientras la clase entre entera
+ * (misma regla que `FranjaService.franjaQueContiene` en el backend).
+ */
+export function iniciosEnFranja(f: Franja, duracion: number): string[] {
+  const desde = minutos(f.horaInicio);
+  const hasta = minutos(f.horaFin);
+  const inicios: string[] = [];
+  for (let m = desde; m + duracion <= hasta; m += PASO_AGENDA_MINUTOS) inicios.push(horaDesdeMinutos(m));
+  return inicios;
+}
+
+/** Precio de una clase: tarifa por hora × minutos / 60, redondeado a centavos (igual que el backend). */
+export function precioClase(precioHora: number | null, duracion: number): number | null {
+  if (precioHora == null) return null;
+  return Math.round(((precioHora * duracion) / 60) * 100) / 100;
+}

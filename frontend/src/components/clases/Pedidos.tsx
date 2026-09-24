@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { api, mensajeDeError } from "@/lib/api";
 import type { Solicitud } from "@/lib/reservas";
-import { fechaHoraCorta } from "@/lib/formatos";
+import { duracionLegible, fechaHoraCorta } from "@/lib/formatos";
 import { nombreCorto } from "@/lib/tutores";
 import { Avatar, Boton, EstadoVacio, SkeletonLista, Tarjeta, useToast } from "@/components/ui";
 
@@ -45,7 +45,10 @@ export default function Pedidos({ pedidos }: { pedidos: Solicitud[] | null }) {
                 <p className="font-bold">
                   {s.menorNombre ?? "Tu hijo/a"} quiere una clase{s.tutorNombre ? ` con ${nombreCorto(s.tutorNombre, s.tutorApellido)}` : ""}
                 </p>
-                <p className="text-sm capitalize text-tinta-suave">{fechaHoraCorta(s.horarioPropuesto)}</p>
+                <p className="text-sm text-tinta-suave">
+                  <span className="capitalize">{fechaHoraCorta(s.horarioPropuesto)}</span>
+                  {s.duracionMinutos ? ` · ${duracionLegible(s.duracionMinutos)}` : ""}
+                </p>
               </div>
             </div>
             <Boton cargando={aprobando === s.id} textoCargando="Aprobando…" onClick={() => void aprobar(s)}>

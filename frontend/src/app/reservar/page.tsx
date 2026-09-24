@@ -7,17 +7,21 @@ import { CalendarX2, Check, ChevronLeft, Clock, Copy, Send, ShieldCheck, UserRou
 import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { useAhora } from "@/lib/useAhora";
-import { diaCorto, duracionLegible, fechaHoraLarga } from "@/lib/formatos";
+import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
-import { duracionFranja, hhmm, inicioISO, proximosDias, type Franja } from "@/lib/agenda";
+import { DURACIONES_CLASE, duracionFranja, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, type Franja } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import AppShell from "@/components/shell/AppShell";
 import { Alerta, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
 
 interface Horario {
   franja: Franja;
+  /** "HH:MM" de inicio. */
+  hora: string;
   inicio: string;
+  fin: string;
+  duracion: number;
   disponible: boolean;
 }
 
@@ -40,6 +44,7 @@ function ReservarFlujo() {
 
   const [paso, setPaso] = useState(0);
   const [dia, setDia] = useState<string | null>(null);
+  const [duracionElegida, setDuracionElegida] = useState<number | null>(null);
   const [ocupacion, setOcupacion] = useState<Record<string, TimeSlot[] | null>>({});
   const [elegido, setElegido] = useState<Horario | null>(null);
   const [tomados, setTomados] = useState<Set<string>>(new Set());
@@ -90,29 +95,46 @@ function ReservarFlujo() {
     if (!dia && diasConHorario[0]) setDia(diasConHorario[0].fecha);
   }, [dia, diasConHorario]);
 
-  // Ocupación real del día (reservas existentes + ventana mínima): la calcula el backend.
-  useEffect(() => {
-    if (!dia || !tutorId || dia in ocupacion) return;
-    setOcupacion((o) => ({ ...o, [dia]: null }));
-    api
-      .get<TimeSlot[]>(`/api/tutores/${tutorId}/horarios?fecha=${dia}&duracionMinutos=30`)
-      .then((slots) => setOcupacion((o) => ({ ...o, [dia]: slots })))
-      .catch(() => setOcupacion((o) => ({ ...o, [dia]: [] })));
-  }, [dia, tutorId, ocupacion]);
+  // D6: duraciones que entran en alguna franja del día; si la elegida no entra, 1 h o la mayor posible.
+  const diaActual = dias.find((x) => x.fecha === dia);
+  const maxDelDia = diaActual ? Math.max(0, ...diaActual.franjas.map(duracionFranja)) : 0;
+  const duracionesDelDia = DURACIONES_CLASE.filter((d) => d <= maxDelDia);
+  const duracion =
+    duracionElegida !== null && duracionesDelDia.some((d) => d === duracionElegida)
+      ? duracionElegida
+      : duracionesDelDia.some((d) => d === 60)
+        ? 60
+        : (duracionesDelDia.at(-1) ?? 30);
+  const claveOcupacion = dia ? `${dia}|${duracion}` : "";
 
-  const horariosDelDia: Horario[] = useMemo(() => {
-    const d = dias.find((x) => x.fecha === dia);
-    if (!d) return [];
-    const slots = ocupacion[dia ?? ""];
+  // Ocupación real del día para esa duración (reservas existentes + ventana mínima): la calcula el backend.
+  useEffect(() => {
+    if (!dia || !tutorId || claveOcupacion in ocupacion) return;
+    setOcupacion((o) => ({ ...o, [claveOcupacion]: null }));
+    api
+      .get<TimeSlot[]>(`/api/tutores/${tutorId}/horarios?fecha=${dia}&duracionMinutos=${duracion}`)
+      .then((slots) => setOcupacion((o) => ({ ...o, [claveOcupacion]: slots })))
+      .catch(() => setOcupacion((o) => ({ ...o, [claveOcupacion]: [] })));
+  }, [dia, duracion, claveOcupacion, tutorId, ocupacion]);
+
+  const horariosDelDia: Horario[] = calcularHorarios();
+  function calcularHorarios(): Horario[] {
+    if (!diaActual) return [];
+    const slots = ocupacion[claveOcupacion];
     const limite = ahora + TIEMPOS.ventanaMinimaReservaMinutos * 60000;
-    return d.franjas.map((f) => {
-      const inicio = inicioISO(d.fecha, f.horaInicio);
-      const slot = slots?.find((s) => new Date(s.startTime).getTime() === new Date(inicio).getTime());
-      const disponible =
-        new Date(inicio).getTime() > limite && !tomados.has(inicio) && (slot ? slot.isAvailable : true);
-      return { franja: f, inicio, disponible };
-    });
-  }, [dias, dia, ocupacion, tomados, ahora]);
+    return diaActual.franjas.flatMap((f) =>
+      iniciosEnFranja(f, duracion).map((hora) => {
+        const inicio = inicioISO(diaActual.fecha, hora);
+        const fin = new Date(new Date(inicio).getTime() + duracion * 60000).toISOString();
+        const slot = slots?.find((s) => new Date(s.startTime).getTime() === new Date(inicio).getTime());
+        const disponible =
+          new Date(inicio).getTime() > limite && !tomados.has(inicio) && (slot ? slot.isAvailable : true);
+        return { franja: f, hora, inicio, fin, duracion, disponible };
+      })
+    );
+  }
+
+  const precioElegido = precioClase(tutor?.precioHora ?? null, elegido?.duracion ?? duracion);
 
   const pasos = esMenor ? ["Cuándo", "Pedido"] : esAR ? ["Cuándo", "Para quién", "Confirmar"] : ["Cuándo", "Confirmar"];
   const pasoConfirmar = pasos.length - 1;
@@ -129,12 +151,17 @@ function ReservarFlujo() {
     setError(null);
     try {
       if (esMenor) {
-        await api.post("/api/solicitudes", { tutorId, horarioPropuesto: elegido.inicio });
+        await api.post("/api/solicitudes", {
+          tutorId,
+          horarioPropuesto: elegido.inicio,
+          duracionMinutos: elegido.duracion,
+        });
         setPedidoEnviado(true);
       } else {
         const reserva = await api.post<{ id: string }>("/api/reservas", {
           tutorId,
           horario: elegido.inicio,
+          duracionMinutos: elegido.duracion,
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
         });
         router.replace(`/pagar?reserva=${reserva.id}`);
@@ -143,11 +170,8 @@ function ReservarFlujo() {
       if (err instanceof ApiError && err.status === 409 && !/menores/i.test(err.message)) {
         // El horario se ocupó mientras decidía: vuelve al paso 1 con ese horario tachado.
         setTomados((t) => new Set(t).add(elegido.inicio));
-        setOcupacion((o) => {
-          const copia = { ...o };
-          if (dia) delete copia[dia];
-          return copia;
-        });
+        // Se vuelve a pedir la ocupación del día para todas las duraciones.
+        setOcupacion((o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith(`${dia}|`))));
         setElegido(null);
         setPaso(0);
         setError("Ese horario se acaba de ocupar. Elegí otro.");
@@ -259,44 +283,68 @@ function ReservarFlujo() {
                   })}
                 </div>
 
+                <h2 className="mt-8 text-xl font-bold">¿Cuánto dura?</h2>
+                <div role="radiogroup" aria-label="Duración de la clase" className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {duracionesDelDia.map((d) => {
+                    const activo = d === duracion;
+                    const precio = precioClase(tutor.precioHora, d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        role="radio"
+                        aria-checked={activo}
+                        onClick={() => {
+                          setDuracionElegida(d);
+                          setElegido(null);
+                        }}
+                        className={cn(
+                          "flex min-h-16 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 px-2 text-center transition-colors",
+                          activo ? "border-tinta bg-tinta text-white" : "border-borde bg-superficie hover:border-borde-fuerte"
+                        )}
+                      >
+                        <span className="text-[15px] font-bold">{duracionLegible(d)}</span>
+                        {precio !== null && (
+                          <span className={cn("tabular text-[12px]", activo ? "text-white/80" : "text-tinta-tenue")}>
+                            {formatearPesos(precio)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <h2 className="mt-8 text-xl font-bold">¿A qué hora?</h2>
-                {dia && ocupacion[dia] === null ? (
-                  <div role="status" className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {dia && ocupacion[claveOcupacion] === null ? (
+                  <div role="status" className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
                     <span className="sr-only">Cargando horarios…</span>
                     <Skeleton className="h-16 rounded-2xl" />
                     <Skeleton className="h-16 rounded-2xl" />
+                    <Skeleton className="h-16 rounded-2xl" />
                   </div>
+                ) : horariosDelDia.length === 0 ? (
+                  <p className="mt-4 text-[15px] text-tinta-suave">No hay horarios para esta duración ese día. Probá con otra más corta.</p>
                 ) : (
-                  <ul className="mt-4 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                  <ul className="mt-4 grid list-none grid-cols-3 gap-2 p-0 sm:grid-cols-4">
                     {horariosDelDia.map((h) => {
                       const activo = elegido?.inicio === h.inicio;
-                      const minutosFranja = duracionFranja(h.franja);
+                      const hasta = horaDesdeMinutos(minutos(h.hora) + h.duracion);
                       return (
-                        <li key={h.franja.id}>
+                        <li key={h.inicio}>
                           <button
                             type="button"
                             aria-pressed={activo}
+                            aria-label={`${h.hora} a ${hasta}${h.disponible ? "" : ", no disponible"}`}
                             disabled={!h.disponible}
                             onClick={() => setElegido(h)}
                             className={cn(
-                              "flex min-h-16 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 px-4 text-left transition-colors disabled:cursor-not-allowed",
+                              "flex min-h-16 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 px-2 text-center transition-colors disabled:cursor-not-allowed",
                               activo ? "border-tinta bg-superficie shadow-elevado" : "border-borde bg-superficie hover:border-borde-fuerte",
                               !h.disponible && "bg-superficie-hundida text-tinta-tenue"
                             )}
                           >
-                            <span>
-                              <span className={cn("block text-[16px] font-bold", !h.disponible && "line-through")}>
-                                {hhmm(h.franja.horaInicio)} a {hhmm(h.franja.horaFin)}
-                              </span>
-                              <span className="block text-sm text-tinta-tenue">
-                                {h.disponible ? duracionLegible(minutosFranja) : "No disponible"}
-                              </span>
-                            </span>
-                            {activo && (
-                              <span aria-hidden className="flex size-6 items-center justify-center rounded-full bg-tinta text-white">
-                                <Check className="size-4" />
-                              </span>
-                            )}
+                            <span className={cn("tabular text-[17px] font-bold", !h.disponible && "line-through")}>{h.hora}</span>
+                            <span className="text-[12px] text-tinta-tenue">{h.disponible ? `a ${hasta}` : "Ocupado"}</span>
                           </button>
                         </li>
                       );
@@ -355,12 +403,12 @@ function ReservarFlujo() {
               <dl className="flex flex-col gap-3 text-[15px]">
                 <Dato titulo="Tutor">{nombreTutor}</Dato>
                 <Dato titulo="Cuándo">
-                  <span className="first-letter:uppercase">{fechaHoraLarga(elegido.inicio, inicioISO(elegido.franja.fechaEspecifica?.slice(0, 10) ?? dia!, elegido.franja.horaFin))}</span>
+                  <span className="first-letter:uppercase">{fechaHoraLarga(elegido.inicio, elegido.fin)}</span>
                 </Dato>
-                <Dato titulo="Duración">{duracionLegible(duracionFranja(elegido.franja))}</Dato>
+                <Dato titulo="Duración">{duracionLegible(elegido.duracion)}</Dato>
                 {esAR && <Dato titulo="Para">{beneficiario ? beneficiario.nombre : "Vos"}</Dato>}
                 <Dato titulo="Precio">
-                  <Precio valor={tutor.precioSesion} sinValor="Se calcula al reservar" />
+                  <Precio valor={precioElegido} sinValor="Se calcula al reservar" />
                 </Dato>
               </dl>
               {!esMenor && (
@@ -382,7 +430,7 @@ function ReservarFlujo() {
         )}
       </div>
 
-      <ResumenLateral tutor={tutor} elegido={elegido} />
+      <ResumenLateral tutor={tutor} elegido={elegido} precio={precioElegido} />
     </div>
   );
 }
@@ -432,7 +480,7 @@ function OpcionBeneficiario({
   );
 }
 
-function ResumenLateral({ tutor, elegido }: { tutor: TutorPerfil; elegido: Horario | null }) {
+function ResumenLateral({ tutor, elegido, precio }: { tutor: TutorPerfil; elegido: Horario | null; precio: number | null }) {
   const foto = useFotoTutor(tutor.id, tutor.tieneFoto);
   return (
     <aside className="hidden lg:sticky lg:top-24 lg:block">
@@ -445,14 +493,20 @@ function ResumenLateral({ tutor, elegido }: { tutor: TutorPerfil; elegido: Horar
           </div>
         </div>
         <div className="flex items-baseline justify-between border-t border-borde pt-4">
-          <span className="text-sm text-tinta-tenue">Precio por clase</span>
-          <Precio valor={tutor.precioSesion} />
+          <span className="text-sm text-tinta-tenue">Precio por hora</span>
+          <Precio valor={tutor.precioHora} />
         </div>
         {elegido && (
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <Clock className="size-4 text-marca-700" aria-hidden />
-            <span className="first-letter:uppercase">{fechaHoraLarga(elegido.inicio).replace(/, /, " · ")}</span>
-          </p>
+          <>
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Clock className="size-4 text-marca-700" aria-hidden />
+              <span className="first-letter:uppercase">{fechaHoraLarga(elegido.inicio, elegido.fin).replace(/, /, " · ")}</span>
+            </p>
+            <div className="flex items-baseline justify-between border-t border-borde pt-4">
+              <span className="text-sm font-semibold">Total · {duracionLegible(elegido.duracion)}</span>
+              <Precio valor={precio} />
+            </div>
+          </>
         )}
       </Tarjeta>
     </aside>

@@ -34,11 +34,11 @@ test.describe("Configuración de Precio del tutor", () => {
       await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
       await mockApi(page, {
         "GET /api/pagos/tarifa": async (route) =>
-          route.fulfill({ status: 200, contentType: "application/json", body: '{"tutorId":"t-1","precioSesion":12000}' }),
+          route.fulfill({ status: 200, contentType: "application/json", body: '{"tutorId":"t-1","precioHora":12000}' }),
       });
 
       await page.goto("/cuenta/precio");
-      await expect(page.getByLabel("Precio por clase (ARS)")).toHaveValue("12000");
+      await expect(page.getByLabel("Precio por hora (ARS)")).toHaveValue("12000");
       await expect(page.getByText("Así lo ven las familias")).toBeVisible();
     }
   );
