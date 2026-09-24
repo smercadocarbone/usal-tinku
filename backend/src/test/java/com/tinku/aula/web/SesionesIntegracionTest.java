@@ -323,6 +323,131 @@ class SesionesIntegracionTest {
                 .andExpect(status().isOk());
     }
 
+    private void leftWebhook(String sala, UUID idUsuario) throws Exception {
+        String body = cuerpoWebhook("participant_left", idUsuario.toString(), sala);
+        mockMvc.perform(post("/api/webhooks/livekit")
+                        .contentType("application/webhook+json")
+                        .header("Authorization", "Bearer " + firmar(body.getBytes(StandardCharsets.UTF_8)))
+                        .content(body))
+                .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------------ FASE2-05 (AUD-029): desconexión real
+
+    /** Regresión del finding (RED antes del fix): una sesión de 120 min donde el
+     *  par se rompió a los 5 min y nadie volvió. El corte automático tiene que
+     *  medir la duración contra la desconexión (par_roto_at), no contra cuando
+     *  corre (fin agendado + 5 min). */
+    @Test
+    void ambosSeDesconectanALos5min_corteAutomatico_emiteInterrumpidaYFinalizadaAnticipada() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        // Clase de 120 min que ya arrancó (la franja publicada es de 60 min; la
+        // duración AGENDADA se fija directo para el escenario de 120 del spec).
+        reserva.setHorario(Instant.now().minusSeconds(3600));
+        reservaRepository.save(reserva);
+        sesion.setDuracionAgendadaSegundos(7200);
+        String sala = "sesion-" + sesion.getId();
+        sesion.setLivekitRoomId(sala);
+        sesionRepository.save(sesion);
+
+        joinWebhook(sala, e.tutorId());
+        joinWebhook(sala, e.menorId());
+        // El primer join fija inicio_real = ahora; se back-datea para que la
+        // clase lleve ~5 min cuando llega la desconexión (spec §5.1). Se re-lee
+        // de la BD: el objeto de programarYCargar quedó obsoleto tras los joins
+        // (un save sobre él borraría los flags que el webhook acaba de grabar).
+        SesionAprendizaje enCurso = sesionRepository.findById(sesion.getId()).orElseThrow();
+        enCurso.setInicioReal(Instant.now().minusSeconds(300));
+        sesionRepository.save(enCurso);
+
+        Instant previo = Instant.now();
+        leftWebhook(sala, e.tutorId());
+        leftWebhook(sala, e.menorId());
+        sesionService.ejecutarCorteAutomatico(sesion.getId());
+
+        SesionAprendizaje cerrada = sesionRepository.findById(sesion.getId()).orElseThrow();
+        // Estado final por desconexión previa al fin agendado (Spec fase2-05 §4.6
+        // / Spec_M3 US-8 caso borde #6); el EVENTO no cambia (<50% → interrumpida,
+        // M5 reembolsa).
+        assertThat(cerrada.getEstado()).isEqualTo("finalizada_anticipada");
+        assertThat(cerrada.getParRotoAt()).isAfterOrEqualTo(previo);
+        assertThat(cerrada.getFinReal()).isEqualTo(cerrada.getParRotoAt());
+        assertThat(cerrada.getDuracionEfectivaSegundos()).isBetween(295, 305);
+        assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.FINALIZADA);
+
+        assertThat(EVENTOS).hasSize(1);
+        assertThat(EVENTOS.get(0)).isInstanceOf(SesionInterrumpidaEvent.class);
+        assertThat(EVENTOS.get(0).getNombre()).isEqualTo("sesion.interrumpida");
+    }
+
+    @Test
+    void seVaUnoYVuelve_elParSeRecompone_noCuentaComoCorte() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        String sala = "sesion-" + sesion.getId();
+        sesion.setLivekitRoomId(sala);
+        sesionRepository.save(sesion);
+
+        joinWebhook(sala, e.tutorId());
+        joinWebhook(sala, e.menorId());
+        leftWebhook(sala, e.tutorId());
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getParRotoAt())
+                .isNotNull();
+
+        joinWebhook(sala, e.tutorId());
+
+        SesionAprendizaje recompuesta = sesionRepository.findById(sesion.getId()).orElseThrow();
+        assertThat(recompuesta.isTutorConectado()).isTrue();
+        assertThat(recompuesta.isEstudianteConectado()).isTrue();
+        assertThat(recompuesta.getParRotoAt()).isNull();
+    }
+
+    @Test
+    void participantLeftSobreSesionYaCortada_noModificaNada() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        String sala = "sesion-" + sesion.getId();
+        sesion.setLivekitRoomId(sala);
+        sesionRepository.save(sesion);
+
+        joinWebhook(sala, e.tutorId());
+        joinWebhook(sala, e.menorId());
+        // Ambas conectadas y sin cortar todavía: el corte a los segundos es
+        // <50% → interrumpida (estado terminal).
+        sesionService.ejecutarCorteAutomatico(sesion.getId());
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("interrumpida");
+
+        leftWebhook(sala, e.tutorId());
+        leftWebhook(sala, e.menorId());
+
+        // Un participant_left tardío (del corte del kill-switch) no toca nada.
+        SesionAprendizaje despues = sesionRepository.findById(sesion.getId()).orElseThrow();
+        assertThat(despues.getEstado()).isEqualTo("interrumpida");
+        assertThat(despues.isTutorConectado()).isTrue();
+        assertThat(despues.isEstudianteConectado()).isTrue();
+        assertThat(despues.getParRotoAt()).isNull();
+    }
+
+    @Test
+    void webhookParticipantLeft_sinFirmaValida_401() throws Exception {
+        String body = cuerpoWebhook("participant_left", "quien-sea", "sala-x");
+        mockMvc.perform(post("/api/webhooks/livekit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer token-que-no-es-jwt")
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/webhooks/livekit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ------------------------------------------------ T-M3-03: sala a T-5
 
     @Test

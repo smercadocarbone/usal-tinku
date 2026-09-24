@@ -350,6 +350,16 @@ public class SesionService {
             }
             if (esCorteAntesDel50(sesion)) {
                 marcarInterrumpida(sesion, reserva);
+                // FASE2-05 (AUD-029)/Spec_M3 US-8 caso borde #6: si el par se
+                // rompió antes del fin agendado, el ESTADO final es
+                // finalizada_anticipada. El EVENTO no cambia (<50% → interrumpida,
+                // M5 reembolsa, FR-PAG-004).
+                if (SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado())
+                        && sesion.getParRotoAt() != null
+                        && sesion.getParRotoAt().isBefore(finAgendado(sesion, reserva))) {
+                    sesion.setEstado(SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA);
+                    sesionRepo.save(sesion);
+                }
             } else {
                 marcarFinalizada(sesion, reserva);
             }
@@ -364,9 +374,28 @@ public class SesionService {
             return false; // sin umbral conocido, se cierra normal
         }
         long efectiva = sesion.getInicioReal() != null
-                ? Math.max(0, Duration.between(sesion.getInicioReal(), Instant.now()).getSeconds())
+                ? Math.max(0, Duration.between(sesion.getInicioReal(), finEfectivo(sesion)).getSeconds())
                 : 0;
         return efectiva * 2 < sesion.getDuracionAgendadaSegundos();
+    }
+
+    /**
+     * FASE2-05 (AUD-029) — el fin efectivo de la sesión: el instante desde el que
+     * el par quedó roto sin que nadie lo recomponga ({@code par_roto_at}); si el
+     * par está completo o la sesión nunca arrancó, ahora. Un solo método para los
+     * 3 cálculos {@code Duration.between(inicioReal, fin)} del corte automático —
+     * hoy cada uno tomaba un "fin" distinto, y ese desacople era el bug (facturaba
+     * la clase entera aunque ambos se hubieran ido a los 5 min).
+     */
+    private Instant finEfectivo(SesionAprendizaje sesion) {
+        Instant parRoto = sesion.getParRotoAt();
+        return parRoto != null ? parRoto : Instant.now();
+    }
+
+    /** Fin agendado (horario de la Reserva + duración congelada al programar):
+     *  la referencia de la regla "anticipada" del corte (FASE2-05 §4.6). */
+    private Instant finAgendado(SesionAprendizaje sesion, Reserva reserva) {
+        return reserva.getHorario().plusSeconds(sesion.getDuracionAgendadaSegundos());
     }
 
     /**
@@ -387,7 +416,7 @@ public class SesionService {
                 || SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())) {
             return sesion; // botón + job de corte pueden chocar: el segundo no re-emite
         }
-        Instant fin = Instant.now();
+        Instant fin = finEfectivo(sesion);
         long duracion = sesion.getInicioReal() != null
                 ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
                 : 0;
@@ -416,7 +445,7 @@ public class SesionService {
         if (reserva.getEstado() == EstadoReserva.FINALIZADA) {
             return sesion;
         }
-        Instant fin = Instant.now();
+        Instant fin = finEfectivo(sesion);
         long duracion = sesion.getInicioReal() != null
                 ? Math.max(0, Duration.between(sesion.getInicioReal(), fin).getSeconds())
                 : 0;
