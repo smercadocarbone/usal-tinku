@@ -50,8 +50,9 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   async function cargar() {
     setCargando(true);
     setError(null);
+    let r: Reserva | null = null;
     try {
-      const r = await api.get<Reserva>(`/api/reservas/${params.id}`);
+      r = await api.get<Reserva>(`/api/reservas/${params.id}`);
       setReserva(r);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -74,7 +75,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
     // T-5 que todavía no creó la Sesión), y se trata igual: nada que mostrar.
     const ESTADOS_SIN_SESION = new Set(["pendiente_pago", "cancelada"]);
     let sesionActual: SesionInfo | null = null;
-    if (!ESTADOS_SIN_SESION.has(r.estado)) {
+    if (r && !ESTADOS_SIN_SESION.has(r.estado)) {
       try {
         sesionActual = await getSesionPorReserva(params.id);
         setSesion(sesionActual);
