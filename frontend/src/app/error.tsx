@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { Alerta, Boton, Tarjeta, clasesBoton } from "@/components/ui";
 
 /**
@@ -30,11 +31,11 @@ export default function Error({
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
       <Tarjeta className="w-full max-w-lg p-8">
-        <div className="mb-6 text-lg font-bold text-slate-800">
-          Tinku<span className="text-teal-700">.</span>
+        <div className="mb-6 flex justify-center">
+          <Logo />
         </div>
-        <h1 className="mb-1 text-xl tracking-tight">Algo se rompió de nuestro lado</h1>
-        <p className="mb-6 text-slate-500">
+        <h1 className="mb-1 text-2xl font-bold text-center">Algo se rompió de nuestro lado</h1>
+        <p className="mb-6 text-center text-tinta-suave">
           No es culpa tuya. Podés reintentar; si el problema sigue, volvé al
           inicio y escribinos.
         </p>
@@ -45,7 +46,7 @@ export default function Error({
           </Alerta>
         )}
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           <Boton onClick={reset}>Reintentar</Boton>
           <Link href="/" className={clasesBoton("secundario")}>
             Ir al inicio
