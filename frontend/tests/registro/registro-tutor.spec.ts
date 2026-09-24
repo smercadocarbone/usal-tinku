@@ -35,7 +35,7 @@ test.describe("Registro de Tutor", () => {
       await page.getByLabel("Apellido").fill("Gómez");
       await page.getByLabel("Fecha de nacimiento").fill("1985-06-10");
       await page.getByLabel("Email").fill("jorge.gomez@example.com");
-      await page.getByLabel("Contrasena").fill("unaClaveSegura1");
+      await page.getByLabel("Contraseña", { exact: true }).fill("unaClaveSegura1");
       await page.getByLabel("Foto de tu DNI (frente)").setInputFiles(FOTO_FAKE);
       await page.getByRole("button", { name: "Crear cuenta", exact: true }).click();
 

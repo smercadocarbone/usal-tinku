@@ -35,7 +35,7 @@ export default function Cabecera({ enlaces = SIN_ENLACES }: CabeceraProps) {
           </Link>
         ))}
         <Boton variante="secundario" onClick={logout}>
-          Cerrar sesion
+          Cerrar sesión
         </Boton>
       </nav>
     </header>

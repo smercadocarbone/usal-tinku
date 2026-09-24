@@ -17,7 +17,7 @@ import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
 
-const DIAS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 interface Franja {
   id: string;
@@ -99,7 +99,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
   async function cancelar() {
     if (!reserva) return;
-    if (!window.confirm("Seguro que queres cancelar esta reserva?")) return;
+    if (!window.confirm("¿Seguro que querés cancelar esta reserva?")) return;
     setConfirmando(true);
     setError(null);
     try {
@@ -274,7 +274,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 </div>
                 {reserva.motivoCancelacion && (
                   <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                    <dt className="font-semibold">Motivo de cancelacion</dt>
+                    <dt className="font-semibold">Motivo de cancelación</dt>
                     <dd className="m-0 text-right">
                       {etiqueta(ETIQUETA_MOTIVO_CANCELACION, reserva.motivoCancelacion)}
                     </dd>
@@ -294,7 +294,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
 
               {puedeReprogramar && (
                 <Boton variante="secundario" onClick={abrirReprogramar}>
-                  {editandoHorario ? "Cancelar edicion" : "Reprogramar"}
+                  {editandoHorario ? "Cancelar edición" : "Reprogramar"}
                 </Boton>
               )}
 
@@ -317,8 +317,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
               >
                 {faltanMenosDe24hs && (
                   <Alerta tono="aviso" className="mb-4">
-                    Faltan menos de 24 horas para esta clase. La reprogramacion se va a tratar
-                    como cancelacion tardia.
+                    Faltan menos de 24 horas para esta clase. La reprogramación se va a tratar
+                    como cancelación tardía.
                   </Alerta>
                 )}
 
@@ -327,7 +327,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && franjasPendiente && (
                   <>
                     <Alerta tono="aviso" className="mb-4">
-                      El listado de franjas del tutor esta pendiente en backend.
+                      El listado de franjas del tutor está pendiente en backend.
                     </Alerta>
                     <Campo
                       id="nuevoHorario"
@@ -343,8 +343,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && !franjasPendiente && franjas?.length === 0 && (
                   <>
                     <Alerta tono="aviso" className="mb-4">
-                      Este tutor no publico disponibilidad todavia. Elegi un horario manual o
-                      cerra el panel.
+                      Este tutor no publicó disponibilidad todavía. Elegí un horario manual o
+                      cerrá el panel.
                     </Alerta>
                     <Campo
                       id="nuevoHorario"
@@ -384,7 +384,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                           onChange={(e) => elegirFranja(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <option value="">Elegi una franja</option>
+                          <option value="">Elegí una franja</option>
                           {franjasAplicables.map((f) => (
                             <option key={f.id} value={f.id}>
                               {f.fechaEspecifica
@@ -405,7 +405,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                         value={horaElegida}
                         onChange={(e) => setHoraElegida(e.target.value)}
                       >
-                        <option value="">Elegi un horario</option>
+                        <option value="">Elegí un horario</option>
                         {horas.map((h) => (
                           <option key={h} value={h}>
                             {h}

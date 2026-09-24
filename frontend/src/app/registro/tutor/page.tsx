@@ -107,10 +107,10 @@ export default function RegistroTutorPage() {
         <div className="mb-6 text-lg font-bold text-slate-800">
           Tinku<span className="text-teal-700">.</span>
         </div>
-        <h1 className="mb-1 text-xl tracking-tight">Registrate como tutor</h1>
+        <h1 className="mb-1 text-xl tracking-tight">Regístrate como tutor</h1>
         <p className="mb-6 text-slate-500">
           Verificamos tu identidad con la foto de tu DNI y que seas mayor de 18
-          anos para poder dar clases en Tinku.
+          años para poder dar clases en Tinku.
         </p>
 
         {bloqueado && (
@@ -195,7 +195,7 @@ export default function RegistroTutorPage() {
 
             <Campo
               id="password"
-              etiqueta="Contrasena"
+              etiqueta="Contraseña"
               type="password"
               autoComplete="new-password"
               required
@@ -226,7 +226,7 @@ export default function RegistroTutorPage() {
         )}
 
         <p className="mt-5 text-center text-sm text-slate-500">
-          Ya tenes cuenta? <Link href="/login">Iniciar sesion</Link>
+          Ya tenés cuenta? <Link href="/login">Iniciar sesión</Link>
         </p>
       </Tarjeta>
     </main>
@@ -316,7 +316,7 @@ function PasoDos() {
 
           {okCredencial && (
             <Alerta tono="exito">
-              Credencial subida. Queda en revision por el equipo de Tinku.
+              Credencial subida. Queda en revisión por el equipo de Tinku.
             </Alerta>
           )}
 
@@ -331,8 +331,8 @@ function PasoDos() {
         </form>
 
         <Alerta tono="aviso" className="mt-4">
-          Los documentos quedan pendientes de revision. Podes completarlos
-          despues desde tu cuenta.
+          Los documentos quedan pendientes de revisión. Podés completarlos
+          después desde tu cuenta.
         </Alerta>
 
         <Boton

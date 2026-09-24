@@ -592,9 +592,9 @@ export default function AulaPage({ params }: { params: { id: string } }) {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 404) {
-          setError("Sesion no encontrada.");
+          setError("Sesión no encontrada.");
         } else if (err.status === 403) {
-          setError("No sos participante de esta sesion.");
+          setError("No sos participante de esta sesión.");
         } else if (err.status === 422) {
           setEstado("sala_no_disponible");
           setError(
@@ -631,7 +631,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("No se pudo finalizar la sesion.");
+        setError("No se pudo finalizar la sesión.");
       }
       setFinalizando(false);
     }
@@ -1010,7 +1010,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
               onClick={finalizar}
               disabled={finalizando}
             >
-              {finalizando ? "Finalizando..." : "Finalizar sesion"}
+              {finalizando ? "Finalizando..." : "Finalizar sesión"}
             </button>
           )}
         </div>

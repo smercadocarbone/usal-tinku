@@ -126,7 +126,7 @@ export default function LoginPage() {
         </p>
 
         <p className="mt-2 text-center text-sm text-slate-500">
-          ¿No tenés cuenta? <Link href="/registro">Registrate</Link>
+          ¿No tenés cuenta? <Link href="/registro">Regístrate</Link>
         </p>
       </Tarjeta>
     </main>

@@ -45,10 +45,10 @@ const NOMBRE_DIA = [
   "Domingo",
   "Lunes",
   "Martes",
-  "Miercoles",
+  "Miércoles",
   "Jueves",
   "Viernes",
-  "Sabado",
+  "Sábado",
 ];
 
 interface ReservaCreada {
@@ -132,7 +132,7 @@ function ReservarForm() {
 
   function verHoras(franja: FranjaDisponible) {
     if (franja.diaSemana !== null && !fechaElegida) {
-      setError("Elegi una fecha valida.");
+      setError("Elegí una fecha válida.");
       return;
     }
     if (franja.fechaEspecifica !== null) {
@@ -284,7 +284,7 @@ function ReservarForm() {
               </ul>
             </div>
           ) : (
-            <EstadoVacio>Este tutor no publico disponibilidad todavia.</EstadoVacio>
+            <EstadoVacio>Este tutor no publicó disponibilidad todavía.</EstadoVacio>
           )}
 
           {horas.length > 0 && (
@@ -295,7 +295,7 @@ function ReservarForm() {
               onChange={(e) => setHoraElegida(e.target.value)}
               required
             >
-              <option value="">Elegi un horario</option>
+              <option value="">Elegí un horario</option>
               {horas.map((h) => (
                 <option key={h} value={h}>
                   {h}

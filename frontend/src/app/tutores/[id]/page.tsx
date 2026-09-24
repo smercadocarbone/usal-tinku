@@ -199,7 +199,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                   </div>
                 )}
                 <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Calificacion</dt>
+                  <dt className="font-semibold">Calificación</dt>
                   <dd className="m-0 text-right">
                     {perfil.calificacionPromedio !== null &&
                     perfil.cantidadCalificaciones >= 5

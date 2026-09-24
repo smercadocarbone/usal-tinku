@@ -145,7 +145,7 @@ export default function CuentaMenoresPage() {
       .post<ReservaResponse>(`/api/solicitudes/${id}/aprobar`)
       .then((res) => {
         setSolicitudes((prev) => prev.map((s) => (s.id === id ? { ...s, estado: "convertida" } : s)));
-        setExito(`Solicitud aprobada. Se creo la reserva.`);
+        setExito(`Solicitud aprobada. Se creó la reserva.`);
         window.location.href = `/pagar?reserva=${res.id}`;
       })
       .catch((err) => {
@@ -234,7 +234,7 @@ export default function CuentaMenoresPage() {
           />
           <Campo
             id="passMenor"
-            etiqueta="Contrasena"
+            etiqueta="Contraseña"
             type="password"
             minLength={8}
             value={password}

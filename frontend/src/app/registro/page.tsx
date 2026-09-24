@@ -514,7 +514,7 @@ export default function RegistroPage() {
           ¿Ya tenés cuenta? <Link href="/login" className="text-teal-700 hover:underline">Iniciar sesión</Link>
           <br />
           ¿Querés dar clases?{" "}
-          <Link href="/registro/tutor" className="text-teal-700 hover:underline">Registrate como tutor</Link>
+          <Link href="/registro/tutor" className="text-teal-700 hover:underline">Regístrate como tutor</Link>
         </p>
       </Tarjeta>
     </main>
