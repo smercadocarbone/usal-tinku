@@ -314,7 +314,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
             {payload && (
               <p className="text-xs text-slate-500">
-                Sesion de {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
+                Tu cuenta: {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
               </p>
             )}
           </div>

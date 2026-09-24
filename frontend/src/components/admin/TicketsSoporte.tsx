@@ -18,13 +18,7 @@ import {
   Tarjeta,
   type TonoInsignia,
 } from "@/components/ui";
-
-const ETIQUETA_ESTADO: Record<EstadoTicket, string> = {
-  abierto: "Abierto",
-  en_proceso: "En proceso",
-  resuelto: "Resuelto",
-  cerrado: "Cerrado",
-};
+import { ETIQUETA_ESTADO_TICKET as ETIQUETA_ESTADO } from "@/lib/etiquetas";
 
 const TONO_ESTADO: Record<string, TonoInsignia> = {
   abierto: "peligro",

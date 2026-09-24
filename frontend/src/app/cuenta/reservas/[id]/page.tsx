@@ -12,6 +12,7 @@ import {
   type SesionInfo,
 } from "@/lib/api";
 import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import { ETIQUETA_MOTIVO_CANCELACION, etiqueta } from "@/lib/etiquetas";
 import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
@@ -275,7 +276,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                   <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
                     <dt className="font-semibold">Motivo de cancelacion</dt>
                     <dd className="m-0 text-right">
-                      {reserva.motivoCancelacion}
+                      {etiqueta(ETIQUETA_MOTIVO_CANCELACION, reserva.motivoCancelacion)}
                     </dd>
                   </div>
                 )}

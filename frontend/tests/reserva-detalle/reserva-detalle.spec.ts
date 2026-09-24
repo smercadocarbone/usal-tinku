@@ -242,4 +242,28 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
       await expect(page.getByRole("button", { name: "Enviar calificación" })).toHaveCount(0);
     }
   );
+
+  test(
+    "una reserva cancelada muestra el motivo en lenguaje humano, no el enum (B6)",
+    { tag: ["@e2e", "@RESERVA-DETALLE-E2E-004"] },
+    async ({ page }) => {
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, {
+          ...reserva("cancelada"),
+          motivoCancelacion: "timeout_pago",
+        }),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(404, {
+          error: "Sesión de Aprendizaje no encontrada.",
+        }),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(
+        page.getByText("No se completó el pago a tiempo")
+      ).toBeVisible();
+      await expect(page.getByText("timeout_pago")).toHaveCount(0);
+    }
+  );
 });

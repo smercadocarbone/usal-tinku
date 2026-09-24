@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta } from "@/components/ui";
-
-const LABEL_ESTADO_SOLICITUD: Record<string, string> = {
-  pendiente: "Pendiente",
-  convertida: "Convertida en reserva",
-  expirada: "Expirada",
-  rechazada: "Rechazada",
-};
+import { ETIQUETA_ESTADO_SOLICITUD as LABEL_ESTADO_SOLICITUD } from "@/lib/etiquetas";
 
 interface Solicitud {
   id: string;

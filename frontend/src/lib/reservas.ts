@@ -1,13 +1,7 @@
-export const ESTADO_ETIQUETA: Record<string, string> = {
-  pendiente_pago: "Pendiente de pago",
-  confirmada: "Confirmada",
-  en_curso: "En curso",
-  finalizada: "Finalizada",
-  cancelada: "Cancelada",
-  no_show_estudiante: "No se presento el estudiante",
-  no_show_tutor: "No se presento el tutor",
-  no_show_doble: "No se presentaron",
-};
+import { ETIQUETA_ESTADO_RESERVA } from "./etiquetas";
+
+/** Etiqueta humana del estado (B6: los enums no se renderizan crudos). */
+export const ESTADO_ETIQUETA = ETIQUETA_ESTADO_RESERVA;
 
 export interface Reserva {
   id: string;

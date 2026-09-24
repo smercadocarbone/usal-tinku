@@ -9,26 +9,13 @@ import {
   presentarDescargoDenuncia,
   type AlertaPropia,
   type DenunciaRecibida,
-  type EstadoDenunciaRecibida,
-  type MotivoDenuncia,
 } from "@/lib/api";
 import { Alerta, Boton, Cargando, Tarjeta } from "@/components/ui";
-
-const ETIQUETA_MOTIVO: Record<MotivoDenuncia, string> = {
-  comportamiento_inapropiado: "Comportamiento inapropiado",
-  incumplimiento: "No cumplió lo acordado",
-  fraude: "Fraude",
-  contenido_ilegal: "Contenido ilegal",
-  acoso: "Acoso",
-};
-
-const ETIQUETA_ESTADO_DENUNCIA: Record<EstadoDenunciaRecibida, string> = {
-  registrada: "Registrada",
-  en_revision: "En revisión",
-  resuelta_infundada: "Resuelta: infundada",
-  resuelta_fundada: "Resuelta: fundada",
-  escalada: "Escalada",
-};
+import {
+  ETIQUETA_ESTADO_ALERTA,
+  ETIQUETA_ESTADO_DENUNCIA,
+  ETIQUETA_MOTIVO_DENUNCIA,
+} from "@/lib/etiquetas";
 
 const ETIQUETA_RAMA: Record<string, string> = {
   menor: "Contenido con un menor",
@@ -164,7 +151,7 @@ export default function SeguridadPage() {
                 {denuncias!.map((d) => (
                   <Tarjeta as="li" key={d.id} className="w-full p-4">
                     <p className="text-sm font-semibold text-slate-800">
-                      {ETIQUETA_MOTIVO[d.motivo] ?? d.motivo}
+                      {ETIQUETA_MOTIVO_DENUNCIA[d.motivo] ?? d.motivo}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
                       Estado: {ETIQUETA_ESTADO_DENUNCIA[d.estado] ?? d.estado} · Recibida{" "}
@@ -197,7 +184,7 @@ export default function SeguridadPage() {
                       {ETIQUETA_RAMA[a.rama] ?? a.rama}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Estado: {a.estado} · Detectada {formatFecha(a.createdAt)}
+                      Estado: {ETIQUETA_ESTADO_ALERTA[a.estado] ?? a.estado} · Detectada {formatFecha(a.createdAt)}
                     </p>
                     <FormularioDescargo
                       yaEnviado={a.descargoTexto}
