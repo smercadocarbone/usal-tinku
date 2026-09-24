@@ -201,3 +201,9 @@ y la suite verde (383 tests) no los detecta porque ninguno de ellos es expresabl
 "request → estado en BD".
 
 **Verificación de la suite al 2026-09-21:** 383 tests, 0 failures, 0 errors, 0 skipped.
+
+**Nota de auditoría — 2026-09-24 (FASE2-04, matching auth pool):** cierre de AUD-015
+(autenticación + exposición del `matching-service` + recompute en una transacción) y del
+sub-ítem 7 de AUD-036 (lock de la carga lazy del embedder). Detalle y tests de regresión en
+`REGISTRO_FINDINGS.md`. Suite backend al 2026-09-24: **442 tests, 0 failures, 0 errors,
+0 skipped**; suite del `matching-service`: 18 tests verdes.

@@ -24,7 +24,7 @@
 | AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
 | AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | 5ddaa1d | `DenunciasModeracionIntegracionTest.aud013_*` (5) |
 | AUD-014 | ALTA | No existe infraestructura real de notificaciones | ABIERTO | 2 | — | — |
-| AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | ABIERTO | 2 | — | — |
+| AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | CERRADO | 2 | 5d504f3 (Python), fe5c367 (backend), db2a9f0 (compose/docs) | `test_main.py` (sin/incorrecto 401, correcto 200, sin token configurado 503, health público), `MatchingServiceClientTest.matchEnviaElTokenCompartidoEnElHeader`, `ArranqueSeguroValidatorTest.prodConMatchingTokenVacio_abortaElArranque` |
 | AUD-016 | MEDIA | El middleware de Next.js sólo verifica que exista la cookie JWT | ABIERTO | 3 | — | — |
 | AUD-017 | ALTA | `darDeBajaMenor` hace DELETE físico sin limpiar FKs dependientes | ABIERTO | 2 | — | — |
 | AUD-018 | ALTA | Modo Bypass deja el marketplace gratis sin TTL ni alerta | ABIERTO | 2 | — | — |
@@ -45,4 +45,4 @@
 | AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | 5ddaa1d | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
 | AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
 | AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | EN CURSO | 3 | — | — |
-| AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) | ABIERTO | 4 | — | — |
+| AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) — sub-ítem 7 (N+1 de conexiones en `RecomputeRepo` + lock de carga lazy del embedder) resuelto en FASE2-04 (5d504f3) | ABIERTO | 4 | — | `test_main.py::test_carga_lazy_concurrente_carga_el_modelo_una_sola_vez`, `persistir_embeddings` en una transacción |
