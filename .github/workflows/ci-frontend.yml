@@ -1,11 +1,9 @@
 name: CI - tinku-frontend
 
+# En `main` los tests los corre deploy.yml antes de publicar; acá, los PR.
 on:
-  push:
-    branches: [main, develop]
-    paths: ["frontend/**"]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths: ["frontend/**"]
 
 jobs:

@@ -1,5 +1,9 @@
 # T13 — Despliegue de producción para el piloto (DT8)
 
+> **Enmendada por `docs/adr/ADR-000-07.md` (2026-09-24):** todo corre en el VPS de 8 GB con Coolify
+> (Postgres y frontend incluidos, sin Supabase ni Vercel). Parte A hecha en el branch
+> `claude/lucid-lovelace-htlv4z`; la Parte B está en `docs/operacion/RUNBOOK_produccion.md`.
+
 **Branch:** `tesis/despliegue` · **Riesgo:** **ALTO** (operación) ·
 **Bloqueada por:** T05–T12 mergeadas y FASE 2 de remediación mergeada (al menos FASE2-02 rate limiting,
 FASE2-04 matching-auth y FASE2-07 modo bypass).

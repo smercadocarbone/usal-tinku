@@ -1,0 +1,127 @@
+# Deploy a producción (ADR-000-07): cada push a `main` corre las tres suites, construye las
+# imágenes en los runners de GitHub (nunca en el VPS), las publica en GHCR con el hash del
+# commit y `latest`, y le pide a Coolify que redespliegue. Si una suite falla, no se publica
+# nada y producción sigue con la versión anterior.
+name: Deploy - produccion
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-produccion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build y tests (Testcontainers)
+        run: mvn -B verify
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+
+  test-matching:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: matching-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencias (PyTorch solo CPU, igual que la imagen)
+        run: |
+          uv venv
+          uv pip install --index-url https://download.pytorch.org/whl/cpu torch
+          uv pip install -r requirements.txt
+      - run: uv run --no-sync pytest -q
+
+  publicar:
+    needs: [test-backend, test-frontend, test-matching]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - servicio: backend
+            contexto: backend
+          - servicio: matching
+            contexto: matching-service
+          - servicio: frontend
+            contexto: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar tinku-${{ matrix.servicio }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.contexto }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/tinku-${{ matrix.servicio }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/tinku-${{ matrix.servicio }}:latest
+          # Solo lo usa el frontend: Next hornea estas URLs en el build.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://api.tinku.site' }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.SITE_URL || 'https://tinku.site' }}
+          cache-from: type=gha,scope=${{ matrix.servicio }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.servicio }}
+      - name: Tamaño de la imagen (T13 A1)
+        run: |
+          IMG=${{ env.REGISTRY }}/tinku-${{ matrix.servicio }}:${{ github.sha }}
+          docker pull -q "$IMG" > /dev/null
+          echo "tinku-${{ matrix.servicio }}: $(docker image inspect "$IMG" --format '{{.Size}}' | numfmt --to=iec)" >> "$GITHUB_STEP_SUMMARY"
+
+  desplegar:
+    needs: publicar
+    runs-on: ubuntu-latest
+    environment: produccion
+    steps:
+      - name: Pedirle a Coolify que redespliegue
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            # Primer merge: las imágenes ya quedaron en GHCR; Coolify todavía no está conectado.
+            echo "::warning::Sin COOLIFY_WEBHOOK / COOLIFY_TOKEN: imágenes publicadas, deploy no disparado (ver RUNBOOK_produccion.md)"
+            exit 0
+          fi
+          curl --fail-with-body -sS -X GET "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+          echo "Desplegado ${{ github.sha }} (rollback: TINKU_TAG=<hash anterior> en Coolify)" >> "$GITHUB_STEP_SUMMARY"

@@ -206,6 +206,12 @@ valores **nunca** se commitean (`.env` está en `.gitignore`).
 
 ---
 
+## Producción
+
+Todo corre en un VPS con Coolify y se despliega solo al mergear a `main` (tests → imágenes en GHCR →
+webhook de Coolify). Decisión: `docs/adr/ADR-000-07.md`. Paso a paso, variables, vuelta atrás y
+backups: `docs/operacion/RUNBOOK_produccion.md`.
+
 ## Tests
 
 ### Backend — solo JDK 21
