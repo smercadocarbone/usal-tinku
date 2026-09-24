@@ -117,16 +117,19 @@ function PagarFlujo() {
     );
   }
 
-  if (reserva?.estado === "cancelada") {
+  // Plazo vencido pero el job todavía no la canceló: igual no se ofrece pagar.
+  const vencida = reserva?.estado === "pendiente_pago" && reserva.puedePagar === false;
+
+  if (reserva?.estado === "cancelada" || vencida) {
     return (
       <Pantalla
         icono={<TimerOff />}
-        titulo={reserva.motivoCancelacion === "timeout_pago" ? "El tiempo para pagar se agotó" : "Esta reserva se canceló"}
+        titulo={vencida || reserva.motivoCancelacion === "timeout_pago" ? "El tiempo para pagar se agotó" : "Esta reserva se canceló"}
         acciones={
           <Link href={`/reservar?tutor=${reserva.tutorId}`} className={clasesBoton("primario", "lg", "w-full")}>Elegir otro horario</Link>
         }
       >
-        {reserva.motivoCancelacion === "timeout_pago"
+        {vencida || reserva.motivoCancelacion === "timeout_pago"
           ? `Pasaron más de ${TIEMPOS.pagoMinutos} minutos sin pago y el horario se liberó. No se te cobró nada.`
           : "No hay nada para pagar."}
       </Pantalla>
