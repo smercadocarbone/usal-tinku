@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Eye, TrendingUp } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { formatearPesos } from "@/lib/formatos";
 import { Alerta, Selector, useToast } from "@/components/ui";
 
@@ -39,7 +39,9 @@ interface ReferenciaRegional {
 }
 
 interface Tarifa {
-  precioHora: number;
+  precioHora: number | null;
+  /** T06: piso por hora vigente (el backend rechaza con 422 por debajo). */
+  pisoHora?: number | null;
 }
 
 /**
@@ -55,14 +57,19 @@ export default function TabPrecio() {
   const [error, setError] = useState<string | null>(null);
   const [provincia, setProvincia] = useState("");
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
+  const [piso, setPiso] = useState<number | null>(null);
+  // Espejo del ref para poder mostrarlo en el render (lint react/refs).
+  const [precioGuardado, setPrecioGuardado] = useState<number | null>(null);
   const guardado = useRef<number | null>(null);
 
   useEffect(() => {
     api
       .get<Tarifa | undefined>("/api/pagos/tarifa")
       .then((t) => {
+        if (t?.pisoHora) setPiso(Number(t.pisoHora));
         if (t?.precioHora) {
           guardado.current = Number(t.precioHora);
+          setPrecioGuardado(Number(t.precioHora));
           setPrecio(String(Number(t.precioHora)));
         }
       })
@@ -87,20 +94,29 @@ export default function TabPrecio() {
   }, [provincia]);
 
   const numero = precio === "" ? null : Number(precio);
+  const bajoPiso = numero !== null && piso !== null && numero < piso;
+  // PT4: el piso no es retroactivo — una tarifa vieja por debajo sigue cobrando hasta que la edite.
+  const guardadaBajoPiso = precioGuardado !== null && piso !== null && precioGuardado < piso && numero === precioGuardado;
   useEffect(() => {
     if (!cargado || numero === null || !Number.isFinite(numero) || numero <= 0 || numero === guardado.current) return;
+    if (piso !== null && numero < piso) return;
     const id = window.setTimeout(() => {
       api
         .put("/api/pagos/tarifa", { precioHora: numero })
         .then(() => {
           guardado.current = numero;
+          setPrecioGuardado(numero);
           setError(null);
           toast.mostrar("Guardamos tu precio");
         })
-        .catch(() => setError("No pudimos guardar el precio. Probá cambiando el valor de nuevo."));
+        .catch((err: unknown) => {
+          const pisoDelError = err instanceof ApiError ? err.detalles?.pisoHora : undefined;
+          if (err instanceof ApiError && err.status === 422 && pisoDelError != null) setPiso(Number(pisoDelError));
+          else setError("No pudimos guardar el precio. Probá cambiando el valor de nuevo.");
+        });
     }, 700);
     return () => window.clearTimeout(id);
-  }, [numero, cargado, toast]);
+  }, [numero, cargado, piso, toast]);
 
   return (
     <section aria-label="Precio" className="flex flex-col gap-6">
@@ -115,7 +131,7 @@ export default function TabPrecio() {
           <input
             id="precio"
             type="number"
-            min={1}
+            min={piso ?? 1}
             step={100}
             inputMode="numeric"
             value={precio}
@@ -124,11 +140,26 @@ export default function TabPrecio() {
             onChange={(e) => setPrecio(e.target.value)}
             className="tabular min-h-16 w-full bg-transparent px-2 text-3xl font-extrabold text-tinta focus:outline-none"
             aria-describedby="precio-ayuda"
+            aria-invalid={bajoPiso || undefined}
           />
         </div>
         <p id="precio-ayuda" className="mt-2 text-[13px] text-tinta-tenue">
           Se guarda solo. Una clase de 30 minutos cobra la mitad; cada reserva congela el precio del momento en que se hizo.
         </p>
+        {piso !== null && (
+          <p className="mt-1 text-[13px] text-tinta-tenue">El mínimo es {formatearPesos(piso)} por hora.</p>
+        )}
+        {bajoPiso && !guardadaBajoPiso && (
+          <Alerta tono="peligro" className="mt-3">
+            No se guardó: el precio por hora no puede ser menor a {formatearPesos(piso!)}.
+          </Alerta>
+        )}
+        {guardadaBajoPiso && (
+          <Alerta tono="aviso" className="mt-3">
+            Tu precio actual quedó por debajo del mínimo de {formatearPesos(piso!)} por hora. Sigue vigente, pero para
+            cambiarlo vas a tener que subirlo al menos a ese valor.
+          </Alerta>
+        )}
         {error && (
           <Alerta tono="peligro" className="mt-3">
             {error}

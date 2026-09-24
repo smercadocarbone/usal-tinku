@@ -106,8 +106,13 @@ tinku:
     # Directorio local para credenciales de Tutor (AlmacenamientoLocal). Cuando
     # haya storage real (ADR), se reemplaza el bean sin tocar el puerto.
     directorio: ${ALMACENAMIENTO_DIRECTORIO:${java.io.tmpdir}/tinku}
+  tarifa:
+    # T06 / DT2 (tesis Cap. 5): piso de USD 4 por hora expresado en ARS. PT3: valor
+    # fijo, lo revisa un Admin una vez por mes (variable de entorno en Coolify);
+    # no se consume ninguna API de tipo de cambio. PT4: no es retroactivo.
+    piso-hora-ars: ${TARIFA_PISO_HORA_ARS:6140}
   reservas:
-    # Tarifa por sesion del Tutor. Fuente real: M5 (Spec M5 US-6, FR-PAG-006) —
+    # Tarifa por hora del Tutor (D6). Fuente real: M5 (Spec M5 US-6, FR-PAG-006) —
     # todavia no implementado. Hasta entonces el puerto TarifaProveedor usa este
     # valor para desarrollo/pruebas; si queda vacio, crear una Reserva falla con
     # mensaje claro (mismo enfoque que livekit sin credenciales, T-000-06).

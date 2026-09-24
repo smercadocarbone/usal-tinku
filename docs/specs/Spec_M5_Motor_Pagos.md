@@ -3,6 +3,8 @@
 **Módulo:** M5 (ver Constitución, Artículo VI)
 **Estado:** Borrador para revisión
 **Depende de:** M3 (eventos de finalización/no-show/corte de sesión, incluidos los de kill-switch), M4 (Reserva confirmada), M9 (pausa y reanudación de escrow por Denuncia, efectos de sanción)
+**BR-PAG-04 — Piso de la tarifa por hora (T06, DT2):** el Tutor no puede fijar un `precioHora` menor al piso vigente, USD 4/h expresado en ARS (`tinku.tarifa.piso-hora-ars`, hoy **$6.140**; tesis Cap. 5: por debajo la comisión no cubre la operación). PT3: valor fijo en ARS, lo revisa un Admin una vez por mes (variable de entorno), sin API de tipo de cambio. PT4: **no retroactivo** — una tarifa ya guardada por debajo sigue vigente hasta que el Tutor la edite; `PUT /api/pagos/tarifa` responde **422** con `pisoHora`, y `GET` devuelve `pisoHora` siempre (con `precioHora: null` si no hay tarifa). No es lo mismo que el precio de referencia regional (FR-PAG-005), que es una sugerencia.
+
 **Historial BR-PAG-01:** comisión de plataforma al **27 %** del monto bruto desde el 2026-09-23, calibrada en el Cap. 5 de la tesis (por debajo de 23,4 % el VAN del escenario base es negativo). Antes: **15 %**.
 
 ---

@@ -232,8 +232,10 @@ class PerfilPublicoTutorIntegracionTest {
         mvc.perform(get("/api/tutores/{id}", tutor.getId()).header("Authorization", token(familia)))
                 .andExpect(jsonPath("$.verificado").value(false))
                 .andExpect(jsonPath("$.precioHora").doesNotExist());
+        // T06: sin tarifa, 200 con precioHora null y el piso (antes 204).
         mvc.perform(get("/api/pagos/tarifa").header("Authorization", token(tutor)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").doesNotExist());
 
         CredencialAcademica c = new CredencialAcademica();
         c.setTutor(tutor);

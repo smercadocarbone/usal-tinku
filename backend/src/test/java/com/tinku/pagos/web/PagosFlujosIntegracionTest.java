@@ -12,6 +12,7 @@ import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.matching.MatchingServiceClient;
 import com.tinku.matching.ReputacionSignalProvider;
+import com.tinku.pagos.model.TarifaTutor;
 import com.tinku.pagos.port.MercadoPagoClient;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaRequest;
@@ -103,6 +104,7 @@ class PagosFlujosIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaService reservaService;
     @Autowired TarifaTutorRepository tarifaTutorRepository;
+    @org.springframework.beans.factory.annotation.Value("${tinku.tarifa.piso-hora-ars}") BigDecimal pisoHora;
     @Autowired ReservaRepository reservaRepository;
 
     @MockBean OcrService ocrService;
@@ -396,14 +398,16 @@ class PagosFlujosIntegracionTest {
         assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioHora())
                 .isEqualByComparingTo(new BigDecimal("22000"));
 
-        // Actualizar de nuevo = upsert, no una fila duplicada.
+        // Actualizar de nuevo = upsert, no una fila duplicada. (Se cuenta antes/después:
+        // la base es compartida con los demás tests de la clase, T06 incluidos.)
+        long filasAntes = tarifaTutorRepository.count();
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("precioHora", 23000))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.precioHora").value(new BigDecimal("23000")));
-        assertThat(tarifaTutorRepository.findAll()).hasSize(1);
+        assertThat(tarifaTutorRepository.count()).isEqualTo(filasAntes);
 
         // La Reserva congela ESE precio (FR-PAG-013): 22000+, no el stub de dev.
         String dniEst = dniUnico();
@@ -458,6 +462,102 @@ class PagosFlujosIntegracionTest {
         // 10000 por hora × 30 minutos.
         assertThat(reservaRepository.findById(reservaId).orElseThrow().getPrecio())
                 .isEqualByComparingTo(new BigDecimal("5000"));
+    }
+
+    // ------------------------------------------------ T06: piso de tarifa (DT2, PT3/PT4)
+
+    private org.springframework.test.web.servlet.ResultActions putTarifa(String token, BigDecimal precio) throws Exception {
+        return mockMvc.perform(put("/api/pagos/tarifa")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("precioHora", precio))));
+    }
+
+    private UUID reservar30min(String tokenTutor, UUID tutorId, int diasAdelante) throws Exception {
+        String tokenEst = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(diasAdelante);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        MvcResult res = mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 30))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+    }
+
+    @Test
+    void actualizarTarifa_bajoPiso_422() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+
+        putTarifa(tokenTutor, pisoHora.subtract(new BigDecimal("0.01")))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.pisoHora").value(pisoHora.doubleValue()));
+        assertThat(tarifaTutorRepository.findByTutorId(usuarioPorDni(dniTutor).getId())).isEmpty();
+    }
+
+    @Test
+    void actualizarTarifa_igualAlPiso_ok() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+
+        putTarifa(tokenTutor, pisoHora)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").value(pisoHora.doubleValue()))
+                .andExpect(jsonPath("$.pisoHora").value(pisoHora.doubleValue()));
+    }
+
+    /** PT4: el piso no es retroactivo — una tarifa ya guardada por debajo sigue vigente
+     *  (y cotizando) hasta que el Tutor la edite; el GET la marca con el piso al lado. */
+    @Test
+    void tarifaExistenteBajoPiso_noSeModificaAlDesplegar() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        BigDecimal vieja = pisoHora.subtract(new BigDecimal("100"));
+        TarifaTutor anterior = new TarifaTutor();
+        anterior.setTutorId(tutorId);
+        anterior.setPrecioHora(vieja);
+        tarifaTutorRepository.save(anterior);
+
+        mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").value(vieja.doubleValue()))
+                .andExpect(jsonPath("$.pisoHora").value(pisoHora.doubleValue()));
+        UUID reservaId = reservar30min(tokenTutor, tutorId, 2);
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getPrecio())
+                .isEqualByComparingTo(vieja.divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP));
+        assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioHora())
+                .isEqualByComparingTo(vieja);
+    }
+
+    /** Un Tutor nuevo (sin tarifa) también tiene que conocer el piso antes de guardar. */
+    @Test
+    void getTarifa_sinTarifa_devuelveElPisoConPrecioNulo() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+
+        mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").doesNotExist())
+                .andExpect(jsonPath("$.pisoHora").value(pisoHora.doubleValue()));
+    }
+
+    @Test
+    void precioReserva_seCalculaConPrecioHoraVigente() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+
+        putTarifa(tokenTutor, new BigDecimal("8000")).andExpect(status().isOk());
+        UUID primera = reservar30min(tokenTutor, tutorId, 2);
+        putTarifa(tokenTutor, new BigDecimal("9000")).andExpect(status().isOk());
+        UUID segunda = reservar30min(tokenTutor, tutorId, 3);
+
+        assertThat(reservaRepository.findById(primera).orElseThrow().getPrecio()).isEqualByComparingTo("4000");
+        assertThat(reservaRepository.findById(segunda).orElseThrow().getPrecio()).isEqualByComparingTo("4500");
     }
 
     @Test

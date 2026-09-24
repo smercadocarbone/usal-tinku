@@ -6,6 +6,7 @@ import com.tinku.pagos.service.PagoInconsistenteException;
 import com.tinku.pagos.service.PreferenciaNoDisponibleException;
 import com.tinku.pagos.service.ProvinciaSinPrecioReferenciaException;
 import com.tinku.pagos.service.SoloPagadorPreferenciaException;
+import com.tinku.pagos.service.TarifaBajoPisoException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
 import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,13 @@ public class PagoExceptionHandler {
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TarifaBajoPisoException.class)
+    public ResponseEntity<Map<String, Object>> handleBajoPiso(TarifaBajoPisoException ex) {
+        // T06: el piso viaja en el cuerpo para que el frontend lo muestre sin otra llamada.
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(Map.of("error", ex.getMessage(), "pisoHora", ex.getPisoHora()));
     }
 
     @ExceptionHandler(ReservaNoEncontradaException.class)
