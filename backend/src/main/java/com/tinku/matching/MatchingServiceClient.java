@@ -22,13 +22,17 @@ import java.util.UUID;
  * servicio Python llega solo un texto de busqueda y una lista YA acotada de
  * tutor_ids candidatos; nunca le llega la pregunta "esta suspendido este
  * tutor?" — esa respuesta se resuelve aca, antes de la llamada.
+ *
+ * Toda llamada viaja con el token compartido en {@code X-Matching-Token}
+ * (AUD-015, fail-closed en el servicio: sin token configurado alli, 503).
  */
 @Component
 public class MatchingServiceClient {
 
     private final RestClient restClient;
 
-    public MatchingServiceClient(@Value("${tinku.matching-service.base-url}") String baseUrl) {
+    public MatchingServiceClient(@Value("${tinku.matching-service.base-url}") String baseUrl,
+                                 @Value("${tinku.matching-service.token:}") String token) {
         // HTTP/1.1 forzado a nivel cliente: el HTTP/2 clear-text del JDK manda un
         // upgrade request ("Connection: Upgrade, HTTP2-Settings") que uvicorn
         // rechaza y responde 422 con body vacio — el /match real fallaba con
@@ -38,10 +42,15 @@ public class MatchingServiceClient {
         HttpClient httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
-        this.restClient = RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(baseUrl)
-                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
-                .build();
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient));
+        if (token != null && !token.isBlank()) {
+            // AUD-015: token compartido con el servicio Python (X-Matching-Token).
+            // Vacío en dev/test es legal (el validador lo exige fuera de ahí).
+            builder.defaultHeader("X-Matching-Token", token);
+        }
+        this.restClient = builder.build();
     }
 
     /**

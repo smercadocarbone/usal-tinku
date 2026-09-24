@@ -22,10 +22,17 @@ class ArranqueSeguroValidatorTest {
     private static final String SECRET_REAL = "un-secret-real-de-al-menos-32-bytes-0123456789";
 
     private ApplicationContextRunner runner(String perfiles, OcrService ocr, String jwtSecret) {
+        return runner(perfiles, ocr, jwtSecret, "un-matching-token-real");
+    }
+
+    private ApplicationContextRunner runner(
+            String perfiles, OcrService ocr, String jwtSecret, String matchingToken) {
         return new ApplicationContextRunner()
                 .withInitializer(ctx -> ctx.getEnvironment()
                         .setActiveProfiles(perfiles.isEmpty() ? new String[0] : perfiles.split(",")))
-                .withPropertyValues("tinku.jwt.secret=" + jwtSecret)
+                .withPropertyValues(
+                        "tinku.jwt.secret=" + jwtSecret,
+                        "tinku.matching-service.token=" + matchingToken)
                 .withBean(OcrService.class, () -> ocr)
                 .withUserConfiguration(ArranqueSeguroValidator.class);
     }
@@ -75,6 +82,17 @@ class ArranqueSeguroValidatorTest {
     void prodConOcrRealYSecretReal_arranca() {
         runner("prod", mock(OcrService.class), SECRET_REAL).run(ctx ->
                 assertThat(ctx).hasNotFailed());
+    }
+
+    @Test
+    void prodConMatchingTokenVacio_abortaElArranque() {
+        // AUD-015: sin el token compartido, el backend llamaria a un matching
+        // fail-closed (503) — abortar temprano, mismo patron que el JWT.
+        runner("prod", mock(OcrService.class), SECRET_REAL, "").run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause()
+                    .hasMessageContaining("tinku.matching-service.token");
+        });
     }
 
     @Test

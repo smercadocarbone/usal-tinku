@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
  *       la verificación de identidad (y de edad de los adultos) quedaría anulada.</li>
  *   <li>{@code tinku.jwt.secret} vacío o igual al placeholder público del repo:
  *       cualquiera podría firmar tokens de Admin.</li>
+ *   <li>{@code tinku.matching-service.token} vacío: el backend llamaría a un
+ *       Motor de Matching fail-closed (503) para siempre.</li>
  * </ul>
  * {@code prod} gana siempre: {@code prod,dev} no habilita el stub en un despliegue real.
  */
@@ -29,12 +31,15 @@ public class ArranqueSeguroValidator implements InitializingBean {
     private final Environment environment;
     private final OcrService ocrService;
     private final String jwtSecret;
+    private final String matchingServiceToken;
 
     public ArranqueSeguroValidator(Environment environment, OcrService ocrService,
-                                   @Value("${tinku.jwt.secret:}") String jwtSecret) {
+                                   @Value("${tinku.jwt.secret:}") String jwtSecret,
+                                   @Value("${tinku.matching-service.token:}") String matchingServiceToken) {
         this.environment = environment;
         this.ocrService = ocrService;
         this.jwtSecret = jwtSecret;
+        this.matchingServiceToken = matchingServiceToken;
     }
 
     @Override
@@ -51,6 +56,11 @@ public class ArranqueSeguroValidator implements InitializingBean {
         if (jwtSecret == null || jwtSecret.isBlank() || JWT_SECRET_PLACEHOLDER.equals(jwtSecret)) {
             throw new IllegalStateException("tinku.jwt.secret vacío o con el placeholder del "
                     + "repositorio fuera de dev/test. Definí JWT_SECRET (AUD-034).");
+        }
+        if (matchingServiceToken == null || matchingServiceToken.isBlank()) {
+            throw new IllegalStateException("tinku.matching-service.token vacío fuera de dev/test: "
+                    + "el Motor de Matching responde fail-closed (503). Definí "
+                    + "MATCHING_SERVICE_TOKEN con el mismo valor que TINKU_MATCHING_TOKEN (AUD-015).");
         }
     }
 }
