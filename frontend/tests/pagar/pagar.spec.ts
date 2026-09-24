@@ -59,7 +59,7 @@ test.describe("Pago de una reserva", () => {
       const pagar = new PagarPage(page);
       await pagar.goto(RESERVA_ID);
 
-      await expect(page.getByText("$5.000")).toBeVisible();
+      await expect(page.getByText("$ 5.000")).toBeVisible();
       await expect(pagar.botonMercadoPago).toBeVisible();
       await expect(
         page.getByText("Vas a salir de Tinku y continuar en el sitio de MercadoPago.")
@@ -105,7 +105,7 @@ test.describe("Pago de una reserva", () => {
       await expect(pagar.campoDetalleSoporte).toHaveValue(new RegExp(RESERVA_ID));
       await pagar.botonEnviarSoporte.click();
 
-      await expect(page.getByText("Le avisamos a soporte.")).toBeVisible();
+      await expect(page.getByText("Recibimos tu consulta.")).toBeVisible();
     }
   );
 

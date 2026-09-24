@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import Cabecera from "@/components/Cabecera";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpDown, Bookmark, BookmarkCheck, History, Search, SearchX, SlidersHorizontal, Sparkles } from "lucide-react";
+import AppShell from "@/components/shell/AppShell";
+import TarjetaTutor from "@/components/tutores/TarjetaTutor";
 import {
-  api,
   buscarTutores,
   ejecutarBusquedaGuardada,
   getBusquedasGuardadas,
@@ -15,280 +15,20 @@ import {
   type NivelCatalogo,
   type ResultadoBusqueda,
 } from "@/lib/api";
-import { formatearPrecio } from "@/lib/formatos";
-import { Alerta, Boton, Chip, EstadoVacio, Insignia, Skeleton, Tarjeta } from "@/components/ui";
+import { getTutor, normalizarTutor, type TutorPerfil } from "@/lib/tutores";
+import { useToast } from "@/components/ui";
+import { Alerta, Boton, Chip, EstadoVacio, Modal, SkeletonTarjetas } from "@/components/ui";
+import { cn } from "@/lib/cn";
 
-/* ---- Contratos ---- */
+type Orden = "relevancia" | "precio" | "calificacion";
 
-interface TutorPerfil {
-  id: string;
-  nombre: string;
-  apellido: string;
-  materias: string[];
-  calificacionPromedio: number | null;
-  cantidadCalificaciones: number;
-  precioHora?: number | null;
-}
+const ORDENES: { id: Orden; label: string }[] = [
+  { id: "relevancia", label: "Más relevantes" },
+  { id: "precio", label: "Menor precio" },
+  { id: "calificacion", label: "Mejor calificados" },
+];
 
-type TrustLevel = "bronce" | "plata" | "oro";
-
-interface TutorResult {
-  id: string;
-  nombre: string;
-  materias: string[];
-  precioProrateado: number | null;
-  trustLevel: TrustLevel | null;
-  avatarUrl: string;
-}
-
-interface BusquedaFiltros {
-  nivel?: string;
-  materia?: string;
-}
-
-/* ---- Confianza derivada ---- */
-
-/**
- * Deriva el nivel de confianza de las calificaciones públicas del perfil.
- * ponytail: regla provisional hasta que el backend exponga una señal de
- * confianza real. Usa la misma puerta que el perfil (>= 5 calificaciones
- * antes de mostrar promedio público, Spec_M7 o M1).
- */
-function nivelConfianza(
-  promedio: number | null,
-  cantidad: number
-): TrustLevel | null {
-  if (promedio === null || cantidad < 5) return null;
-  if (promedio >= 4.5) return "oro";
-  if (promedio >= 4) return "plata";
-  return "bronce";
-}
-
-const ETIQUETA_TRUST: Record<TrustLevel, string> = {
-  bronce: "Bronce",
-  plata: "Plata",
-  oro: "Oro",
-};
-
-const COLOR_TRUST: Record<TrustLevel, string> = {
-  bronce: "bg-orange-50 text-orange-700",
-  plata: "bg-slate-100 text-slate-600",
-  oro: "bg-amber-50 text-amber-700",
-};
-
-function TrustLevelBadge({ nivel }: { nivel: TrustLevel }) {
-  return (
-    <Insignia
-      tono="neutro"
-      className={COLOR_TRUST[nivel]}
-      title={`Nivel de confianza: ${ETIQUETA_TRUST[nivel]}`}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        className="h-3 w-3"
-        aria-hidden="true"
-      >
-        <path
-          d="M12 3l7 3v5c0 4.5-2.9 7.7-7 9-4.1-1.3-7-4.5-7-9V6l7-3z"
-          strokeLinejoin="round"
-        />
-        <path d="m9 11.5 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      {ETIQUETA_TRUST[nivel]}
-    </Insignia>
-  );
-}
-
-/* ---- Tarjeta de Tutor ---- */
-
-function TutorCard({
-  tutor,
-  noAutorizado,
-  avisoActivo,
-  onSolicitarAutorizacion,
-}: {
-  tutor: TutorResult;
-  noAutorizado: boolean;
-  avisoActivo: boolean;
-  onSolicitarAutorizacion: (id: string) => void;
-}) {
-  const iniciales = tutor.nombre
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <Tarjeta as="article" interactiva className="flex flex-col overflow-hidden p-0">
-      <Link href={`/tutores/${tutor.id}`} className="block flex-1 p-5">
-        <div className="flex items-center gap-3">
-          {tutor.avatarUrl ? (
-            <img
-              src={tutor.avatarUrl}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-bold text-teal-700">
-              {iniciales}
-            </span>
-          )}
-
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate font-semibold text-slate-800">
-                {tutor.nombre}
-              </h2>
-              {tutor.trustLevel && <TrustLevelBadge nivel={tutor.trustLevel} />}
-            </div>
-            {tutor.materias.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {tutor.materias.slice(0, 2).map((m) => (
-                  <Insignia key={m} tono="neutro" className="px-2 py-0.5 font-normal">
-                    {m}
-                  </Insignia>
-                ))}
-                {tutor.materias.length > 2 && (
-                  <Insignia tono="neutro" className="px-2 py-0.5 font-normal text-slate-500">
-                    +{tutor.materias.length - 2}
-                  </Insignia>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-5 flex items-end justify-between">
-          <div>
-            <div className="text-xl font-bold text-slate-800">
-              {tutor.precioProrateado !== null
-                ? formatearPrecio(tutor.precioProrateado)
-                : "A consultar"}
-            </div>
-            {tutor.precioProrateado !== null && (
-              <div className="text-xs text-slate-500">por hora</div>
-            )}
-          </div>
-          <span className="text-sm font-semibold text-teal-700">Ver perfil →</span>
-        </div>
-      </Link>
-
-      {noAutorizado && (
-        <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
-          <Boton
-            variante="secundario"
-            tamano="sm"
-            onClick={() => onSolicitarAutorizacion(tutor.id)}
-          >
-            Solicitar autorización
-          </Boton>
-          {avisoActivo && (
-            <p
-              className="mt-2 text-xs text-slate-500"
-              role="status"
-            >
-              Tu adulto a cargo debe autorizar a este tutor para poder
-              contactarte.
-            </p>
-          )}
-        </div>
-      )}
-    </Tarjeta>
-  );
-}
-
-/* ---- Skeleton de la grilla ---- */
-
-function SearchResultsSkeleton() {
-  return (
-    <div
-      className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
-      role="status"
-      aria-label="Cargando resultados"
-    >
-      {Array.from({ length: 6 }).map((_, i) => (
-        // ponytail: grilla estática de carga — índice como key está bien
-        // eslint-disable-next-line react/no-array-index-key
-        <Tarjeta key={i} className="animate-pulse p-5">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
-          </div>
-          <Skeleton className="mt-4 h-3 w-1/2" />
-          <Skeleton className="mt-3 h-3 w-1/3" />
-        </Tarjeta>
-      ))}
-    </div>
-  );
-}
-
-/* ---- Empty state ---- */
-
-function SearchEmpty() {
-  return (
-    <EstadoVacio
-      icono={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          className="mx-auto h-12 w-12"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-        </svg>
-      }
-    >
-      No encontramos tutores exactos para esta búsqueda. Intenta usar
-      palabras m&aacute;s generales o navega por las categorías.
-    </EstadoVacio>
-  );
-}
-
-/* ---- Contenedor de resultados ---- */
-
-function SearchResults({
-  results,
-  noAutorizados,
-  solicitadas,
-  isLoading,
-  onSolicitarAutorizacion,
-}: {
-  results: TutorResult[];
-  noAutorizados: Record<string, boolean>;
-  solicitadas: Set<string>;
-  isLoading: boolean;
-  onSolicitarAutorizacion: (id: string) => void;
-}) {
-  if (isLoading) return <SearchResultsSkeleton />;
-  if (results.length === 0) return <SearchEmpty />;
-
-  return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {results.map((t) => (
-        <TutorCard
-          key={t.id}
-          tutor={t}
-          noAutorizado={noAutorizados[t.id] === true}
-          avisoActivo={solicitadas.has(t.id)}
-          onSolicitarAutorizacion={onSolicitarAutorizacion}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ---- Página ---- */
+const MATERIAS_SUGERIDAS = ["Matemática", "Física", "Química", "Inglés", "Lengua", "Historia", "Programación"];
 
 const ROTULO_NIVEL: Record<string, string> = {
   primario: "Primaria",
@@ -300,347 +40,414 @@ function rotuloNivel(n: string): string {
   return ROTULO_NIVEL[n] ?? n.charAt(0).toUpperCase() + n.slice(1);
 }
 
+interface Resultado {
+  tutor: TutorPerfil;
+  noAutorizado: boolean;
+  score: number;
+}
+
 export default function BuscarPage() {
+  const toast = useToast();
   const [catalogos, setCatalogos] = useState<NivelCatalogo[] | null>(null);
   const [errorCat, setErrorCat] = useState<string | null>(null);
 
   const [texto, setTexto] = useState("");
   const [nivel, setNivel] = useState("");
   const [materia, setMateria] = useState("");
+  const [orden, setOrden] = useState<Orden>("relevancia");
+  const [hojaFiltros, setHojaFiltros] = useState(false);
 
-  const [resultados, setResultados] = useState<TutorResult[] | null>(null);
-  const [noAutorizados, setNoAutorizados] = useState<Record<string, boolean>>(
-    {}
-  );
-  const [haBuscado, setHaBuscado] = useState(false);
+  const [resultados, setResultados] = useState<Resultado[] | null>(null);
+  const [consulta, setConsulta] = useState<{ texto: string; materia: string } | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [solicitadas, setSolicitadas] = useState<Set<string>>(new Set());
 
   const [guardadas, setGuardadas] = useState<BusquedaGuardada[] | null>(null);
-  const [guardandoBusqueda, setGuardandoBusqueda] = useState(false);
-  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [yaGuardada, setYaGuardada] = useState(false);
 
-  useEffect(() => {
-    getBusquedasGuardadas()
-      .then(setGuardadas)
-      .catch(() => setGuardadas([]));
-  }, []);
+  const inicializado = useRef(false);
 
-  function cargarCatalogos() {
+  const cargarCatalogos = useCallback(() => {
     setErrorCat(null);
     getCatalogos()
       .then(setCatalogos)
-      .catch((err) =>
-        setErrorCat(mensajeDeError(err, "No se pudo cargar el catálogo."))
-      );
-  }
+      .catch((err) => setErrorCat(mensajeDeError(err, "No pudimos cargar las materias.")));
+  }, []);
 
   useEffect(() => {
     cargarCatalogos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    getBusquedasGuardadas()
+      .then(setGuardadas)
+      .catch(() => setGuardadas([]));
+  }, [cargarCatalogos]);
 
   const nivelSel = catalogos?.find((n) => n.nivel === nivel) ?? null;
-  const materiasNivel = useMemo(() => {
-    if (!nivelSel) return [];
-    return [
-      ...new Set(nivelSel.cursos.flatMap((c) => c.materias.map((m) => m.nombre))),
-    ];
-  }, [nivelSel]);
+  const materiasNivel = useMemo(
+    () => (nivelSel ? [...new Set(nivelSel.cursos.flatMap((c) => c.materias.map((m) => m.nombre)))] : []),
+    [nivelSel]
+  );
 
-  /** Compartida entre una búsqueda nueva y la re-ejecución de una guardada:
-   *  ambas devuelven la misma forma cruda y necesitan el mismo hidratado
-   *  de perfiles. */
-  async function hidratarYMostrar(lista: ResultadoBusqueda[]) {
-    const perfiles = await Promise.allSettled(
-      lista.map((r) => api.get<TutorPerfil>(`/api/tutores/${r.tutorId}`))
-    );
-
-    const tutorResults: TutorResult[] = lista.map((r, i) => {
-      const perfil =
-        perfiles[i].status === "fulfilled" ? perfiles[i].value : null;
-      if (!perfil) {
+  const hidratar = useCallback(async (lista: ResultadoBusqueda[]) => {
+    const perfiles = await Promise.allSettled(lista.map((r) => getTutor(r.tutorId)));
+    setResultados(
+      lista.map((r, i) => {
+        const p = perfiles[i];
         return {
-          id: r.tutorId,
-          nombre: `Tutor #${r.tutorId}`,
-          materias: [],
-          precioProrateado: null,
-          trustLevel: null,
-          avatarUrl: "",
+          tutor: p?.status === "fulfilled" ? p.value : normalizarTutor({ id: r.tutorId, nombre: "Tutor" }),
+          noAutorizado: r.noAutorizado,
+          score: r.score,
         };
-      }
-      return {
-        id: perfil.id,
-        nombre: perfil.apellido
-          ? `${perfil.nombre} ${perfil.apellido}`
-          : perfil.nombre,
-        materias: perfil.materias,
-        precioProrateado: perfil.precioHora ?? null,
-        trustLevel: nivelConfianza(
-          perfil.calificacionPromedio,
-          perfil.cantidadCalificaciones
-        ),
-        avatarUrl: "",
-      };
-    });
-
-    setNoAutorizados(
-      Object.fromEntries(lista.map((r) => [r.tutorId, r.noAutorizado]))
+      })
     );
-    setResultados(tutorResults);
-  }
+  }, []);
 
-  async function ejecutarBusqueda(filtros: BusquedaFiltros = {}) {
-    const query = texto.trim();
-    const filtroMateria = filtros.materia ?? materia;
-    if (!query && !filtroMateria) {
-      setError("Escribí qué necesitás para buscar o elegí una materia.");
+  const ejecutar = useCallback(async (q: string, m: string) => {
+    if (!q.trim() && !m) {
+      setError("Escribí qué necesitás aprender o elegí una materia.");
       return;
     }
-
     setBuscando(true);
     setError(null);
     setResultados(null);
-    setHaBuscado(true);
+    setYaGuardada(false);
+    setConsulta({ texto: q.trim(), materia: m });
     try {
-      const lista = await buscarTutores({
-        textoBusqueda: query || undefined,
-        filtroMateria: filtroMateria || undefined,
-      });
-      await hidratarYMostrar(lista);
+      const lista = await buscarTutores({ textoBusqueda: q.trim() || undefined, filtroMateria: m || undefined });
+      await hidratar(lista);
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo completar la búsqueda."));
+      setError(mensajeDeError(err, "No pudimos completar la búsqueda. Revisá tu conexión y probá de nuevo."));
+    } finally {
+      setBuscando(false);
+    }
+  }, [hidratar]);
+
+  // Búsqueda que viene de la landing o de un link (?q=, ?materia=).
+  useEffect(() => {
+    if (inicializado.current) return;
+    inicializado.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q") ?? "";
+    const m = params.get("materia") ?? "";
+    if (q || m) {
+      setTexto(q);
+      setMateria(m);
+      void ejecutar(q, m);
+    }
+  }, [ejecutar]);
+
+  async function ejecutarGuardada(g: BusquedaGuardada) {
+    setBuscando(true);
+    setError(null);
+    setResultados(null);
+    setTexto(g.textoBusqueda);
+    setConsulta({ texto: g.textoBusqueda, materia: "" });
+    setYaGuardada(true);
+    try {
+      await hidratar(await ejecutarBusquedaGuardada(g.id));
+    } catch (err) {
+      setError(mensajeDeError(err, "No pudimos repetir esa búsqueda."));
     } finally {
       setBuscando(false);
     }
   }
 
-  async function guardarBusquedaActual() {
-    const query = texto.trim();
-    if (!query && !materia) return;
-    setGuardandoBusqueda(true);
-    setErrorGuardar(null);
+  async function guardarActual() {
+    if (!consulta) return;
+    setGuardando(true);
     try {
       const nueva = await guardarBusqueda({
-        textoBusqueda: query || undefined,
-        filtroMateria: materia || undefined,
+        textoBusqueda: consulta.texto || undefined,
+        filtroMateria: consulta.materia || undefined,
       });
       setGuardadas((prev) => [nueva, ...(prev ?? [])]);
+      setYaGuardada(true);
+      toast.mostrar("Guardamos la búsqueda");
     } catch (err) {
-      setErrorGuardar(mensajeDeError(err, "No se pudo guardar la búsqueda."));
+      toast.mostrar(mensajeDeError(err, "No pudimos guardar la búsqueda."), { tono: "error" });
     } finally {
-      setGuardandoBusqueda(false);
+      setGuardando(false);
     }
   }
 
-  async function ejecutarGuardada(id: string) {
-    setBuscando(true);
-    setError(null);
-    setResultados(null);
-    setHaBuscado(true);
-    try {
-      const lista = await ejecutarBusquedaGuardada(id);
-      await hidratarYMostrar(lista);
-    } catch (err) {
-      setError(mensajeDeError(err, "No se pudo ejecutar la búsqueda guardada."));
-    } finally {
-      setBuscando(false);
+  function elegirMateria(m: string) {
+    const nueva = materia === m ? "" : m;
+    setMateria(nueva);
+    if (nueva || texto.trim()) void ejecutar(texto, nueva);
+    else {
+      setResultados(null);
+      setConsulta(null);
     }
   }
 
-  function toggleNivel(n: string) {
-    setMateria("");
-    if (nivel === n) {
-      setNivel("");
-    } else {
-      setNivel(n);
+  const ordenados = useMemo(() => {
+    if (!resultados) return null;
+    const copia = [...resultados];
+    if (orden === "precio") {
+      copia.sort((a, b) => (a.tutor.precioSesion ?? Infinity) - (b.tutor.precioSesion ?? Infinity));
+    } else if (orden === "calificacion") {
+      copia.sort((a, b) => (b.tutor.calificacionPromedio ?? -1) - (a.tutor.calificacionPromedio ?? -1));
     }
-  }
+    return copia;
+  }, [resultados, orden]);
 
-  function toggleMateria(m: string) {
-    if (materia === m) {
-      setMateria("");
-      if (texto.trim()) {
-        ejecutarBusqueda({ materia: "" });
-      } else {
-        setResultados(null);
-        setHaBuscado(false);
-      }
-    } else {
-      setMateria(m);
-      ejecutarBusqueda({ materia: m });
-    }
-  }
+  const filtrosActivos = (nivel ? 1 : 0) + (materia ? 1 : 0);
+  const hayBusqueda = buscando || consulta !== null;
 
-  function toggleSolicitud(id: string) {
-    setSolicitadas((prev) => {
-      const s = new Set(prev);
-      if (s.has(id)) {
-        s.delete(id);
-      } else {
-        s.add(id);
-      }
-      return s;
-    });
-  }
-
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    ejecutarBusqueda();
-  }
-
-  return (
-    <>
-      <Cabecera />
-
-      <main className="mx-auto max-w-6xl px-5 pb-16">
-        <section className="mx-auto max-w-2xl pb-4 pt-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800">
-            Encontr&aacute; al tutor ideal
-          </h1>
-          <p className="mt-2 text-slate-500">
-            Describí lo que necesit&aacute;s y te acercamos a los mejores
-            tutores.
-          </p>
-
-          <form
-            onSubmit={onSubmit}
-            role="search"
-            className="relative mt-6"
-          >
-            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-teal-700">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Ej: repasar división para el secundario"
-              maxLength={500}
-              aria-label="Buscar tutores"
-              className="w-full rounded-full border border-slate-200 bg-white py-3.5 pl-12 pr-32 text-base shadow-sm transition placeholder:text-slate-500 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-            <Boton
-              type="submit"
-              cargando={buscando}
-              textoCargando="Buscando…"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full px-5 text-sm"
-            >
-              Buscar
-            </Boton>
-          </form>
-
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-500">
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-3.5 w-3.5 text-teal-500"
-              aria-hidden="true"
-            >
-              <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z" />
-            </svg>
-            Tutores recomendados para lo que necesitás
-          </p>
-        </section>
-
-        <section className="mt-6">
-          {errorCat && (
-            <Alerta tono="error" className="mb-4">
-              {errorCat}{" "}
-              <Boton
-                variante="secundario"
-                tamano="sm"
-                className="ml-2"
-                onClick={cargarCatalogos}
-              >
-                Reintentar
-              </Boton>
-            </Alerta>
-          )}
-
-          <div className="no-scrollbar flex gap-2 overflow-x-auto py-1">
+  const panelFiltros = (
+    <div className="flex flex-col gap-5">
+      {errorCat && (
+        <Alerta tono="peligro" accion={<Boton variante="secundario" tamano="sm" onClick={cargarCatalogos}>Reintentar</Boton>}>
+          {errorCat}
+        </Alerta>
+      )}
+      {(catalogos ?? []).length > 0 && (
+        <fieldset>
+          <legend className="mb-2 text-sm font-bold">Nivel</legend>
+          <div className="flex flex-wrap gap-2">
             {(catalogos ?? []).map((n) => (
               <Chip
                 key={n.nivel}
                 activo={nivel === n.nivel}
-                onClick={() => toggleNivel(n.nivel)}
+                onClick={() => {
+                  setNivel(nivel === n.nivel ? "" : n.nivel);
+                }}
               >
                 {rotuloNivel(n.nivel)}
               </Chip>
             ))}
           </div>
+        </fieldset>
+      )}
+      <fieldset>
+        <legend className="mb-2 text-sm font-bold">Materia</legend>
+        <div className="flex flex-wrap gap-2">
+          {(materiasNivel.length > 0 ? materiasNivel : MATERIAS_SUGERIDAS).map((m) => (
+            <Chip key={m} activo={materia === m} onClick={() => elegirMateria(m)}>
+              {m}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  );
 
-          {nivelSel && materiasNivel.length > 0 && (
-            <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto py-1">
-              {materiasNivel.map((m) => (
-                <Chip key={m} activo={materia === m} onClick={() => toggleMateria(m)}>
-                  {m}
-                </Chip>
-              ))}
-            </div>
-          )}
+  return (
+    <AppShell>
+      <section>
+        <h1 className="text-[28px] font-extrabold sm:text-[40px]">¿Qué querés aprender?</h1>
+        <form
+          role="search"
+          className="mt-5 flex items-center gap-2 rounded-[18px] bg-superficie p-2 shadow-elevado ring-1 ring-borde focus-within:ring-2 focus-within:ring-marca-600"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void ejecutar(texto, materia);
+          }}
+        >
+          <Search className="ml-3 size-5 shrink-0 text-tinta-tenue" aria-hidden />
+          <label htmlFor="buscar-texto" className="sr-only">
+            Buscar tutores
+          </label>
+          <input
+            id="buscar-texto"
+            type="search"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Ej: repasar división para el secundario"
+            maxLength={500}
+            className="min-h-12 w-full min-w-0 bg-transparent px-1 text-[17px] text-tinta placeholder:text-tinta-tenue focus:outline-none"
+          />
+          <Boton type="submit" variante="oscuro" cargando={buscando} className="shrink-0">
+            Buscar
+          </Boton>
+        </form>
+        <p className="mt-3 flex items-center gap-1.5 text-sm text-tinta-tenue">
+          <Sparkles className="size-4 text-acento-700" aria-hidden />
+          Tutores recomendados para lo que necesitás
+        </p>
+      </section>
 
-          {guardadas !== null && guardadas.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold text-slate-500">Tus búsquedas guardadas</p>
-              <div className="no-scrollbar mt-1.5 flex gap-2 overflow-x-auto py-1">
-                {guardadas.map((g) => (
+      {/* Barra de filtros: chips en desktop, hoja inferior en mobile. */}
+      <div className="mt-6 flex items-center gap-2">
+        <Boton
+          variante="secundario"
+          tamano="sm"
+          className="rounded-pastilla lg:hidden"
+          icono={<SlidersHorizontal />}
+          onClick={() => setHojaFiltros(true)}
+        >
+          Filtros{filtrosActivos > 0 ? ` · ${filtrosActivos}` : ""}
+        </Boton>
+        {materia && (
+          <Chip removible onClick={() => elegirMateria(materia)} aria-label={`Quitar filtro ${materia}`}>
+            {materia}
+          </Chip>
+        )}
+        {nivel && (
+          <Chip removible onClick={() => setNivel("")} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
+            {rotuloNivel(nivel)}
+          </Chip>
+        )}
+      </div>
+      <div className="mt-4 hidden lg:block">{panelFiltros}</div>
+
+      <Modal
+        abierto={hojaFiltros}
+        onCerrar={() => setHojaFiltros(false)}
+        titulo="Filtros"
+        variante="hoja"
+        pie={
+          <>
+            <Boton
+              variante="fantasma"
+              onClick={() => {
+                setNivel("");
+                elegirMateria(materia);
+              }}
+              disabled={filtrosActivos === 0}
+            >
+              Limpiar
+            </Boton>
+            <Boton onClick={() => setHojaFiltros(false)}>Ver resultados</Boton>
+          </>
+        }
+      >
+        {panelFiltros}
+      </Modal>
+
+      <section className="mt-8" aria-live="polite" aria-busy={buscando}>
+        {error && (
+          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia)}>Probar de nuevo</Boton>}>
+            {error}
+          </Alerta>
+        )}
+
+        {!hayBusqueda && (
+          <div className="flex flex-col gap-8">
+            {guardadas !== null && guardadas.length > 0 && (
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                  <History className="size-5 text-tinta-tenue" aria-hidden /> Tus búsquedas guardadas
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {guardadas.map((g) => (
+                    <Boton key={g.id} variante="secundario" tamano="sm" className="rounded-pastilla" onClick={() => void ejecutarGuardada(g)}>
+                      {g.textoBusqueda}
+                    </Boton>
+                  ))}
+                </div>
+              </div>
+            )}
+            <EstadoVacio icono={<Search />} titulo="Empezá por lo que necesitás" className="py-8">
+              Contanos con tus palabras qué querés aprender (&ldquo;ecuaciones de segundo grado&rdquo;, &ldquo;inglés para viajar&rdquo;) o elegí una materia.
+            </EstadoVacio>
+          </div>
+        )}
+
+        {hayBusqueda && (
+          <>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[15px] text-tinta-suave">
+                {buscando ? (
+                  "Buscando tutores…"
+                ) : (
+                  <>
+                    <strong className="text-tinta">{ordenados?.length ?? 0}</strong>{" "}
+                    {(ordenados?.length ?? 0) === 1 ? "tutor" : "tutores"}
+                    {consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>}
+                  </>
+                )}
+              </p>
+              {!buscando && (ordenados?.length ?? 0) > 0 && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="orden" className="sr-only">
+                    Ordenar por
+                  </label>
+                  <div className="relative">
+                    <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-tinta-tenue" aria-hidden />
+                    <select
+                      id="orden"
+                      value={orden}
+                      onChange={(e) => setOrden(e.target.value as Orden)}
+                      className="min-h-10 cursor-pointer appearance-none rounded-pastilla border border-borde-fuerte bg-superficie pl-9 pr-4 text-sm font-semibold text-tinta"
+                    >
+                      {ORDENES.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <Boton
-                    key={g.id}
                     variante="secundario"
                     tamano="sm"
-                    className="shrink-0 rounded-full"
-                    onClick={() => ejecutarGuardada(g.id)}
+                    className="rounded-pastilla"
+                    icono={yaGuardada ? <BookmarkCheck /> : <Bookmark />}
+                    cargando={guardando}
+                    disabled={yaGuardada}
+                    onClick={guardarActual}
                   >
-                    {g.textoBusqueda}
+                    {yaGuardada ? (
+                      "Guardada"
+                    ) : (
+                      <>
+                        <span className="sm:hidden">Guardar</span>
+                        <span className="hidden sm:inline">Guardar esta búsqueda</span>
+                      </>
+                    )}
                   </Boton>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-          )}
-        </section>
 
-        <section className="mt-8">
-          {error && (
-            <Alerta tono="error" className="mb-4">
-              {error}
-            </Alerta>
-          )}
+            {buscando && <SkeletonTarjetas cantidad={6} etiqueta="Buscando tutores…" />}
 
-          {haBuscado && !buscando && (texto.trim() || materia) && (
-            <div className="mb-4 flex items-center gap-2">
-              <Boton
-                variante="secundario"
-                tamano="sm"
-                cargando={guardandoBusqueda}
-                textoCargando="Guardando…"
-                onClick={guardarBusquedaActual}
+            {!buscando && ordenados && ordenados.length === 0 && !error && (
+              <EstadoVacio
+                icono={<SearchX />}
+                titulo={consulta?.texto ? `No encontramos tutores para “${consulta.texto}”` : "No encontramos tutores con esos filtros"}
+                accion={
+                  filtrosActivos > 0 ? (
+                    <Boton
+                      variante="secundario"
+                      onClick={() => {
+                        setNivel("");
+                        elegirMateria(materia);
+                      }}
+                    >
+                      Sacar los filtros
+                    </Boton>
+                  ) : undefined
+                }
               >
-                Guardar esta búsqueda
-              </Boton>
-              {errorGuardar && <span className="text-sm text-red-700">{errorGuardar}</span>}
-            </div>
-          )}
+                Probá con otras palabras, más generales, o sacá algún filtro.
+              </EstadoVacio>
+            )}
 
-          {buscando || haBuscado ? (
-            <SearchResults
-              results={resultados ?? []}
-              noAutorizados={noAutorizados}
-              solicitadas={solicitadas}
-              isLoading={buscando}
-              onSolicitarAutorizacion={toggleSolicitud}
-            />
-          ) : null}
-        </section>
-      </main>
-    </>
+            {!buscando && ordenados && ordenados.length > 0 && (
+              <ul className="grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 lg:grid-cols-3">
+                {ordenados.map((r, i) => (
+                  <li key={r.tutor.id} className={cn("motion-safe:animate-aparecer")} style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                    <TarjetaTutor
+                      tutor={r.tutor}
+                      noAutorizado={r.noAutorizado}
+                      avisoAutorizacion={solicitadas.has(r.tutor.id)}
+                      onSolicitarAutorizacion={() =>
+                        setSolicitadas((prev) => {
+                          const s = new Set(prev);
+                          s.add(r.tutor.id);
+                          return s;
+                        })
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </section>
+    </AppShell>
   );
 }

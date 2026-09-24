@@ -1,326 +1,370 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { BadgeCheck, CalendarDays, ChevronLeft, Flag, IdCard, ShieldCheck, UserX } from "lucide-react";
 import { api, ApiError, autorizarTutor, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
-import { formatearPrecio } from "@/lib/formatos";
-import Cabecera from "@/components/Cabecera";
+import { diaCorto } from "@/lib/formatos";
+import { TIEMPOS } from "@/lib/tiempos";
+import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
+import { hhmm, proximosDias, type Franja } from "@/lib/agenda";
+import AppShell from "@/components/shell/AppShell";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
 import {
   Alerta,
+  Avatar,
   Boton,
-  CampoSelect,
-  Cargando,
   EstadoVacio,
+  Estrellas,
   Insignia,
+  Interruptor,
+  Menu,
+  Precio,
+  Selector,
+  Skeleton,
+  SkeletonPerfil,
   Tarjeta,
   clasesBoton,
+  useToast,
 } from "@/components/ui";
 
-interface TutorPerfil {
-  id: string;
-  nombre: string;
-  apellido: string;
-  tipo: string;
-  capacidadEstudiante: boolean;
-  capacidadAdultoResponsable: boolean;
-  materias: string[];
-  nivel: string;
-  calificacionPromedio: number | null;
-  cantidadCalificaciones: number;
-  precioHora?: number | null;
+function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-borde pt-8">
+      <h2 className="text-xl font-bold">{titulo}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
 }
 
-const NOMBRE_TIPO: Record<string, string> = {
-  ADULTO: "Adulto",
-  MENOR: "Menor",
-  TUTOR: "Tutor",
-};
-
 export default function TutorPerfilPage({ params }: { params: { id: string } }) {
-  const session = useSesion();
-  const payload = session?.payload;
+  const sesion = useSesion();
+  const payload = sesion?.payload;
+  const toast = useToast();
 
   const [perfil, setPerfil] = useState<TutorPerfil | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [noConfiable, setNoConfiable] = useState(false);
-  const [enviandoNoConfiable, setEnviandoNoConfiable] = useState(false);
-  const [mensajeNoConfiable, setMensajeNoConfiable] = useState<string | null>(null);
+  const [franjas, setFranjas] = useState<Franja[] | null>(null);
+  const [reportar, setReportar] = useState(false);
 
+  const cargar = useCallback(() => {
+    setCargando(true);
+    setError(null);
+    getTutor(params.id)
+      .then(setPerfil)
+      .catch((err) =>
+        setError(
+          err instanceof ApiError && err.status === 404
+            ? "No encontramos a este tutor. Puede que ya no esté dando clases en Tinku."
+            : "No pudimos cargar el perfil. Revisá tu conexión y probá de nuevo."
+        )
+      )
+      .finally(() => setCargando(false));
+    api
+      .get<Franja[]>(`/api/tutores/${params.id}/franjas`)
+      .then(setFranjas)
+      .catch(() => setFranjas([]));
+  }, [params.id]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const foto = useFotoTutor(perfil?.id, perfil?.tieneFoto);
+  const esMenor = payload?.tipo === "MENOR";
+  const esAR = !esMenor && payload?.cap_ar === true;
+  const nuevo = !perfil || perfil.calificacionPromedio === null || perfil.cantidadCalificaciones < TIEMPOS.minimoCalificaciones;
+  const dias = franjas ? proximosDias(franjas, 7).filter((d) => d.franjas.length > 0) : null;
+  const hrefReservar = `/reservar?tutor=${params.id}`;
+
+  if (cargando) {
+    return (
+      <AppShell>
+        <SkeletonPerfil />
+      </AppShell>
+    );
+  }
+
+  if (error || !perfil) {
+    return (
+      <AppShell>
+        <EstadoVacio
+          icono={<UserX />}
+          titulo="No pudimos mostrar este perfil"
+          accion={
+            <div className="flex gap-2">
+              <Link href="/buscar" className={clasesBoton("secundario")}>
+                Volver a buscar
+              </Link>
+              <Boton onClick={cargar}>Probar de nuevo</Boton>
+            </div>
+          }
+        >
+          {error}
+        </EstadoVacio>
+      </AppShell>
+    );
+  }
+
+  const nombre = `${perfil.nombre} ${perfil.apellido}`.trim();
+  const cta = esMenor ? "Pedir esta clase" : "Reservar clase";
+
+  return (
+    <AppShell>
+      <Link
+        href="/buscar"
+        className="-ml-2 mb-4 inline-flex min-h-11 items-center gap-1 rounded-control px-2 text-[15px] font-semibold text-tinta no-underline hover:bg-superficie-hundida"
+      >
+        <ChevronLeft className="size-5" aria-hidden /> Volver a los resultados
+      </Link>
+
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_340px] lg:items-start">
+        <div className="flex flex-col gap-8">
+          {/* Encabezado */}
+          <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <Avatar nombre={perfil.nombre} apellido={perfil.apellido} semilla={perfil.id} foto={foto} tamano="xl" verificado={perfil.verificado} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="text-[28px] font-extrabold sm:text-[36px]">{nombre}</h1>
+                {!esMenor && (
+                  <Menu
+                    etiqueta="Más opciones de este perfil"
+                    items={[{ texto: "Reportar este perfil", icono: <Flag />, peligro: true, onClick: () => setReportar(true) }]}
+                  />
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {nuevo ? (
+                  <Insignia tono="acento">Tutor nuevo</Insignia>
+                ) : (
+                  <Estrellas valor={perfil.calificacionPromedio!} cantidad={perfil.cantidadCalificaciones} tamano="md" />
+                )}
+                {perfil.nivel && <Insignia>{perfil.nivel.charAt(0).toUpperCase() + perfil.nivel.slice(1)}</Insignia>}
+              </div>
+              <ul className="mt-4 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-sm font-semibold">
+                <li className="flex items-center gap-1.5 text-exito">
+                  <IdCard className="size-4" aria-hidden /> Identidad verificada
+                </li>
+                {perfil.verificado ? (
+                  <li className="flex items-center gap-1.5 text-exito">
+                    <BadgeCheck className="size-4" aria-hidden /> Título verificado
+                  </li>
+                ) : (
+                  <li className="flex items-center gap-1.5 text-tinta-tenue">
+                    <BadgeCheck className="size-4" aria-hidden /> Título en revisión
+                  </li>
+                )}
+              </ul>
+            </div>
+          </header>
+
+          {esMenor && (
+            <Alerta tono="aviso" titulo="Las clases para menores se habilitan al finalizar el piloto.">
+              Pedile a tu adulto responsable que te autorice a este tutor desde su cuenta.
+            </Alerta>
+          )}
+
+          {perfil.bio && (
+            <Seccion titulo="Sobre mí">
+              <p className="whitespace-pre-line text-[16px] leading-relaxed text-tinta-suave">{perfil.bio}</p>
+            </Seccion>
+          )}
+
+          {perfil.materias.length > 0 && (
+            <Seccion titulo="Materias que enseña">
+              <ul className="flex list-none flex-wrap gap-2 p-0">
+                {perfil.materias.map((m) => (
+                  <li key={m}>
+                    <Insignia className="px-3 py-1.5 text-sm">{m}</Insignia>
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
+
+          <Seccion titulo="Disponibilidad esta semana">
+            {dias === null ? (
+              <div role="status" className="flex gap-2">
+                <span className="sr-only">Cargando horarios…</span>
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-20 w-28 rounded-2xl" />
+                ))}
+              </div>
+            ) : dias.length === 0 ? (
+              <p className="flex items-center gap-2 text-[15px] text-tinta-suave">
+                <CalendarDays className="size-5" aria-hidden /> No tiene horarios publicados en los próximos 7 días.
+              </p>
+            ) : (
+              <ul className="no-scrollbar -mx-4 flex list-none gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+                {dias.map((d) => (
+                  <li key={d.fecha} className="min-w-28 shrink-0 rounded-2xl border border-borde bg-superficie p-3">
+                    <p className="text-sm font-bold capitalize">{diaCorto(d.referencia)}</p>
+                    <p className="mt-1 text-[13px] text-tinta-suave">
+                      {d.franjas.map((f) => `${hhmm(f.horaInicio)}–${hhmm(f.horaFin)}`).join(" · ")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Seccion>
+
+          {esAR && <ParaTusChicos tutorId={perfil.id} nombreTutor={nombreCorto(perfil.nombre, perfil.apellido)} />}
+        </div>
+
+        {/* CTA: tarjeta lateral fija en desktop */}
+        <aside className="hidden lg:sticky lg:top-24 lg:block">
+          <Tarjeta className="flex flex-col gap-5">
+            <div>
+              <Precio valor={perfil.precioSesion} tamano="lg" />
+              {perfil.precioSesion !== null && <p className="text-sm text-tinta-tenue">por clase</p>}
+            </div>
+            <Link href={hrefReservar} className={clasesBoton("primario", "lg", "w-full")}>
+              {cta}
+            </Link>
+            <ul className="flex list-none flex-col gap-3 p-0 text-sm text-tinta-suave">
+              <li className="flex gap-2.5">
+                <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
+                Pagás al reservar; al tutor se le libera {TIEMPOS.liberacionHoras} hs después de la clase.
+              </li>
+              <li className="flex gap-2.5">
+                <CalendarDays className="size-5 shrink-0 text-marca-700" aria-hidden />
+                Cancelás gratis hasta {TIEMPOS.cancelacionSinPenalidadHoras} hs antes.
+              </li>
+            </ul>
+          </Tarjeta>
+        </aside>
+      </div>
+
+      {/* CTA: barra inferior en mobile, encima de la navegación */}
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-borde bg-superficie/95 px-4 py-3 shadow-barra backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+          <div>
+            <Precio valor={perfil.precioSesion} tamano="md" />
+            {perfil.precioSesion !== null && <p className="text-[13px] text-tinta-tenue">por clase</p>}
+          </div>
+          <Link href={hrefReservar} className={clasesBoton("primario", "lg", "flex-1 max-w-56")}>
+            {cta}
+          </Link>
+        </div>
+      </div>
+      <div aria-hidden className="h-20 lg:hidden" />
+
+      {!esMenor && (
+        <FormularioDenuncia
+          abierto={reportar}
+          onCerrar={() => setReportar(false)}
+          onEnviada={() => toast.mostrar("Denuncia registrada. La vamos a revisar.")}
+          denunciadoId={perfil.id}
+          nombre={nombreCorto(perfil.nombre, perfil.apellido)}
+        />
+      )}
+    </AppShell>
+  );
+}
+
+/** Adulto Responsable: autorizar a este tutor para un hijo, o marcarlo como no confiable (FR-ID-009). */
+function ParaTusChicos({ tutorId, nombreTutor }: { tutorId: string; nombreTutor: string }) {
+  const toast = useToast();
   const [menores, setMenores] = useState<Menor[] | null>(null);
   const [errorMenores, setErrorMenores] = useState<string | null>(null);
   const [menorElegido, setMenorElegido] = useState("");
   const [autorizando, setAutorizando] = useState(false);
-  const [mensajeAutorizacion, setMensajeAutorizacion] = useState<string | null>(null);
-
-  function cargar() {
-    setCargando(true);
-    setError(null);
-    api
-      .get<TutorPerfil>(`/api/tutores/${params.id}`)
-      .then((p) => setPerfil(p))
-      .catch((err) => {
-        if (err instanceof ApiError) {
-          setError(
-            err.status === 404
-              ? "Tutor no encontrado."
-              : err.message || "No se pudo cargar el perfil."
-          );
-        } else {
-          setError("No se pudo cargar el perfil.");
-        }
-      })
-      .finally(() => setCargando(false));
-  }
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [noConfiable, setNoConfiable] = useState(false);
+  const [guardandoConfianza, setGuardandoConfianza] = useState(false);
 
   useEffect(() => {
-    cargar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
-
-  const esMenor = payload?.tipo === "MENOR";
-  const puedeReservar = !esMenor;
-  const esAdultoConAR = !esMenor && payload?.cap_ar === true;
-
-  useEffect(() => {
-    if (!esAdultoConAR) return;
     getMenores()
       .then((lista) => {
         setMenores(lista);
         if (lista[0]) setMenorElegido(lista[0].id);
       })
-      .catch((err) => setErrorMenores(mensajeDeError(err, "No se pudo cargar tu listado de menores.")));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esAdultoConAR]);
+      .catch((err) => setErrorMenores(mensajeDeError(err, "No pudimos cargar a tus chicos.")));
+  }, []);
 
   async function autorizar() {
     if (!menorElegido) return;
     setAutorizando(true);
-    setMensajeAutorizacion(null);
+    setMensaje(null);
     setError(null);
     try {
-      await autorizarTutor(menorElegido, params.id);
-      const nombreMenor = menores?.find((m) => m.id === menorElegido);
-      setMensajeAutorizacion(
-        nombreMenor
-          ? `Autorizaste a este tutor para ${nombreMenor.nombre}.`
-          : "Tutor autorizado."
-      );
+      await autorizarTutor(menorElegido, tutorId);
+      const m = menores?.find((x) => x.id === menorElegido);
+      setMensaje(m ? `Autorizaste a este tutor para ${m.nombre}.` : "Tutor autorizado.");
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo autorizar al tutor."));
+      setError(mensajeDeError(err, "No pudimos autorizar al tutor."));
     } finally {
       setAutorizando(false);
     }
   }
 
-  async function toggleNoConfiable(nuevoValor: boolean) {
-    setEnviandoNoConfiable(true);
-    setMensajeNoConfiable(null);
-    setError(null);
+  async function cambiarConfianza(valor: boolean) {
+    setGuardandoConfianza(true);
     try {
-      await api.patch("/api/autorizaciones/no-confiable", {
-        tutorId: params.id,
-        noConfiable: nuevoValor,
-      });
-      setNoConfiable(nuevoValor);
-      setMensajeNoConfiable(
-        nuevoValor
-          ? "Tutor marcado como no confiable. Ya no aparece en los resultados de búsqueda de tu cuenta."
-          : "Tutor desmarcado como no confiable."
-      );
+      await api.patch("/api/autorizaciones/no-confiable", { tutorId, noConfiable: valor });
+      setNoConfiable(valor);
+      toast.mostrar(valor ? "Listo: ya no aparece en las búsquedas de tus chicos." : "Volvió a aparecer en las búsquedas de tus chicos.");
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message || "No se pudo actualizar el estado de confianza.");
-      } else {
-        setError("No se pudo actualizar el estado de confianza.");
-      }
+      toast.mostrar(mensajeDeError(err, "No pudimos guardar el cambio."), { tono: "error" });
     } finally {
-      setEnviandoNoConfiable(false);
+      setGuardandoConfianza(false);
     }
   }
 
   return (
-    <>
-      <Cabecera />
-
-      <main className="mx-auto max-w-2xl px-5 py-8">
-        {cargando && <Cargando>Cargando perfil...</Cargando>}
-
-        {error && !cargando && (
-          <Alerta tono="error">
-            {error}
-            <Boton
-              variante="secundario"
-              tamano="sm"
-              className="mt-3 flex"
-              onClick={cargar}
-            >
-              Reintentar
-            </Boton>
-          </Alerta>
-        )}
-
-        {perfil && (
-          <div>
-            <Tarjeta className="mb-4 w-full max-w-none p-8">
-              <h1 className="mb-2 text-2xl">
-                {perfil.nombre} {perfil.apellido}
-              </h1>
-
-              {perfil.materias.length > 0 && (
-                <div className="mb-4">
-                  {perfil.materias.map((m) => (
-                    <Insignia
-                      key={m}
-                      tono="exito"
-                      className="mb-1.5 mr-1.5 px-2.5"
-                    >
-                      {m}
-                    </Insignia>
-                  ))}
-                </div>
-              )}
-
-              <dl className="m-0">
-                {perfil.nivel && (
-                  <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                    <dt className="font-semibold">Nivel</dt>
-                    <dd className="m-0 text-right">{perfil.nivel}</dd>
-                  </div>
-                )}
-                {typeof perfil.precioHora === "number" && (
-                  <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                    <dt className="font-semibold">Precio por hora</dt>
-                    <dd className="m-0 text-right">
-                      {formatearPrecio(perfil.precioHora)}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Calificación</dt>
-                  <dd className="m-0 text-right">
-                    {perfil.calificacionPromedio !== null &&
-                    perfil.cantidadCalificaciones >= 5
-                      ? `${perfil.calificacionPromedio.toFixed(1)} (${perfil.cantidadCalificaciones})`
-                      : "Sin calificaciones suficientes"}
-                  </dd>
-                </div>
-              </dl>
-            </Tarjeta>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {puedeReservar ? (
-                <Link
-                  href={`/reservar?tutor=${perfil.id}`}
-                  className={clasesBoton("primario")}
-                >
-                  Reservar clase
+    <Seccion titulo="Para tus chicos">
+      <div className="flex flex-col gap-6 rounded-tarjeta border border-borde bg-superficie p-5">
+        <div>
+          <p className="text-[15px] text-tinta-suave">
+            Tus hijos solo pueden pedir clases a tutores que vos autorizaste.
+          </p>
+          <div className="mt-4">
+            {errorMenores && <Alerta tono="peligro">{errorMenores}</Alerta>}
+            {!errorMenores && menores === null && <Skeleton className="h-12 w-full rounded-control" />}
+            {menores !== null && menores.length === 0 && (
+              <p className="text-[15px] text-tinta-suave">
+                Todavía no diste de alta a ningún menor.{" "}
+                <Link href="/cuenta/menores" className="font-semibold">
+                  Sumá a tu hijo o hija
                 </Link>
-              ) : (
-                <Alerta tono="aviso" className="w-fit">
-                  Las clases para menores se habilitan al finalizar el piloto.
-                  Pedile a tu adulto responsable que te autorice a esta tutora/o.
-                </Alerta>
-              )}
-
-              {!esMenor && <FormularioDenuncia denunciadoId={perfil.id} />}
-            </div>
-
-            {esAdultoConAR && (
-              <div className="mt-6">
-                <h2 className="mb-3 text-lg">
-                  Autorizacion
-                </h2>
-
-                <div className="mb-4">
-                  {errorMenores && <Alerta tono="error">{errorMenores}</Alerta>}
-
-                  {!errorMenores && menores === null && (
-                    <Cargando>Cargando tus menores…</Cargando>
-                  )}
-
-                  {menores !== null && menores.length === 0 && (
-                    <EstadoVacio className="mx-0 max-w-none py-4 text-left">
-                      Todavía no diste de alta a ningún menor. Podés hacerlo desde tu cuenta.
-                    </EstadoVacio>
-                  )}
-
-                  {menores !== null && menores.length > 0 && (
-                    <div className="flex flex-wrap items-end gap-3">
-                      <CampoSelect
-                        id="menorAAutorizar"
-                        etiqueta="Menor"
-                        etiquetaOculta
-                        value={menorElegido}
-                        onChange={(e) => setMenorElegido(e.target.value)}
-                      >
-                        {menores.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nombre} {m.apellido}
-                          </option>
-                        ))}
-                      </CampoSelect>
-                      <Boton
-                        tamano="sm"
-                        cargando={autorizando}
-                        textoCargando="Autorizando…"
-                        onClick={autorizar}
-                      >
-                        Autorizar para este menor
-                      </Boton>
-                    </div>
-                  )}
-
-                  {mensajeAutorizacion && (
-                    <Alerta tono="exito" className="mt-2 w-fit">
-                      {mensajeAutorizacion}
-                    </Alerta>
-                  )}
-                </div>
-
-                <div
-                  className="mb-2 flex items-center gap-3"
-                >
-                  <label
-                    htmlFor="no-confiable"
-                    className="flex cursor-pointer items-center gap-2"
-                    style={{ cursor: enviandoNoConfiable ? "not-allowed" : "pointer" }}
-                  >
-                    <input
-                      id="no-confiable"
-                      type="checkbox"
-                      className="h-[1.1rem] w-[1.1rem] accent-teal-600 disabled:cursor-not-allowed"
-                      checked={noConfiable}
-                      disabled={enviandoNoConfiable}
-                      onChange={(e) => toggleNoConfiable(e.target.checked)}
-                    />
-                    Marcar como no confiable
-                  </label>
-                </div>
-                <p
-                  className="mb-2 text-sm text-slate-500"
-                >
-                  Sacarlo de tus resultados de busqueda.
-                </p>
-
-                {mensajeNoConfiable && (
-                  <Alerta tono="exito" className="mt-2 w-fit">
-                    {mensajeNoConfiable}
-                  </Alerta>
-                )}
-              </div>
-            )}
-
-            {payload && (
-              <p className="text-xs text-slate-500">
-                Tu cuenta: {NOMBRE_TIPO[payload.tipo ?? ""] ?? payload.tipo ?? "usuario"}
+                .
               </p>
             )}
+            {menores !== null && menores.length > 0 && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <Selector id="menorAAutorizar" etiqueta="Menor" value={menorElegido} onChange={(e) => setMenorElegido(e.target.value)}>
+                    {menores.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nombre} {m.apellido}
+                      </option>
+                    ))}
+                  </Selector>
+                </div>
+                <Boton cargando={autorizando} textoCargando="Autorizando…" onClick={autorizar}>
+                  Autorizar para este menor
+                </Boton>
+              </div>
+            )}
+            {mensaje && <Alerta tono="exito" className="mt-3">{mensaje}</Alerta>}
+            {error && <Alerta tono="peligro" className="mt-3">{error}</Alerta>}
           </div>
-        )}
-      </main>
-    </>
+        </div>
+        <div className="border-t border-borde pt-5">
+          <Interruptor
+            id="no-confiable"
+            etiqueta="Marcar como no confiable"
+            descripcion={`${nombreTutor} deja de aparecer en las búsquedas de tus chicos. Es privado: no se le avisa a nadie.`}
+            activo={noConfiable}
+            disabled={guardandoConfianza}
+            onCambio={cambiarConfianza}
+          />
+        </div>
+      </div>
+    </Seccion>
   );
 }
+

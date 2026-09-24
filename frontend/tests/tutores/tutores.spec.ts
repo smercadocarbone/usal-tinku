@@ -15,7 +15,7 @@ const PERFIL_MOCK = {
   nivel: "secundario",
   calificacionPromedio: 4.8,
   cantidadCalificaciones: 12,
-  precioHora: 5000,
+  precioSesion: 5000,
 };
 
 test.describe("Perfil de Tutor — denuncia y autorización", () => {

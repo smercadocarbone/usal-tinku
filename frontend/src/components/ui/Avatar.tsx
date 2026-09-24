@@ -41,7 +41,7 @@ export interface AvatarProps {
 export default function Avatar({ nombre, apellido, semilla, foto, tamano = "md", verificado, className }: AvatarProps) {
   const color = FONDOS[hash(semilla ?? `${nombre}${apellido ?? ""}`) % FONDOS.length];
   return (
-    <span aria-hidden className={cn("relative inline-flex shrink-0", className)}>
+    <span aria-hidden className={cn("relative inline-flex h-fit w-fit shrink-0 self-start", className)}>
       {foto ? (
         // eslint-disable-next-line @next/next/no-img-element -- blob/URL del backend autenticado, sin optimizador
         <img src={foto} alt="" className={cn("rounded-full object-cover ring-2 ring-superficie", TAMANOS[tamano])} />

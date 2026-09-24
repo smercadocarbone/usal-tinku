@@ -8,7 +8,7 @@ export class ReservarPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.selectHora = page.getByLabel("Horario");
-    this.botonReservar = page.getByRole("button", { name: "Reservar y pagar" });
+    this.botonReservar = page.getByRole("button", { name: "Confirmar y pagar" });
   }
 
   async goto(tutorId: string): Promise<void> {
@@ -19,9 +19,10 @@ export class ReservarPage extends BasePage {
     return this.page.getByRole("button", { name: etiqueta });
   }
 
-  async elegirFranjaYHora(etiquetaFranja: string, hora: string): Promise<void> {
-    await this.franja(etiquetaFranja).click();
-    await this.selectHora.selectOption(hora);
+  /** Paso "Cuándo": el primer día con horarios ya viene elegido; se toca el horario. */
+  async elegirHorario(etiquetaHorario: string): Promise<void> {
+    await this.page.getByRole("button", { name: new RegExp(etiquetaHorario) }).click();
+    await this.page.getByRole("button", { name: "Continuar", exact: true }).click();
   }
 
   async confirmar(): Promise<void> {
