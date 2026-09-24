@@ -1,59 +1,55 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { getAlertasMias, getDenunciasRecibidas } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
-import Cabecera from "@/components/Cabecera";
+import AppShell from "@/components/shell/AppShell";
 import SettingsShell, { type GrupoNavAjustes } from "@/components/settings/SettingsShell";
 
+/** Rutas de "ajustes" de la cuenta: van con el menú lateral. El resto son destinos
+ *  principales (Mis clases, Mis chicos, Mi agenda…) y ocupan la pantalla entera. */
+const RUTAS_AJUSTES = ["/cuenta", "/cuenta/acceso", "/cuenta/seguridad"];
+
 export default function CuentaLayout({ children }: { children: ReactNode }) {
-  const session = useSesion();
-  const payload = session?.payload;
+  const pathname = usePathname();
+  const sesion = useSesion();
+  const [tieneCasos, setTieneCasos] = useState(false);
+
+  // "Casos y reportes" solo aparece si hay alguno (UX-05 §1): a quien no tiene
+  // ninguno, "Denuncias y alertas" en el menú le suena alarmante.
+  useEffect(() => {
+    if (!sesion || sesion.payload.tipo === "MENOR") return;
+    let vivo = true;
+    Promise.all([getDenunciasRecibidas().catch(() => []), getAlertasMias().catch(() => [])]).then(([d, a]) => {
+      if (vivo) setTieneCasos(d.length + a.length > 0);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [sesion]);
+
+  if (!RUTAS_AJUSTES.includes(pathname)) {
+    return <AppShell>{children}</AppShell>;
+  }
 
   const grupos: GrupoNavAjustes[] = [
     {
-      titulo: "Cuenta",
+      titulo: "Tu cuenta",
       items: [
         { href: "/cuenta", label: "Perfil" },
-        { href: "/cuenta/acceso", label: "Acceso" },
+        { href: "/cuenta/acceso", label: "Seguridad y acceso" },
+        ...(tieneCasos || pathname === "/cuenta/seguridad" ? [{ href: "/cuenta/seguridad", label: "Casos y reportes" }] : []),
       ],
     },
   ];
 
-  if (payload?.tipo === "TUTOR") {
-    grupos.push({
-      titulo: "Tutor",
-      items: [
-        { href: "/cuenta/horarios", label: "Mis Horarios" },
-        { href: "/cuenta/materias", label: "Mis Materias" },
-        { href: "/cuenta/precio", label: "Configuración de Precio" },
-      ],
-    });
-  }
-
-  if (payload?.cap_ar === true) {
-    grupos.push({
-      titulo: "Adulto responsable",
-      items: [{ href: "/cuenta/menores", label: "Menores a cargo" }],
-    });
-  }
-
-  grupos.push({
-    titulo: "General",
-    items: [
-      { href: "/cuenta/reservas", label: "Mis reservas" },
-      { href: "/cuenta/seguridad", label: "Denuncias y alertas" },
-    ],
-  });
-
   return (
-    <>
-      <Cabecera enlaces={[{ href: "/buscar", label: "Buscar tutores" }]} />
-      <main className="mx-auto max-w-5xl px-5 py-8">
-        <h1 className="text-xl tracking-tight text-slate-800">Mi cuenta</h1>
-        <SettingsShell base="/cuenta" grupos={grupos}>
-          {children}
-        </SettingsShell>
-      </main>
-    </>
+    <AppShell>
+      <h1 className="text-[28px] font-extrabold sm:text-[40px]">Mi cuenta</h1>
+      <SettingsShell base="/cuenta" grupos={grupos}>
+        {children}
+      </SettingsShell>
+    </AppShell>
   );
 }

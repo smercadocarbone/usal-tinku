@@ -143,7 +143,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
 
   return (
     <>
-      <Cabecera enlaces={[{ href: "/buscar", label: "Buscar" }]} />
+      <Cabecera />
 
       <main className="mx-auto max-w-2xl px-5 py-8">
         {cargando && <Cargando>Cargando perfil...</Cargando>}

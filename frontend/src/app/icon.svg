@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tinku">
-  <rect width="64" height="64" rx="14" fill="#0d9488"/>
+  <rect width="64" height="64" rx="14" fill="#146251"/>
   <path d="M16 20h32v7.5H36.2V48h-8.4V27.5H16z" fill="#ffffff"/>
-  <circle cx="50" cy="45" r="4.5" fill="#ffffff"/>
+  <circle cx="50" cy="45" r="4.5" fill="#f59e2b"/>
 </svg>

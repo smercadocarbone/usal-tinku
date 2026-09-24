@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <Cabecera enlaces={[{ href: "/cuenta", label: "Mi cuenta" }]} />
+      <Cabecera />
       <main className="mx-auto max-w-6xl px-5 py-8">
         <h1 className="text-xl tracking-tight text-slate-800">Panel de Administración</h1>
         <p className="mt-1 text-sm text-slate-500">

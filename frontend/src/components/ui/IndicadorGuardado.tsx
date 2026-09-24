@@ -39,14 +39,14 @@ export default function IndicadorGuardado({
   }
 
   return (
-    <span role="status" className={cn("flex items-center gap-1.5 text-sm text-slate-500", className)}>
+    <span role="status" className={cn("flex items-center gap-1.5 text-sm text-tinta-tenue", className)}>
       {estado === "guardando" ? (
         <>
           <Loader2 className="animate-spin" size={16} aria-hidden /> {textoGuardando}
         </>
       ) : (
         <>
-          <CloudCheck className="text-teal-700" size={16} aria-hidden /> {textoOk}
+          <CloudCheck className="text-marca-700" size={16} aria-hidden /> {textoOk}
         </>
       )}
     </span>

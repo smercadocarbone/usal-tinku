@@ -62,8 +62,8 @@ export default function Tabs<T extends string>({
       className={cn(
         "no-scrollbar flex overflow-x-auto",
         variante === "subrayado"
-          ? "gap-6 border-b border-slate-200"
-          : "w-fit gap-1 rounded-lg bg-slate-100 p-1",
+          ? "gap-6 border-b border-borde"
+          : "w-fit gap-1 rounded-pastilla bg-superficie-hundida p-1",
         className
       )}
     >
@@ -88,11 +88,11 @@ export default function Tabs<T extends string>({
               "cursor-pointer whitespace-nowrap transition-colors",
               variante === "subrayado"
                 ? seleccionado
-                  ? "border-b-2 border-teal-700 pb-3 text-sm font-semibold text-teal-700"
-                  : "border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800"
+                  ? "-mb-px min-h-11 border-b-2 border-tinta pb-3 text-[15px] font-bold text-tinta"
+                  : "-mb-px min-h-11 border-b-2 border-transparent pb-3 text-[15px] font-semibold text-tinta-tenue hover:text-tinta"
                 : seleccionado
-                  ? "rounded-md bg-teal-700 px-4 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+                  ? "min-h-10 rounded-pastilla bg-superficie px-4 text-sm font-bold text-tinta shadow-elevado"
+                  : "min-h-10 rounded-pastilla px-4 text-sm font-semibold text-tinta-suave hover:text-tinta"
             )}
           >
             {o.label}

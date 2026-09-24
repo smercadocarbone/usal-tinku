@@ -492,7 +492,7 @@ export default function BuscarPage() {
 
   return (
     <>
-      <Cabecera enlaces={[{ href: "/cuenta", label: "Mi cuenta" }]} />
+      <Cabecera />
 
       <main className="mx-auto max-w-6xl px-5 pb-16">
         <section className="mx-auto max-w-2xl pb-4 pt-10 text-center">
