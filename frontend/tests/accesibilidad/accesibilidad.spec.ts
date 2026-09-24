@@ -74,7 +74,7 @@ test.describe("Accesibilidad", () => {
       await page.goto("/registro");
       expect(await violacionesGraves(page)).toEqual([]);
 
-      await page.getByRole("button", { name: "Soy mayor de edad" }).click();
+      await page.getByRole("radio", { name: /Voy a tomar clases/ }).click();
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       expect(await violacionesGraves(page)).toEqual([]);
 
@@ -82,6 +82,7 @@ test.describe("Accesibilidad", () => {
       await page.getByLabel("Apellido").fill("Pérez");
       await page.getByLabel("DNI").fill("30111222");
       await page.getByLabel("Fecha de nacimiento").fill("1995-04-10");
+      await page.getByLabel("Email").fill("ana@example.com");
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       expect(await violacionesGraves(page)).toEqual([]);
 
@@ -94,7 +95,7 @@ test.describe("Accesibilidad", () => {
         ),
       });
       await page.getByRole("button", { name: "Verificar", exact: true }).click();
-      await expect(page.getByLabel("Email")).toBeVisible();
+      await expect(page.getByLabel("Repetí la contraseña")).toBeVisible();
       expect(await violacionesGraves(page)).toEqual([]);
     }
   );

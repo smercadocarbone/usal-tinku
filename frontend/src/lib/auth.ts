@@ -72,3 +72,12 @@ export function isAuthenticated(): boolean {
   }
   return true;
 }
+/** Pantalla de inicio de cada rol: el tutor arranca en su agenda; el resto, en sus clases. */
+export function inicioPorRol(payload: PayloadSesion | null | undefined): string {
+  return payload?.tipo === "TUTOR" ? "/cuenta/horarios" : "/cuenta/reservas";
+}
+
+/** Payload de un token recién emitido (para decidir a dónde ir después del login). */
+export function payloadDeToken(token: string): PayloadSesion | null {
+  return decodePayload(token);
+}

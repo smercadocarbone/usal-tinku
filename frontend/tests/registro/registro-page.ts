@@ -27,7 +27,7 @@ export class RegistroPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.botonSoyAdulto = page.getByRole("button", { name: "Soy mayor de edad" });
+    this.botonSoyAdulto = page.getByRole("radio", { name: /Voy a tomar clases/ });
     this.botonContinuar = page.getByRole("button", { name: "Continuar", exact: true });
     this.botonVerificar = page.getByRole("button", { name: "Verificar", exact: true });
     this.botonCrearCuenta = page.getByRole("button", { name: "Crear cuenta", exact: true });
@@ -47,6 +47,7 @@ export class RegistroPage extends BasePage {
     await this.page.getByLabel("Apellido").fill(datos.apellido);
     await this.page.getByLabel("DNI").fill(datos.dni);
     await this.page.getByLabel("Fecha de nacimiento").fill(datos.fechaNacimiento);
+    await this.page.getByLabel("Email").fill(datos.email || "sin-email@example.com");
     await this.botonContinuar.click();
   }
 
@@ -55,8 +56,7 @@ export class RegistroPage extends BasePage {
     await this.botonVerificar.click();
   }
 
-  async crearAcceso(email: string, password: string): Promise<void> {
-    await this.page.getByLabel("Email").fill(email);
+  async crearAcceso(password: string): Promise<void> {
     // "Contraseña" es substring de "Repetí la contraseña" — exact evita el
     // choque entre los dos campos.
     await this.page.getByLabel("Contraseña", { exact: true }).fill(password);
@@ -69,6 +69,6 @@ export class RegistroPage extends BasePage {
     await this.elegirRolAdulto();
     await this.completarDatosPersonales(datos);
     await this.verificarIdentidad();
-    await this.crearAcceso(datos.email, datos.password);
+    await this.crearAcceso(datos.password);
   }
 }

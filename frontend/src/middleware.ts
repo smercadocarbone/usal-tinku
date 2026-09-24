@@ -19,7 +19,10 @@ export function middleware(request: NextRequest) {
   if (!token) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("siguiente", pathname);
+    // La query se preserva en `siguiente` (ej. /buscar?materia=Física): sin eso, el
+    // usuario vuelve del login a una búsqueda vacía.
+    url.search = "";
+    url.searchParams.set("siguiente", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

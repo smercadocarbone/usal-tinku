@@ -1,254 +1,263 @@
 import Link from "next/link";
 import {
   Atom,
+  BadgeCheck,
   BookOpen,
-  Building2,
   Calculator,
+  CalendarCheck,
+  ChevronRight,
+  Code2,
   FlaskConical,
-  GraduationCap,
-  HeartHandshake,
+  Globe2,
   Languages,
-  School,
-  Users,
+  Search,
+  Sigma,
+  Video,
+  WalletCards,
   type LucideIcon,
 } from "lucide-react";
+import Cabecera from "@/components/Cabecera";
+import Logo from "@/components/Logo";
 import TarjetasSeguridad from "@/components/TarjetasSeguridad";
+import BuscadorHero from "@/components/landing/BuscadorHero";
+import { Acordeon, Avatar, Insignia, clasesBoton } from "@/components/ui";
+import { TIEMPOS } from "@/lib/tiempos";
 
-const MATERIAS: { nombre: string; descripcion: string; icono: LucideIcon }[] = [
+const MATERIAS: { nombre: string; icono: LucideIcon }[] = [
+  { nombre: "Matemática", icono: Calculator },
+  { nombre: "Física", icono: Atom },
+  { nombre: "Química", icono: FlaskConical },
+  { nombre: "Inglés", icono: Languages },
+  { nombre: "Lengua", icono: BookOpen },
+  { nombre: "Historia", icono: Globe2 },
+  { nombre: "Análisis Matemático", icono: Sigma },
+  { nombre: "Programación", icono: Code2 },
+];
+
+const PASOS: { icono: LucideIcon; titulo: string; texto: string }[] = [
   {
-    nombre: "Matemática",
-    descripcion: "Operaciones, álgebra, funciones y todo el programa escolar.",
-    icono: Calculator,
+    icono: Search,
+    titulo: "Buscá",
+    texto: "Contanos qué necesitás aprender y te mostramos tutores verificados que lo enseñan.",
   },
   {
-    nombre: "Física",
-    descripcion: "Cinemática, fuerzas, energía y problemas guiados paso a paso.",
-    icono: Atom,
+    icono: CalendarCheck,
+    titulo: "Reservá y pagá",
+    texto: `Elegí el horario y pagá con MercadoPago. El dinero queda retenido hasta ${TIEMPOS.liberacionHoras} hs después de la clase.`,
   },
   {
-    nombre: "Química",
-    descripcion: "Estequiometría, reacciones y preparación de parciales.",
-    icono: FlaskConical,
+    icono: Video,
+    titulo: "Tomá la clase",
+    texto: "Entrás al aula de Tinku desde el navegador, sin instalar nada. Al terminar, calificás al tutor.",
+  },
+];
+
+const PREGUNTAS = [
+  {
+    pregunta: "¿Cómo se paga?",
+    respuesta: `Con MercadoPago, al reservar. Tenés ${TIEMPOS.pagoMinutos} minutos para completar el pago; si no, el horario se libera. El dinero queda retenido y se le libera al tutor ${TIEMPOS.liberacionHoras} hs después de la clase.`,
   },
   {
-    nombre: "Inglés",
-    descripcion: "Clases de conversación, gramática y apoyo con tareas.",
-    icono: Languages,
+    pregunta: "¿Qué pasa si la clase no se da?",
+    respuesta: `Si cancelás con más de ${TIEMPOS.cancelacionSinPenalidadHoras} hs de anticipación, te devolvemos el total. Si el tutor no se conecta, también te devolvemos todo.`,
   },
   {
-    nombre: "Lengua",
-    descripcion: "Lectura, escritura, análisis de texto y redacción.",
-    icono: BookOpen,
+    pregunta: "¿Desde qué edad se puede usar?",
+    respuesta: `Desde los ${TIEMPOS.edadMinimaMenor} años, siempre con un adulto responsable que crea la cuenta del chico, autoriza a cada tutor y paga. Durante el piloto, las clases son solo para mayores de 18.`,
+  },
+  {
+    pregunta: "¿Cómo se verifica a un tutor?",
+    respuesta:
+      "Valida su identidad con el DNI al registrarse, y nuestro equipo revisa a mano su título o certificado antes de que pueda aparecer en las búsquedas.",
   },
 ];
 
 export default function HomePage() {
   return (
-    <main>
-      {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-teal-700 opacity-20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 -right-24 -z-10 h-80 w-80 rounded-full bg-teal-700 opacity-10 blur-3xl"
-        />
-
-        <div className="mx-auto grid min-h-[80vh] max-w-6xl grid-cols-1 items-center gap-14 px-5 py-16 lg:grid-cols-2 lg:gap-12">
-          <div>
-            <p
-              className="mb-5 inline-flex items-center gap-2 animate-fade-in-up motion-reduce:animate-none rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-500"
-              style={{ animationDelay: "0ms" }}
-            >
-              <span className="h-2 w-2 rounded-full bg-teal-600" />
-              Tutorías en línea para toda Argentina
-            </p>
-
-            <h1
-              className="animate-fade-in-up motion-reduce:animate-none text-5xl font-extrabold tracking-tight text-slate-800 md:text-7xl"
-              style={{ animationDelay: "100ms" }}
-            >
-              El apoyo escolar que necesitás,{" "}
-              <span className="text-teal-700">sin barreras geográficas</span>
-            </h1>
-
-            <p
-              className="animate-fade-in-up motion-reduce:animate-none mt-6 max-w-xl text-lg text-slate-500"
-              style={{ animationDelay: "200ms" }}
-            >
-              Conectamos alumnos con Tutores verificados para clases en un aula
-              virtual segura: se paga al terminar, la clase queda resumida por
-              IA y las identidades están validadas desde el primer día.
-            </p>
-
-            <div
-              className="animate-fade-in-up motion-reduce:animate-none mt-9 flex flex-col gap-4 sm:flex-row"
-              style={{ animationDelay: "300ms" }}
-            >
-              <Link
-                href="/buscar"
-                className="rounded-xl bg-teal-700 px-6 py-3 text-center text-base font-semibold text-white no-underline transition-all duration-300 hover:scale-105 hover:bg-teal-800 hover:shadow-[0_0_20px_rgba(13,148,136,0.4)] active:scale-95"
-              >
-                Encontrar un Tutor
-              </Link>
+    <>
+      <Cabecera variante="publica" />
+      <main>
+        {/* ============ HERO ============ */}
+        <section className="relative overflow-hidden border-b border-borde bg-[linear-gradient(180deg,#ffffff_0%,#f6f8f7_100%)]">
+          <div className="mx-auto grid max-w-[1120px] grid-cols-1 items-center gap-12 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:pb-24 lg:pt-20">
+            <div className="motion-safe:animate-aparecer">
+              <Insignia tono="acento" icono={<BadgeCheck />} className="mb-6">
+                Tutores con identidad y título verificados
+              </Insignia>
+              <h1 className="text-[40px] font-extrabold leading-[1.05] sm:text-[56px]">
+                Clases particulares online, con tutores en los que podés confiar.
+              </h1>
+              <p className="mt-5 max-w-lg text-lg leading-relaxed text-tinta-suave">
+                Escolar, secundario y universitario. Pagás al reservar y el tutor cobra recién después de la clase.
+              </p>
+              <div className="mt-8">
+                <BuscadorHero />
+              </div>
               <Link
                 href="/registro/tutor"
-                className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-center text-base font-semibold text-teal-700 transition-all duration-300 hover:scale-105 hover:border-teal-700 hover:bg-teal-50 active:scale-95"
+                className="mt-6 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold text-tinta underline decoration-borde-fuerte underline-offset-4 hover:decoration-tinta"
               >
-                Quiero Enseñar
+                Quiero dar clases <ChevronRight className="size-4" aria-hidden />
               </Link>
             </div>
-          </div>
 
-          {/* Mockup del aula virtual */}
-          <div className="relative mx-auto w-full max-w-md">
-            <div className="animate-float rounded-2xl border border-slate-200 bg-white p-4 shadow-sm motion-reduce:animate-none">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-600/10 font-bold text-teal-700">
-                    M
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">
-                      Martín · Tutor
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Matemática · 3er año
-                    </p>
+            {/* Así se ve un tutor en Tinku: explica qué datos vas a encontrar (sello,
+                precio, próximo horario, pago protegido). Es ilustrativo. */}
+            <figure className="relative mx-auto w-full max-w-md" aria-labelledby="hero-ejemplo">
+              <div aria-hidden className="absolute -inset-6 -z-10 rounded-[40px] bg-marca-100/60 blur-2xl" />
+              <div className="rounded-[28px] border border-borde bg-superficie p-5 shadow-flotante">
+                <div className="flex items-center gap-4">
+                  <Avatar nombre="Valeria" apellido="Gómez" semilla="valeria" tamano="lg" verificado />
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold">Valeria G.</p>
+                    <p className="text-sm text-tinta-suave">Matemática · Física · Secundario</p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-700/10 px-2.5 py-1 text-xs font-semibold text-teal-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-teal-700" />
-                  En vivo
-                </span>
-              </div>
-
-              <div className="relative flex aspect-video items-center justify-center rounded-lg border border-slate-200 bg-slate-100">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-600/10 text-2xl font-bold text-teal-700">
-                  S
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Insignia tono="exito" icono={<BadgeCheck />}>Título verificado</Insignia>
+                  <Insignia>4,9 ★ · 38 clases</Insignia>
                 </div>
-                <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white">
-                  Sofía · Estudiante
-                </span>
+                <div className="mt-5 grid grid-cols-3 gap-2" aria-hidden>
+                  {["jue 18:00", "jue 19:00", "vie 17:30"].map((h, i) => (
+                    <span
+                      key={h}
+                      className={`rounded-control border px-2 py-2.5 text-center text-sm font-semibold ${i === 0 ? "border-tinta bg-tinta text-white" : "border-borde-fuerte"}`}
+                    >
+                      {h}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-5 flex items-center justify-between rounded-2xl bg-fondo p-4">
+                  <div className="flex items-center gap-3">
+                    <WalletCards className="size-5 text-marca-700" aria-hidden />
+                    <span className="text-sm font-semibold">Pago protegido hasta después de la clase</span>
+                  </div>
+                </div>
               </div>
-
-              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                <span className="font-semibold text-slate-800">Resumen IA:</span>{" "}
-                “División de polinomios” explicado con 3 ejercicios.
-              </div>
-            </div>
-            <div
-              aria-hidden
-              className="absolute -bottom-4 -left-4 -z-10 h-28 w-28 rounded-2xl bg-teal-700 opacity-10 blur-2xl"
-            />
+              <figcaption id="hero-ejemplo" className="mt-4 text-center text-sm text-tinta-tenue">
+                Así se ve un tutor en Tinku (ejemplo ilustrativo).
+              </figcaption>
+            </figure>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ============ ESCAPARATE: TOP MATERIAS ============ */}
-      <section className="bg-slate-50 py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 md:text-4xl">
-            Las materias más pedidas
-          </h2>
-          <p className="mt-3 max-w-2xl text-lg text-slate-500">
-            Explorá la oferta real de tutores y reservá la próxima clase sin
-            tener que registrarte primero.
-          </p>
+        {/* ============ CÓMO FUNCIONA ============ */}
+        <section id="como-funciona" className="mx-auto max-w-[1120px] scroll-mt-20 px-4 py-16 sm:px-6 lg:py-24">
+          <h2 className="text-[28px] font-extrabold sm:text-[40px]">Cómo funciona</h2>
+          <ol className="mt-10 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
+            {PASOS.map((p, i) => (
+              <li key={p.titulo} className="rounded-tarjeta border border-borde bg-superficie p-6">
+                <div className="flex items-center justify-between">
+                  <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-marca-50 text-marca-700">
+                    <p.icono className="size-6" />
+                  </span>
+                  <span className="text-5xl font-extrabold text-superficie-hundida" aria-hidden>
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="mt-6 text-xl font-bold">
+                  <span className="sr-only">Paso {i + 1}: </span>
+                  {p.titulo}
+                </h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-tinta-suave">{p.texto}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-          <div className="mt-10 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4">
+        {/* ============ SEGURIDAD PARA FAMILIAS ============ */}
+        <section className="bg-marca-950 text-white">
+          <div className="mx-auto max-w-[1120px] px-4 py-16 sm:px-6 lg:py-24">
+            <h2 className="max-w-2xl text-[28px] font-extrabold text-white sm:text-[40px]">
+              Pensado para que las familias confíen
+            </h2>
+            <p className="mt-4 max-w-2xl text-lg text-white/75">
+              Antes de poner tu tarjeta o dejar a tu hijo en una videollamada, estas son las garantías que ya vienen incluidas.
+            </p>
+            <TarjetasSeguridad />
+          </div>
+        </section>
+
+        {/* ============ MATERIAS ============ */}
+        <section className="mx-auto max-w-[1120px] px-4 py-16 sm:px-6 lg:py-24">
+          <h2 className="text-[28px] font-extrabold sm:text-[40px]">Las materias más pedidas</h2>
+          <p className="mt-3 max-w-2xl text-lg text-tinta-suave">Elegí una para ver quién la enseña.</p>
+          <ul className="mt-10 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-4">
             {MATERIAS.map((m) => (
-              <Link
-                key={m.nombre}
-                href="/buscar"
-                className="group w-72 shrink-0 snap-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-600/10 text-teal-700">
-                  <m.icono className="h-6 w-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800">{m.nombre}</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {m.descripcion}
-                </p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-teal-700">
-                  Buscar tutores <span aria-hidden>→</span>
-                </span>
+              <li key={m.nombre}>
+                <Link
+                  href={`/buscar?materia=${encodeURIComponent(m.nombre)}`}
+                  className="group flex min-h-24 flex-col justify-between gap-4 rounded-tarjeta border border-borde bg-superficie p-4 text-tinta no-underline transition-[border-color,box-shadow] hover:border-borde-fuerte hover:shadow-elevado sm:p-5"
+                >
+                  <m.icono className="size-6 text-marca-700" aria-hidden />
+                  <span className="flex items-center justify-between gap-2 text-[15px] font-bold sm:text-base">
+                    {m.nombre}
+                    <ChevronRight className="size-4 text-tinta-tenue transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ============ PARA TUTORES ============ */}
+        <section className="mx-auto max-w-[1120px] px-4 pb-16 sm:px-6 lg:pb-24">
+          <div className="grid gap-8 overflow-hidden rounded-[28px] bg-acento-100 p-8 sm:p-12 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+            <div>
+              <h2 className="text-[28px] font-extrabold sm:text-[40px]">¿Enseñás? Dá clases en Tinku.</h2>
+              <ul className="mt-6 flex list-none flex-col gap-3 p-0 text-[16px] text-tinta">
+                {[
+                  "Ponés tu precio y tus horarios.",
+                  `Cobrás por MercadoPago ${TIEMPOS.liberacionHoras} hs después de cada clase.`,
+                  "Las familias llegan sabiendo que estás verificado.",
+                ].map((t) => (
+                  <li key={t} className="flex gap-3">
+                    <BadgeCheck className="mt-0.5 size-5 shrink-0 text-acento-700" aria-hidden />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col gap-3 lg:items-end">
+              <Link href="/registro/tutor" className={clasesBoton("oscuro", "lg", "w-full lg:w-auto")}>
+                Crear mi perfil de tutor
               </Link>
-            ))}
+              <p className="text-sm text-tinta-suave">Te pedimos DNI y tu título o certificado.</p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ============ POR QUÉ CONFIAR ============ */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 md:text-4xl">
-          Pensado para que las familias confíen
-        </h2>
-        <p className="mt-3 max-w-2xl text-lg text-slate-500">
-          Antes de poner tu tarjeta o dejar a tu hijo en una videollamada,
-          estas son las garantías que ya vienen incluidas.
-        </p>
+        {/* ============ PREGUNTAS FRECUENTES ============ */}
+        <section className="mx-auto max-w-[720px] px-4 pb-20 sm:px-6 lg:pb-28">
+          <h2 className="text-center text-[28px] font-extrabold sm:text-[40px]">Preguntas frecuentes</h2>
+          <Acordeon items={PREGUNTAS} className="mt-10" />
+        </section>
+      </main>
 
-        <TarjetasSeguridad />
-      </section>
-
-      {/* ============ PARTNERS: COMUNIDAD EDUCATIVA ============ */}
-      <section className="border-y border-slate-200 bg-white py-16">
-        <div className="mx-auto max-w-6xl px-5">
-          <p className="text-center text-sm font-semibold uppercase tracking-widest text-slate-500">
-            En alianza con la comunidad educativa de toda Argentina
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {[
-              { icono: School, nombre: "Colegios y escuelas" },
-              { icono: GraduationCap, nombre: "Universidades y CBC" },
-              { icono: Building2, nombre: "Instituciones públicas" },
-              { icono: Users, nombre: "Centros de estudiantes" },
-              { icono: HeartHandshake, nombre: "ONGs educativas" },
-              { icono: Languages, nombre: "Comunidades de idiomas" },
-            ].map((p) => (
-              <span
-                key={p.nombre}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-500"
-              >
-                <p.icono className="h-4 w-4 text-teal-700" />
-                {p.nombre}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ FOOTER ============ */}
-      <footer className="bg-slate-50">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-12 md:flex-row md:items-start md:justify-between">
+      <footer className="border-t border-borde bg-superficie">
+        <div className="mx-auto flex max-w-[1120px] flex-col gap-8 px-4 py-12 sm:px-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xl font-extrabold text-slate-800">
-              Tinku<span className="text-teal-700">.</span>
-            </p>
-            <p className="mt-2 max-w-sm text-sm text-slate-500">
-              Tutorías en línea con Tutores verificados, pagos protegidos y
-              aulas seguras para menores.
+            <Logo />
+            <p className="mt-3 max-w-sm text-sm text-tinta-suave">
+              Clases particulares online con tutores verificados y pagos protegidos.
             </p>
           </div>
-          <nav className="flex flex-col gap-2 text-sm">
-            <Link href="/buscar" className="font-semibold text-slate-800 transition-colors hover:text-teal-700">
-              Encontrar un Tutor
+          <nav aria-label="Pie de página" className="flex flex-col gap-1 text-[15px]">
+            <Link href="/registro" className="min-h-10 font-semibold text-tinta no-underline hover:underline">
+              Crear cuenta
             </Link>
-            <Link href="/registro" className="font-semibold text-slate-800 transition-colors hover:text-teal-700">
-              Crear mi cuenta
+            <Link href="/login" className="min-h-10 font-semibold text-tinta no-underline hover:underline">
+              Ingresar
             </Link>
-            <Link href="/registro/tutor" className="font-semibold text-slate-800 transition-colors hover:text-teal-700">
-              Quiero enseñar
+            <Link href="/registro/tutor" className="min-h-10 font-semibold text-tinta no-underline hover:underline">
+              Dar clases en Tinku
             </Link>
           </nav>
         </div>
-        <p className="border-t border-slate-200 py-5 text-center text-xs text-slate-500">
-          © 2026 Tinku · Tutorías en línea para toda Argentina
+        <p className="border-t border-borde py-5 text-center text-xs text-tinta-tenue">
+          © 2026 Tinku · Tutorías online para toda Argentina
         </p>
       </footer>
-    </main>
+    </>
   );
 }
