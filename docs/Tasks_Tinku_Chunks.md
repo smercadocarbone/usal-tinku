@@ -153,6 +153,11 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 - [x] **Chunk TESIS-B** — Gate de menores del piloto (T-TES-10, spec `tesis/T10-gate-menores-piloto.md`, DT7) — _branch `tesis/gate-menores-piloto`. Riesgo bajo (corte fail-closed). Sin dependencias. Flag solo en true con T-M3-06 y T02 cerradas. Cerrado 2026-09-23: RED `expected:<409> but was:<201>` → GREEN; suite 432 run/0 fail (427 previos + 5): `GateMenoresPilotoIntegracionTest` (4) + `crearReserva_beneficiarioMenor_conFlagTrue_ok`._
 - [x] **Chunk TESIS-L** — Recomendaciones por resultado, sin rótulo "IA" (T-TES-12, spec `tesis/T12-ux-recomendaciones.md`) — _branch `tesis/ux-recomendaciones`. Riesgo bajo. Sin dependencias. Cerrado 2026-09-24: "Búsqueda inteligente con IA" → "Tutores recomendados para lo que necesitás" (`buscar/page.tsx`) y "resultados de matching" → "resultados de búsqueda" (`tutores/[id]/page.tsx`); E2E `BUSCAR-E2E-001` actualizado. PARAR §2.2: no se agrega la línea de "por qué" por resultado — el backend no devuelve materia/nivel que coincidan. Solo frontend: `bun run lint` + `npx tsc --noEmit -p .` en verde (sin suite de Maven)._
 
+
+## UX — Rediseño UX/UI (specs en `docs/superpowers/specs/ux/`)
+
+- [x] **Chunk UX-01..08 + U1** — _branch `claude/lucid-lovelace-htlv4z` (un commit por spec). Cerrado 2026-09-24: sistema visual, zona pública, embudo, cuenta, tutor, aula y admin; U1 (bio/foto) con V28 y Spec_M1 US-7; `ReservaResponse` con acciones del servidor. Suite 467 run/0 fail; E2E 76/76. Lo que depende de FASE2-01, FASE2-03, FASE3-03 o de endpoints que no existen quedó listado en `Tasks_Tinku_Implementacion.md` (sección UX)._
+
 ---
 
 ## FASE 2 — Remediación de auditoría (sessiones/branches por spec)
