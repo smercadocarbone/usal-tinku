@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import {
   actualizarCapacidades,
   getPerfilPropio,
@@ -18,7 +18,7 @@ const NOMBRE_TIPO: Record<string, string> = {
 };
 
 export default function CuentaPerfilPage() {
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
 
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);

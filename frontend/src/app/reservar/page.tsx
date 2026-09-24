@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import { formatearFechaCorta, formatearPrecio } from "@/lib/formatos";
 import {
   Alerta,
@@ -71,7 +71,7 @@ function ReservarForm() {
   const [horas, setHoras] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
 
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
   const esMenor = payload?.tipo === "MENOR";
 

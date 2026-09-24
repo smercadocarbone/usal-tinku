@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, autorizarTutor, getMenores, mensajeDeError, type Menor } from "@/lib/api";
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import { formatearPrecio } from "@/lib/formatos";
 import Cabecera from "@/components/Cabecera";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
@@ -39,7 +39,7 @@ const NOMBRE_TIPO: Record<string, string> = {
 };
 
 export default function TutorPerfilPage({ params }: { params: { id: string } }) {
-  const session = getSession();
+  const session = useSesion();
   const payload = session?.payload;
 
   const [perfil, setPerfil] = useState<TutorPerfil | null>(null);

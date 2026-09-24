@@ -1,11 +1,11 @@
 "use client";
 
-import { getSession } from "@/lib/auth";
+import { useSesion } from "@/lib/useSesion";
 import TabHorarios from "@/components/tutor/TabHorarios";
 import { Tarjeta } from "@/components/ui";
 
 export default function CuentaHorariosPage() {
-  const session = getSession();
+  const session = useSesion();
   const tutorId = String(session?.payload.sub ?? "");
 
   return (
