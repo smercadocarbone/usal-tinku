@@ -83,6 +83,12 @@ public class CredencialService {
         return credencialRepo.findFirstByTutorIdOrderByCreatedAtDesc(tutorId);
     }
 
+    /** B12: ¿el Tutor ya tiene alguna credencial APROBADA (aunque la última
+     *  siga en revisión)? Es la pregunta que el banner de /cuenta necesita. */
+    public boolean existeAprobada(UUID tutorId) {
+        return credencialRepo.findByTutorIdAndEstado(tutorId, EstadoCredencial.APROBADO).isPresent();
+    }
+
     /** El intento dentro del ciclo actual: 1 si el ciclo arranca, o el siguiente tras un rechazo. */
     private int numeroDeIntentoParaCiclo(UUID tutorId) {
         return CicloIntentos.siguiente(

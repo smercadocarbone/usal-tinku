@@ -84,8 +84,10 @@ export default function BannerCredencial() {
 
   if (credencial?.estado === "PENDIENTE") {
     return (
-      <Alerta tono="aviso" className="w-fit">
-        Tu credencial está en revisión por el equipo de Tinku.
+      <Alerta tono={credencial.tieneAprobada ? "exito" : "aviso"} className="w-fit">
+        {credencial.tieneAprobada
+          ? "Tu perfil está verificado. Tu nueva credencial está en revisión."
+          : "Tu credencial está en revisión por el equipo de Tinku."}
       </Alerta>
     );
   }

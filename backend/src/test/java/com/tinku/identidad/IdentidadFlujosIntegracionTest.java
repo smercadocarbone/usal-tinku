@@ -712,6 +712,22 @@ class IdentidadFlujosIntegracionTest {
         mockMvc.perform(get("/api/tutores/me/credencial")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("PENDIENTE"));
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tieneAprobada").value(false));
+    }
+
+    @Test
+    void credencialPropia_conAprobadaMasAntigua_yPendienteActual_diceQueEstaVerificado() throws Exception {
+        // B12: el tutor Jorge verificado que vuelve a subir una credencial nueva.
+        String token = registrarTutorYToken("26262626", "Jorge", "Estrada");
+        UUID aprobada = cargarCredencial(token, 201);
+        credencialService.marcarAprobada(aprobada, null);
+        cargarCredencial(token, 201); // la nueva, en revisión
+
+        mockMvc.perform(get("/api/tutores/me/credencial")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.tieneAprobada").value(true));
     }
 }
