@@ -237,7 +237,7 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
       const detalle = new ReservaDetallePage(page);
       await detalle.goto(RESERVA_ID);
 
-      await expect(page.getByRole("heading", { name: "Detalle de la reserva" })).toBeVisible();
+      await expect(page.getByText("Detalle de la reserva")).toBeAttached();
       await expect(detalle.botonEntrarClase).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Enviar calificación" })).toHaveCount(0);
     }

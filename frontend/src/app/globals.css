@@ -1,37 +1,125 @@
 @import "tailwindcss";
 
 /*
- * Sistema de diseño de Tinku.
+ * Sistema visual de Tinku (UX-01, `docs/superpowers/specs/ux/01-sistema-visual.md`).
  *
- * Paleta: slate (neutros) + teal (marca), ambas de la escala nativa de
- * Tailwind — no hay tokens propios de color. Elegidas por: (1) teal-600
- * es un verde-azulado "de confianza" sin ser corporativo-frío, apropiado
- * para una plataforma que maneja pagos y menores; (2) slate tiene
- * subtono frío que combina con teal sin choque de matiz (a diferencia de
- * gray/stone, neutros más cálidos usados antes en algunas pantallas);
- * (3) al ser paleta estándar de Tailwind, cualquier pantalla nueva hereda
- * consistencia sin tener que aprender nombres propios del proyecto.
+ * Las pantallas usan tokens SEMÁNTICOS (`marca`, `acento`, `tinta`, `superficie`,
+ * `borde`, `exito`/`aviso`/`peligro`/`info`), nunca un color crudo de la escala de
+ * Tailwind: el próximo cambio de marca es tocar este archivo.
  *
- * Radios: rounded-lg (controles: botones, inputs, chips) / rounded-2xl
- * (contenedores: tarjetas, paneles). Dos escalones, no más.
+ * Los ratios de contraste de cada valor están en la spec (§2). Si cambiás un valor,
+ * re-verificalo: texto ≥ 4.5:1, límites de controles ≥ 3:1.
  *
- * Sombra de tarjeta en reposo: shadow-sm; al hover, shadow-lg (ver
- * TutorCard en /buscar) — nunca shadow-md suelto, para no sumar un tercer
- * escalón de elevación.
+ * Alias temporales: `teal-*` y `slate-*` se redefinen con los valores de `marca` y de
+ * un neutro con el mismo matiz, para que las pantallas que todavía no migraron se vean
+ * del sistema nuevo mientras se reescriben (UX-01 §6, "dejá alias temporales").
  */
 @theme {
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+    var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
 
+  /* ---- Marca ---- */
+  --color-marca-50: #effaf6;
+  --color-marca-100: #d8f2e8;
+  --color-marca-200: #b3e4d3;
+  --color-marca-300: #7fcfb6;
+  --color-marca-400: #48b394;
+  --color-marca-500: #26967a;
+  --color-marca-600: #187a63;
+  --color-marca-700: #146251;
+  --color-marca-800: #134f43;
+  --color-marca-900: #113f37;
+  --color-marca-950: #0a2621;
+
+  /* ---- Acento: solo lo positivo. acento-500 como relleno con texto tinta; como
+     texto sobre blanco, solo acento-700. ---- */
+  --color-acento-50: #fff7ed;
+  --color-acento-100: #ffeccc;
+  --color-acento-300: #ffc26b;
+  --color-acento-500: #f59e2b;
+  --color-acento-700: #b45f06;
+
+  /* ---- Texto ---- */
+  --color-tinta: #14231f;
+  --color-tinta-suave: #475a55;
+  --color-tinta-tenue: #5f716c;
+
+  /* ---- Superficies y bordes ---- */
+  --color-superficie: #ffffff;
+  --color-superficie-alta: #ffffff;
+  --color-superficie-hundida: #eef2f0;
+  --color-fondo: #f6f8f7;
+  --color-borde: #e3e9e7;
+  --color-borde-fuerte: #c9d3d0;
+  --color-borde-control: #7f8f8a;
+
+  /* ---- Estados ---- */
+  --color-exito: #15803d;
+  --color-exito-suave: #ecfdf3;
+  --color-aviso: #b45309;
+  --color-aviso-suave: #fff8eb;
+  --color-peligro: #b91c1c;
+  --color-peligro-suave: #fef2f2;
+  --color-info: #1d4ed8;
+  --color-info-suave: #eff5ff;
+
+  /* ---- Alias temporales (ver cabecera) ---- */
+  --color-teal-50: #effaf6;
+  --color-teal-100: #d8f2e8;
+  --color-teal-200: #b3e4d3;
+  --color-teal-300: #7fcfb6;
+  --color-teal-400: #48b394;
+  --color-teal-500: #26967a;
+  --color-teal-600: #187a63;
+  --color-teal-700: #146251;
+  --color-teal-800: #134f43;
+  --color-teal-900: #113f37;
+  --color-slate-50: #f6f8f7;
+  --color-slate-100: #eef2f0;
+  --color-slate-200: #e3e9e7;
+  --color-slate-300: #c9d3d0;
+  --color-slate-400: #7f8f8a;
+  --color-slate-500: #5f716c;
+  --color-slate-600: #475a55;
+  --color-slate-700: #33443f;
+  --color-slate-800: #1f2e2a;
+  --color-slate-900: #14231f;
+
+  /* Aula (fondo oscuro para video): neutros oscuros con el matiz de marca. */
+  --color-gray-50: #f6f8f7;
+  --color-gray-100: #e3e9e7;
+  --color-gray-200: #c9d3d0;
+  --color-gray-300: #a9b6b2;
+  --color-gray-400: #8fa09b;
+  --color-gray-500: #6b7c77;
+  --color-gray-600: #4a5a55;
+  --color-gray-700: #2f3d39;
+  --color-gray-800: #18231f;
+  --color-gray-900: #0d1513;
+
+  /* ---- Forma ---- */
+  --radius-control: 12px;
+  --radius-tarjeta: 20px;
+  --radius-pastilla: 999px;
+
+  /* ---- Elevación: plano (solo borde) · elevado · flotante ---- */
+  --shadow-elevado: 0 1px 2px rgb(20 35 31 / 0.04), 0 4px 16px rgb(20 35 31 / 0.06);
+  --shadow-flotante: 0 8px 24px rgb(20 35 31 / 0.12), 0 24px 64px rgb(20 35 31 / 0.12);
+  --shadow-barra: 0 -1px 0 rgb(20 35 31 / 0.06), 0 -8px 24px rgb(20 35 31 / 0.06);
+
+  /* ---- Movimiento: 150–250 ms ease-out. Todo se usa bajo `motion-safe:`. ---- */
+  --ease-salida: cubic-bezier(0.22, 1, 0.36, 1);
   --animate-shake: shake 0.35s ease-in-out;
-  --animate-fade-in-up: fade-in-up 0.7s ease-out both;
-  --animate-float: float 3.5s ease-in-out infinite;
+  --animate-aparecer: aparecer 0.22s var(--ease-salida) both;
+  --animate-subir: subir 0.25s var(--ease-salida) both;
+  --animate-hoja: hoja 0.25s var(--ease-salida) both;
+  --animate-fondo: fondo 0.2s ease-out both;
 
-  @keyframes fade-in-up {
+  @keyframes aparecer {
     from {
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
@@ -39,13 +127,32 @@
     }
   }
 
-  @keyframes float {
-    0%,
-    100% {
+  @keyframes subir {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes hoja {
+    from {
+      transform: translateY(100%);
+    }
+    to {
       transform: translateY(0);
     }
-    50% {
-      transform: translateY(-8px);
+  }
+
+  @keyframes fondo {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 
@@ -70,32 +177,43 @@
 }
 
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-slate-50 font-sans text-slate-800 antialiased;
+    @apply bg-fondo font-sans text-tinta antialiased;
     line-height: 1.5;
+    font-feature-settings: "ss01", "cv11";
   }
 
-  /* teal-700 y no teal-600: sobre blanco, teal-600 da 3.75:1 y WCAG AA pide
-     4.5:1 para texto normal. El subrayado es el otro requisito (axe:
-     `link-in-text-block`): un enlace dentro de un párrafo no puede
-     distinguirse SOLO por color, porque quien no percibe ese contraste de
-     matiz no ve que hay un enlace. Los enlaces que visualmente son botones
-     lo desactivan con `no-underline` (ver `clasesBoton`). */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight text-tinta;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  /* marca-700 sobre blanco pasa AA para texto. El subrayado es el otro requisito
+     (axe: `link-in-text-block`); los enlaces que son botones lo desactivan con
+     `no-underline` (ver `clasesBoton`). */
   a {
-    @apply text-teal-700;
+    @apply text-marca-700;
   }
 
-  /* Solo dentro de prosa: ahí un enlace no puede distinguirse SOLO por color
-     (axe: `link-in-text-block`). Las tarjetas y la navegación quedan afuera a
-     propósito — ahí la posición y la forma ya dicen que son navegables, y
-     subrayarlas ensucia sin sumar. */
   p a {
-    @apply underline;
+    @apply underline underline-offset-2;
   }
 
-  /* El foco es un componente de interfaz, no texto: le alcanza con 3:1. */
+  /* El foco es un componente de interfaz: le alcanza con 3:1. */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-teal-600;
+    @apply outline-2 outline-offset-2 outline-marca-600;
+  }
+
+  ::selection {
+    @apply bg-marca-200 text-tinta;
   }
 }
 
@@ -106,5 +224,18 @@
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Deja lugar para la navegación inferior fija en mobile (y el home indicator). */
+  .pb-nav {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

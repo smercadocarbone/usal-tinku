@@ -1,133 +1,127 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ChevronRight, GraduationCap, Lock } from "lucide-react";
 import { useSesion } from "@/lib/useSesion";
-import {
-  actualizarCapacidades,
-  getPerfilPropio,
-  mensajeDeError,
-  type PerfilPropio,
-} from "@/lib/api";
-import BannerCredencial from "@/components/BannerCredencial";
-import { Alerta, Boton, CampoCheckbox, Cargando, Tarjeta } from "@/components/ui";
-
-const NOMBRE_TIPO: Record<string, string> = {
-  ADULTO: "Adulto",
-  MENOR: "Menor",
-  TUTOR: "Tutor",
-};
+import { actualizarCapacidades, getPerfilPropio, mensajeDeError, type PerfilPropio } from "@/lib/api";
+import { dniEnmascarado } from "@/lib/formatos";
+import { Avatar, Interruptor, Skeleton, Tarjeta, useToast } from "@/components/ui";
 
 export default function CuentaPerfilPage() {
-  const session = useSesion();
-  const payload = session?.payload;
+  const sesion = useSesion();
+  const payload = sesion?.payload;
+  const toast = useToast();
 
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);
-  const [cargandoPerfil, setCargandoPerfil] = useState(true);
-
-  const [capEstudiante, setCapEstudiante] = useState(false);
-  const [capAr, setCapAr] = useState(false);
-  const [guardandoCapacidades, setGuardandoCapacidades] = useState(false);
-  const [errorCapacidades, setErrorCapacidades] = useState<string | null>(null);
-  const [exitoCapacidades, setExitoCapacidades] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     getPerfilPropio()
-      .then((p) => {
-        setPerfil(p);
-        setCapEstudiante(p.capacidadEstudiante);
-        setCapAr(p.capacidadAdultoResponsable);
-      })
+      .then(setPerfil)
       .catch(() => setPerfil(null))
-      .finally(() => setCargandoPerfil(false));
+      .finally(() => setCargando(false));
   }, []);
 
-  async function onSubmitCapacidades(e: FormEvent) {
-    e.preventDefault();
-    setErrorCapacidades(null);
-    setExitoCapacidades(false);
-    setGuardandoCapacidades(true);
+  /** "¿Cómo usás Tinku?" se aplica al toque (UX-05 §2); si el backend lo rechaza, vuelve atrás. */
+  async function cambiar(capEst: boolean, capAr: boolean) {
+    if (!perfil) return;
+    const anterior = perfil;
+    setPerfil({ ...perfil, capacidadEstudiante: capEst, capacidadAdultoResponsable: capAr });
+    setGuardando(true);
     try {
-      const p = await actualizarCapacidades(capEstudiante, capAr);
-      setPerfil(p);
-      setExitoCapacidades(true);
+      setPerfil(await actualizarCapacidades(capEst, capAr));
+      toast.mostrar(
+        capAr && !anterior.capacidadAdultoResponsable
+          ? "Listo. Volvé a ingresar para ver Mis chicos en el menú."
+          : "Guardamos tus cambios"
+      );
     } catch (err) {
-      setErrorCapacidades(mensajeDeError(err, "No se pudieron actualizar las capacidades."));
+      setPerfil(anterior);
+      toast.mostrar(mensajeDeError(err, "No pudimos guardar el cambio."), { tono: "error" });
     } finally {
-      setGuardandoCapacidades(false);
+      setGuardando(false);
     }
   }
 
-  return (
-    <section>
-      <h2 className="text-lg font-semibold text-slate-800">Perfil</h2>
+  const esMenor = (perfil?.tipo ?? payload?.tipo) === "MENOR";
+  const esTutor = (perfil?.tipo ?? payload?.tipo) === "TUTOR";
 
-      {payload?.tipo === "TUTOR" && (
-        <div className="mt-4">
-          <BannerCredencial />
-        </div>
+  return (
+    <section className="flex flex-col gap-6">
+      <Tarjeta className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        {cargando ? (
+          <div role="status" className="flex items-center gap-4">
+            <span className="sr-only">Cargando tu perfil…</span>
+            <Skeleton className="size-16 rounded-full" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+          </div>
+        ) : (
+          <>
+            <Avatar nombre={perfil?.nombre ?? "?"} apellido={perfil?.apellido} semilla={perfil?.id} tamano="lg" />
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold">{perfil ? `${perfil.nombre} ${perfil.apellido}` : "Tu perfil"}</h2>
+              {perfil?.email && <p className="truncate text-[15px] text-tinta-suave">{perfil.email}</p>}
+              <p className="tabular mt-1 text-sm text-tinta-tenue">DNI {dniEnmascarado(payload?.sub)}</p>
+            </div>
+          </>
+        )}
+      </Tarjeta>
+
+      <p className="flex gap-2 text-sm text-tinta-tenue">
+        <Lock className="size-4 shrink-0 translate-y-0.5" aria-hidden />
+        Tu nombre y tu DNI vienen de la verificación de identidad y no se pueden cambiar. El email y la contraseña los cambiás en{" "}
+        <Link href="/cuenta/acceso" className="font-semibold underline">Seguridad y acceso</Link>.
+      </p>
+
+      {esMenor && (
+        <Tarjeta variante="plana">
+          <p className="text-[15px] text-tinta-suave">Tu cuenta la administra tu adulto responsable. Él o ella reserva y paga tus clases.</p>
+        </Tarjeta>
       )}
 
-      <dl className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
-          <dt className="text-sm font-semibold text-slate-800">DNI</dt>
-          <dd className="m-0 text-right text-sm text-slate-600 capitalize">{payload?.sub ?? "—"}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
-          <dt className="text-sm font-semibold text-slate-800">Tipo de cuenta</dt>
-          <dd className="m-0 text-right text-sm text-slate-600 capitalize">
-            {payload?.tipo ? NOMBRE_TIPO[payload.tipo] ?? payload.tipo : "—"}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
-          <dt className="text-sm font-semibold text-slate-800">Estudiante</dt>
-          <dd className="m-0 text-right text-sm text-slate-600 capitalize">
-            {payload?.cap_est ? "Activa" : "Inactiva"}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
-          <dt className="text-sm font-semibold text-slate-800">Adulto Responsable</dt>
-          <dd className="m-0 text-right text-sm text-slate-600 capitalize">
-            {payload?.cap_ar ? "Activa" : "Inactiva"}
-          </dd>
-        </div>
-      </dl>
+      {esTutor && (
+        <Link
+          href="/cuenta/perfil-tutor"
+          className="flex min-h-16 items-center gap-4 rounded-tarjeta border border-borde bg-superficie p-5 text-tinta no-underline hover:border-borde-fuerte"
+        >
+          <span aria-hidden className="flex size-11 items-center justify-center rounded-2xl bg-marca-50 text-marca-700">
+            <GraduationCap className="size-6" />
+          </span>
+          <span className="flex-1">
+            <span className="block font-bold">Mi perfil de tutor</span>
+            <span className="block text-sm text-tinta-suave">Presentación, foto, materias, precio y credencial</span>
+          </span>
+          <ChevronRight className="size-5 text-tinta-tenue" aria-hidden />
+        </Link>
+      )}
 
       {perfil?.tipo === "ADULTO" && (
-        <Tarjeta className="mt-6 w-full max-w-sm p-6">
-          <h3 className="mb-3 text-base font-semibold text-slate-800">Capacidades</h3>
-          {cargandoPerfil ? (
-            <Cargando>Cargando…</Cargando>
-          ) : (
-            <form className="flex flex-col gap-3" onSubmit={onSubmitCapacidades}>
-              <CampoCheckbox
-                id="capEstudiante"
-                etiqueta="Estudiante"
-                checked={capEstudiante}
-                onChange={(e) => setCapEstudiante(e.target.checked)}
-              />
-              <CampoCheckbox
-                id="capAr"
-                etiqueta="Adulto Responsable"
-                checked={capAr}
-                onChange={(e) => setCapAr(e.target.checked)}
-              />
-              {errorCapacidades && <Alerta tono="error">{errorCapacidades}</Alerta>}
-              {exitoCapacidades && <Alerta tono="exito">Capacidades actualizadas.</Alerta>}
-              <Boton
-                type="submit"
-                tamano="sm"
-                className="w-fit"
-                cargando={guardandoCapacidades}
-                textoCargando="Guardando…"
-                disabled={
-                  capEstudiante === perfil?.capacidadEstudiante &&
-                  capAr === perfil?.capacidadAdultoResponsable
-                }
-              >
-                Guardar capacidades
-              </Boton>
-            </form>
-          )}
+        <Tarjeta>
+          <h2 className="text-lg font-bold">¿Cómo usás Tinku?</h2>
+          <div className="mt-5 flex flex-col gap-5">
+            <Interruptor
+              id="capEstudiante"
+              etiqueta="Tomo clases"
+              descripcion="Podés buscar tutores y reservar clases para vos."
+              activo={perfil.capacidadEstudiante}
+              disabled={guardando}
+              onCambio={(v) => void cambiar(v, perfil.capacidadAdultoResponsable)}
+            />
+            <div className="border-t border-borde" />
+            <Interruptor
+              id="capAr"
+              etiqueta="Tengo hijos o hijas a cargo"
+              descripcion="Suma la sección Mis chicos: les creás su acceso, autorizás a sus tutores y pagás sus clases."
+              activo={perfil.capacidadAdultoResponsable}
+              disabled={guardando}
+              onCambio={(v) => void cambiar(perfil.capacidadEstudiante, v)}
+            />
+          </div>
         </Tarjeta>
       )}
     </section>

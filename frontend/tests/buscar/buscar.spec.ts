@@ -23,7 +23,7 @@ test.describe("Búsqueda de tutores", () => {
           materias: ["Matemática"],
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioHora: 5000,
+          precioSesion: 5000,
         }),
       });
 
@@ -55,7 +55,7 @@ test.describe("Búsqueda de tutores", () => {
           materias: ["Física"],
           calificacionPromedio: null,
           cantidadCalificaciones: 0,
-          precioHora: null,
+          precioSesion: null,
         }),
       });
 

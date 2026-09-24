@@ -1,15 +1,15 @@
 "use client";
 
 import TabMaterias from "@/components/tutor/TabMaterias";
+import SubpaginaTutor from "@/components/tutor/SubpaginaTutor";
 import { Tarjeta } from "@/components/ui";
 
 export default function CuentaMateriasPage() {
   return (
-    <section>
-      <h2 className="text-lg font-semibold text-slate-800">Mis Materias</h2>
-      <Tarjeta className="mt-4 w-full">
+    <SubpaginaTutor titulo="Mis materias" descripcion="Elegí qué temas enseñás. Se guardan solos.">
+      <Tarjeta>
         <TabMaterias />
       </Tarjeta>
-    </section>
+    </SubpaginaTutor>
   );
 }

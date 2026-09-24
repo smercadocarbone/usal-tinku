@@ -25,14 +25,15 @@ test.describe("Reserva de una clase", () => {
           nivel: "secundario",
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioHora: 5000,
+          precioSesion: 5000,
         }),
         [`GET /api/tutores/${TUTOR_ID}/franjas`]: jsonRoute(200, [
           {
             id: "f-1",
             tutorId: TUTOR_ID,
             diaSemana: null,
-            fechaEspecifica: "2026-10-05T00:00:00Z",
+            // Siempre dentro de los próximos 14 días (antes era una fecha fija que envejecía).
+            fechaEspecifica: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
             horaInicio: "10:00",
             horaFin: "12:00",
             activa: true,
@@ -43,7 +44,9 @@ test.describe("Reserva de una clase", () => {
 
       const reservar = new ReservarPage(page);
       await reservar.goto(TUTOR_ID);
-      await reservar.elegirFranjaYHora("10:00 a 12:00", "10:00");
+      await reservar.elegirHorario("10:00 a 12:00");
+      // Resumen antes de pagar: precio y duración a la vista (UX-04 §3).
+      await expect(page.getByText("2 h", { exact: true })).toBeVisible();
       await reservar.confirmar();
 
       await expect(page).toHaveURL(/\/pagar\?reserva=r-1/);
@@ -91,7 +94,7 @@ test.describe("Reserva de una clase", () => {
 
       const copiar = page.getByRole("button", { name: "Copiar este mensaje" });
       await expect(copiar).toBeVisible();
-      await expect(page.getByRole("button", { name: "Reservar y pagar" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Confirmar y pagar" })).toHaveCount(0);
 
       await copiar.click();
       await expect(page.getByText("Mensaje copiado")).toBeVisible();

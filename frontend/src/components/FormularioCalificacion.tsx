@@ -10,7 +10,7 @@ import {
   mensajeDeError,
   type CalificacionCreada,
 } from "@/lib/api";
-import { Alerta, Boton, Cargando } from "@/components/ui";
+import { Alerta, AreaTexto, Boton, Cargando } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export interface FormularioCalificacionProps {
@@ -39,11 +39,11 @@ function Estrellas({
           onMouseEnter={() => !soloLectura && setHover(n)}
           onMouseLeave={() => !soloLectura && setHover(0)}
           onClick={() => onCambiar?.(n)}
-          className={cn("p-0.5", soloLectura ? "cursor-default" : "cursor-pointer")}
+          className={cn("rounded-full p-1", soloLectura ? "cursor-default" : "cursor-pointer motion-safe:hover:scale-110 transition-transform")}
         >
           <Star
-            size={28}
-            className={cn(n <= mostradas ? "fill-amber-400 text-amber-400" : "fill-none text-slate-300")}
+            size={34}
+            className={cn(n <= mostradas ? "fill-acento-500 text-acento-500" : "fill-none text-borde-control")}
           />
         </button>
       ))}
@@ -140,11 +140,11 @@ export default function FormularioCalificacion({ sesionId }: FormularioCalificac
 
   if (calificacion && !editando) {
     return (
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-800">Tu calificación</p>
+      <div className="flex flex-col gap-4 rounded-tarjeta border border-borde bg-superficie p-5 shadow-elevado">
+        <h2 className="text-lg font-bold">Tu calificación</h2>
         <Estrellas valor={calificacion.estrellas} />
-        {calificacion.comentario && <p className="text-sm text-slate-700">{calificacion.comentario}</p>}
-        {error && <Alerta tono="error">{error}</Alerta>}
+        {calificacion.comentario && <p className="text-[15px] text-tinta-suave">{calificacion.comentario}</p>}
+        {error && <Alerta tono="peligro">{error}</Alerta>}
         {puedeEditar && (
           <div className="flex gap-2">
             <Boton variante="secundario" tamano="sm" onClick={abrirEdicion}>
@@ -166,23 +166,21 @@ export default function FormularioCalificacion({ sesionId }: FormularioCalificac
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm font-semibold text-slate-800">¿Cómo estuvo la clase?</p>
+    <div className="flex flex-col gap-4 rounded-tarjeta border border-borde bg-superficie p-5 shadow-elevado">
+      <h2 className="text-lg font-bold">¿Cómo estuvo la clase?</h2>
       <Estrellas valor={estrellas} onCambiar={setEstrellas} />
 
-      <label htmlFor="comentarioCalificacion" className="text-sm font-semibold text-slate-800">
-        Comentario (opcional)
-      </label>
-      <textarea
+      <AreaTexto
         id="comentarioCalificacion"
+        etiqueta="Comentario (opcional)"
         rows={3}
         maxLength={500}
+        contador
         value={comentario}
         onChange={(e) => setComentario(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
       />
 
-      {error && <Alerta tono="error">{error}</Alerta>}
+      {error && <Alerta tono="peligro">{error}</Alerta>}
 
       <div className="flex gap-2">
         <Boton tamano="sm" className="w-fit" cargando={enviando} textoCargando="Enviando…" onClick={enviar}>

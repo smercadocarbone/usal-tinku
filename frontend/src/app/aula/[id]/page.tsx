@@ -22,6 +22,8 @@ import {
 } from "livekit-client";
 import { Mic, MicOff, MoreVertical, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import Logo from "@/components/Logo";
+import { ModalConfirmacion } from "@/components/ui";
 
 interface TokenResponse {
   token: string;
@@ -229,6 +231,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   const previaAudioTrackRef = useRef<LocalAudioTrack | null>(null);
 
   const [estado, setEstado] = useState<Estado>("previa");
+  const [confirmarFin, setConfirmarFin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finalizando, setFinalizando] = useState(false);
   const [remoteActivo, setRemoteActivo] = useState(false);
@@ -626,7 +629,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
       roomRef.current?.disconnect();
       roomRef.current = null;
       setEstado("finalizada");
-      router.replace("/cuenta");
+      router.replace("/cuenta/reservas");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -690,9 +693,11 @@ export default function AulaPage({ params }: { params: { id: string } }) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 px-4 py-8 text-gray-50">
         <div className="w-full max-w-md">
-          <div className="mb-6 text-center text-lg font-bold">
-            Tinku<span className="text-teal-500">.</span>
+          <div className="mb-6 flex justify-center">
+            <Logo href="/cuenta/reservas" claro />
           </div>
+          <h1 className="mb-1 text-center text-2xl font-extrabold text-gray-50">Tu clase está por empezar</h1>
+          <p className="mb-6 text-center text-sm text-gray-400">Revisá tu cámara y tu micrófono antes de entrar.</p>
 
           <div className="relative aspect-video overflow-hidden rounded-xl border-2 border-gray-700 bg-black">
             <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
@@ -709,9 +714,19 @@ export default function AulaPage({ params }: { params: { id: string } }) {
           </div>
 
           {(errorCam || errorMic) && (
-            <div className="mt-3 rounded-lg border border-amber-700 bg-amber-950/40 px-3.5 py-3 text-sm text-amber-300" role="alert">
+            <div className="mt-3 rounded-2xl border border-amber-700 bg-amber-950/40 px-4 py-3.5 text-sm text-amber-200" role="alert">
               {errorCam && <p>{errorCam}</p>}
               {errorMic && <p className={errorCam ? "mt-1" : ""}>{errorMic}</p>}
+              <p className="mt-2 text-amber-100/90">
+                Para darle permiso: tocá el candado de la barra de direcciones, elegí <strong>Permitir</strong> en cámara y micrófono y volvé a intentar.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-3 inline-flex min-h-10 cursor-pointer items-center rounded-control border border-amber-600 px-3 font-semibold text-amber-100 hover:bg-amber-900/40"
+              >
+                Volver a intentar
+              </button>
             </div>
           )}
 
@@ -773,12 +788,15 @@ export default function AulaPage({ params }: { params: { id: string } }) {
 
           <button
             type="button"
-            className="mt-6 w-full cursor-pointer rounded-lg bg-teal-700 px-4 py-3 font-semibold text-white enabled:hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-6 min-h-13 w-full cursor-pointer rounded-control bg-marca-600 px-4 py-3 text-base font-bold text-white enabled:hover:bg-marca-500 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={conectar}
             disabled={!previaLista || Boolean(bloqueadoTotal)}
           >
             {bloqueadoTotal ? "Revisá los permisos para continuar" : "Unirme a la clase"}
           </button>
+          <p className="mt-4 text-center text-[13px] text-gray-400">
+            La clase se hace dentro de Tinku. No compartas teléfonos, emails ni redes.
+          </p>
         </div>
       </main>
     );
@@ -1007,12 +1025,26 @@ export default function AulaPage({ params }: { params: { id: string } }) {
             <button
               type="button"
               className="cursor-pointer rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={finalizar}
+              onClick={() => setConfirmarFin(true)}
               disabled={finalizando}
             >
-              {finalizando ? "Finalizando..." : "Finalizar sesión"}
+              {finalizando ? "Finalizando…" : "Finalizar clase"}
             </button>
           )}
+          <ModalConfirmacion
+            abierto={confirmarFin}
+            onCerrar={() => setConfirmarFin(false)}
+            onConfirmar={async () => {
+              setConfirmarFin(false);
+              await finalizar();
+            }}
+            cargando={finalizando}
+            titulo="¿Finalizar la clase?"
+            textoConfirmar="Finalizar clase"
+            textoCancelar="Seguir en la clase"
+          >
+            Termina la clase para los dos y no se puede volver a abrir.
+          </ModalConfirmacion>
         </div>
       </div>
     </main>

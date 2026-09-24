@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,6 +43,7 @@ public class SolicitudController {
 
     /** US-2: la genera la cuenta del menor. No bloquea horario ni genera cobro (FR-RES-021). */
     @PostMapping
+    @Transactional
     public ResponseEntity<SolicitudResponse> crear(
             @Valid @RequestBody NuevaSolicitudRequest request,
             Authentication authentication) {
@@ -52,6 +54,7 @@ public class SolicitudController {
 
     /** US-3: las solicitudes pendientes de los menores a cargo del AR. */
     @GetMapping("/pendientes")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<SolicitudResponse>> pendientes(Authentication authentication) {
         List<SolicitudSesion> pendientes = solicitudService.pendientesDelAdultoResponsable(
                 usuarioActual.obtener(authentication));
@@ -63,7 +66,8 @@ public class SolicitudController {
     public ResponseEntity<ReservaResponse> aprobar(
             @PathVariable UUID id,
             Authentication authentication) {
-        var reserva = reservaService.aprobarSolicitud(usuarioActual.obtener(authentication), id);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ReservaResponse.from(reserva));
+        var yo = usuarioActual.obtener(authentication);
+        var reserva = reservaService.aprobarSolicitud(yo, id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.vista(yo, reserva.getId()));
     }
 }

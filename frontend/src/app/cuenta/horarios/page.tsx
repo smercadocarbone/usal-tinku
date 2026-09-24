@@ -1,36 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api, type PerfilPropio } from "@/lib/api";
+import { useIdPropio } from "@/lib/useIdPropio";
 import TabHorarios from "@/components/tutor/TabHorarios";
-import { Alerta, Cargando, Tarjeta } from "@/components/ui";
+import ChecklistTutor from "@/components/tutor/ChecklistTutor";
+import { Skeleton, Tarjeta } from "@/components/ui";
 
+/** "Mi agenda": la home del tutor (UX-06 §1–2): qué le falta y su disponibilidad. */
 export default function CuentaHorariosPage() {
-  const [tutorId, setTutorId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // B4: el `sub` del JWT es hoy el DNI, no el UUID del Tutor — mandarlo como
-  // `tutorId` hace que GET /api/tutores/{dni}/franjas devuelva 403 y la
-  // agenda quede vacía. El id del Tutor sale de GET /api/usuarios/me.
-  useEffect(() => {
-    api
-      .get<PerfilPropio>("/api/usuarios/me")
-      .then((p) => setTutorId(p.id))
-      .catch(() => setError("No se pudo cargar tu agenda de tutor."));
-  }, []);
+  // B4: el id del Tutor sale de GET /api/usuarios/me, no del `sub` del JWT (DNI).
+  const tutorId = useIdPropio();
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold text-slate-800">Mis Horarios</h2>
-      <Tarjeta className="mt-4 w-full">
-        {error ? (
-          <Alerta tono="error">{error}</Alerta>
-        ) : tutorId === null ? (
-          <Cargando>Cargando tu agenda…</Cargando>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <h1 className="text-[28px] font-extrabold sm:text-[40px]">Mi agenda</h1>
+      <ChecklistTutor tutorId={tutorId} compacto />
+      <Tarjeta>
+        {tutorId === null ? (
+          <div role="status">
+            <span className="sr-only">Cargando tu agenda…</span>
+            <Skeleton className="h-64 w-full rounded-2xl" />
+          </div>
         ) : (
           <TabHorarios tutorId={tutorId} />
         )}
       </Tarjeta>
-    </section>
+    </div>
   );
 }

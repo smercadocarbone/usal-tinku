@@ -30,12 +30,13 @@ test.describe("Cuenta — capacidades (Estudiante / Adulto Responsable)", () => 
       await page.goto("/cuenta");
       await page.waitForLoadState("networkidle");
 
-      const checkboxAr = page.getByLabel("Adulto Responsable", { exact: true });
-      await expect(checkboxAr).not.toBeChecked();
-      await checkboxAr.check();
-      await page.getByRole("button", { name: "Guardar capacidades" }).click();
+      // UX-05 §2: interruptor que se aplica al toque, sin botón "Guardar".
+      const interruptorAr = page.getByRole("switch", { name: "Tengo hijos o hijas a cargo" });
+      await expect(interruptorAr).toHaveAttribute("aria-checked", "false");
+      await interruptorAr.click();
 
-      await expect(page.getByText("Capacidades actualizadas.")).toBeVisible();
+      await expect(page.getByText("Volvé a ingresar para ver Mis chicos")).toBeVisible();
+      await expect(interruptorAr).toHaveAttribute("aria-checked", "true");
     }
   );
 
@@ -56,11 +57,12 @@ test.describe("Cuenta — capacidades (Estudiante / Adulto Responsable)", () => 
       await page.goto("/cuenta");
       await page.waitForLoadState("networkidle");
 
-      const checkboxAr = page.getByLabel("Adulto Responsable", { exact: true });
-      await checkboxAr.uncheck();
-      await page.getByRole("button", { name: "Guardar capacidades" }).click();
+      const interruptorAr = page.getByRole("switch", { name: "Tengo hijos o hijas a cargo" });
+      await interruptorAr.click();
 
       await expect(page.getByText("No se puede desactivar Adulto Responsable con menores a cargo.")).toBeVisible();
+      // El backend lo rechazó: el interruptor vuelve a como estaba.
+      await expect(interruptorAr).toHaveAttribute("aria-checked", "true");
     }
   );
 
@@ -77,7 +79,7 @@ test.describe("Cuenta — capacidades (Estudiante / Adulto Responsable)", () => 
       await page.goto("/cuenta");
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText("Capacidades")).toHaveCount(0);
+      await expect(page.getByText("¿Cómo usás Tinku?")).toHaveCount(0);
     }
   );
 });

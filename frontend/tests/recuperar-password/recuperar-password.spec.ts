@@ -17,7 +17,7 @@ test.describe("Recuperar contraseña — solicitud", () => {
       await recuperar.goto();
 
       await expect(
-        page.getByText("La recuperación automática por email todavía no está disponible.")
+        page.getByText("Todavía no mandamos emails de recuperación")
       ).toBeVisible();
       await expect(page.getByLabel("DNI", { exact: true })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Enviar enlace de recuperación" })).toHaveCount(0);
@@ -33,7 +33,7 @@ test.describe("Resetear contraseña — con el token del enlace", () => {
       const resetear = new ResetearPasswordPage(page);
       await resetear.goto();
 
-      await expect(page.getByText("Este enlace no es válido.")).toBeVisible();
+      await expect(page.getByText("Este enlace ya no es válido.")).toBeVisible();
       await expect(resetear.campoPasswordNueva).toHaveCount(0);
     }
   );

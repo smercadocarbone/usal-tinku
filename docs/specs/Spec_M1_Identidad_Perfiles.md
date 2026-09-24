@@ -83,6 +83,14 @@ _Como_ Tutor que dictará clases a Menores, _quiero_ cargar mi Certificado de An
 - **Dado** que el CAP aprobado cumpla 12 meses desde su fecha de emisión, **cuando** ese plazo se cumpla, **entonces** el Tutor queda suspendido de la habilitación para Menores hasta cargar un CAP vigente nuevo — no se elimina la cuenta ni se afecta su habilitación para adultos (FR-ID-025, Tabla_Tiempos_Tinku.md).
 - **Dado** que el CAP esté `aprobado` y vigente, **cuando** se evalúe si el Tutor puede dictar clases a un Menor, **entonces** solo con esa condición queda habilitado para Menores — sin CAP vigente nunca se habilita (FR-ID-026).
 
+### US-7 — Presentación y foto en el perfil público del Tutor _(alcance agregado por la decisión U1, 2026-09-24, `docs/superpowers/specs/ux/00-LEEME-ux.md` §5)_
+
+_Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público, _para_ que una familia confíe en mí antes de reservar.
+
+- **Dado** que escriba una presentación de hasta 500 caracteres, **cuando** la guarde, **entonces** cualquier usuario que vea mi perfil la lee; si la dejo vacía, el perfil no muestra la sección (FR-ID-027).
+- **Dado** que suba una foto JPG o PNG, **cuando** el contenido real del archivo lo confirme (no la extensión ni lo que declara el navegador), **entonces** aparece en mi perfil público; cualquier otro formato se rechaza sin guardarse (FR-ID-028).
+- **Dado** que la presentación o la foto tengan contenido inapropiado o datos de contacto, **cuando** el Admin de Moderación y Seguridad las revise, **entonces** puede quitar cualquiera de las dos (FR-ID-029).
+
 ## 4. Requisitos Funcionales
 
 | ID        | Requisito                                                                                                                                                                                                                            |
@@ -107,6 +115,9 @@ _Como_ Tutor que dictará clases a Menores, _quiero_ cargar mi Certificado de An
 | FR-ID-024 | _Acotado a Tutores de Menores (ADR-M1-04)._ CAP con antecedente fuera de esa lista, o proceso en trámite sin sentencia firme → estado `en_revision_legal`, **no habilita** (fail-closed, BR-CAP-02), decisión manual documentada del Admin hasta que la asesoría legal defina el criterio (PT1). |
 | FR-ID-025 | _Acotado a Tutores de Menores (ADR-M1-04)._ Vencimiento del CAP a los 12 meses de emisión → suspensión de la habilitación para Menores (no de la cuenta ni del matching a adultos) hasta recarga de un CAP vigente. |
 | FR-ID-026 | Un Tutor queda habilitado para Menores solo con un CAP `aprobado` y vigente (12 meses desde la emisión, Tabla_Tiempos_Tinku.md). |
+| FR-ID-027 | Presentación ("bio") opcional del Tutor, hasta 500 caracteres, visible en su perfil público (U1). |
+| FR-ID-028 | Foto opcional del Tutor en su perfil público: solo JPG o PNG verificado por contenido, mismo tamaño máximo que la Credencial; se sirve autenticada y nunca como URL pública del almacenamiento (U1). |
+| FR-ID-029 | El Admin de Moderación y Seguridad puede quitar la presentación y/o la foto de un Tutor (U1). |
 
 ## 5. Reglas de Negocio Aplicables
 

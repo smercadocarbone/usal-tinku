@@ -32,6 +32,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tinku.reservas.web.ReservaResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -58,7 +59,7 @@ public class ReservaService {
     private static final Duration VENTANA_MINIMA = Duration.ofMinutes(15);
 
     /** FR-RES-020 — timeout de pendiente_pago a 15 min (Tabla_Tiempos_Tinku.md). */
-    private static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
+    public static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
 
     /** FR-RES-004/015/016 — reprogramación y cancelación sin penalidad hasta 24hs antes. */
     private static final Duration VENTANA_CANCELACION = Duration.ofHours(24);
@@ -251,6 +252,25 @@ public class ReservaService {
     @Transactional
     public void expirarPorTimeoutPago(UUID reservaId) {
         reservaRepo.findById(reservaId).ifPresent(this::expirarSiSiguePendiente);
+    }
+
+    /** UX-05 §4: la Reserva como la ve {@code usuario}, con nombres, duración (la de
+     * la franja que la originó, FR-RES-023) y acciones. Dentro de la transacción:
+     * pagador/beneficiario/tutor son asociaciones perezosas. */
+    @Transactional(readOnly = true)
+    public ReservaResponse vista(Usuario usuario, UUID reservaId) {
+        return vista(obtener(usuario, reservaId), usuario, Instant.now());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservaResponse> vistas(Usuario usuario) {
+        Instant ahora = Instant.now();
+        return listarDe(usuario).stream().map(r -> vista(r, usuario, ahora)).toList();
+    }
+
+    private ReservaResponse vista(Reserva r, Usuario usuario, Instant ahora) {
+        Duration duracion = franjaService.duracionFranjaQueCubre(r.getTutor().getId(), r.getHorario()).orElse(null);
+        return ReservaResponse.from(r, usuario, duracion, ahora);
     }
 
     /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor. */

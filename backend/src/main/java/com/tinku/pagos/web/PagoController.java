@@ -2,6 +2,7 @@ package com.tinku.pagos.web;
 
 import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
+import com.tinku.pagos.repository.TarifaTutorRepository;
 import com.tinku.pagos.service.PagoService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
@@ -26,7 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
  * perfil para no adivinar cuánto cobrar en su zona.
  *
  * {@code PUT /api/pagos/tarifa}: el Tutor fija el precio por sesión de su
- * perfil (US-6, FR-PAG-006, Chunk M5-H).
+ * perfil (US-6, FR-PAG-006, Chunk M5-H). {@code GET /api/pagos/tarifa}: la
+ * lee (UX-06 §4; antes la pantalla de precio no tenía de dónde leerla). 204 si
+ * todavía no la definió.
  */
 @RestController
 @RequestMapping("/api/pagos")
@@ -34,10 +37,12 @@ public class PagoController {
 
     private final PagoService pagoService;
     private final UsuarioActual usuarioActual;
+    private final TarifaTutorRepository tarifaRepo;
 
-    public PagoController(PagoService pagoService, UsuarioActual usuarioActual) {
+    public PagoController(PagoService pagoService, UsuarioActual usuarioActual, TarifaTutorRepository tarifaRepo) {
         this.pagoService = pagoService;
         this.usuarioActual = usuarioActual;
+        this.tarifaRepo = tarifaRepo;
     }
 
     @PostMapping("/preferencia")
@@ -54,6 +59,13 @@ public class PagoController {
             @PathVariable String provincia) {
         PrecioReferenciaRegional precio = pagoService.sugerirPrecioReferencia(provincia);
         return ResponseEntity.ok(PrecioReferenciaResponse.from(precio));
+    }
+
+    @GetMapping("/tarifa")
+    public ResponseEntity<TarifaTutorResponse> miTarifa(Authentication authentication) {
+        return tarifaRepo.findByTutorId(usuarioActual.obtener(authentication).getId())
+                .map(t -> ResponseEntity.ok(TarifaTutorResponse.from(t)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PutMapping("/tarifa")

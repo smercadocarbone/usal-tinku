@@ -10,7 +10,7 @@ import {
   type CredencialCola,
   type DecisionCredencial,
 } from "@/lib/api";
-import { Alerta, Boton, Cargando, Tarjeta } from "@/components/ui";
+import { Alerta, Boton, Cargando, ModalConfirmacion, Tarjeta } from "@/components/ui";
 
 const ETIQUETA_TIPO: Record<string, string> = {
   TITULO: "Título",
@@ -95,6 +95,8 @@ export default function ColaCredenciales() {
 
   useEffect(cargar, []);
 
+  const [aRechazar, setARechazar] = useState<CredencialCola | null>(null);
+
   async function resolver(id: string, decision: DecisionCredencial) {
     setProcesandoId(id);
     try {
@@ -112,6 +114,31 @@ export default function ColaCredenciales() {
     return <Cargando>Cargando credenciales…</Cargando>;
   }
 
+  const modalRechazo = (
+    <ModalConfirmacion
+      abierto={aRechazar !== null}
+      onCerrar={() => setARechazar(null)}
+      cargando={aRechazar !== null && procesandoId === aRechazar.id}
+      onConfirmar={async () => {
+        if (!aRechazar) return;
+        await resolver(aRechazar.id, "RECHAZAR");
+        setARechazar(null);
+      }}
+      titulo={aRechazar ? `¿Rechazar la credencial de ${aRechazar.tutorNombre} ${aRechazar.tutorApellido}?` : ""}
+      textoConfirmar="Rechazar credencial"
+    >
+      {aRechazar && (
+        <p>
+          Es su intento {aRechazar.numeroIntento} de 3.{" "}
+          {aRechazar.numeroIntento >= 3
+            ? "Si la rechazás, agota el ciclo y tiene que esperar antes de volver a intentar (24 hs la primera vez, y se duplica en cada ciclo)."
+            : "Si la rechazás, puede volver a cargarla."}{" "}
+          Sin una credencial aprobada no aparece en las búsquedas.
+        </p>
+      )}
+    </ModalConfirmacion>
+  );
+
   if (prohibido) {
     return (
       <p className="text-sm text-slate-500">
@@ -126,6 +153,7 @@ export default function ColaCredenciales() {
 
   return (
     <div className="flex flex-col gap-3">
+      {modalRechazo}
       {error && (
         <Alerta tono="error" className="flex items-start gap-2">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
@@ -165,7 +193,7 @@ export default function ColaCredenciales() {
               <Boton
                 variante="peligro"
                 tamano="sm"
-                onClick={() => resolver(c.id, "RECHAZAR")}
+                onClick={() => setARechazar(c)}
                 disabled={procesandoId === c.id}
               >
                 Rechazar

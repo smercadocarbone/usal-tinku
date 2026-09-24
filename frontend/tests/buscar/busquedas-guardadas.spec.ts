@@ -24,7 +24,7 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
           materias: ["Matemática"],
           calificacionPromedio: 4.8,
           cantidadCalificaciones: 12,
-          precioHora: 5000,
+          precioSesion: 5000,
         }),
         "POST /api/busquedas/guardadas": jsonRoute(201, {
           id: "g-1",
@@ -41,8 +41,9 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
       await expect(botonGuardar).toBeVisible();
       await botonGuardar.click();
 
-      await expect(page.getByText("Tus búsquedas guardadas")).toBeVisible();
-      await expect(page.getByRole("button", { name: "cómo dividir polinomios" })).toBeVisible();
+      // Confirmación no bloqueante + el botón queda en "Guardada" (no se guarda dos veces).
+      await expect(page.getByText("Guardamos la búsqueda")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Guardada" })).toBeDisabled();
     }
   );
 
@@ -65,7 +66,7 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
           materias: ["Física"],
           calificacionPromedio: 4.5,
           cantidadCalificaciones: 8,
-          precioHora: 4500,
+          precioSesion: 4500,
         }),
       });
 

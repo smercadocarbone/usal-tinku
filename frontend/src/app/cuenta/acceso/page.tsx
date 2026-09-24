@@ -70,15 +70,16 @@ export default function CuentaAccesoPage() {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-slate-800">Acceso</h2>
+      <h2 className="text-2xl font-bold">Seguridad y acceso</h2>
+      <p className="mt-1 text-[15px] text-tinta-suave">Ingresás con tu DNI y tu contraseña. El email lo usamos para cosas de tu cuenta.</p>
 
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row">
-        <Tarjeta className="w-full max-w-sm p-6">
-          <h3 className="mb-3 text-base font-semibold text-slate-800">Email</h3>
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Tarjeta>
+          <h3 className="mb-4 text-lg font-bold">Email</h3>
           {cargandoPerfil ? (
             <Cargando>Cargando…</Cargando>
           ) : (
-            <form className="flex flex-col gap-3" onSubmit={onSubmitEmail}>
+            <form className="flex flex-col gap-4" onSubmit={onSubmitEmail}>
               <Campo
                 id="nuevoEmail"
                 etiqueta="Email"
@@ -88,11 +89,10 @@ export default function CuentaAccesoPage() {
                 value={nuevoEmail}
                 onChange={(e) => setNuevoEmail(e.target.value)}
               />
-              {errorEmail && <Alerta tono="error">{errorEmail}</Alerta>}
+              {errorEmail && <Alerta tono="peligro">{errorEmail}</Alerta>}
               {exitoEmail && <Alerta tono="exito">Email actualizado.</Alerta>}
               <Boton
                 type="submit"
-                tamano="sm"
                 className="w-fit"
                 cargando={guardandoEmail}
                 textoCargando="Guardando…"
@@ -104,13 +104,13 @@ export default function CuentaAccesoPage() {
           )}
         </Tarjeta>
 
-        <Tarjeta className="w-full max-w-sm p-6">
-          <h3 className="mb-3 text-base font-semibold text-slate-800">Contraseña</h3>
-          <form className="flex flex-col gap-3" onSubmit={onSubmitPassword}>
+        <Tarjeta>
+          <h3 className="mb-4 text-lg font-bold">Contraseña</h3>
+          <form className="flex flex-col gap-4" onSubmit={onSubmitPassword}>
             <Campo
               id="passwordActual"
               etiqueta="Contraseña actual"
-              type="password"
+              variante="password"
               autoComplete="current-password"
               required
               value={passwordActual}
@@ -119,18 +119,17 @@ export default function CuentaAccesoPage() {
             <Campo
               id="passwordNueva"
               etiqueta="Contraseña nueva"
-              type="password"
+              variante="password"
               autoComplete="new-password"
               required
               minLength={8}
               value={passwordNueva}
               onChange={(e) => setPasswordNueva(e.target.value)}
             />
-            {errorPassword && <Alerta tono="error">{errorPassword}</Alerta>}
+            {errorPassword && <Alerta tono="peligro">{errorPassword}</Alerta>}
             {exitoPassword && <Alerta tono="exito">Contraseña actualizada.</Alerta>}
             <Boton
               type="submit"
-              tamano="sm"
               className="w-fit"
               cargando={guardandoPassword}
               textoCargando="Guardando…"

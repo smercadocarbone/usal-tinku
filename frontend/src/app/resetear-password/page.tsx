@@ -4,7 +4,8 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, resetearPassword } from "@/lib/api";
-import { Alerta, Boton, Campo, Tarjeta } from "@/components/ui";
+import { Alerta, Boton, Campo } from "@/components/ui";
+import PantallaAuth from "@/components/auth/PantallaAuth";
 
 export default function ResetearPasswordPage() {
   const router = useRouter();
@@ -54,17 +55,13 @@ export default function ResetearPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-      <Tarjeta className="w-full max-w-sm p-8">
-        <div className="mb-6 text-lg font-bold text-slate-800">
-          Tinku<span className="text-teal-700">.</span>
-        </div>
-        <h1 className="mb-1 text-xl tracking-tight">Elegí una contraseña nueva</h1>
+    <PantallaAuth>
+        <h1 className="text-[32px] font-extrabold">Elegí una contraseña nueva</h1>
 
         {!token && (
-          <Alerta tono="error" className="mt-4">
-            Este enlace no es válido.{" "}
-            <Link href="/recuperar-password">Pedí uno nuevo</Link>.
+          <Alerta tono="error" className="mt-6">
+            Este enlace ya no es válido.{" "}
+            <Link href="/recuperar-password" className="font-semibold underline">Pedí uno nuevo</Link>.
           </Alerta>
         )}
 
@@ -74,11 +71,11 @@ export default function ResetearPasswordPage() {
           </Alerta>
         ) : (
           token && (
-            <form className="mt-6 flex flex-col gap-4" onSubmit={onSubmit}>
+            <form className="mt-6 flex flex-col gap-5" onSubmit={onSubmit}>
               <Campo
                 id="passwordNueva"
                 etiqueta="Contraseña nueva"
-                type="password"
+                variante="password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -88,7 +85,7 @@ export default function ResetearPasswordPage() {
               <Campo
                 id="passwordConfirmacion"
                 etiqueta="Repetí la contraseña"
-                type="password"
+                variante="password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -98,13 +95,12 @@ export default function ResetearPasswordPage() {
 
               {error && <Alerta tono="error">{error}</Alerta>}
 
-              <Boton type="submit" cargando={enviando} textoCargando="Guardando…">
+              <Boton type="submit" tamano="lg" anchoCompleto cargando={enviando} textoCargando="Guardando…">
                 Guardar contraseña nueva
               </Boton>
             </form>
           )
         )}
-      </Tarjeta>
-    </main>
+    </PantallaAuth>
   );
 }

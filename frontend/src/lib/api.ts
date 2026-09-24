@@ -736,3 +736,38 @@ export function subirCredencial(tipo: TipoCredencial, archivo: File): Promise<Cr
   form.append("archivo", archivo);
   return api.post("/api/tutores/credenciales", form);
 }
+/* ---- UX-06 / U1 — perfil público y estado del Tutor ---- */
+
+export interface EstadoPerfilTutor {
+  /** Flag real del matching (`activo_para_matching`). */
+  visibleEnBusquedas: boolean;
+  ultimaCredencial: EstadoCredencial | null;
+  tieneCredencialAprobada: boolean;
+  tieneMaterias: boolean;
+  tienePrecio: boolean;
+  tieneBio: boolean;
+  tieneFoto: boolean;
+}
+
+export function getEstadoPerfilTutor(): Promise<EstadoPerfilTutor> {
+  return api.get("/api/tutores/me/estado-perfil");
+}
+
+export function actualizarBioTutor(bio: string): Promise<unknown> {
+  return api.put("/api/tutores/me/perfil", { bio });
+}
+
+export function subirFotoTutor(archivo: File): Promise<unknown> {
+  const form = new FormData();
+  form.append("archivo", archivo);
+  return api.put("/api/tutores/me/foto", form);
+}
+
+export function borrarFotoTutor(): Promise<unknown> {
+  return api.delete("/api/tutores/me/foto");
+}
+
+/** U1 — moderación: el Admin de Moderación quita la presentación o la foto de un Tutor. */
+export function moderarPerfilTutor(tutorId: string, que: "bio" | "foto"): Promise<void> {
+  return api.delete(`/api/admin/moderacion/tutores/${tutorId}/${que}`);
+}

@@ -17,8 +17,9 @@ export class CuentaPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.selectMenorBaja = page.getByLabel("Menor", { exact: true });
-    this.botonDarDeBaja = page.getByRole("button", { name: "Dar de baja", exact: true });
+    // UX-05 §5: cada hijo es una tarjeta; la baja vive en su menú ⋯ y se confirma en un modal.
+    this.selectMenorBaja = page.getByRole("button", { name: /^Opciones de / });
+    this.botonDarDeBaja = page.getByRole("menuitem", { name: "Dar de baja" });
 
     this.campoEmail = page.getByLabel("Email", { exact: true });
     this.botonGuardarEmail = page.getByRole("button", { name: "Guardar email" });
@@ -42,6 +43,11 @@ export class CuentaPage extends BasePage {
   }
 
   /** Menores a cargo del Adulto Responsable: alta, solicitudes, baja. */
+  /** La credencial del tutor vive en "Mi perfil" (UX-06). */
+  async gotoPerfilTutor(): Promise<void> {
+    await super.goto("/cuenta/perfil-tutor");
+  }
+
   async gotoMenores(): Promise<void> {
     await super.goto("/cuenta/menores");
   }

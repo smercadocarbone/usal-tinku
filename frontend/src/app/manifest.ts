@@ -17,8 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Clases particulares en línea con Tutores verificados, pagos protegidos y aulas seguras.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f8fafc",
-    theme_color: "#0d9488",
+    background_color: "#f6f8f7",
+    theme_color: "#146251",
     lang: "es-AR",
     orientation: "portrait",
     icons: [

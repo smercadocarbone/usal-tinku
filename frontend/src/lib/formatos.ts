@@ -48,3 +48,87 @@ export function formatearFechaCorta(iso: string): string {
     timeZone: ZONA_ARGENTINA,
   });
 }
+/* ---- UX-01: formatos del sistema visual (`Precio`, `FechaHora`) ---- */
+
+const PESOS = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 0,
+});
+
+/** `$ 15.000` — pesos argentinos sin centavos. */
+export function formatearPesos(valor: number): string {
+  return PESOS.format(valor);
+}
+
+function partes(iso: string | Date, opciones: Intl.DateTimeFormatOptions): Record<string, string> {
+  const fecha = typeof iso === "string" ? new Date(iso) : iso;
+  const res: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat("es-AR", { ...opciones, timeZone: ZONA_ARGENTINA }).formatToParts(fecha)) {
+    res[p.type] = p.value;
+  }
+  return res;
+}
+
+/** `mar 24 sep · 18:00` */
+export function fechaHoraCorta(iso: string | Date): string {
+  const p = partes(iso, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return `${(p.weekday ?? "").replace(".", "")} ${p.day} ${(p.month ?? "").replace(".", "")} · ${p.hour}:${p.minute}`;
+}
+
+/** `martes 24 de septiembre, 18:00` (+ ` a 19:00` si hay fin). */
+export function fechaHoraLarga(inicio: string | Date, fin?: string | Date | null): string {
+  const p = partes(inicio, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  let texto = `${p.weekday} ${p.day} de ${p.month}, ${p.hour}:${p.minute}`;
+  if (fin) {
+    const f = partes(fin, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    texto += ` a ${f.hour}:${f.minute}`;
+  }
+  return texto;
+}
+
+/** `jue 25 sep` */
+export function diaCorto(iso: string | Date): string {
+  const p = partes(iso, { weekday: "short", day: "numeric", month: "short" });
+  return `${(p.weekday ?? "").replace(".", "")} ${p.day} ${(p.month ?? "").replace(".", "")}`;
+}
+
+/** `18:00` en hora argentina, 24 h. */
+export function horaCorta(iso: string | Date): string {
+  const p = partes(iso, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return `${p.hour}:${p.minute}`;
+}
+
+/** Fecha `YYYY-MM-DD` en hora argentina (para comparar días sin líos de UTC). */
+export function claveDia(iso: string | Date): string {
+  const p = partes(iso, { year: "numeric", month: "2-digit", day: "2-digit" });
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** "1 h 30 min", "45 min", "2 h". */
+export function duracionLegible(minutos: number): string {
+  const h = Math.floor(minutos / 60);
+  const m = Math.round(minutos % 60);
+  if (h && m) return `${h} h ${m} min`;
+  if (h) return `${h} h`;
+  return `${m} min`;
+}
+
+/** "en 3 h", "en 12 min", "hace 2 días" — para plazos y cuentas regresivas. */
+export function tiempoRelativo(iso: string | Date, ahora: Date = new Date()): string {
+  const ms = (typeof iso === "string" ? new Date(iso) : iso).getTime() - ahora.getTime();
+  const rtf = new Intl.RelativeTimeFormat("es-AR", { numeric: "auto" });
+  const abs = Math.abs(ms);
+  const min = Math.round(ms / 60000);
+  if (abs < 3600000) return rtf.format(min, "minute");
+  const h = Math.round(ms / 3600000);
+  if (abs < 86400000 * 2) return rtf.format(h, "hour");
+  return rtf.format(Math.round(ms / 86400000), "day");
+}
+
+/** DNI enmascarado: `••.•••.233`. Nunca el DNI completo si no hace falta. */
+export function dniEnmascarado(dni: string | null | undefined): string {
+  if (!dni) return "—";
+  const d = dni.replace(/\D/g, "");
+  return `••.•••.${d.slice(-3)}`;
+}

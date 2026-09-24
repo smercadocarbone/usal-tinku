@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { crearTicketSoporte, mensajeDeError } from "@/lib/api";
-import { Alerta, Boton } from "@/components/ui";
+import { Alerta, AreaTexto, Boton } from "@/components/ui";
 
 export interface FormularioSoporteProps {
   /**
@@ -44,7 +44,7 @@ export default function FormularioSoporte({
   }
 
   if (enviado) {
-    return <Alerta tono="exito">Le avisamos a soporte. Te van a contactar a la brevedad.</Alerta>;
+    return <Alerta tono="exito">Recibimos tu consulta. El equipo de soporte la va a revisar y te va a contactar.</Alerta>;
   }
 
   return (
@@ -54,20 +54,17 @@ export default function FormularioSoporte({
       </Boton>
 
       {abierto && (
-        <div className="mt-3 flex max-w-sm flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <label htmlFor="detalleSoporte" className="text-sm font-semibold text-slate-800">
-            Contanos qué pasó
-          </label>
-          <textarea
+        <div className="mt-3 flex max-w-md flex-col gap-3 rounded-tarjeta border border-borde bg-superficie p-4">
+          <AreaTexto
             id="detalleSoporte"
+            etiqueta="Contanos qué pasó"
             rows={3}
             maxLength={1000}
             value={detalle}
             onChange={(e) => setDetalle(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
           />
 
-          {error && <Alerta tono="error">{error}</Alerta>}
+          {error && <Alerta tono="peligro">{error}</Alerta>}
 
           <Boton
             tamano="sm"

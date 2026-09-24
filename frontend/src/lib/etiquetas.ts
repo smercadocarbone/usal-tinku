@@ -14,9 +14,10 @@ export const ETIQUETA_ESTADO_RESERVA: Record<string, string> = {
   en_curso: "En curso",
   finalizada: "Finalizada",
   cancelada: "Cancelada",
-  no_show_estudiante: "No se presentó el estudiante",
-  no_show_tutor: "No se presentó el tutor",
-  no_show_doble: "No se presentó nadie",
+  // Nunca culpar (UX-01 §5): "No se presentaron" → "La clase no se realizó".
+  no_show_estudiante: "No se realizó · el alumno no se conectó",
+  no_show_tutor: "No se realizó · el tutor no se conectó",
+  no_show_doble: "La clase no se realizó",
 };
 
 // Cancelación de Reserva — backend `reservas.model.MotivoCancelacion`.
@@ -77,7 +78,7 @@ export const ETIQUETA_ESTADO_TICKET: Record<string, string> = {
 
 // Transacción de pago (escrow) — backend `pagos.model.EstadoTransaccion`.
 export const ETIQUETA_ESTADO_PAGO: Record<string, string> = {
-  retenido_escrow: "Retenido en escrow",
+  retenido_escrow: "Retenido hasta después de la clase",
   liberado: "Liberado al tutor",
   reembolsado: "Reembolsado",
   pausado_denuncia: "Pausado por denuncia",
@@ -88,3 +89,17 @@ export function etiqueta(mapa: Record<string, string>, valor: string | null | un
   if (valor === null || valor === undefined) return "—";
   return mapa[valor] ?? valor;
 }
+/**
+ * Tono de la pastilla de estado de una Reserva (`EstadoReserva`). Mapa único:
+ * ninguna pantalla decide por su cuenta de qué color es un estado.
+ */
+export const TONO_ESTADO_RESERVA: Record<string, "neutro" | "exito" | "aviso" | "peligro" | "info" | "marca"> = {
+  pendiente_pago: "aviso",
+  confirmada: "exito",
+  en_curso: "info",
+  finalizada: "neutro",
+  cancelada: "neutro",
+  no_show_estudiante: "neutro",
+  no_show_tutor: "neutro",
+  no_show_doble: "neutro",
+};
