@@ -43,19 +43,22 @@ services:
 
   # Backup diario de Postgres, cifrado, a un bucket S3 compatible (Cloudflare R2) fuera del VPS
   # (ADR-000-07). Hay menores entre los usuarios (Ley 25.326): sin BACKUP_PASSPHRASE no se sube nada.
+  # Las variables son opcionales para poder arrancar sin R2: mientras falten, el backup de cada
+  # noche falla con error en el log de este contenedor y NO hay copia fuera del servidor.
+  # Cargar las cinco juntas: con R2 configurado y sin BACKUP_PASSPHRASE, el dump subiría SIN cifrar.
   backup:
     image: eeshugerman/postgres-backup-s3:16
     restart: unless-stopped
     environment:
       SCHEDULE: "@daily"
       BACKUP_KEEP_DAYS: "14"
-      PASSPHRASE: ${BACKUP_PASSPHRASE:?falta BACKUP_PASSPHRASE}
+      PASSPHRASE: ${BACKUP_PASSPHRASE:-}
       S3_REGION: auto
-      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:?falta BACKUP_S3_ENDPOINT}
-      S3_BUCKET: ${BACKUP_S3_BUCKET:?falta BACKUP_S3_BUCKET}
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      S3_BUCKET: ${BACKUP_S3_BUCKET:-}
       S3_PREFIX: postgres
-      S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:?falta BACKUP_S3_ACCESS_KEY_ID}
-      S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:?falta BACKUP_S3_SECRET_ACCESS_KEY}
+      S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
       POSTGRES_HOST: db
       POSTGRES_DATABASE: tinku
       POSTGRES_USER: ${SERVICE_USER_POSTGRES}
