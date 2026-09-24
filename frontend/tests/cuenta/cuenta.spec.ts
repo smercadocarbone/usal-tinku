@@ -18,10 +18,8 @@ test.describe("Cuenta — baja de menor", () => {
       const cuenta = new CuentaPage(page);
       await cuenta.gotoMenores();
 
-      await expect(cuenta.selectMenorBaja).toBeVisible();
-      await expect(
-        cuenta.selectMenorBaja.locator("option", { hasText: "Sofía Pérez" })
-      ).toHaveCount(1);
+      await expect(page.getByRole("heading", { name: "Sofía Pérez" })).toBeVisible();
+      await cuenta.selectMenorBaja.click();
       await expect(cuenta.botonDarDeBaja).toBeVisible();
 
       // Regresión: este cartel decía que el listado de menores no existía del
@@ -66,7 +64,10 @@ test.describe("Cuenta — baja de menor", () => {
 
       const cuenta = new CuentaPage(page);
       await cuenta.gotoMenores();
+      await cuenta.selectMenorBaja.click();
       await cuenta.botonDarDeBaja.click();
+      // El modal explica la consecuencia ANTES de confirmar, con el nombre en el botón.
+      await page.getByRole("button", { name: "Dar de baja a Sofía" }).click();
 
       await expect(page.getByText("Este menor tiene reservas futuras.")).toBeVisible();
       await expect(page.getByRole("button", { name: "Confirmar baja" })).toBeVisible();

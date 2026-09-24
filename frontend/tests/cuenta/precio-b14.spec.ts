@@ -19,6 +19,7 @@ test.describe("Configuración de Precio del tutor — contrato de tarifa", () =>
           version: 1,
           vigenteDesde: "2026-01-01T00:00:00Z",
         }),
+        "GET /api/pagos/tarifa": async (route) => route.fulfill({ status: 204 }),
         "PUT /api/pagos/tarifa": jsonRoute(200, {
           tutorId: "t-1",
           precioSesion: 10000,
@@ -27,7 +28,8 @@ test.describe("Configuración de Precio del tutor — contrato de tarifa", () =>
       });
       await page.goto("/cuenta/precio");
 
-      const input = page.getByLabel("Precio por sesión (ARS)");
+      const input = page.getByLabel("Precio por clase (ARS)");
+      await expect(input).toBeEnabled();
       const [req] = await Promise.all([
         page.waitForRequest((r) => r.url().includes("/api/pagos/tarifa")),
         input.fill("10000"),

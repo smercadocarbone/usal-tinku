@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Eye, TrendingUp } from "lucide-react";
 import { api } from "@/lib/api";
-import { TrendingUp } from "lucide-react";
-import { Alerta, IndicadorGuardado } from "@/components/ui";
+import { formatearPesos } from "@/lib/formatos";
+import { Alerta, Selector, useToast } from "@/components/ui";
 
 const PROVINCIAS = [
   "Buenos Aires",
@@ -32,183 +33,135 @@ const PROVINCIAS = [
   "Tucumán",
 ];
 
-const PROVINCIA_POR_DEFECTO = "Buenos Aires";
-const CLAVE_PRECIO_LOCAL = "tinku_precio";
-
-type EstadoGuardado = "idle" | "guardando" | "ok" | "error";
-
 interface ReferenciaRegional {
   provincia: string;
   valorSugerido: number;
-  version: number;
-  vigenteDesde: string;
 }
 
-function redondearA100(valor: number): number {
-  return Math.round(valor / 100) * 100;
+interface Tarifa {
+  precioSesion: number;
 }
 
-/** Rango sugerido a partir del valor de referencia único del backend. */
-function rangoSugerido(valor: number): [number, number] {
-  return [redondearA100(valor * 0.85), redondearA100(valor * 1.15)];
-}
-
+/**
+ * Precio por clase del tutor (M5 US-6, UX-06 §4). Se guarda solo (PUT
+ * /api/pagos/tarifa, `precioSesion` en camelCase — B14) y se congela en cada
+ * reserva. El valor actual sale del backend (GET /api/pagos/tarifa), nunca de
+ * localStorage. "Por clase": hasta FASE2-01 la tarifa es por sesión, no por hora.
+ */
 export default function TabPrecio() {
-  const [precio, setPrecio] = useState<string | null>(null);
-  const [estado, setEstado] = useState<EstadoGuardado>("idle");
-  const [mensajeError, setMensajeError] = useState("");
-  const [provincia, setProvincia] = useState(PROVINCIA_POR_DEFECTO);
+  const toast = useToast();
+  const [precio, setPrecio] = useState<string>("");
+  const [cargado, setCargado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [provincia, setProvincia] = useState("");
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
-  const [cargandoReferencia, setCargandoReferencia] = useState(false);
-  const [referenciaAusente, setReferenciaAusente] = useState(false);
-  // B3: localStorage solo se lee tras el montaje, nunca en el render.
-  // `listo` evita que el auto-guardado corra por el setPrecio del restore.
-  const listo = useRef(false);
-  const precioRestaurado = useRef<number | null>(null);
+  const guardado = useRef<number | null>(null);
 
   useEffect(() => {
-    const guardado = localStorage.getItem(CLAVE_PRECIO_LOCAL);
-    if (guardado !== null) {
-      const n = Number(guardado);
-      if (Number.isFinite(n)) {
-        precioRestaurado.current = n;
-        setPrecio(guardado);
-      }
-    }
-    listo.current = true;
-  }, []);
-
-  // Sugerencia regional por provincia (M5 US-6).
-  useEffect(() => {
-    let activo = true;
-    setCargandoReferencia(true);
-    setReferenciaAusente(false);
     api
-      .get<ReferenciaRegional>(`/api/pagos/precio-referencia/${encodeURIComponent(provincia)}`)
-      .then((r) => {
-        if (!activo) return;
-        if (r) {
-          setReferencia(r);
-        } else {
-          // 204 = sin referencia para la provincia (B11): estado vacío
-          // esperado, no un error.
-          setReferencia(null);
-          setReferenciaAusente(true);
+      .get<Tarifa | undefined>("/api/pagos/tarifa")
+      .then((t) => {
+        if (t?.precioSesion) {
+          guardado.current = Number(t.precioSesion);
+          setPrecio(String(Number(t.precioSesion)));
         }
       })
-      .catch(() => {
-        if (!activo) return;
-        setReferencia(null);
-        setReferenciaAusente(true);
-      })
-      .finally(() => {
-        if (activo) setCargandoReferencia(false);
-      });
+      .catch(() => undefined)
+      .finally(() => setCargado(true));
+  }, []);
+
+  // Referencia regional (M5 US-6): si no hay para la provincia, no se muestra nada.
+  useEffect(() => {
+    if (!provincia) {
+      setReferencia(null);
+      return;
+    }
+    let vivo = true;
+    api
+      .get<ReferenciaRegional | undefined>(`/api/pagos/precio-referencia/${encodeURIComponent(provincia)}`)
+      .then((r) => vivo && setReferencia(r ?? null))
+      .catch(() => vivo && setReferencia(null));
     return () => {
-      activo = false;
+      vivo = false;
     };
   }, [provincia]);
 
-  // Auto-guardado del precio (PU /api/pagos/tarifa, FR-PAG-006).
-  const precioNumerico = precio === null || precio === "" ? null : Number(precio);
+  const numero = precio === "" ? null : Number(precio);
   useEffect(() => {
-    if (!listo.current || precioNumerico === precioRestaurado.current) {
-      return;
-    }
-    if (precioNumerico === null || !Number.isFinite(precioNumerico)) {
-      setEstado("idle");
-      return;
-    }
-    setEstado("guardando");
-    const id = setTimeout(() => {
+    if (!cargado || numero === null || !Number.isFinite(numero) || numero <= 0 || numero === guardado.current) return;
+    const id = window.setTimeout(() => {
       api
-        .put("/api/pagos/tarifa", { precioSesion: precioNumerico })
+        .put("/api/pagos/tarifa", { precioSesion: numero })
         .then(() => {
-          setMensajeError("");
-          setEstado("ok");
+          guardado.current = numero;
+          setError(null);
+          toast.mostrar("Guardamos tu precio");
         })
-        .catch(() => {
-          setMensajeError(
-            "No se pudo guardar el precio. Intentá de nuevo cambiando el valor."
-          );
-          setEstado("error");
-        });
-    }, 500);
-    return () => clearTimeout(id);
-  }, [precioNumerico]);
-
-  const rango = referencia ? rangoSugerido(referencia.valorSugerido) : null;
-  const formatear = (v: number) => `$${v.toLocaleString("es-AR")}`;
+        .catch(() => setError("No pudimos guardar el precio. Probá cambiando el valor de nuevo."));
+    }, 700);
+    return () => window.clearTimeout(id);
+  }, [numero, cargado, toast]);
 
   return (
-    <section aria-label="Configuración de precio">
-      <h2 className="text-lg font-bold text-slate-800">Configuración de precio</h2>
-      <p className="text-sm text-slate-500">
-        Fijá cuánto cobrás por sesión. Se guarda solo y ese valor se congela en
-        cada reserva que aceptes.
-      </p>
-
-      <div className="mt-4 flex items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm font-semibold text-slate-800">
-          Precio por sesión (ARS)
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
-              step={100}
-              inputMode="numeric"
-              value={precio ?? ""}
-              placeholder="0"
-              onChange={(e) => setPrecio(e.target.value === "" ? "" : e.target.value)}
-              className="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-2xl font-bold text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
-            />
-            <span aria-hidden className="text-xl font-bold text-slate-500">
-              $
-            </span>
-          </div>
+    <section aria-label="Precio" className="flex flex-col gap-6">
+      <div>
+        <label htmlFor="precio" className="text-sm font-bold">
+          Precio por clase (ARS)
         </label>
-        {(estado === "guardando" || estado === "ok") && (
-          <IndicadorGuardado estado={estado} className="mb-2" />
+        <div className="mt-2 flex max-w-xs items-center rounded-control border border-borde-control bg-superficie px-4 focus-within:border-marca-700 focus-within:ring-4 focus-within:ring-marca-100">
+          <span aria-hidden className="text-3xl font-extrabold text-tinta-tenue">
+            $
+          </span>
+          <input
+            id="precio"
+            type="number"
+            min={1}
+            step={100}
+            inputMode="numeric"
+            value={precio}
+            placeholder="0"
+            disabled={!cargado}
+            onChange={(e) => setPrecio(e.target.value)}
+            className="tabular min-h-16 w-full bg-transparent px-2 text-3xl font-extrabold text-tinta focus:outline-none"
+            aria-describedby="precio-ayuda"
+          />
+        </div>
+        <p id="precio-ayuda" className="mt-2 text-[13px] text-tinta-tenue">
+          Se guarda solo. Cada reserva congela el precio del momento en que se hizo.
+        </p>
+        {error && (
+          <Alerta tono="peligro" className="mt-3">
+            {error}
+          </Alerta>
         )}
       </div>
 
-      {estado === "error" && (
-        <IndicadorGuardado estado="error" mensajeError={mensajeError} className="mt-2" />
+      {numero !== null && numero > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl bg-fondo p-4">
+          <Eye className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
+          <p className="text-[15px]">
+            Así lo ven las familias: <strong>{formatearPesos(numero)} por clase</strong>.
+          </p>
+        </div>
       )}
 
-      <label className="mt-5 flex flex-col gap-1 text-sm font-semibold text-slate-800">
-        Tu provincia (para la sugerencia de precio)
-        <select
-          value={provincia}
-          onChange={(e) => setProvincia(e.target.value)}
-          className="w-72 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
-        >
+      <div className="max-w-sm">
+        <Selector id="provincia" etiqueta="Tu provincia (para ver el precio de referencia)" value={provincia} onChange={(e) => setProvincia(e.target.value)}>
+          <option value="">Elegí tu provincia</option>
           {PROVINCIAS.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
           ))}
-        </select>
-      </label>
-
-      {cargandoReferencia ? (
-        <p className="mt-3 text-sm text-slate-500">Buscando referencia regional…</p>
-      ) : rango ? (
-        <Alerta tono="dato" className="mt-4 flex items-start gap-2 font-medium">
-          <TrendingUp className="mt-0.5 shrink-0" size={18} aria-hidden />
-          <span>
-            Sugerencia inteligente: según el poder adquisitivo de tu región, los
-            tutores de tu nivel cobran entre {formatear(rango[0])} y{" "}
-            {formatear(rango[1])}. Ajustar tu precio a este rango puede aumentar
-            tus reservas.
+        </Selector>
+      </div>
+      {referencia && (
+        <Alerta tono="info" titulo={`Precio de referencia en ${referencia.provincia}`} sinIcono>
+          <span className="flex items-center gap-2">
+            <TrendingUp className="size-4" aria-hidden /> Ronda los {formatearPesos(referencia.valorSugerido)} por clase.
           </span>
         </Alerta>
-      ) : referenciaAusente ? (
-        <p className="mt-3 text-sm text-slate-500">
-          Todavía no tenemos referencia de precios para {provincia}. Este dato no
-          es obligatorio para publicar tus tutorías.
-        </p>
-      ) : null}
+      )}
     </section>
   );
 }

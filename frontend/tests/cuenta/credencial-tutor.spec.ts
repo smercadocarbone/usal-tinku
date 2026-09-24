@@ -24,7 +24,7 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoPerfilTutor();
 
       await expect(page.getByText("Todavía no cargaste tu credencial académica")).toBeVisible();
       await expect(cuenta.selectTipoCredencial).toBeVisible();
@@ -45,7 +45,7 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoPerfilTutor();
 
       await expect(page.getByText("Tu credencial está en revisión por el equipo de Tinku.")).toBeVisible();
       await expect(cuenta.botonCargarCredencial).toHaveCount(0);
@@ -62,7 +62,7 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoPerfilTutor();
 
       await expect(page.getByText("Tu credencial académica fue aprobada.")).toBeVisible();
     }
@@ -81,7 +81,7 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoPerfilTutor();
 
       await expect(
         page.getByText("Tu perfil está verificado. Tu nueva credencial está en revisión.")
@@ -102,7 +102,7 @@ test.describe("Cuenta — estado real de la credencial (Tutor)", () => {
       });
 
       const cuenta = new CuentaPage(page);
-      await cuenta.goto();
+      await cuenta.gotoPerfilTutor();
 
       await expect(page.getByText("Tu credencial fue rechazada. Podés volver a cargarla.")).toBeVisible();
       await expect(cuenta.botonCargarCredencial).toBeVisible();

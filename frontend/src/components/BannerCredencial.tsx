@@ -8,7 +8,7 @@ import {
   type CredencialPropia,
   type TipoCredencial,
 } from "@/lib/api";
-import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta } from "@/components/ui";
+import { Alerta, Boton, CampoSelect, Cargando, SubidaArchivo } from "@/components/ui";
 
 const TIPOS: { value: TipoCredencial; label: string }[] = [
   { value: "TITULO", label: "Título" },
@@ -69,22 +69,19 @@ export default function BannerCredencial() {
 
   if (errorCarga) {
     return (
-      <Alerta tono="error" className="w-fit">
+      <Alerta tono="peligro" accion={<Boton variante="secundario" tamano="sm" onClick={cargar}>Reintentar</Boton>}>
         No se pudo cargar el estado de tu credencial.
-        <Boton variante="secundario" tamano="sm" className="mt-3 flex" onClick={cargar}>
-          Reintentar
-        </Boton>
       </Alerta>
     );
   }
 
   if (credencial?.estado === "APROBADO") {
-    return <Alerta tono="exito" className="w-fit">Tu credencial académica fue aprobada.</Alerta>;
+    return <Alerta tono="exito">Tu credencial académica fue aprobada.</Alerta>;
   }
 
   if (credencial?.estado === "PENDIENTE") {
     return (
-      <Alerta tono={credencial.tieneAprobada ? "exito" : "aviso"} className="w-fit">
+      <Alerta tono={credencial.tieneAprobada ? "exito" : "aviso"}>
         {credencial.tieneAprobada
           ? "Tu perfil está verificado. Tu nueva credencial está en revisión."
           : "Tu credencial está en revisión por el equipo de Tinku."}
@@ -95,14 +92,14 @@ export default function BannerCredencial() {
   // credencial === null (nunca cargó ninguna) o estado === "RECHAZADO".
   return (
     <div className="flex flex-col gap-3">
-      <Alerta tono={credencial?.estado === "RECHAZADO" ? "error" : "aviso"} className="w-fit">
+      <Alerta tono={credencial?.estado === "RECHAZADO" ? "peligro" : "aviso"}>
         {credencial?.estado === "RECHAZADO"
           ? "Tu credencial fue rechazada. Podés volver a cargarla."
           : "Todavía no cargaste tu credencial académica: sin ella, tu perfil no aparece en las búsquedas de los Adultos Responsables."}
       </Alerta>
 
-      <Tarjeta className="w-full max-w-sm p-4">
-        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
+      <div className="max-w-md">
+        <form className="flex flex-col gap-4" onSubmit={onSubmit}>
           <CampoSelect
             id="tipoCredencial"
             etiqueta="Tipo de documento"
@@ -116,21 +113,24 @@ export default function BannerCredencial() {
             ))}
           </CampoSelect>
 
-          <Campo
+          <SubidaArchivo
             id="archivoCredencial"
             etiqueta="Archivo"
-            type="file"
+            formatosTexto="PDF, JPG o PNG"
             accept="application/pdf,image/png,image/jpeg"
-            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            maxMb={5}
+            archivo={archivo}
+            onCambio={setArchivo}
+            ayuda="Lo revisa a mano una persona del equipo de Tinku."
           />
 
-          {errorSubida && <Alerta tono="error">{errorSubida}</Alerta>}
+          {errorSubida && <Alerta tono="peligro">{errorSubida}</Alerta>}
 
-          <Boton type="submit" tamano="sm" className="w-fit" cargando={enviando} textoCargando="Cargando…">
+          <Boton type="submit" className="w-fit" cargando={enviando} textoCargando="Cargando…">
             Cargar credencial
           </Boton>
         </form>
-      </Tarjeta>
+      </div>
     </div>
   );
 }

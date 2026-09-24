@@ -1,455 +1,445 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CalendarClock, ChevronLeft, CircleSlash, Flag, Sparkles, Video, WalletCards } from "lucide-react";
 import {
   api,
   ApiError,
   getResumenSesion,
   getSesionPorReserva,
+  mensajeDeError,
   type ResumenSesionInfo,
   type SesionInfo,
 } from "@/lib/api";
-import { ESTADO_ETIQUETA, Reserva } from "@/lib/reservas";
+import { finDe, type Reserva } from "@/lib/reservas";
 import { ETIQUETA_MOTIVO_CANCELACION, etiqueta } from "@/lib/etiquetas";
-import { formatearFecha, formatearHora, formatearPrecio } from "@/lib/formatos";
+import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
+import { TIEMPOS } from "@/lib/tiempos";
+import { useSesion } from "@/lib/useSesion";
+import { useAhora } from "@/lib/useAhora";
+import { hhmm, inicioISO, proximosDias, type Franja } from "@/lib/agenda";
+import { nombreCorto } from "@/lib/tutores";
+import { cn } from "@/lib/cn";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
-import { Alerta, Boton, Campo, CampoSelect, Cargando, Tarjeta, clasesBoton } from "@/components/ui";
+import FormularioDenuncia from "@/components/FormularioDenuncia";
+import {
+  Alerta,
+  Avatar,
+  Boton,
+  EstadoReserva,
+  EstadoVacio,
+  Menu,
+  Modal,
+  ModalConfirmacion,
+  SkeletonPerfil,
+  Tarjeta,
+  clasesBoton,
+  useToast,
+} from "@/components/ui";
 
-const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-interface Franja {
-  id: string;
-  diaSemana: number | null;
-  fechaEspecifica: string | null;
-  horaInicio: string;
-  horaFin: string;
-  activa: boolean;
+/** Pasos de la línea de tiempo de una clase (UX-05 §4). Sin fechas inventadas: solo estado. */
+function pasosLinea(r: Reserva, sesion: SesionInfo | null) {
+  const orden = ["pendiente_pago", "confirmada", "en_curso", "finalizada"];
+  const i = orden.indexOf(r.estado);
+  return [
+    { titulo: "Reservada", hecho: true },
+    { titulo: "Pagada y confirmada", hecho: i >= 1 },
+    { titulo: "Clase", hecho: i >= 3 || sesion?.estado === "finalizada", actual: r.estado === "en_curso" },
+    {
+      titulo: `Pago al tutor (${TIEMPOS.liberacionHoras} hs después)`,
+      hecho: false,
+      detalle: i >= 3 ? `Se libera ${TIEMPOS.liberacionHoras} hs después de la clase si no hay reclamos.` : undefined,
+    },
+  ];
 }
 
 export default function ReservaDetallePage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const toast = useToast();
+  const sesionUsuario = useSesion();
+  const payload = sesionUsuario?.payload;
+  const esMenor = payload?.tipo === "MENOR";
+  const esTutor = payload?.tipo === "TUTOR";
+  const ahora = useAhora();
+
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sesion, setSesion] = useState<SesionInfo | null>(null);
   const [resumen, setResumen] = useState<ResumenSesionInfo | null>(null);
-  const [confirmando, setConfirmando] = useState(false);
-  const [nuevoHorario, setNuevoHorario] = useState("");
-  const [editandoHorario, setEditandoHorario] = useState(false);
+  const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [reprogramar, setReprogramar] = useState(false);
+  const [reportar, setReportar] = useState(false);
 
-  const [franjas, setFranjas] = useState<Franja[] | null>(null);
-  const [cargandoFranjas, setCargandoFranjas] = useState(false);
-  const [franjasPendiente, setFranjasPendiente] = useState(false);
-  const [fechaElegida, setFechaElegida] = useState("");
-  const [franjaElegida, setFranjaElegida] = useState("");
-  const [horaElegida, setHoraElegida] = useState("");
-  const [horas, setHoras] = useState<string[]>([]);
-
-  async function cargar() {
+  const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
-    let r: Reserva | null = null;
+    let r: Reserva;
     try {
       r = await api.get<Reserva>(`/api/reservas/${params.id}`);
       setReserva(r);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(
-          err.status === 404
-            ? "La reserva no existe."
-            : err.message || "No se pudo cargar la reserva."
-        );
-      } else {
-        setError("No se pudo cargar la reserva.");
-      }
-      return;
-    } finally {
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? "No encontramos esta clase."
+          : "No pudimos cargar la clase. Revisá tu conexión y probá de nuevo."
+      );
       setCargando(false);
+      return;
     }
-
-    // Estados que por construcción no pueden tener Sesión: no pedirla (B11) —
-    // un 404 esperado en cada carga de una reserva cancelada no es un error.
-    // Para confirmada en adelante, un 404 puntual SÍ es el caso normal (job
-    // T-5 que todavía no creó la Sesión), y se trata igual: nada que mostrar.
-    const ESTADOS_SIN_SESION = new Set(["pendiente_pago", "cancelada"]);
-    let sesionActual: SesionInfo | null = null;
-    if (r && !ESTADOS_SIN_SESION.has(r.estado)) {
+    setCargando(false);
+    // B11: sin Sesión por construcción (pendiente/cancelada) no se pide.
+    if (r.estado === "pendiente_pago" || r.estado === "cancelada") return;
+    try {
+      const s = await getSesionPorReserva(params.id);
+      setSesion(s);
       try {
-        sesionActual = await getSesionPorReserva(params.id);
-        setSesion(sesionActual);
+        setResumen(await getResumenSesion(s.id));
       } catch {
-        setSesion(null);
+        setResumen(null);
       }
-
-      if (sesionActual) {
-        try {
-          setResumen(await getResumenSesion(sesionActual.id));
-        } catch {
-          setResumen(null);
-        }
-      }
+    } catch {
+      setSesion(null);
     }
-  }
-
-  useEffect(() => {
-    cargar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  function pagar() {
-    if (!reserva) return;
-    router.replace(`/pagar?reserva=${reserva.id}`);
-  }
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
   async function cancelar() {
     if (!reserva) return;
-    if (!window.confirm("¿Seguro que querés cancelar esta reserva?")) return;
-    setConfirmando(true);
-    setError(null);
+    setCancelando(true);
     try {
-      const actualizada = await api.post<Reserva>(`/api/reservas/${reserva.id}/cancelar`);
-      setReserva(actualizada);
-      // Al cancelar ya no hay clase a la que entrar ni sesión que calificar.
+      const r = await api.post<Reserva>(`/api/reservas/${reserva.id}/cancelar`);
+      setReserva(r);
       setSesion(null);
       setResumen(null);
+      setConfirmarCancelar(false);
+      toast.mostrar("Cancelaste la clase");
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("No se pudo cancelar la reserva.");
-      }
+      toast.mostrar(mensajeDeError(err, "No pudimos cancelar la clase."), { tono: "error" });
     } finally {
-      setConfirmando(false);
+      setCancelando(false);
     }
   }
 
-  async function cargarFranjas() {
-    if (!reserva) return;
-    setCargandoFranjas(true);
-    setFranjasPendiente(false);
-    try {
-      const lista = await api.get<Franja[]>(`/api/tutores/${reserva.tutorId}/franjas`);
-      setFranjas(lista);
-    } catch {
-      setFranjasPendiente(true);
-    } finally {
-      setCargandoFranjas(false);
-    }
+  if (cargando) return <SkeletonPerfil etiqueta="Cargando la clase…" />;
+  if (error || !reserva) {
+    return (
+      <EstadoVacio
+        icono={<CircleSlash />}
+        titulo="No pudimos mostrar esta clase"
+        accion={<Boton onClick={() => void cargar()}>Probar de nuevo</Boton>}
+      >
+        {error}
+      </EstadoVacio>
+    );
   }
 
-  function abrirReprogramar() {
-    const abriendo = !editandoHorario;
-    setEditandoHorario(abriendo);
-    if (abriendo) {
-      setFranjas(null);
-      setFranjasPendiente(false);
-      setFechaElegida("");
-      setFranjaElegida("");
-      setHoraElegida("");
-      setHoras([]);
-      cargarFranjas();
-    }
-  }
-
-  function fechaAplicable(f: Franja): string | null {
-    if (f.fechaEspecifica) return f.fechaEspecifica;
-    if (!fechaElegida) return null;
-    const dia = new Date(`${fechaElegida}T12:00:00`).getDay();
-    return f.diaSemana === dia ? fechaElegida : null;
-  }
-
-  function elegirFranja(id: string) {
-    setFranjaElegida(id);
-    setHoraElegida("");
-    setHoras([]);
-    const f = franjas?.find((x) => x.id === id);
-    if (!f || !fechaAplicable(f)) return;
-    setError(null);
-    const [ini, fin] = [f.horaInicio, f.horaFin].map((h) => {
-      const [hh, mm] = h.split(":").map(Number);
-      return hh * 60 + mm;
-    });
-    const lista: string[] = [];
-    for (let t = ini; t < fin; t += 60) {
-      lista.push(
-        `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`
-      );
-    }
-    setHoras(lista);
-  }
-
-  const franjasAplicables = franjas?.filter((f) => fechaAplicable(f) !== null) ?? [];
-
-  async function reprogramar(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!reserva) return;
-    let iso = "";
-    if (franjaElegida && horaElegida) {
-      const f = franjas?.find((x) => x.id === franjaElegida);
-      const fecha = f ? fechaAplicable(f) : null;
-      if (fecha) iso = new Date(`${fecha}T${horaElegida}:00`).toISOString();
-    } else if (nuevoHorario) {
-      iso = new Date(nuevoHorario).toISOString();
-    }
-    if (!iso) return;
-    setConfirmando(true);
-    setError(null);
-    try {
-      const actualizada = await api.post<Reserva>(`/api/reservas/${reserva.id}/reprogramar`, {
-        nuevoHorario: iso,
-      });
-      setReserva(actualizada);
-      setEditandoHorario(false);
-      setNuevoHorario("");
-      setFranjas(null);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("No se pudo reprogramar la reserva.");
-      }
-    } finally {
-      setConfirmando(false);
-    }
-  }
-
-  const puedePagar = reserva?.estado === "pendiente_pago";
-  const puedeCancelar =
-    reserva?.estado === "pendiente_pago" || reserva?.estado === "confirmada";
-  const puedeReprogramar = reserva?.estado === "confirmada";
-  const puedeEntrarAClase =
-    sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
-  // Solo el cierre limpio (`finalizada`) habilita calificar — un no-show doble
-  // o un corte interrumpido antes del 50% no son una clase que se pueda
-  // evaluar, y el backend tampoco lo esperaría como caso de uso normal.
+  const r = reserva;
+  const fin = finDe(r);
+  const tutorNombre = r.tutorNombre ? `${r.tutorNombre} ${r.tutorApellido ?? ""}`.trim() : "tu tutor";
+  const beneficiario = r.beneficiarioNombre && r.beneficiarioId !== r.pagadorId ? r.beneficiarioNombre : null;
+  const titulo = esTutor
+    ? `Clase con ${r.beneficiarioNombre ? nombreCorto(r.beneficiarioNombre, r.beneficiarioApellido) : "tu alumno"}`
+    : beneficiario
+      ? `Clase de ${beneficiario} con ${r.tutorNombre ?? "su tutor"}`
+      : `Clase con ${r.tutorNombre ?? "tu tutor"}`;
+  const puedePagar = r.puedePagar ?? r.estado === "pendiente_pago";
+  const puedeCancelar = r.puedeCancelar ?? (r.estado === "pendiente_pago" || r.estado === "confirmada");
+  const puedeEntrar = sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
   const puedeCalificar = sesion !== null && sesion.estado === "finalizada";
-  const faltanMenosDe24hs =
-    reserva !== null &&
-    Date.now() >= new Date(reserva.horario).getTime() - 24 * 60 * 60 * 1000;
+  const puedeReprogramar = r.estado === "confirmada" && !esMenor;
+  const cancelada = r.estado === "cancelada";
+  const empiezaPronto = ahora > 0 && new Date(r.horario).getTime() - ahora < 60 * 60000;
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl tracking-tight">
-        Detalle de la reserva
-      </h1>
+    <div className="mx-auto max-w-2xl">
+      <Link
+        href="/cuenta/reservas"
+        className="-ml-2 mb-4 inline-flex min-h-11 items-center gap-1 rounded-control px-2 text-[15px] font-semibold text-tinta no-underline hover:bg-superficie-hundida"
+      >
+        <ChevronLeft className="size-5" aria-hidden /> Mis clases
+      </Link>
 
-        {cargando && <Cargando>Cargando...</Cargando>}
+      <header className="flex items-start gap-4">
+        <Avatar
+          nombre={(esTutor ? r.beneficiarioNombre : r.tutorNombre) ?? "?"}
+          apellido={(esTutor ? r.beneficiarioApellido : r.tutorApellido) ?? undefined}
+          semilla={esTutor ? (r.beneficiarioId ?? r.id) : r.tutorId}
+          tamano="lg"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="sr-only">Detalle de la reserva</p>
+          <h1 className="text-[26px] font-extrabold sm:text-[32px]">{titulo}</h1>
+          <p className="mt-1 text-[16px] text-tinta-suave first-letter:uppercase">{fechaHoraLarga(r.horario, fin)}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <EstadoReserva estado={r.estado} />
+            {r.duracionMinutos ? <span className="text-sm text-tinta-tenue">{duracionLegible(r.duracionMinutos)}</span> : null}
+            {r.precio !== null && <span className="tabular text-sm font-semibold">{formatearPesos(r.precio)}</span>}
+          </div>
+        </div>
+        {!esMenor && !esTutor && !cancelada && (
+          <Menu
+            etiqueta="Más opciones de esta clase"
+            items={[{ texto: "Reportar un problema", icono: <Flag />, peligro: true, onClick: () => setReportar(true) }]}
+          />
+        )}
+      </header>
 
-        {error && !cargando && (
-          <Alerta tono="error" className="mb-4">
-            {error}
-            <Boton
-              variante="secundario"
-              tamano="sm"
-              className="mt-3 flex"
-              onClick={cargar}
-            >
-              Reintentar
-            </Boton>
+      {!esTutor && r.tutorNombre && (
+        <p className="mt-4 text-sm">
+          <Link href={`/tutores/${r.tutorId}`} className="font-semibold">
+            Ver el perfil de {tutorNombre}
+          </Link>
+        </p>
+      )}
+
+      {cancelada && (
+        <Alerta tono="info" className="mt-6" titulo={etiqueta(ETIQUETA_MOTIVO_CANCELACION, r.motivoCancelacion)}>
+          {r.motivoCancelacion === "timeout_pago"
+            ? "No se te cobró nada y el horario se liberó."
+            : "Si ya se había pagado, la devolución sigue la política de cancelación."}
+        </Alerta>
+      )}
+
+      {/* Acción principal según el estado */}
+      <div className="mt-8 flex flex-col gap-3">
+        {puedePagar && (
+          <Boton tamano="lg" anchoCompleto icono={<WalletCards />} onClick={() => router.push(`/pagar?reserva=${r.id}`)}>
+            Pagar ahora
+          </Boton>
+        )}
+        {puedeEntrar && sesion && (
+          <Link href={`/aula/${sesion.id}`} className={clasesBoton("primario", "lg", "w-full")}>
+            <Video className="size-5" aria-hidden /> Entrar a la clase
+          </Link>
+        )}
+        {r.estado === "confirmada" && !puedeEntrar && !empiezaPronto && (
+          <p className="flex items-center gap-2 text-sm text-tinta-suave">
+            <CalendarClock className="size-4" aria-hidden /> El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes de la clase.
+          </p>
+        )}
+        {(puedeReprogramar || puedeCancelar) && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {puedeReprogramar && (
+              <Boton variante="secundario" className="flex-1" onClick={() => setReprogramar(true)}>
+                Cambiar horario
+              </Boton>
+            )}
+            {puedeCancelar && (
+              <Boton variante="secundario" className="flex-1 text-peligro" onClick={() => setConfirmarCancelar(true)}>
+                Cancelar clase
+              </Boton>
+            )}
+          </div>
+        )}
+      </div>
+
+      {!cancelada && (
+        <section className="mt-10" aria-labelledby="linea">
+          <h2 id="linea" className="text-lg font-bold">
+            Cómo va
+          </h2>
+          <ol className="mt-4 flex list-none flex-col p-0">
+            {pasosLinea(r, sesion).map((p, i, arr) => (
+              <li key={p.titulo} className="relative flex gap-4 pb-6 last:pb-0">
+                {i < arr.length - 1 && (
+                  <span aria-hidden className={cn("absolute left-[11px] top-7 h-[calc(100%-1.5rem)] w-0.5", p.hecho ? "bg-marca-700" : "bg-borde")} />
+                )}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "relative z-10 mt-0.5 size-6 shrink-0 rounded-full border-2",
+                    p.hecho ? "border-marca-700 bg-marca-700" : p.actual ? "border-info bg-info-suave" : "border-borde-fuerte bg-superficie"
+                  )}
+                />
+                <div>
+                  <p className={cn("text-[15px] font-semibold", !p.hecho && !p.actual && "text-tinta-tenue")}>
+                    {p.titulo}
+                    <span className="sr-only">{p.hecho ? " (hecho)" : p.actual ? " (en curso)" : " (pendiente)"}</span>
+                  </p>
+                  {p.detalle && <p className="text-sm text-tinta-tenue">{p.detalle}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {resumen?.disponible && (
+        <Tarjeta className="mt-10">
+          <h2 className="flex items-center gap-2 text-lg font-bold">
+            <Sparkles className="size-5 text-acento-700" aria-hidden /> Resumen de la clase
+          </h2>
+          <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-tinta-suave">{resumen.resumenFinal}</p>
+        </Tarjeta>
+      )}
+
+      {puedeCalificar && sesion && (
+        <div className="mt-10">
+          <FormularioCalificacion sesionId={sesion.id} />
+        </div>
+      )}
+
+      <ModalConfirmacion
+        abierto={confirmarCancelar}
+        onCerrar={() => setConfirmarCancelar(false)}
+        onConfirmar={cancelar}
+        cargando={cancelando}
+        titulo="¿Cancelar esta clase?"
+        textoConfirmar="Cancelar la clase"
+      >
+        {r.estado === "pendiente_pago" ? (
+          <p>Todavía no pagaste, así que no se te cobra nada. El horario vuelve a quedar libre.</p>
+        ) : r.cancelarReembolsaTotal === false ? (
+          <p>
+            <strong className="text-tinta">Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} hs:</strong> si cancelás ahora, el pago se le libera
+            al tutor y no hay devolución.
+          </p>
+        ) : esTutor ? (
+          <p>Si cancelás, le devolvemos el total a quien pagó la clase.</p>
+        ) : (
+          <p>Como falta más de {TIEMPOS.cancelacionSinPenalidadHoras} hs, te devolvemos el total por el mismo medio de pago.</p>
+        )}
+      </ModalConfirmacion>
+
+      {puedeReprogramar && (
+        <CambiarHorario
+          abierto={reprogramar}
+          onCerrar={() => setReprogramar(false)}
+          reserva={r}
+          onCambiado={(nueva) => {
+            setReserva(nueva);
+            setReprogramar(false);
+            toast.mostrar("Cambiamos el horario");
+          }}
+        />
+      )}
+
+      {!esMenor && !esTutor && (
+        <FormularioDenuncia
+          abierto={reportar}
+          onCerrar={() => setReportar(false)}
+          onEnviada={() => toast.mostrar("Recibimos tu reporte. Lo vamos a revisar.")}
+          denunciadoId={r.tutorId}
+          nombre={r.tutorNombre ? nombreCorto(r.tutorNombre, r.tutorApellido) : undefined}
+          sesionId={sesion?.id}
+        />
+      )}
+    </div>
+  );
+}
+
+function CambiarHorario({
+  abierto,
+  onCerrar,
+  reserva,
+  onCambiado,
+}: {
+  abierto: boolean;
+  onCerrar: () => void;
+  reserva: Reserva;
+  onCambiado: (r: Reserva) => void;
+}) {
+  const [franjas, setFranjas] = useState<Franja[] | null>(null);
+  const [elegido, setElegido] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ahora = useAhora();
+
+  useEffect(() => {
+    if (!abierto || franjas) return;
+    api
+      .get<Franja[]>(`/api/tutores/${reserva.tutorId}/franjas`)
+      .then(setFranjas)
+      .catch(() => setFranjas([]));
+  }, [abierto, franjas, reserva.tutorId]);
+
+  const opciones = useMemo(() => {
+    if (!franjas) return [];
+    const limite = ahora + TIEMPOS.ventanaMinimaReservaMinutos * 60000;
+    return proximosDias(franjas, 14).flatMap((d) =>
+      d.franjas
+        .map((f) => ({ id: `${d.fecha}-${f.id}`, inicio: inicioISO(d.fecha, f.horaInicio), dia: d.referencia, f }))
+        .filter((o) => new Date(o.inicio).getTime() > limite && o.inicio !== new Date(reserva.horario).toISOString())
+    );
+  }, [franjas, ahora, reserva.horario]);
+
+  const menosDe24 = ahora > 0 && new Date(reserva.horario).getTime() - ahora < TIEMPOS.cancelacionSinPenalidadHoras * 3600000;
+
+  async function guardar() {
+    const o = opciones.find((x) => x.id === elegido);
+    if (!o) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      onCambiado(await api.post<Reserva>(`/api/reservas/${reserva.id}/reprogramar`, { nuevoHorario: o.inicio }));
+    } catch (err) {
+      setError(mensajeDeError(err, "No pudimos cambiar el horario."));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      variante="hoja"
+      titulo="Cambiar horario"
+      descripcion="Elegí otro horario publicado por el tutor."
+      pie={
+        <>
+          <Boton variante="secundario" onClick={onCerrar}>
+            Volver
+          </Boton>
+          <Boton disabled={!elegido} cargando={guardando} textoCargando="Guardando…" onClick={guardar}>
+            Confirmar nuevo horario
+          </Boton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3 pb-2">
+        {menosDe24 && (
+          <Alerta tono="aviso">
+            Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} horas para esta clase: el cambio se trata como cancelación tardía.
           </Alerta>
         )}
-
-        {reserva && (
-          <>
-            <Tarjeta className="mb-4 w-full max-w-none p-8">
-              <dl className="m-0">
-                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Estado</dt>
-                  <dd className="m-0 text-right">
-                    {ESTADO_ETIQUETA[reserva.estado] ?? reserva.estado}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Fecha</dt>
-                  <dd className="m-0 text-right">
-                    {formatearFecha(reserva.horario)}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Horario</dt>
-                  <dd className="m-0 text-right">
-                    {formatearHora(reserva.horario)}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                  <dt className="font-semibold">Monto</dt>
-                  <dd className="m-0 text-right">
-                    {reserva.precio !== null
-                      ? formatearPrecio(reserva.precio)
-                      : "—"}
-                  </dd>
-                </div>
-                {reserva.motivoCancelacion && (
-                  <div className="flex justify-between gap-4 border-b border-slate-200 py-3">
-                    <dt className="font-semibold">Motivo de cancelación</dt>
-                    <dd className="m-0 text-right">
-                      {etiqueta(ETIQUETA_MOTIVO_CANCELACION, reserva.motivoCancelacion)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </Tarjeta>
-
-            <div className="flex flex-col gap-2">
-              {puedePagar && <Boton onClick={pagar}>Pagar ahora</Boton>}
-
-              {puedeEntrarAClase && sesion && (
-                <Link href={`/aula/${sesion.id}`} className={clasesBoton("primario")}>
-                  Entrar a la clase
-                </Link>
-              )}
-
-              {puedeReprogramar && (
-                <Boton variante="secundario" onClick={abrirReprogramar}>
-                  {editandoHorario ? "Cancelar edición" : "Reprogramar"}
-                </Boton>
-              )}
-
-              {puedeCancelar && (
-                <Boton
-                  variante="peligro"
-                  onClick={cancelar}
-                  cargando={confirmando}
-                  textoCargando="Procesando..."
+        {franjas === null ? (
+          <p role="status" className="text-sm text-tinta-tenue">
+            Cargando horarios…
+          </p>
+        ) : opciones.length === 0 ? (
+          <p className="text-[15px] text-tinta-suave">El tutor no tiene otros horarios publicados en las próximas dos semanas.</p>
+        ) : (
+          <ul className="flex list-none flex-col gap-2 p-0" aria-label="Horarios disponibles">
+            {opciones.map((o) => (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  aria-pressed={elegido === o.id}
+                  onClick={() => setElegido(o.id)}
+                  className={cn(
+                    "flex min-h-14 w-full cursor-pointer items-center justify-between rounded-2xl border-2 px-4 text-left",
+                    elegido === o.id ? "border-tinta" : "border-borde hover:border-borde-fuerte"
+                  )}
                 >
-                  Cancelar reserva
-                </Boton>
-              )}
-            </div>
-
-            {editandoHorario && puedeReprogramar && (
-              <form
-                onSubmit={reprogramar}
-                className="mt-6 flex flex-col gap-4"
-              >
-                {faltanMenosDe24hs && (
-                  <Alerta tono="aviso" className="mb-4">
-                    Faltan menos de 24 horas para esta clase. La reprogramación se va a tratar
-                    como cancelación tardía.
-                  </Alerta>
-                )}
-
-                {cargandoFranjas && <Cargando>Cargando franjas...</Cargando>}
-
-                {!cargandoFranjas && franjasPendiente && (
-                  <>
-                    <Alerta tono="aviso" className="mb-4">
-                      No pudimos cargar las franjas del tutor. Probá de nuevo en unos minutos.
-                    </Alerta>
-                    <Campo
-                      id="nuevoHorario"
-                      etiqueta="Nuevo horario"
-                      type="datetime-local"
-                      required
-                      value={nuevoHorario}
-                      onChange={(e) => setNuevoHorario(e.target.value)}
-                    />
-                  </>
-                )}
-
-                {!cargandoFranjas && !franjasPendiente && franjas?.length === 0 && (
-                  <>
-                    <Alerta tono="aviso" className="mb-4">
-                      Este tutor no publicó disponibilidad todavía. Elegí un horario manual o
-                      cerrá el panel.
-                    </Alerta>
-                    <Campo
-                      id="nuevoHorario"
-                      etiqueta="Nuevo horario"
-                      type="datetime-local"
-                      required
-                      value={nuevoHorario}
-                      onChange={(e) => setNuevoHorario(e.target.value)}
-                    />
-                  </>
-                )}
-
-                {!cargandoFranjas && !franjasPendiente && franjas && franjas.length > 0 && (
-                  <>
-                    <Campo
-                      id="fechaReprogramar"
-                      etiqueta="Fecha"
-                      type="date"
-                      value={fechaElegida}
-                      onChange={(e) => {
-                        setFechaElegida(e.target.value);
-                        setFranjaElegida("");
-                        setHoraElegida("");
-                        setHoras([]);
-                      }}
-                    />
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="franja" className="text-sm font-semibold">Franja del tutor</label>
-                      {franjasAplicables.length === 0 ? (
-                        <p className="text-sm text-slate-500">
-                          Elegi una fecha que corresponda a una franja.
-                        </p>
-                      ) : (
-                        <select
-                          id="franja"
-                          value={franjaElegida}
-                          onChange={(e) => elegirFranja(e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <option value="">Elegí una franja</option>
-                          {franjasAplicables.map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.fechaEspecifica
-                                ? `${new Date(`${f.fechaEspecifica}T12:00:00`).toLocaleDateString(
-                                    "es-AR",
-                                    { day: "numeric", month: "short" }
-                                  )} de ${f.horaInicio} a ${f.horaFin}`
-                                : `${DIAS[f.diaSemana ?? 0]} de ${f.horaInicio} a ${f.horaFin}`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    {horas.length > 0 && (
-                      <CampoSelect
-                        id="hora"
-                        etiqueta="Horario"
-                        value={horaElegida}
-                        onChange={(e) => setHoraElegida(e.target.value)}
-                      >
-                        <option value="">Elegí un horario</option>
-                        {horas.map((h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ))}
-                      </CampoSelect>
-                    )}
-                  </>
-                )}
-
-                <Boton
-                  type="submit"
-                  disabled={!nuevoHorario && !(franjaElegida && horaElegida)}
-                  cargando={confirmando}
-                  textoCargando="Reprogramando..."
-                >
-                  Confirmar nuevo horario
-                </Boton>
-              </form>
-            )}
-
-            {resumen?.disponible && (
-              <Tarjeta className="mt-6 w-full max-w-none p-6">
-                <h2 className="mb-2 text-base font-semibold text-slate-800">Resumen de la clase</h2>
-                <p className="whitespace-pre-line text-sm text-slate-700">{resumen.resumenFinal}</p>
-              </Tarjeta>
-            )}
-
-            {puedeCalificar && sesion && (
-              <div className="mt-6">
-                <FormularioCalificacion sesionId={sesion.id} />
-              </div>
-            )}
-          </>
+                  <span className="font-semibold capitalize">{diaCorto(o.dia)}</span>
+                  <span className="text-tinta-suave">
+                    {hhmm(o.f.horaInicio)} a {hhmm(o.f.horaFin)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-    </div>
+        {error && <Alerta tono="peligro">{error}</Alerta>}
+      </div>
+    </Modal>
   );
 }
