@@ -20,6 +20,8 @@ export const TIEMPOS = {
   edicionCalificacionHoras: 48,
   /** Revisión del Admin de una Alerta de kill-switch. */
   revisionAlertaHoras: 12,
+  /** Plazo de revisión de Credencial por intento. */
+  revisionCredencialHoras: 48,
   /** Edad mínima del menor. */
   edadMinimaMenor: 6,
   /** Umbral mínimo de calificaciones públicas ("Tutor nuevo" antes). */

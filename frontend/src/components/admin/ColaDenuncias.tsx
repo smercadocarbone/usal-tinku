@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, EyeOff, ImageOff } from "lucide-react";
 import {
   getColaDenuncias,
   mensajeDeError,
+  moderarPerfilTutor,
   resolverDenuncia,
   type DenunciaCola,
   type ResolucionDenuncia,
@@ -18,7 +19,10 @@ import {
   Cargando,
   EstadoVacio,
   Insignia,
+  Menu,
+  ModalConfirmacion,
   Tarjeta,
+  useToast,
 } from "@/components/ui";
 
 const ETIQUETA_MOTIVO: Record<string, string> = {
@@ -161,6 +165,9 @@ function FilaDenuncia({
   onResuelto: (id: string) => void;
 }) {
   const [abierta, setAbierta] = useState(false);
+  const [moderar, setModerar] = useState<"bio" | "foto" | null>(null);
+  const [moderando, setModerando] = useState(false);
+  const toast = useToast();
 
   return (
     <Tarjeta as="li" className="p-5">
@@ -198,14 +205,41 @@ function FilaDenuncia({
         </div>
       )}
 
-      <Boton
-        variante="secundario"
-        tamano="sm"
-        className="mt-3"
-        onClick={() => setAbierta((v) => !v)}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Boton variante="secundario" tamano="sm" onClick={() => setAbierta((v) => !v)}>
+          {abierta ? "Ocultar resolución" : "Resolver"}
+        </Boton>
+        <Menu
+          etiqueta="Moderar el perfil del denunciado"
+          items={[
+            { texto: "Quitar su presentación", icono: <EyeOff />, onClick: () => setModerar("bio") },
+            { texto: "Quitar su foto", icono: <ImageOff />, onClick: () => setModerar("foto") },
+          ]}
+        />
+      </div>
+
+      <ModalConfirmacion
+        abierto={moderar !== null}
+        onCerrar={() => setModerar(null)}
+        cargando={moderando}
+        onConfirmar={async () => {
+          if (!moderar) return;
+          setModerando(true);
+          try {
+            await moderarPerfilTutor(denuncia.denunciadoId, moderar);
+            toast.mostrar(moderar === "bio" ? "Quitamos la presentación" : "Quitamos la foto");
+            setModerar(null);
+          } catch (err) {
+            toast.mostrar(mensajeDeError(err, "No se pudo moderar el perfil."), { tono: "error" });
+          } finally {
+            setModerando(false);
+          }
+        }}
+        titulo={moderar === "bio" ? "¿Quitar la presentación?" : "¿Quitar la foto?"}
+        textoConfirmar={moderar === "bio" ? "Quitar presentación" : "Quitar foto"}
       >
-        {abierta ? "Ocultar resolución" : "Resolver"}
-      </Boton>
+        Deja de verse en su perfil público. El tutor puede cargar otra; no resuelve la denuncia.
+      </ModalConfirmacion>
 
       {abierta && <FormularioResolucion denuncia={denuncia} onResuelto={onResuelto} />}
     </Tarjeta>

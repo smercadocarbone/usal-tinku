@@ -37,8 +37,12 @@ export function usePerfilPropio(): PerfilPropio | null {
   return perfil;
 }
 
-/** Rol de admin del usuario, o `null` si no es admin (403/404) o no hay sesión. */
-export function useRolAdmin(): RolAdmin | null {
+/**
+ * Rol de admin del usuario, o `null` si no es admin (403/404) o no hay sesión.
+ * `fresco`: dentro de /admin se pregunta siempre al backend (el rol puede haber
+ * cambiado); la cabecera usa el valor cacheado.
+ */
+export function useRolAdmin(fresco = false): RolAdmin | null {
   const sesion = useSesion();
   const [rol, setRol] = useState<RolAdmin | null>(null);
   useEffect(() => {
@@ -54,8 +58,9 @@ export function useRolAdmin(): RolAdmin | null {
     } catch {
       /* almacenamiento bloqueado: se pregunta al backend */
     }
+    if (fresco) rolEnVuelo = null;
     rolEnVuelo ??=
-      guardado !== null
+      guardado !== null && !fresco
         ? Promise.resolve(guardado === "" ? null : (guardado as RolAdmin))
         : api
             .get<{ rol: RolAdmin }>("/api/admin/yo")
@@ -74,6 +79,6 @@ export function useRolAdmin(): RolAdmin | null {
     return () => {
       vivo = false;
     };
-  }, [sesion]);
+  }, [sesion, fresco]);
   return rol;
 }

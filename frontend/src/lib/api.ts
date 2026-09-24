@@ -766,3 +766,8 @@ export function subirFotoTutor(archivo: File): Promise<unknown> {
 export function borrarFotoTutor(): Promise<unknown> {
   return api.delete("/api/tutores/me/foto");
 }
+
+/** U1 — moderación: el Admin de Moderación quita la presentación o la foto de un Tutor. */
+export function moderarPerfilTutor(tutorId: string, que: "bio" | "foto"): Promise<void> {
+  return api.delete(`/api/admin/moderacion/tutores/${tutorId}/${que}`);
+}

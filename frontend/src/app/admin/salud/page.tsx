@@ -44,7 +44,7 @@ export default function AdminSaludPage() {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-slate-800">Salud de Infraestructura</h2>
+      <h2 className="text-2xl font-bold">Salud de Infraestructura</h2>
       <div className="mt-4">
         {cargando ? (
           <Cargando>Consultando infraestructura…</Cargando>
