@@ -106,14 +106,14 @@ tinku:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
     sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}
-  # M6 — resumen automatico. ADR del proveedor LLM PENDIENTE (Constitucion,
-  # "LLM (resumen y transcripcion): GPT-4o vs Gemini 2.0 Flash — Pendiente, ADR",
-  # flag T-FIN-03). Hasta no cerrarlo, el puerto ResumenProveedor es fail-closed:
-  # sin proveedor configurado NO sale nada hacia ningun modelo. Estos placeholders
-  # solo existen para que la decision final sea config y no codigo.
+  # M6 — resumen automatico (T07, ADR-M6-03): Gemini 3.5 Flash-Lite, pipeline de
+  # dos llamadas. Con tinku.resumen.proveedor=gemini se activan los beans reales
+  # (TranscriptSesionProveedorGemini + ResumenProveedorGemini) y salen llamadas a
+  # Google; SIN esa property siguen los fail-closed: tests y dev nunca llaman a
+  # Google. La API key vive SOLO en el entorno (GEMINI_API_KEY), nunca en el repo.
   resumen:
-    llm:
-      proveedor: ${LLM_PROVEEDOR:}   # gpt-4o | gemini-2.0-flash — vacio = fail-closed
-      api-key: ${LLM_API_KEY:}       # clave del proveedor elegido por el ADR
+    proveedor: ${LLM_PROVEEDOR:none}   # gemini — none = fail-closed (ADR-M6-03)
+    gemini:
+      api-key: ${GEMINI_API_KEY:}  # clave de Google AI Studio — solo entorno
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}

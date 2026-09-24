@@ -58,11 +58,13 @@ import java.util.UUID;
  * generacion al resolverse la disputa (caso borde #4 solo aclara que un
  * reembolso no anula un resumen ya generado): lo minimo es pausar y no filtrar.</p>
  *
- * <p><b>T-M6-05:</b> la generacion va por {@link ResumenProveedor} (puerto,
- * ADR del proveedor PENDIENTE — el bean default es fail-closed). El transcript
- * pasa SIEMPRE por {@link AnonimizadorTranscript} antes de armar el prompt y
- * antes de cualquier llamada saliente (FR-SUM-005); el texto anonimizado queda
- * persistido aunque el LLM no exista (T-M6-04).</p>
+ * <p><b>T-M6-05:</b> la generacion va por {@link ResumenProveedor} (puerto;
+ * ADR-M6-03: Gemini 3.5 Flash-Lite, pipeline de dos llamadas). El bean default
+ * (sin la property {@code tinku.resumen.proveedor=gemini}) es fail-closed; con
+ * la property se activan los adapters reales de Gemini. El transcript pasa
+ * SIEMPRE por {@link AnonimizadorTranscript} antes de armar el prompt y antes de
+ * cualquier llamada saliente (FR-SUM-005); el texto anonimizado queda persistido
+ * aun si la generacion falla (T-M6-04).</p>
  *
  * <p><b>T-M6-06:</b> si la llamada falla, backoff identico al de M5
  * ({@code LiberacionEscrowService}): 3 reintentos {@code 5min → 15min → 1h}
@@ -272,8 +274,9 @@ public class ResumenService {
             fila.setProximoReintentoAt(null);
             resumenRepo.save(fila);
             cancelarReintento(sesionId);
-            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — ADR del proveedor pendiente "
-                    + "(T-FIN-03); el transcript anonimizado queda persistido.", sesionId);
+            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — sin property tinku.resumen.proveedor=gemini "
+                    + "el resumen no se genera (fail-closed, ADR-M6-03); el transcript "
+                    + "anonimizado queda persistido.", sesionId);
         } catch (RuntimeException e) {
             reintentarOAgotar(fila);
         }
