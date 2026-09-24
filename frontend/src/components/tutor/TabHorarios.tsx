@@ -254,7 +254,7 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
         <p className="mt-2 text-slate-500">Cargando…</p>
       ) : listaPendiente ? (
         <Alerta tono="aviso" className="mt-2 w-fit">
-          El listado de franjas está pendiente en backend.
+          No pudimos cargar tus franjas. Probá de nuevo en unos minutos.
         </Alerta>
       ) : franjas.length === 0 ? (
         <p className="mt-2 text-slate-500">No publicaste franjas todavía.</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { formatearPrecioConMoneda } from "@/lib/formatos";
@@ -20,6 +20,7 @@ interface ReservaInfo {
 }
 
 function PagarForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const reservaId = searchParams.get("reserva");
 
@@ -31,11 +32,7 @@ function PagarForm() {
   const [reserva, setReserva] = useState<ReservaInfo | null>(null);
 
   function cargar() {
-    if (!reservaId) {
-      setEstado("error");
-      setError("Falta la reserva a pagar.");
-      return;
-    }
+    if (!reservaId) return;
     setEstado("cargando");
     setError(null);
     api
@@ -59,6 +56,16 @@ function PagarForm() {
         );
       });
   }
+
+  useEffect(() => {
+    // Sin reserva en la URL no hay nada que pagar: no dejar un error rojo con
+    // un Reintentar que no reintenta nada. Redirigir con un mensaje neutro
+    // (B9).
+    if (!reservaId) {
+      router.replace("/cuenta/reservas");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservaId]);
 
   useEffect(() => {
     cargar();

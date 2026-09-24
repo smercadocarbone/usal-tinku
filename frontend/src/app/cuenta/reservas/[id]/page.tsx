@@ -327,7 +327,7 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
                 {!cargandoFranjas && franjasPendiente && (
                   <>
                     <Alerta tono="aviso" className="mb-4">
-                      El listado de franjas del tutor está pendiente en backend.
+                      No pudimos cargar las franjas del tutor. Probá de nuevo en unos minutos.
                     </Alerta>
                     <Campo
                       id="nuevoHorario"

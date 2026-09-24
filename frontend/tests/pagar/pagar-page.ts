@@ -21,8 +21,8 @@ export class PagarPage extends BasePage {
     this.botonEnviarSoporte = page.getByRole("button", { name: "Enviar a soporte" });
   }
 
-  async goto(reservaId: string): Promise<void> {
-    await super.goto(`/pagar?reserva=${reservaId}`);
+  async goto(reservaId?: string): Promise<void> {
+    await super.goto(reservaId ? `/pagar?reserva=${reservaId}` : "/pagar");
   }
 
   async contactarSoporte(): Promise<void> {

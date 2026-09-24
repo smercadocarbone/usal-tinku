@@ -91,7 +91,6 @@ function ReservarForm() {
 
   function cargar() {
     if (!tutorId) {
-      setError("Falta el Tutor para reservar.");
       setCargando(false);
       return;
     }
@@ -117,6 +116,15 @@ function ReservarForm() {
       .catch(() => setFranjas([]))
       .finally(() => setCargandoFranjas(false));
   }
+
+  useEffect(() => {
+    // Sin tutor en la URL no hay nada que reservar: redirigir a la búsqueda
+    // con un mensaje neutro en vez de un error rojo inútil (B9).
+    if (!tutorId) {
+      router.replace("/buscar");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorId]);
 
   useEffect(() => {
     cargar();

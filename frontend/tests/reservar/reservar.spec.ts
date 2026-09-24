@@ -100,4 +100,15 @@ test.describe("Reserva de una clase", () => {
       expect(copiado).toContain("¿Me la reservás?");
     }
   );
+
+  test(
+    "sin parámetro de tutor, redirige a la búsqueda (B9)",
+    { tag: ["@e2e", "@reserva", "@RESERVAR-E2E-003"] },
+    async ({ page }) => {
+      await page.goto("/reservar");
+
+      await expect(page).toHaveURL(/\/buscar/);
+      await expect(page.getByRole("heading", { name: "Reservar una clase" })).toHaveCount(0);
+    }
+  );
 });

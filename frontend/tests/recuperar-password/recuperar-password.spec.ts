@@ -4,22 +4,23 @@ import { mockApi, jsonRoute } from "../helpers";
 
 test.describe("Recuperar contraseña — solicitud", () => {
   test(
-    "pedir el enlace muestra siempre el mismo mensaje de éxito",
+    "el flujo automático está deshabilitado y no promete un email que no sale (B9)",
     { tag: ["@critical", "@e2e", "@RECUPERAR-PASSWORD-E2E-001"] },
     async ({ page }) => {
       await mockApi(page, {
-        "POST /api/usuarios/recuperar-password": jsonRoute(204, {}),
+        "POST /api/usuarios/recuperar-password": (_route) => {
+          throw new Error("El flujo deshabilitado no debe llamar al backend");
+        },
       });
 
       const recuperar = new RecuperarPasswordPage(page);
       await recuperar.goto();
 
-      await recuperar.campoDni.fill("12345678");
-      await recuperar.botonEnviar.click();
-
       await expect(
-        page.getByText("Si el DNI está registrado, vas a recibir un enlace de recuperación en breve.")
+        page.getByText("La recuperación automática por email todavía no está disponible.")
       ).toBeVisible();
+      await expect(page.getByLabel("DNI", { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Enviar enlace de recuperación" })).toHaveCount(0);
     }
   );
 });

@@ -108,4 +108,16 @@ test.describe("Pago de una reserva", () => {
       await expect(page.getByText("Le avisamos a soporte.")).toBeVisible();
     }
   );
+
+  test(
+    "sin parámetro de reserva, redirige a mis reservas (B9)",
+    { tag: ["@e2e", "@pago", "@PAGAR-E2E-004"] },
+    async ({ page }) => {
+      const pagar = new PagarPage(page);
+      await pagar.goto("");
+
+      await expect(page).toHaveURL(/\/cuenta\/reservas/);
+      await expect(page.getByText("Pago de la reserva")).toHaveCount(0);
+    }
+  );
 });

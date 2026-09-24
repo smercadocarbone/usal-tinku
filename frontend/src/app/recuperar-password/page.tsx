@@ -1,28 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { solicitarResetPassword } from "@/lib/api";
-import { Alerta, Boton, Campo, Tarjeta } from "@/components/ui";
+import { Alerta, Tarjeta } from "@/components/ui";
 
+/**
+ * El envío de emails todavía no existe (AUD-008/014, P5): el backend solo
+ * escribe el token de recuperación en el log. Prometer un enlace que nunca
+ * sale es mentirle al usuario, así que el flujo queda deshabilitado con una
+ * explicación honesta hasta que exista un canal de notificación real.
+ */
 export default function RecuperarPasswordPage() {
-  const [dni, setDni] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setEnviando(true);
-    try {
-      await solicitarResetPassword(dni);
-    } finally {
-      // El backend responde 204 exista o no el DNI (no hay que distinguir
-      // el caso de error): mostrar siempre el mismo mensaje de éxito.
-      setEnviando(false);
-      setEnviado(true);
-    }
-  }
-
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
       <Tarjeta className="w-full max-w-sm p-8">
@@ -31,31 +18,14 @@ export default function RecuperarPasswordPage() {
         </div>
         <h1 className="mb-1 text-xl tracking-tight">Recuperar contraseña</h1>
         <p className="mb-6 text-slate-500">
-          Ingresá tu DNI y te vamos a enviar un enlace para elegir una contraseña nueva.
+          ¿No podés entrar a tu cuenta?
         </p>
 
-        {enviado ? (
-          <Alerta tono="exito">
-            Si el DNI está registrado, vas a recibir un enlace de recuperación en breve.
-          </Alerta>
-        ) : (
-          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-            <Campo
-              id="dni"
-              etiqueta="DNI"
-              type="text"
-              inputMode="numeric"
-              autoComplete="username"
-              required
-              value={dni}
-              onChange={(e) => setDni(e.target.value)}
-            />
-
-            <Boton type="submit" cargando={enviando} textoCargando="Enviando…">
-              Enviar enlace de recuperación
-            </Boton>
-          </form>
-        )}
+        <Alerta tono="aviso">
+          La recuperación automática por email todavía no está disponible. Si
+          no podés entrar a tu cuenta, escribinos a soporte de Tinku y un
+          administrador te ayuda a recuperarla.
+        </Alerta>
 
         <p className="mt-5 text-center text-sm text-slate-500">
           <Link href="/login">Volver a iniciar sesión</Link>
