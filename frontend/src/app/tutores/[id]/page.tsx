@@ -220,6 +220,7 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                 </Link>
               ) : (
                 <Alerta tono="aviso" className="w-fit">
+                  Las clases para menores se habilitan al finalizar el piloto.
                   Pedile a tu adulto responsable que te autorice a esta tutora/o.
                 </Alerta>
               )}

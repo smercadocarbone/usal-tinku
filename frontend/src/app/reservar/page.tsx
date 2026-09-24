@@ -198,7 +198,8 @@ function ReservarForm() {
 
       {esMenor && (
         <Alerta tono="aviso" className="mb-4">
-          Tu Adulto Responsable debe reservar por vos.
+          Las clases para menores se habilitan al finalizar el piloto. Tu Adulto
+          Responsable debe reservar por vos.
         </Alerta>
       )}
 

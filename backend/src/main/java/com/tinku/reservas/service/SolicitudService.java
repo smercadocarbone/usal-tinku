@@ -43,17 +43,20 @@ public class SolicitudService {
     private final AutorizacionTutorRepository autorizacionRepo;
     private final FranjaService franjaService;
     private final Scheduler scheduler;
+    private final PoliticaSesionesMenores politicaMenores;
 
     public SolicitudService(SolicitudSesionRepository solicitudRepo,
                             UsuarioRepository usuarioRepo,
                             AutorizacionTutorRepository autorizacionRepo,
                             FranjaService franjaService,
-                            Scheduler scheduler) {
+                            Scheduler scheduler,
+                            PoliticaSesionesMenores politicaMenores) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
         this.franjaService = franjaService;
         this.scheduler = scheduler;
+        this.politicaMenores = politicaMenores;
     }
 
     @Transactional
@@ -66,6 +69,8 @@ public class SolicitudService {
             throw new SoloMenorException(
                     "La cuenta del menor no tiene Adulto Responsable asociado (FR-ID-020).");
         }
+        // T-TES-10/DT7: piloto sin menores (US-2). Fail-closed (AGENTS §3).
+        politicaMenores.validarSesionesHabilitadas();
 
         Usuario tutor = usuarioRepo.findById(request.tutorId())
                 .orElseThrow(TutorNoAutorizadoParaMenorException::new);

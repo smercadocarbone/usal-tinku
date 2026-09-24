@@ -34,6 +34,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 - El menor tiene cuenta y sesión propias, pero no puede pagar, autorizar Tutores nuevos, ni presentar Denuncias — eso lo hace su Adulto Responsable en su nombre. Es una restricción de permisos a nivel de endpoint/autorización, no una limitación de cuenta.
 - La rama de kill-switch con menor presente **nunca** continúa la sesión ni pregunta al menor si vio algo — corta directo. La rama de "ambos adultos" sí pregunta y puede continuar.
 - Si una tarea te deja en duda sobre a cuál de estos dos casos aplica, tratala como si hubiera un menor — nunca al revés.
+- **Flag T-TES-10 (piloto sin menores):** `tinku.menores.sesiones-habilitadas` solo pasa a `true` cuando cierran **T-M3-06** (kill-switch en cliente) y **T02** (CAP). Mientras tanto es `false` (default) y el corte es fail-closed en `ReservaService.crearReserva` y `SolicitudService.crear`.
 
 ## 4. Convención de eventos de dominio
 

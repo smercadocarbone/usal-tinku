@@ -102,6 +102,10 @@ tinku:
     # valor para desarrollo/pruebas; si queda vacio, crear una Reserva falla con
     # mensaje claro (mismo enfoque que livekit sin credenciales, T-000-06).
     tarifa-stub: ${RESERVAS_TARIFA_STUB:}
+  menores:
+    # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
+    # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
+    sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}
   # M6 — resumen automatico. ADR del proveedor LLM PENDIENTE (Constitucion,
   # "LLM (resumen y transcripcion): GPT-4o vs Gemini 2.0 Flash — Pendiente, ADR",
   # flag T-FIN-03). Hasta no cerrarlo, el puerto ResumenProveedor es fail-closed:

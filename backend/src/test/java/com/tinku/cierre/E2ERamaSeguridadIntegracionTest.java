@@ -49,6 +49,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -96,6 +97,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
+// T-TES-10/DT7: la rama de seguridad incluye la Solicitud del menor y su
+// aprobación; se corre con la flag en true para no deshabilitar esa rama del
+// E2E (el corte por defecto lo cubre GateMenoresPilotoIntegracionTest).
+// La flag solo se abre con T-M3-06 y T02 cerradas (AGENTS §3).
+@TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class E2ERamaSeguridadIntegracionTest {
 
     @Container
