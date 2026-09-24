@@ -91,9 +91,9 @@ El admin tiene que volver a iniciar sesión.
 | `SERVICE_PASSWORD_64_MATCHING` | auto | Token compartido backend ↔ matching (AUD-015) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | **sí** | Token del conector del túnel (§2.3) |
 | `APP_URL_PUBLICA` | sí (default `https://tinku.site`) | Enlaces de los emails y CORS |
-| `BACKUP_PASSPHRASE` | **sí** | Clave de cifrado de los backups. Guardarla en el gestor de contraseñas: sin ella no se restaura |
-| `BACKUP_S3_ENDPOINT` | **sí** | `https://<account-id>.r2.cloudflarestorage.com` |
-| `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | **sí** | Bucket de R2 y un token de API de R2 con permiso solo sobre ese bucket |
+| `BACKUP_PASSPHRASE` | para backups (**pendiente hasta configurar R2**) | Clave de cifrado de los backups. Guardarla en el gestor de contraseñas: sin ella no se restaura |
+| `BACKUP_S3_ENDPOINT` | para backups (**pendiente hasta configurar R2**) | `https://<account-id>.r2.cloudflarestorage.com` |
+| `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | para backups (**pendiente hasta configurar R2**) | Bucket de R2 y un token de API de R2 con permiso solo sobre ese bucket |
 | `RESEND_API_KEY`, `EMAIL_REMITENTE` | para email | Resend. Vacías = avisos solo en la app; el reset de contraseña no llega |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | para el aula | LiveKit Cloud |
 | `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` | para cobrar | MercadoPago. Sin el secret el webhook rechaza todo |
@@ -125,6 +125,8 @@ El admin tiene que volver a iniciar sesión.
 Los hashes están en el resumen de cada run de `Deploy - produccion` en GitHub Actions.
 
 ## 7. Backups
+> **Mientras no estén cargadas las variables `BACKUP_*`, no hay backup fuera del servidor**: el
+> contenedor `backup` falla cada noche con error en su log. Configurarlas antes de tener usuarios reales.
 - Diario automático (contenedor `backup`), cifrado, 14 días en R2. Backup manual inmediato:
   `docker exec <contenedor-backup> sh backup.sh`.
 - Restaurar el último: `docker exec <contenedor-backup> sh restore.sh` (o `sh restore.sh <timestamp>`).
