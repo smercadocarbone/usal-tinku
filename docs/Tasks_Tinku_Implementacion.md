@@ -224,7 +224,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-AUD-014: Puerto `Notificador` + outbox persistido; implementar como mínimo kill-switch rama menor → Adulto Responsable (AUD-014)
 - [ ] T-AUD-015: Autenticación en `matching-service` + quitar `ports:` del compose + pool de conexiones (AUD-015)
 - [ ] T-AUD-016: Decidir y documentar (ADR) baja de menor: cascada o anonimización; test de integración real (AUD-017)
-- [ ] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029)
+- [x] T-AUD-017: Manejar `participant_left`/`room_finished` y calcular la duración efectiva contra la última desconexión (AUD-029) — CERRADO (FASE2-05, commit 1fa9772): webhook nuevo + `finEfectivo = par_roto_at` en el corte automático + estado `finalizada_anticipada` por desconexión previa al fin agendado; 4 tests de integración
 - [ ] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018)
 - [x] T-AUD-019: Reconciliar `Tasks_Tinku_Implementacion.md` con el código y elegir una sola fuente de verdad (AUD-030) — CERRADO, ver `REGISTRO_FINDINGS.md` (commits 8707da6, 64fe386, 352d065, 2d4e108)
 - [x] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033) — CERRADO en FASE 1 junto con AUD-013 (Task 1.8)

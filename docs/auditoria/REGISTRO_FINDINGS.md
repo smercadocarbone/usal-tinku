@@ -38,7 +38,7 @@
 | AUD-026 | MEDIA | `getCatalogos` cae a un mock local ante cualquier error, no sólo 404 | ABIERTO | 3 | — | — |
 | AUD-027 | MEDIA | JWT con DNI como subject y sin invalidación al resetear password | ABIERTO | 3 | — | — |
 | AUD-028 | MEDIA | Pagador y beneficiario pueden calificar dos veces la misma sesión | ABIERTO | 3 | — | — |
-| AUD-029 | MEDIA | El webhook de LiveKit sólo procesa `participant_joined` | ABIERTO | 2 | — | — |
+| AUD-029 | MEDIA | El webhook de LiveKit sólo procesa `participant_joined` | CERRADO | 2 | 1fa9772 (FASE2-05) | `SesionesIntegracionTest.ambosSeDesconectanALos5min_corteAutomatico_emiteInterrumpidaYFinalizadaAnticipada`, `seVaUnoYVuelve_elParSeRecompone_noCuentaComoCorte`, `participantLeftSobreSesionYaCortada_noModificaNada`, `webhookParticipantLeft_sinFirmaValida_401` |
 | AUD-030 | MEDIA | `Tasks_Tinku_Implementacion.md` desactualizado y contradice los chunks | CERRADO | 2 | 8707da6, 64fe386, 352d065, 2d4e108 | n/a (documentación) |
 | AUD-031 | MEDIA | `matching-service` sin CI; E2E de Playwright mockean `/api` completo | ABIERTO | 2 | — | — |
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | ABIERTO | 3 | — | — |
