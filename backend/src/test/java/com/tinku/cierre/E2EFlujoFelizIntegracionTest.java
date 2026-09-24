@@ -238,7 +238,8 @@ class E2EFlujoFelizIntegracionTest {
     }
 
     private Instant dentroDeFranja(LocalDate fecha) {
-        return ZonedDateTime.of(fecha, LocalTime.of(15, 30), ReservasZonaHoraria.ZONA).toInstant();
+        // D6: 15:00 por 60 min ocupa la franja 15-16 entera → precio = tarifa por hora.
+        return ZonedDateTime.of(fecha, LocalTime.of(15, 0), ReservasZonaHoraria.ZONA).toInstant();
     }
 
     private UUID solicitar(String tokenMenor, UUID tutorId, Instant horario) throws Exception {
@@ -247,7 +248,8 @@ class E2EFlujoFelizIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
-                                "horarioPropuesto", horario.toString()))))
+                                "horarioPropuesto", horario.toString(),
+                                "duracionMinutos", 60))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(

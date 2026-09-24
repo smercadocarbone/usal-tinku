@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,6 +64,33 @@ public class FranjaService {
     /** FR-RES-012: true si dentro de una franja activa del tutor que cubre ese día/hora. */
     public boolean estaDentroDeFranjaActiva(UUID tutorId, Instant horario) {
         return franjaQueCubre(tutorId, horario).isPresent();
+    }
+
+    /** D6 regla 1: una reserva dura de 30 a 180 minutos, en bloques de 30. */
+    public static boolean duracionValida(Integer duracionMinutos) {
+        return duracionMinutos != null
+                && duracionMinutos >= DURACION_MINIMA.toMinutes()
+                && duracionMinutos <= DURACION_MAXIMA.toMinutes()
+                && duracionMinutos % 30 == 0;
+    }
+
+    /**
+     * D6 reglas 2 y 3: franja activa que contiene ENTERO {@code [inicio, inicio+duracion)}
+     * con {@code inicio} alineado a un bloque de 30 minutos desde el comienzo de la franja.
+     */
+    public Optional<FranjaDisponibilidad> franjaQueContiene(UUID tutorId, Instant inicio, int duracionMinutos) {
+        if (!duracionValida(duracionMinutos)) {
+            return Optional.empty();
+        }
+        return franjaQueCubre(tutorId, inicio).filter(f -> {
+            LocalTime ini = inicio.atZone(ReservasZonaHoraria.ZONA).toLocalTime();
+            long desdeInicio = Duration.between(f.getHoraInicio(), ini).toMinutes();
+            LocalTime fin = ini.plusMinutes(duracionMinutos);
+            boolean alineado = desdeInicio % 30 == 0;
+            // fin.isAfter(ini): la reserva no cruza la medianoche.
+            boolean cabe = !fin.isAfter(f.getHoraFin()) && fin.isAfter(ini);
+            return alineado && cabe;
+        });
     }
 
     /** Franjas activas publicadas por el Tutor (GET /api/tutores/{id}/franjas). */

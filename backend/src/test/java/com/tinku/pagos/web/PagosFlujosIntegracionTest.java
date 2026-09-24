@@ -191,7 +191,8 @@ class PagosFlujosIntegracionTest {
     }
 
     private Instant dentroDeFranja(LocalDate fecha) {
-        return ZonedDateTime.of(fecha, LocalTime.of(15, 30), ReservasZonaHoraria.ZONA).toInstant();
+        // D6: 15:00 por 60 min ocupa la franja 15-16 entera → precio = tarifa por hora.
+        return ZonedDateTime.of(fecha, LocalTime.of(15, 0), ReservasZonaHoraria.ZONA).toInstant();
     }
 
     /** AR con un menor a cargo + Tutor con franja puntual 15:00-16:00 en `fecha`. */
@@ -249,7 +250,8 @@ class PagosFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "beneficiarioId", beneficiarioId == null ? "" : beneficiarioId.toString(),
-                                "horario", horario.toString()))))
+                                "horario", horario.toString(),
+                                "duracionMinutos", 60))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());

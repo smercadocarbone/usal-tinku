@@ -69,6 +69,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -253,7 +254,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
-                                "horarioPropuesto", horario.toString()))))
+                                "horarioPropuesto", horario.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
@@ -319,7 +321,8 @@ class ReservasFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "horarioPropuesto", dentroDeFranja(
-                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2)).toString()))))
+                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2)).toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isForbidden());
     }
 
@@ -334,7 +337,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horarioPropuesto", fuera.toString()))))
+                                "horarioPropuesto", fuera.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isUnprocessableEntity());
     }
 
@@ -349,7 +353,8 @@ class ReservasFlujosIntegracionTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.estado").value("pendiente_pago"))
                 .andExpect(jsonPath("$.beneficiarioId").value(e.menorId().toString()))
-                .andExpect(jsonPath("$.precio").value(15000.00))
+                // D6: tarifa-stub 15000 es POR HORA → 30 min = 7500.
+                .andExpect(jsonPath("$.precio").value(7500.00))
                 .andReturn();
 
         UUID reservaId = UUID.fromString(
@@ -370,14 +375,14 @@ class ReservasFlujosIntegracionTest {
         UUID menorId = registrarMenor(dniMenor, tokenAr);
 
         // Franja PUNTUAL que cubre "ahora+5min" respetando FR-RES-024 (30-180
-        // min), sin depender de la hora del día: arranco 1h antes del horario y
-        // termino 2h después; si el intervalo cruzara la medianoche lo recorto
-        // al borde del día (la duración resultante sigue dentro de 30-180 min).
-        Instant pronto = Instant.now().plusSeconds(5 * 60);
+        // min), sin depender de la hora del día: arranca en el horario y termina
+        // 2h después; si cruzara la medianoche lo recorto al borde del día.
+        Instant pronto = Instant.now().plusSeconds(5 * 60).truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
         ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
         LocalDate hoy = punto.toLocalDate();
         LocalTime hora = punto.toLocalTime();
-        LocalTime inicioFranja = hora.minusHours(1);
+        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
+        LocalTime inicioFranja = hora;
         LocalTime finFranja = hora.plusHours(2);
         if (inicioFranja.isAfter(hora)) {
             inicioFranja = LocalTime.MIDNIGHT; // inicio cayó en el día anterior
@@ -565,10 +570,202 @@ class ReservasFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "beneficiarioId", beneficiarioId == null ? "" : beneficiarioId.toString(),
-                                "horario", horario.toString()))))
+                                "horario", horario.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+    }
+
+    // ------------------------------------------------ FASE2-01 (AUD-009 / AUD-020, D6)
+
+    /** Franja PUNTUAL {fecha} 10:00-12:00 (4 bloques de 30'). */
+    private void publicarFranja10a12(String tokenTutor, LocalDate fecha) throws Exception {
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", fecha.toString(), "horaInicio", "10:00", "horaFin", "12:00"))))
+                .andExpect(status().isCreated());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postReserva(
+            String token, UUID tutorId, Instant horario, int duracionMinutos) throws Exception {
+        return mockMvc.perform(post("/api/reservas")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "tutorId", tutorId.toString(),
+                        "horario", horario.toString(),
+                        "duracionMinutos", duracionMinutos))));
+    }
+
+    private Instant a(LocalDate dia, int hora, int minuto) {
+        return ZonedDateTime.of(dia, LocalTime.of(hora, minuto), ReservasZonaHoraria.ZONA).toInstant();
+    }
+
+    @Test
+    void aud009_reservasSuperpuestasDelMismoTutor_laSegundaDa409() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        String otroEstudiante = registrarAdultoYToken(dniUnico(), "Ana", "Paz", true, false);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 60).andExpect(status().isCreated());
+        // 10:30-11:30 pisa a 10:00-11:00 del mismo tutor: antes entraba (igualdad exacta).
+        postReserva(otroEstudiante, e.tutorId(), a(dia, 10, 30), 60).andExpect(status().isConflict());
+    }
+
+    /** Tarifa del Tutor vía el endpoint de M5 (la cotización de la Reserva sale de acá). */
+    private void fijarTarifa(String tokenTutor, String precio) throws Exception {
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"precioSesion\": " + precio + "}"))
+                .andExpect(status().isOk());
+    }
+
+    private String idDe(org.springframework.test.web.servlet.ResultActions r) throws Exception {
+        return objectMapper.readTree(r.andReturn().getResponse().getContentAsString()).get("id").asText();
+    }
+
+    @Test
+    void reservasContiguas_10a11_y_11a12_ambas201() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        String otroEstudiante = registrarAdultoYToken(dniUnico(), "Ana", "Paz", true, false);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 60)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.duracionMinutos").value(60))
+                .andExpect(jsonPath("$.horarioFin").value(a(dia, 11, 0).toString()));
+        postReserva(otroEstudiante, e.tutorId(), a(dia, 11, 0), 60).andExpect(status().isCreated());
+    }
+
+    @Test
+    void reservaQueSeSaleDeLaFranja_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 11, 30), 60)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void reservaDesalineada_10h15_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 15), 30)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void duracionNoMultiploDe30_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 45)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void duracionMayorA180_422() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja(e.tokenTutor(), dia, LocalTime.of(8, 0), LocalTime.of(11, 0));
+        publicarFranja(e.tokenTutor(), dia, LocalTime.of(11, 0), LocalTime.of(14, 0));
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 8, 0), 210)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void beneficiarioConDosReservasSuperpuestasConDistintosTutores_409() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        String dniOtroTutor = dniUnico();
+        String tokenOtroTutor = registrarTutorYToken(dniOtroTutor, "Rosa", "Gil");
+        UUID otroTutorId = usuarioPorDni(dniOtroTutor).getId();
+        publicarFranja10a12(tokenOtroTutor, dia);
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 60).andExpect(status().isCreated());
+        postReserva(e.tokenEstudiante(), otroTutorId, a(dia, 10, 30), 30).andExpect(status().isConflict());
+    }
+
+    @Test
+    void precio_90min_conPrecioHora1000_es1500() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        fijarTarifa(e.tokenTutor(), "1000");
+
+        postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 90)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.precio").value(1500.00));
+    }
+
+    @Test
+    void precio_30min_conPrecioHora999_es499_50() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        fijarTarifa(e.tokenTutor(), "999");
+
+        String id = idDe(postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 30)
+                .andExpect(status().isCreated()));
+        assertThat(reservaRepo.findById(UUID.fromString(id)).orElseThrow().getPrecio())
+                .isEqualByComparingTo("499.50");
+    }
+
+    @Test
+    void solicitudDelMenor_conDuracion_alAprobarseLaReservaLaHereda() throws Exception {
+        Escenario e = escenarioBase();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+
+        MvcResult sol = mockMvc.perform(post("/api/solicitudes")
+                        .header("Authorization", "Bearer " + e.tokenMenor())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horarioPropuesto", a(dia, 10, 30).toString(),
+                                "duracionMinutos", 90))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID solicitudId = UUID.fromString(
+                objectMapper.readTree(sol.getResponse().getContentAsString()).get("id").asText());
+        assertThat(solicitudRepo.findById(solicitudId).orElseThrow().getDuracionMinutos()).isEqualTo(90);
+
+        mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.duracionMinutos").value(90))
+                .andExpect(jsonPath("$.horarioFin").value(a(dia, 12, 0).toString()))
+                .andExpect(jsonPath("$.precio").value(22500.00)); // 15000/h × 1,5 h
+    }
+
+    @Test
+    void reprogramar_conservaLaDuracionYElPrecio() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        LocalDate dia = e.fecha().plusDays(1);
+        publicarFranja10a12(e.tokenTutor(), dia);
+        UUID reservaId = UUID.fromString(idDe(
+                postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 60)
+                        .andExpect(status().isCreated())));
+        confirmarPago(e.tokenEstudiante(), reservaId);
+
+        reprogramar(e.tokenEstudiante(), reservaId, a(dia, 11, 0));
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getDuracionMinutos()).isEqualTo(60);
+        assertThat(r.getHorarioFin()).isEqualTo(a(dia, 12, 0));
+        assertThat(r.getPrecio()).isEqualByComparingTo("15000");
     }
 
     @Test
@@ -618,7 +815,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.estado").value("pendiente_pago"))
                 .andExpect(jsonPath("$.beneficiarioId").value(e.estudianteId().toString()))
@@ -673,7 +871,8 @@ class ReservasFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "beneficiarioId", menorId.toString(),
-                                "horario", dentroDeFranja(fecha).toString()))))
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isForbidden());
     }
 
@@ -686,7 +885,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isForbidden());
     }
 
@@ -698,11 +898,12 @@ class ReservasFlujosIntegracionTest {
         String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
         UUID tutorId = usuarioPorDni(dniTutor).getId();
 
-        Instant pronto = Instant.now().plusSeconds(5 * 60);
+        Instant pronto = Instant.now().plusSeconds(5 * 60).truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
         ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
         LocalDate hoy = punto.toLocalDate();
         LocalTime hora = punto.toLocalTime();
-        LocalTime inicioFranja = hora.minusHours(1);
+        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
+        LocalTime inicioFranja = hora;
         LocalTime finFranja = hora.plusHours(2);
         if (inicioFranja.isAfter(hora)) {
             inicioFranja = LocalTime.MIDNIGHT;
@@ -723,7 +924,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
-                                "horario", pronto.toString()))))
+                                "horario", pronto.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isUnprocessableEntity());
     }
 
@@ -737,7 +939,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", fuera.toString()))))
+                                "horario", fuera.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isUnprocessableEntity());
     }
 
@@ -750,7 +953,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", UUID.randomUUID().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isNotFound());
     }
 
@@ -777,7 +981,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated());
     }
 
@@ -842,7 +1047,7 @@ class ReservasFlujosIntegracionTest {
 
         Reserva r = reservaRepo.findById(reservaId).orElseThrow();
         assertThat(r.getHorario()).isEqualTo(nuevoHorario);
-        assertThat(r.getPrecio()).isEqualByComparingTo("15000"); // precio original intacto
+        assertThat(r.getPrecio()).isEqualByComparingTo("7500"); // precio original intacto (30 min a 15000/h)
         assertThat(r.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
         assertThat(reservaRepo.count()).isEqualTo(reservasAntes); // misma fila: sin transacción ni reserva nueva
 
@@ -863,9 +1068,11 @@ class ReservasFlujosIntegracionTest {
 
         // Franja HOY que cubre `pronto` (≈2hs → <24hs de anticipación), respetando
         // FR-RES-024 (30-180 min) sin depender de la hora del día.
-        Instant pronto = Instant.now().plus(2, java.time.temporal.ChronoUnit.HOURS);
+        Instant pronto = Instant.now().plus(2, java.time.temporal.ChronoUnit.HOURS)
+                .truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
         ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
-        LocalTime inicio = punto.toLocalTime().minusHours(1);
+        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
+        LocalTime inicio = punto.toLocalTime();
         LocalTime fin = punto.toLocalTime().plusHours(2);
         if (inicio.isAfter(punto.toLocalTime())) inicio = LocalTime.MIDNIGHT;
         if (fin.isBefore(inicio)) fin = LocalTime.of(23, 59, 59);
@@ -941,7 +1148,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated());
     }
 
@@ -1047,7 +1255,8 @@ class ReservasFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horario", e.horario().toString()))))
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isForbidden());
     }
 
@@ -1120,7 +1329,8 @@ class ReservasFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
                                 "beneficiarioId", beneficiarioId == null ? "" : beneficiarioId.toString(),
-                                "horario", horario.toString()))))
+                                "horario", horario.toString(),
+                                "duracionMinutos", 30))))
                 .andReturn().getResponse().getStatus();
     }
 

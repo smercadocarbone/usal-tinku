@@ -232,7 +232,8 @@ class E2ERamaSeguridadIntegracionTest {
     }
 
     private Instant dentroDeFranja(LocalDate fecha) {
-        return ZonedDateTime.of(fecha, LocalTime.of(15, 30), ReservasZonaHoraria.ZONA).toInstant();
+        // D6: 15:00 por 60 min ocupa la franja 15-16 entera → precio = tarifa por hora.
+        return ZonedDateTime.of(fecha, LocalTime.of(15, 0), ReservasZonaHoraria.ZONA).toInstant();
     }
 
     private UUID reservaDeMenor(String tokenMenor, String tokenAr, UUID tutorId,
@@ -242,7 +243,8 @@ class E2ERamaSeguridadIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", tutorId.toString(),
-                                "horarioPropuesto", horario.toString()))))
+                                "horarioPropuesto", horario.toString(),
+                                "duracionMinutos", 60))))
                 .andExpect(status().isCreated())
                 .andReturn();
         UUID solicitudId = UUID.fromString(objectMapper.readTree(

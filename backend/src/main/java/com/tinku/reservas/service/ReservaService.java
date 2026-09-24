@@ -33,6 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tinku.reservas.web.ReservaResponse;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -121,7 +123,7 @@ public class ReservaService {
         }
 
         Reserva reserva = crearReserva(adultoResponsable, menor, solicitud.getTutor(),
-                solicitud.getHorarioPropuesto());
+                solicitud.getHorarioPropuesto(), solicitud.getDuracionMinutos());
 
         solicitud.setEstado(EstadoSolicitud.CONVERTIDA);
         solicitudRepo.save(solicitud);
@@ -143,7 +145,7 @@ public class ReservaService {
 
         if (request.beneficiarioId() == null) {
             exigirCapacidadEstudiante(pagador);
-            return crearReserva(pagador, pagador, tutor, request.horario());
+            return crearReserva(pagador, pagador, tutor, request.horario(), request.duracionMinutos());
         }
 
         exigirCapacidadAdultoResponsable(pagador);
@@ -158,7 +160,7 @@ public class ReservaService {
                 pagador.getId(), beneficiario.getId()).contains(request.tutorId())) {
             throw new TutorNoAutorizadoParaMenorException();
         }
-        return crearReserva(pagador, beneficiario, tutor, request.horario());
+        return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos());
     }
 
     /**
@@ -205,7 +207,8 @@ public class ReservaService {
             return cancelarInterna(reserva, usuario);
         }
         validarNuevoHorario(reserva, nuevoHorario);
-        reserva.setHorario(nuevoHorario);
+        // D6 regla 6: la reprogramación conserva la duración (y el precio) originales.
+        reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
         reservaRepo.save(reserva);
         events.publishEvent(new ReservaReprogramadaEvent(this, reserva.getId()));
         return reserva;
@@ -254,8 +257,8 @@ public class ReservaService {
         reservaRepo.findById(reservaId).ifPresent(this::expirarSiSiguePendiente);
     }
 
-    /** UX-05 §4: la Reserva como la ve {@code usuario}, con nombres, duración (la de
-     * la franja que la originó, FR-RES-023) y acciones. Dentro de la transacción:
+    /** UX-05 §4: la Reserva como la ve {@code usuario}, con nombres, duración (la
+     * guardada en la Reserva, D6) y acciones. Dentro de la transacción:
      * pagador/beneficiario/tutor son asociaciones perezosas. */
     @Transactional(readOnly = true)
     public ReservaResponse vista(Usuario usuario, UUID reservaId) {
@@ -269,8 +272,7 @@ public class ReservaService {
     }
 
     private ReservaResponse vista(Reserva r, Usuario usuario, Instant ahora) {
-        Duration duracion = franjaService.duracionFranjaQueCubre(r.getTutor().getId(), r.getHorario()).orElse(null);
-        return ReservaResponse.from(r, usuario, duracion, ahora);
+        return ReservaResponse.from(r, usuario, ahora);
     }
 
     /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor. */
@@ -387,7 +389,8 @@ public class ReservaService {
         return new TriggerKey("timeout-pago-trigger-" + reservaId, GRUPO_JOB);
     }
 
-    private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor, Instant horario) {
+    private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
+                                 Instant horario, Integer duracionMinutos) {
         // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {
@@ -401,9 +404,13 @@ public class ReservaService {
             throw new VentanaMinimaException(
                     "Faltan menos de 15 minutos para el horario — no se puede reservar (FR-RES-013).");
         }
-        if (!franjaService.estaDentroDeFranjaActiva(tutor.getId(), horario)) {
+        if (!FranjaService.duracionValida(duracionMinutos)) {
+            throw new DuracionMinutosInvalidaException(
+                    "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
+        }
+        if (franjaService.franjaQueContiene(tutor.getId(), horario, duracionMinutos).isEmpty()) {
             throw new HorarioFueraDeFranjaException(
-                    "La franja ya no está activa o ya no cubre el horario (FR-RES-012).");
+                    "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
 
         // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
@@ -411,8 +418,11 @@ public class ReservaService {
         reserva.setPagador(pagador);
         reserva.setBeneficiario(beneficiario);
         reserva.setTutor(tutor);
-        reserva.setHorario(horario);
-        reserva.setPrecio(tarifaProveedor.tarifaPorSesion(tutor.getId()));
+        reserva.definirHorario(horario, duracionMinutos);
+        // D6 regla 5: precio = tarifa por hora × minutos / 60. TODO paso 6: el puerto pasa a precioHora.
+        reserva.setPrecio(tarifaProveedor.tarifaPorSesion(tutor.getId())
+                .multiply(BigDecimal.valueOf(duracionMinutos))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
         reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
         Reserva guardada = reservaRepo.save(reserva);
         programarTimeoutPago(guardada);
@@ -476,9 +486,10 @@ public class ReservaService {
             throw new VentanaMinimaException(
                     "Faltan menos de 15 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
         }
-        if (!franjaService.estaDentroDeFranjaActiva(reserva.getTutor().getId(), nuevoHorario)) {
+        if (franjaService.franjaQueContiene(reserva.getTutor().getId(), nuevoHorario,
+                reserva.getDuracionMinutos()).isEmpty()) {
             throw new HorarioFueraDeFranjaException(
-                    "El nuevo horario no cae en una franja publicada y activa (FR-RES-012).");
+                    "El nuevo horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
     }
 

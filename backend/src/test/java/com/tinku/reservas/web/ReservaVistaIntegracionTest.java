@@ -101,7 +101,8 @@ class ReservaVistaIntegracionTest {
         r.setPagador(pagador);
         r.setBeneficiario(pagador);
         r.setTutor(tutor);
-        r.setHorario(horario);
+        // D6/AUD-020: la duración es de la Reserva (antes se leía de la franja de 90).
+        r.definirHorario(horario, 90);
         r.setPrecio(BigDecimal.valueOf(15000));
         r.setEstado(estado);
         return reservaRepository.save(r);

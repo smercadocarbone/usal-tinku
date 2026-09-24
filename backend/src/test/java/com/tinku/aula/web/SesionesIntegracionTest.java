@@ -842,7 +842,8 @@ class SesionesIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "tutorId", e.tutorId().toString(),
-                                "horarioPropuesto", horario.toString()))))
+                                "horarioPropuesto", horario.toString(),
+                                "duracionMinutos", 30))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(
