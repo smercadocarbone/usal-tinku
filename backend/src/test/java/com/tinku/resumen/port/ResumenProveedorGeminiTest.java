@@ -1,6 +1,7 @@
 package com.tinku.resumen.port;
 
 import com.tinku.resumen.GeminiCliente;
+import com.tinku.resumen.PromptResumen;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -59,6 +61,24 @@ class ResumenProveedorGeminiTest {
 
         assertThat(proveedor.generarResumen(request).texto())
                 .isEqualTo("Resumen de la sesion.");
+        server.verify();
+    }
+
+    /** Lo enviado es exactamente la plantilla que ResumenService persiste para auditoria. */
+    @Test
+    void enviaLaMismaPlantillaQueSePersisteParaAuditoria() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        ResumenProveedorGemini proveedor =
+                new ResumenProveedorGemini(new GeminiCliente("clave-de-prueba", builder));
+
+        server.expect(once(), requestTo(URI_GENERAR))
+                .andExpect(jsonPath("$.contents[0].parts[0].text")
+                        .value(PromptResumen.armar("[nombre] explico fracciones")))
+                .andRespond(withSuccess(RESPUESTA_OK, MediaType.APPLICATION_JSON));
+
+        proveedor.generarResumen(new ResumenProveedor.ResumenRequest(UUID.randomUUID(),
+                "[nombre] explico fracciones", null, null, "Matematica", "primario"));
         server.verify();
     }
 }

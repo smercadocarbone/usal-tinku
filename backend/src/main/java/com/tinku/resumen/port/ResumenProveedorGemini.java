@@ -1,6 +1,7 @@
 package com.tinku.resumen.port;
 
 import com.tinku.resumen.GeminiCliente;
+import com.tinku.resumen.PromptResumen;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -23,29 +24,7 @@ public class ResumenProveedorGemini implements ResumenProveedor {
 
     @Override
     public ResumenResultado generarResumen(ResumenRequest request) {
-        String texto = geminiCliente.generarContenido(armarPrompt(request.transcriptAnonimizado()));
+        String texto = geminiCliente.generarContenido(PromptResumen.armar(request.transcriptAnonimizado()));
         return new ResumenResultado(texto);
-    }
-
-    /**
-     * FR-SUM-003/008: estructura fija + prohibiciones de evaluacion. Es la MISMA
-     * plantilla que {@code ResumenService} persiste como {@code promptAnonimizado}
-     * (auditoria); este es el prompt realmente enviado — ambas copias deben
-     * evolucionar juntas.
-     */
-    private static String armarPrompt(String transcriptAnonimizado) {
-        return "Resumi la sesion de tutoria en espanol, con tono claro y adaptado al nivel "
-                + "escolar del estudiante. Estructura fija:\n"
-                + "1. Temas tratados\n"
-                + "2. Conceptos clave explicados\n"
-                + "3. Ejercicios o ejemplos trabajados\n"
-                + "4. Dudas que quedaron abiertas\n"
-                + "5. Sugerencia de que reforzar en la proxima sesion\n"
-                + "\n"
-                + "Reglas: NO evalues a ninguna persona, NO uses tono moralizante y NO hagas "
-                + "predicciones de desempeno. El texto esta anonimizado: no reconstruyas "
-                + "identidades ni datos personales; referite a los participantes como "
-                + "\"el tutor\" y \"el estudiante\".\n"
-                + "\nTranscript:\n" + transcriptAnonimizado;
     }
 }

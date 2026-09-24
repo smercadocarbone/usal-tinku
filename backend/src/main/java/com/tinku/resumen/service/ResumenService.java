@@ -6,6 +6,7 @@ import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.resumen.PromptResumen;
 import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
 import com.tinku.resumen.jobs.ReintentoResumenJob;
@@ -252,7 +253,7 @@ public class ResumenService {
         // FR-SUM-005: la anonimizacion corre SIEMPRE y antes de toda llamada saliente.
         String anonimizado = anonimizador.anonimizar(crudo);
         fila.setTranscriptAnonimizado(anonimizado);
-        fila.setPromptAnonimizado(armarPrompt(anonimizado));
+        fila.setPromptAnonimizado(PromptResumen.armar(anonimizado));
         resumenRepo.save(fila);
 
         // El request al proveedor lleva UNICAMENTE el transcript ya anonimizado.
@@ -438,24 +439,5 @@ public class ResumenService {
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                         .withMisfireHandlingInstructionIgnoreMisfires())
                 .build();
-    }
-
-    // ---------------------------------------------------------------- prompt
-
-    /** FR-SUM-003/008: estructura fija + prohibiciones de evaluacion. */
-    private static String armarPrompt(String transcriptAnonimizado) {
-        return "Resumi la sesion de tutoria en espanol, con tono claro y adaptado al nivel "
-                + "escolar del estudiante. Estructura fija:\n"
-                + "1. Temas tratados\n"
-                + "2. Conceptos clave explicados\n"
-                + "3. Ejercicios o ejemplos trabajados\n"
-                + "4. Dudas que quedaron abiertas\n"
-                + "5. Sugerencia de que reforzar en la proxima sesion\n"
-                + "\n"
-                + "Reglas: NO evalues a ninguna persona, NO uses tono moralizante y NO hagas "
-                + "predicciones de desempeno. El texto esta anonimizado: no reconstruyas "
-                + "identidades ni datos personales; referite a los participantes como "
-                + "\"el tutor\" y \"el estudiante\".\n"
-                + "\nTranscript:\n" + transcriptAnonimizado;
     }
 }
