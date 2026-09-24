@@ -360,7 +360,7 @@ class E2ERamaSeguridadIntegracionTest {
                 .andExpect(status().isOk());
 
         // Corte directo + Alerta rama menor + suspensión preventiva + escrow en pausa
-        // (ADR-M3-02: el reembolso espera a la resolución de la Alerta).
+        // por Alerta (ADR-M3-02 + FASE2-10: el reembolso espera la resolución de la Alerta).
         SesionAprendizaje cortada = sesionRepository.findById(sesionActual).orElseThrow();
         assertThat(cortada.getEstado()).isEqualTo(SesionAprendizaje.ESTADO_FINALIZADA);
         assertThat(reservaRepository.findById(reservaActual).orElseThrow().getEstado())
@@ -371,7 +371,7 @@ class E2ERamaSeguridadIntegracionTest {
         assertThat(alerta.getEstado()).isEqualTo(AlertaSeguridad.ESTADO_PENDIENTE_REVISION);
         assertThat(usuarioPorDni(dniTutor).isActivoParaMatching()).isFalse();
         assertThat(transaccionRepository.findByReservaId(reservaActual).orElseThrow().getEstado())
-                .isEqualTo(EstadoTransaccion.PAUSADO_DENUNCIA);
+                .isEqualTo(EstadoTransaccion.PAUSADO_ALERTA);
 
         // M8 — la Alerta entra a la cola de moderación (admin de moderación real).
         Usuario admin = adminModeracion();

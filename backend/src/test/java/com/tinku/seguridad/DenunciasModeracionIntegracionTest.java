@@ -624,7 +624,7 @@ class DenunciasModeracionIntegracionTest {
         Usuario estudiante = usuario(TipoUsuario.ADULTO, false);
         Cupo cupo = cupoConEscrow(estudiante, tutor, Instant.now().plusSeconds(3600));
         Transaccion t = transaccion(cupo.transaccionId());
-        t.setEstado(EstadoTransaccion.PAUSADO_DENUNCIA); // lo dejó así el kill-switch
+        t.setEstado(EstadoTransaccion.PAUSADO_ALERTA); // lo dejó así el kill-switch (FASE2-10)
         transaccionRepository.save(t);
         AlertaSeguridad alerta = new AlertaSeguridad();
         alerta.setSesionId(cupo.sesionId());
