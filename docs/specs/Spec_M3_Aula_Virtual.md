@@ -102,10 +102,10 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 - **Dado** que un participante corte antes del fin agendado sin presionar "Finalizar", **cuando** eso ocurra, **entonces** la sesión queda `finalizada_anticipada` cuando la otra parte también salga o al agotarse la tolerancia; ese outcome alimenta la regla de corte <50% de US-5.
 
   **Implementado (AUD-029, 2026-09-24, FASE2-05):** el webhook procesa `participant_left`/
-  `room_finished` (`par_roto_at` = instante en que el par dejó de estar completo) y el corte
+  `room_finished` (`par_roto_at` = instante en que salió el último: si uno se va y el otro se queda, no hay corte — US-5) y el corte
   automático deja el estado `finalizada_anticipada` cuando `par_roto_at` es anterior al fin
-  agendado — y la duración efectiva se mide contra ese instante. Una reconexión que recompleta
-  el par limpia `par_roto_at`: el microcorte de ambos no cuenta como corte.
+  agendado — y la duración efectiva se mide contra ese instante. Cualquier reconexión
+  limpia `par_roto_at`: el microcorte de ambos no cuenta como corte.
 
 ## 3. Requisitos Funcionales
 

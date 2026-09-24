@@ -395,15 +395,46 @@ class SesionesIntegracionTest {
         joinWebhook(sala, e.tutorId());
         joinWebhook(sala, e.menorId());
         leftWebhook(sala, e.tutorId());
+        leftWebhook(sala, e.menorId());
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getParRotoAt())
                 .isNotNull();
 
         joinWebhook(sala, e.tutorId());
 
+        // Spec_M3 US-5: el corte es "ambas partes desconectadas, sin reconexión".
+        // Con uno de vuelta ya no están los dos afuera: el corte deja de contar.
         SesionAprendizaje recompuesta = sesionRepository.findById(sesion.getId()).orElseThrow();
         assertThat(recompuesta.isTutorConectado()).isTrue();
-        assertThat(recompuesta.isEstudianteConectado()).isTrue();
+        assertThat(recompuesta.isEstudianteConectado()).isFalse();
         assertThat(recompuesta.getParRotoAt()).isNull();
+    }
+
+    /** Spec_M3 US-5: el reembolso por corte exige que se desconecten AMBAS partes.
+     *  Si el estudiante se va y el Tutor se queda esperando en la sala, no hay
+     *  corte: par_roto_at queda nulo hasta que sale el último, y toma ESE instante. */
+    @Test
+    void seVaElEstudianteYElTutorSeQueda_noHayCorteHastaQueSaleElUltimo() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        String sala = "sesion-" + sesion.getId();
+        sesion.setLivekitRoomId(sala);
+        sesionRepository.save(sesion);
+
+        joinWebhook(sala, e.tutorId());
+        joinWebhook(sala, e.menorId());
+        leftWebhook(sala, e.menorId());
+
+        SesionAprendizaje conTutor = sesionRepository.findById(sesion.getId()).orElseThrow();
+        assertThat(conTutor.isTutorConectado()).isTrue();
+        assertThat(conTutor.isEstudianteConectado()).isFalse();
+        assertThat(conTutor.getParRotoAt()).isNull();
+
+        Instant antesDeSalirElTutor = Instant.now();
+        leftWebhook(sala, e.tutorId());
+
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getParRotoAt())
+                .isAfterOrEqualTo(antesDeSalirElTutor);
     }
 
     @Test

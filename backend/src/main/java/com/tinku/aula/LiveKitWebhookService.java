@@ -68,11 +68,9 @@ public class LiveKitWebhookService {
         if (!rolMatched) {
             return; // tercero: no forma el par de la clase (FASE2-05 §4.3)
         }
-        if (sesion.isTutorConectado() && sesion.isEstudianteConectado()) {
-            // El par volvió a estar completo: la desconexión anterior deja de
-            // contar como fin efectivo (reconexión, Spec fase2-05 §4.3).
-            sesion.setParRotoAt(null);
-        }
+        // Alguien volvió: ya no están los dos afuera, así que el corte anterior
+        // deja de contar como fin efectivo (Spec_M3 US-5: "sin reconexión").
+        sesion.setParRotoAt(null);
         if (nuevoJoin && SesionAprendizaje.ESTADO_NO_INICIADA.equals(sesion.getEstado())) {
             // Primer join real: la sesión arranca (US-2) — inicio_real alimenta el
             // cálculo de duración efectiva al finalizar (US-5/M6).
@@ -89,9 +87,11 @@ public class LiveKitWebhookService {
 
     /**
      * FASE2-05 (AUD-029) — {@code participant_left}: marca el flag del rol en
-     * {@code false} y, si antes estaban los dos conectados, fija {@code par_roto_at}
-     * en el instante del primer abandono (el "fin efectivo" para el corte). Un
-     * tercero no cuenta y una sesión ya cortada no se toca.
+     * {@code false} y, si con esta salida no queda nadie conectado, fija
+     * {@code par_roto_at} en este instante (el "fin efectivo" para el corte).
+     * Spec_M3 US-5: el corte exige AMBAS partes desconectadas; si uno se va y el
+     * otro se queda esperando, no hay corte. Un tercero no cuenta y una sesión ya
+     * cortada no se toca.
      */
     @Transactional
     public void registrarSalida(String livekitRoomId, String identity) {
@@ -109,7 +109,7 @@ public class LiveKitWebhookService {
         if (reserva == null) {
             return;
         }
-        boolean ambosConectados = sesion.isTutorConectado() && sesion.isEstudianteConectado();
+        boolean habiaAlguien = sesion.isTutorConectado() || sesion.isEstudianteConectado();
         if (mismaPersona(reserva.getTutor(), identity)) {
             sesion.setTutorConectado(false);
         } else if (mismaPersona(reserva.getBeneficiario(), identity)) {
@@ -117,7 +117,7 @@ public class LiveKitWebhookService {
         } else {
             return; // tercero: no forma el par
         }
-        if (ambosConectados) {
+        if (habiaAlguien && !sesion.isTutorConectado() && !sesion.isEstudianteConectado()) {
             sesion.setParRotoAt(Instant.now());
         }
         sesionRepo.save(sesion);
@@ -125,7 +125,7 @@ public class LiveKitWebhookService {
 
     /**
      * FASE2-05 (AUD-029) — {@code room_finished}: la sala terminó, así que quedan
-     * los dos desconectados. Si estaban los dos conectados, {@code par_roto_at}
+     * los dos desconectados. Si quedaba alguien conectado, {@code par_roto_at}
      * queda en este instante. No-op si la sesión ya cerró.
      */
     @Transactional
@@ -137,10 +137,10 @@ public class LiveKitWebhookService {
         if (sesion == null || yaCerrada(sesion)) {
             return;
         }
-        boolean ambosConectados = sesion.isTutorConectado() && sesion.isEstudianteConectado();
+        boolean habiaAlguien = sesion.isTutorConectado() || sesion.isEstudianteConectado();
         sesion.setTutorConectado(false);
         sesion.setEstudianteConectado(false);
-        if (ambosConectados) {
+        if (habiaAlguien) {
             sesion.setParRotoAt(Instant.now());
         }
         sesionRepo.save(sesion);
