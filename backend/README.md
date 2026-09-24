@@ -124,7 +124,7 @@ memoria: deben sobrevivir a un reinicio o redeploy del proceso.
 
 Copiar `.env.example` a `.env` en la raiz del repo y completar valores:
 
-`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_TOKEN_TTL_SEGUNDOS`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`, y para OCR: `TESSDATA_PREFIX` (carpeta con `spa.traineddata`).
+`DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_TOKEN_TTL_SEGUNDOS`, `MP_ACCESS_TOKEN`, `MATCHING_SERVICE_URL`, `MATCHING_SERVICE_TOKEN` (token compartido con el servicio Python, AUD-015 — mismo valor que `TINKU_MATCHING_TOKEN`), y para OCR: `TESSDATA_PREFIX` (carpeta con `spa.traineddata`).
 
 `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` son las credenciales de T-000-06 (LiveKit Cloud). Con ellas vacías el backend arranca igual; `LiveKitService` falla con mensaje claro recién cuando se intenta usar (M3).
 

@@ -18,12 +18,26 @@ mal — esa pregunta se responde en el backend Java, antes de la llamada.
 
 ## Endpoints
 
-- `GET /health` — comunicación interna backend Java → Python (T-000-08).
+- `GET /health` — comunicación interna backend Java → Python (T-000-08). **Público** (lo usan el compose y el panel de salud de M8).
 - `POST /match` — ranking por similitud semántica (T-M2-04). Body:
   `{"texto_busqueda": "...", "tutor_ids_candidatos": ["<uuid>", ...]}`.
   Devuelve `[{"tutor_id": ..., "score": ...}]` ordenado por score descendente.
   Los candidatos sin embedding todavía no se rankean. Si el modelo o la base
   no están disponibles responde `503` — nunca fabrica un ranking falso.
+- `POST /recompute-embeddings` — repuebla `embedding` de todos los perfiles
+  (contrato 2c). Todos los vectores se embeddean primero y se persisten en una
+  sola transacción (AUD-015): un fallo a mitad revierte todo.
+
+## Autenticación (AUD-015)
+
+`/match` y `/recompute-embeddings` exigen el header `X-Matching-Token` con un
+token compartido entre el backend y este servicio — **el mismo valor** en
+`TINKU_MATCHING_TOKEN` (servicio) y `MATCHING_SERVICE_TOKEN` (backend). Nada de
+usuarios ni JWT (Constitución, Artículo VII).
+
+- Sin el header, o con un valor distinto → `401`.
+- Si `TINKU_MATCHING_TOKEN` está vacío en el servicio → **fail-closed**: todos
+  los endpoints responden `503` excepto `/health`. Nunca "sin token = abierto".
 
 ## Cómo correr localmente
 
@@ -35,6 +49,8 @@ source .venv/bin/activate
 # Config de la base pgvector (misma base que el backend):
 export TINKU_PG_HOST=localhost TINKU_PG_PORT=5432 \
        TINKU_PG_DBNAME=tinku TINKU_PG_USER=... TINKU_PG_PASSWORD=...
+# Token compartido (mismo valor que MATCHING_SERVICE_TOKEN del backend):
+export TINKU_MATCHING_TOKEN=... 
 uvicorn main:app --reload --port 8000
 ```
 
@@ -52,8 +68,10 @@ ruff check . && ruff format . --check
 ## Verificar
 
 ```bash
-curl http://localhost:8000/health
-curl -X POST localhost:8000/match -H 'Content-Type: application/json' \
+curl http://localhost:8000/health                      # 200 (público)
+curl http://localhost:8000/match                       # 401 sin token
+curl -X POST localhost:8000/match -H "X-Matching-Token: $TINKU_MATCHING_TOKEN" \
+     -H 'Content-Type: application/json' \
      -d '{"texto_busqueda":"algebra lineal","tutor_ids_candidatos":["<uuid>"]}'
 ```
 
