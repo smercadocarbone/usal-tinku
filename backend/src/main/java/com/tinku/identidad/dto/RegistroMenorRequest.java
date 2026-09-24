@@ -1,8 +1,8 @@
 package com.tinku.identidad.dto;
 
+import com.tinku.identidad.validacion.PasswordSegura;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
@@ -19,7 +19,7 @@ public record RegistroMenorRequest(
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
-        @NotBlank @Size(min = 8) String password,
+        @NotBlank @PasswordSegura String password,
         @NotNull Boolean consentimientoExplicito,
         String versionTextoConsentimiento
 ) {

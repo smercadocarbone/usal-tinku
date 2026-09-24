@@ -67,6 +67,16 @@ tinku:
   jwt:
     secret: ${JWT_SECRET:CAMBIAR_EN_TODOS_LOS_AMBIENTES_AL_AGREGAR_UN_SECRET_REAL}
     expiration-minutes: 60
+  # FASE2-02 / AUD-012 (P4). Valores de docs/Tabla_Tiempos_Tinku.md: ventana de 1 minuto por IP.
+  rate-limit:
+    publicos-por-minuto: 20
+    verificar-dni-por-minuto: 5
+    webhooks-por-minuto: 120
+  # Bloqueo por intentos fallidos de login, por DNI (Tabla de Tiempos).
+  login:
+    intentos-antes-de-bloqueo: 5
+    bloqueo-inicial-minutos: 15
+    bloqueo-maximo-horas: 24
   livekit:
     base-url: ${LIVEKIT_URL:} # ej. wss://xxx.livekit.cloud — REST de sala bajo /twirp
     api-key: ${LIVEKIT_API_KEY:}

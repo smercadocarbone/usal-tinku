@@ -20,7 +20,8 @@ import {
 import { api, ApiError, subirCredencial, type TipoCredencial } from "@/lib/api";
 import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { cn } from "@/lib/cn";
-import { Alerta, Boton, Campo, CampoCheckbox, Pasos, Selector, SubidaArchivo, clasesBoton } from "@/components/ui";
+import { Alerta, Boton, Campo, CampoCheckbox, Pasos, RequisitosPassword, Selector, SubidaArchivo, clasesBoton } from "@/components/ui";
+import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
 
 type Uso = "clases" | "hijos" | "ambos";
 type Tipo = "adulto" | "tutor";
@@ -361,13 +362,11 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
         <form onSubmit={crearCuenta}>
           <Encabezado titulo="Creá tu acceso" texto={<>Listo, verificamos tu identidad. Vas a ingresar con tu DNI y esta contraseña.</>} />
           <div className="mt-6 flex flex-col gap-5">
-            <Campo id="password" etiqueta="Contraseña" variante="password" autoComplete="new-password" required minLength={8}
+            <Campo id="password" etiqueta="Contraseña" variante="password" autoComplete="new-password" required minLength={LARGO_MINIMO_PASSWORD}
               value={password} onChange={(e) => setPassword(e.target.value)} error={erroresCampos.password} />
-            <ul className="-mt-2 flex list-none flex-col gap-1.5 p-0 text-sm" aria-live="polite">
-              <Requisito cumple={password.length >= 8}>Al menos 8 caracteres</Requisito>
-            </ul>
+            <RequisitosPassword password={password} dni={dni} className="-mt-2" />
             <Campo id="confirmarPassword" etiqueta="Repetí la contraseña" variante="password" autoComplete="new-password"
-              required minLength={8} value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
+              required minLength={LARGO_MINIMO_PASSWORD} value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
               error={confirmar && password !== confirmar ? "No coincide con la contraseña de arriba." : undefined} />
             <CampoCheckbox id="terminos" etiqueta="Acepto los Términos y Condiciones" checked={terminos} required
               onChange={(e) => setTerminos(e.target.checked)} />
@@ -376,7 +375,7 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
             </p>
           </div>
           <Navegacion onVolver={() => ir(iIdentidad)}>
-            <Boton type="submit" tamano="lg" anchoCompleto disabled={password.length < 8 || password !== confirmar || !terminos}
+            <Boton type="submit" tamano="lg" anchoCompleto disabled={!passwordValida(password, dni) || password !== confirmar || !terminos}
               cargando={trabajando} textoCargando="Creando tu cuenta…">
               Crear cuenta
             </Boton>
@@ -398,18 +397,6 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
         {error && <Alerta tono="peligro">{error}</Alerta>}
       </div>
     </div>
-  );
-}
-
-function Requisito({ cumple, children }: { cumple: boolean; children: ReactNode }) {
-  return (
-    <li className={cn("flex items-center gap-2", cumple ? "text-exito" : "text-tinta-tenue")}>
-      <span aria-hidden className={cn("flex size-5 items-center justify-center rounded-full", cumple ? "bg-exito text-white" : "border border-borde-control")}>
-        {cumple && <Check className="size-3.5" />}
-      </span>
-      {children}
-      <span className="sr-only">{cumple ? "(cumplido)" : "(pendiente)"}</span>
-    </li>
   );
 }
 

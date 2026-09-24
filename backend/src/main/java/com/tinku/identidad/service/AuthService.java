@@ -19,11 +19,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final long expirationMinutes;
+    private final LoginBackoffService loginBackoff;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
-                       @Value("${tinku.jwt.expiration-minutes}") long expirationMinutes) {
+                       @Value("${tinku.jwt.expiration-minutes}") long expirationMinutes,
+                       LoginBackoffService loginBackoff) {
+        this.loginBackoff = loginBackoff;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -31,9 +34,16 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
+        // FASE2-02 / AUD-012: bloqueado → 429 aunque la contraseña sea la correcta.
+        loginBackoff.chequearPuedeIntentar(request.dni());
         Usuario usuario = usuarioRepository.findByDni(request.dni())
                 .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas"));
+                .orElse(null);
+        if (usuario == null) {
+            loginBackoff.registrarFallo(request.dni());
+            throw new BadCredentialsException("Credenciales inválidas");
+        }
+        loginBackoff.registrarExito(request.dni());
 
         // Auditoría 2026-09-18: sin este chequeo, una cuenta SUSPENDIDA por
         // sanción de M9 (kill-switch, denuncia fundada) podía loguearse con

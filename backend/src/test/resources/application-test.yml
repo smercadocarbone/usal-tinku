@@ -6,6 +6,15 @@ spring:
     enabled: true
 
 tinku:
+  # FASE2-02: la suite hace cientos de registros/logins desde 127.0.0.1. Límites
+  # altos para no depender del filtro; RateLimitYBloqueoLoginIntegracionTest los
+  # prueba con valores bajos propios. NUNCA subir los de producción por esto.
+  rate-limit:
+    publicos-por-minuto: 100000
+    verificar-dni-por-minuto: 100000
+    webhooks-por-minuto: 100000
+  login:
+    intentos-antes-de-bloqueo: 100000
   jwt:
     secret: test-secret-nunca-usar-en-produccion
   livekit:

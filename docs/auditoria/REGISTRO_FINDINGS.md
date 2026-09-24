@@ -21,7 +21,7 @@
 | AUD-009 | ALTA | La constraint de reservas compara igualdad exacta, no solapamiento | ABIERTO | 2 | — | — |
 | AUD-010 | ALTA | Sin índice único en `mp_payment_id`/`reserva_id`: escrow duplicable | CERRADO | 1 | b6bd538 + (este commit: pagos distintos concurrentes) | `PagosWebhookIntegracionTest.webhook_dosNotificacionesConcurrentesMismoMpPaymentId_unaSolaFilaYAmbas2xx`, `webhook_dosPagosDistintosConcurrentesMismaReserva_unoConfirmaYElOtroSeReembolsa` |
 | AUD-011 | ALTA | `DenunciaService.presentar` sin validar participación (BOLA) | CERRADO | 1 | beaf32a | `DenunciasModeracionIntegracionTest.aud011_*` (5) |
-| AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | ABIERTO | 2 | — | — |
+| AUD-012 | ALTA | Sin rate limiting ni bloqueo de intentos en ningún endpoint | CERRADO | 2 | (este commit) — FASE2-02, D8, P4 | `RateLimitYBloqueoLoginIntegracionTest` (6) |
 | AUD-013 | ALTA | Reactivación de cuenta/matching sin verificar sanción vigente | CERRADO | 1 | 5ddaa1d | `DenunciasModeracionIntegracionTest.aud013_*` (5) |
 | AUD-014 | ALTA | No existe infraestructura real de notificaciones | ABIERTO | 2 | — | — |
 | AUD-015 | ALTA | `matching-service` sin autenticación, expuesto en el host | CERRADO | 2 | 5d504f3 (Python), fe5c367 (backend), db2a9f0 (compose/docs) | `test_main.py` (sin/incorrecto 401, correcto 200, sin token configurado 503, health público), `MatchingServiceClientTest.matchEnviaElTokenCompartidoEnElHeader`, `ArranqueSeguroValidatorTest.prodConMatchingTokenVacio_abortaElArranque` |

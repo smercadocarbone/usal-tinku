@@ -9,6 +9,7 @@ import { ESTADOS_PROXIMOS } from "@/lib/reservas";
 import { fechaHoraCorta } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { nombreCorto } from "@/lib/tutores";
+import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
 import Pedidos from "@/components/clases/Pedidos";
 import {
   Alerta,
@@ -21,6 +22,7 @@ import {
   Modal,
   ModalConfirmacion,
   Pasos,
+  RequisitosPassword,
   SkeletonLista,
   SubidaArchivo,
   Tarjeta,
@@ -272,7 +274,7 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
   const puedeSeguir = [
     !!(nombre.trim() && apellido.trim() && dni.length >= 7 && fechaNac),
     !!fotoDni,
-    password.length >= 8,
+    passwordValida(password, dni),
     consentimiento,
   ][paso];
 
@@ -343,12 +345,12 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
               id="passMenor"
               etiqueta="Contraseña para su cuenta"
               variante="password"
-              minLength={8}
+              minLength={LARGO_MINIMO_PASSWORD}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              ayuda="Al menos 8 caracteres."
               required
             />
+            <RequisitosPassword password={password} dni={dni} />
           </>
         )}
         {paso === 3 && (

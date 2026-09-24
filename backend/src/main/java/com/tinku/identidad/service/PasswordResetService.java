@@ -1,5 +1,7 @@
 package com.tinku.identidad.service;
 
+import com.tinku.identidad.validacion.PoliticaPassword;
+
 import com.tinku.identidad.model.TokenResetPassword;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.NotificadorResetPassword;
@@ -81,6 +83,7 @@ public class PasswordResetService {
         }
 
         Usuario usuario = token.getUsuario();
+        PoliticaPassword.exigirDistintaDelDni(passwordNueva, usuario.getDni());
         usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
         usuarioRepository.save(usuario);
 
