@@ -86,6 +86,21 @@ public class Usuario {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    /**
+     * Presentación del Tutor en su perfil público (U1, Spec_M1 US-7). Hasta
+     * 500 caracteres, opcional, moderable por el Admin. Solo aplica a TUTOR.
+     */
+    @Column(length = 500)
+    private String bio;
+
+    /**
+     * Referencia INTERNA del puerto {@code Almacenamiento} a la foto del perfil
+     * público (U1). Nunca se expone: los bytes salen por
+     * {@code GET /api/tutores/{id}/foto}. {@code null} = sin foto.
+     */
+    @Column(name = "foto_ref")
+    private String fotoRef;
+
     /** Edad calculada al momento de la consulta — no persistida (evita
      * inconsistencias si la fila se lee mucho tiempo después de creada). */
     @Transient

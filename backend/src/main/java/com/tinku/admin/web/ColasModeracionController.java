@@ -10,6 +10,8 @@ import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.port.ArchivoNoDisponibleException;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.service.CredencialService;
+import com.tinku.identidad.service.PerfilPublicoTutorService;
+import com.tinku.identidad.service.TutorNoEncontradoException;
 import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.seguridad.web.AlertaSeguridadResponse;
@@ -22,6 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,19 +62,48 @@ public class ColasModeracionController {
     private final DenunciaRepository denunciaRepo;
     private final CredencialService credencialService;
     private final Almacenamiento almacenamiento;
+    private final PerfilPublicoTutorService perfilPublicoService;
 
     public ColasModeracionController(AdminModeracionGate gate,
                                      CredencialAcademicaRepository credencialRepo,
                                      AlertaSeguridadRepository alertaRepo,
                                      DenunciaRepository denunciaRepo,
                                      CredencialService credencialService,
-                                     Almacenamiento almacenamiento) {
+                                     Almacenamiento almacenamiento,
+                                     PerfilPublicoTutorService perfilPublicoService) {
         this.gate = gate;
         this.credencialRepo = credencialRepo;
         this.alertaRepo = alertaRepo;
         this.denunciaRepo = denunciaRepo;
         this.credencialService = credencialService;
         this.almacenamiento = almacenamiento;
+        this.perfilPublicoService = perfilPublicoService;
+    }
+
+    /**
+     * U1: moderación del perfil público de un Tutor — quita su bio y/o su foto
+     * (p. ej. datos de contacto o contenido inapropiado). Auditado por el
+     * {@code AuditoriaInterceptor} de {@code /api/admin/**}.
+     */
+    @DeleteMapping("/tutores/{tutorId}/bio")
+    public ResponseEntity<Void> quitarBio(@PathVariable UUID tutorId, Authentication authentication) {
+        gate.requiereModeracion(authentication);
+        return moderarPerfil(tutorId, true, false);
+    }
+
+    @DeleteMapping("/tutores/{tutorId}/foto")
+    public ResponseEntity<Void> quitarFoto(@PathVariable UUID tutorId, Authentication authentication) {
+        gate.requiereModeracion(authentication);
+        return moderarPerfil(tutorId, false, true);
+    }
+
+    private ResponseEntity<Void> moderarPerfil(UUID tutorId, boolean bio, boolean foto) {
+        try {
+            perfilPublicoService.moderar(tutorId, bio, foto);
+        } catch (TutorNoEncontradoException e) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/credenciales")

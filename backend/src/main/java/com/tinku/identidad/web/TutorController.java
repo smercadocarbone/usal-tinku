@@ -1,5 +1,6 @@
 package com.tinku.identidad.web;
 
+import com.tinku.identidad.dto.ActualizarPerfilPublicoRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.dto.MateriasNivel;
@@ -14,19 +15,26 @@ import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.port.PerfilMatchingProvider;
 import com.tinku.identidad.port.ReputacionPerfilProvider;
+import com.tinku.identidad.port.TarifaPerfilProvider;
 import com.tinku.identidad.service.ArchivoCredencialDemasiadoGrandeException;
 import com.tinku.identidad.service.ArchivoCredencialInvalidoException;
 import com.tinku.identidad.service.CredencialService;
+import com.tinku.identidad.service.PerfilPublicoTutorService;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,6 +59,8 @@ public class TutorController {
     private final Almacenamiento almacenamiento;
     private final PerfilMatchingProvider perfilMatchingProvider;
     private final ReputacionPerfilProvider reputacionPerfilProvider;
+    private final TarifaPerfilProvider tarifaPerfilProvider;
+    private final PerfilPublicoTutorService perfilPublicoService;
     /** Mismo valor que corta el contenedor; se re-chequea acá (ver cargarCredencial). */
     private final DataSize maxArchivoCredencial;
 
@@ -60,6 +70,8 @@ public class TutorController {
                            Almacenamiento almacenamiento,
                            PerfilMatchingProvider perfilMatchingProvider,
                            ReputacionPerfilProvider reputacionPerfilProvider,
+                           TarifaPerfilProvider tarifaPerfilProvider,
+                           PerfilPublicoTutorService perfilPublicoService,
                            @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial) {
         this.maxArchivoCredencial = maxArchivoCredencial;
         this.usuarioService = usuarioService;
@@ -68,6 +80,8 @@ public class TutorController {
         this.almacenamiento = almacenamiento;
         this.perfilMatchingProvider = perfilMatchingProvider;
         this.reputacionPerfilProvider = reputacionPerfilProvider;
+        this.tarifaPerfilProvider = tarifaPerfilProvider;
+        this.perfilPublicoService = perfilPublicoService;
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -79,16 +93,66 @@ public class TutorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(tutor));
     }
 
-/** Perfil público del Tutor (autenticado). No expone DNI, passwordHash ni
-     * capacidad de pago. Materias/nivel (M2) y calificaciones (M7) vienen de
-     * puertos con stubs hasta que esos módulos existan. */
+    /** Perfil público del Tutor (autenticado). No expone DNI, passwordHash ni
+     * email. Materias/nivel (M2), calificaciones (M7) y precio (M5) vienen de
+     * puertos; bio y foto (U1) son del propio Tutor. */
     @GetMapping("/{id}")
     public ResponseEntity<TutorPerfilResponse> obtener(@PathVariable UUID id) {
         Usuario tutor = usuarioService.obtenerTutor(id);
+        return ResponseEntity.ok(perfil(tutor));
+    }
+
+    private TutorPerfilResponse perfil(Usuario tutor) {
+        UUID id = tutor.getId();
         Optional<MateriasNivel> materiasNivel = perfilMatchingProvider.materiasYNivel(id);
         ReputacionTutor reputacion = reputacionPerfilProvider.reputacion(id);
-        return ResponseEntity.ok(TutorPerfilResponse.of(
-                tutor, materiasNivel.orElse(null), reputacion));
+        return TutorPerfilResponse.of(tutor, materiasNivel.orElse(null), reputacion,
+                credencialService.existeAprobada(id),
+                tarifaPerfilProvider.tarifaConfigurada(id).orElse(null));
+    }
+
+    /** U1: el Tutor autenticado actualiza la bio de su perfil público (≤ 500 caracteres). */
+    @PutMapping("/me/perfil")
+    public ResponseEntity<TutorPerfilResponse> actualizarPerfilPublico(
+            @RequestBody ActualizarPerfilPublicoRequest request, Authentication authentication) {
+        Usuario tutor = perfilPublicoService.actualizarBio(usuarioActual.obtener(authentication), request.bio());
+        return ResponseEntity.ok(perfil(tutor));
+    }
+
+    /** U1: foto del perfil público. PNG o JPEG por magic bytes; mismo tope de tamaño que las credenciales. */
+    @PutMapping(value = "/me/foto", consumes = "multipart/form-data")
+    public ResponseEntity<TutorPerfilResponse> actualizarFoto(
+            @RequestPart("archivo") MultipartFile archivo, Authentication authentication) throws IOException {
+        if (archivo.getSize() > maxArchivoCredencial.toBytes()) {
+            throw new ArchivoCredencialDemasiadoGrandeException(maxArchivoCredencial);
+        }
+        Usuario tutor = perfilPublicoService.actualizarFoto(usuarioActual.obtener(authentication), archivo.getBytes());
+        return ResponseEntity.ok(perfil(tutor));
+    }
+
+    @DeleteMapping("/me/foto")
+    public ResponseEntity<TutorPerfilResponse> borrarFoto(Authentication authentication) {
+        Usuario tutor = perfilPublicoService.borrarFoto(usuarioActual.obtener(authentication));
+        return ResponseEntity.ok(perfil(tutor));
+    }
+
+    /**
+     * U1: bytes de la foto del Tutor (autenticado, como el resto del perfil). El
+     * Content-Type sale de los magic bytes; {@code nosniff} + {@code CSP: sandbox}
+     * como en el visor de credenciales (AUD-007). 404 si no tiene foto.
+     */
+    @GetMapping("/{id}/foto")
+    public ResponseEntity<byte[]> foto(@PathVariable UUID id) {
+        return perfilPublicoService.foto(id)
+                .map(bytes -> ResponseEntity.ok()
+                        .contentType(TipoArchivoCredencial.detectar(bytes)
+                                .map(t -> MediaType.parseMediaType(t.getMediaType()))
+                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                        .header("X-Content-Type-Options", "nosniff")
+                        .header("Content-Security-Policy", "sandbox")
+                        .cacheControl(CacheControl.noCache().cachePrivate())
+                        .body(bytes))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /** Verificación previa del DNI del Tutor en el wizard (FR-ID-007), sin

@@ -8,36 +8,46 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Perfil PÚBLICO de un Tutor (GET /api/tutores/{id}). Base = campos de
- * {@link UsuarioResponse} (nunca exportera passwordHash ni DNI) + materias y
- * nivel del catálogo de M2 + reputación pública de M7 (promedio null si count
- * < 5, FR-REP-007). Sin materias configuradas o sin calificaciones suficientes,
- * listas vacías y promedio null.
+ * Perfil PÚBLICO de un Tutor (GET /api/tutores/{id}). Nunca exporta
+ * passwordHash, DNI ni email. Materias y nivel del catálogo de M2 + reputación
+ * pública de M7 (promedio null si count < 5, FR-REP-007).
+ *
+ * <p>UX-04 §2 / U1: suma {@code bio}, {@code tieneFoto} (los bytes se piden a
+ * {@code GET /api/tutores/{id}/foto}), {@code verificado} (tiene al menos una
+ * Credencial Académica aprobada) y {@code precioSesion} (la tarifa que el Tutor
+ * configuró; {@code null} = todavía no la definió). Se sacaron
+ * {@code capacidadEstudiante}/{@code capacidadAdultoResponsable}: no le sirven a
+ * quien mira un perfil público.</p>
  */
 public record TutorPerfilResponse(
         UUID id,
         String nombre,
         String apellido,
         TipoUsuario tipo,
-        boolean capacidadEstudiante,
-        boolean capacidadAdultoResponsable,
         List<String> materias,
         String nivel,
         BigDecimal calificacionPromedio,
-        long cantidadCalificaciones
+        long cantidadCalificaciones,
+        String bio,
+        boolean tieneFoto,
+        boolean verificado,
+        BigDecimal precioSesion
 ) {
-    public static TutorPerfilResponse of(Usuario tutor, MateriasNivel materiasNivel, ReputacionTutor reputacion) {
+    public static TutorPerfilResponse of(Usuario tutor, MateriasNivel materiasNivel, ReputacionTutor reputacion,
+                                         boolean verificado, BigDecimal precioSesion) {
         return new TutorPerfilResponse(
                 tutor.getId(),
                 tutor.getNombre(),
                 tutor.getApellido(),
                 tutor.getTipo(),
-                tutor.isCapacidadEstudiante(),
-                tutor.isCapacidadAdultoResponsable(),
                 materiasNivel == null ? List.of() : materiasNivel.materias(),
                 materiasNivel == null ? null : materiasNivel.nivel(),
                 reputacion.calificacionPromedio(),
-                reputacion.cantidadCalificaciones()
+                reputacion.cantidadCalificaciones(),
+                tutor.getBio(),
+                tutor.getFotoRef() != null,
+                verificado,
+                precioSesion
         );
     }
 }

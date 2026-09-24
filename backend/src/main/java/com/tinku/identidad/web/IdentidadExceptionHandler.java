@@ -96,6 +96,16 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(FotoPerfilInvalidaException.class)
+    public ResponseEntity<Map<String, String>> handleFotoPerfilInvalida(FotoPerfilInvalidaException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SoloTutorException.class)
+    public ResponseEntity<Map<String, String>> handleSoloTutor(SoloTutorException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(ArchivoCredencialInvalidoException.class)
     public ResponseEntity<Map<String, String>> handleArchivoCredencialInvalido(ArchivoCredencialInvalidoException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
