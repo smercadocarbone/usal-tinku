@@ -4,6 +4,7 @@ import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.OcrService;
+import com.tinku.identidad.port.CancelacionReservasFuturas;
 import com.tinku.identidad.port.VerificadorReservasFuturas;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.ConsentimientoMenorRepository;
@@ -40,6 +41,7 @@ class UsuarioServiceDarDeBajaTest {
     private ConsentimientoMenorRepository consentRepo;
     private AutorizacionTutorRepository autorizacionRepo;
     private VerificadorReservasFuturas verificador;
+    private CancelacionReservasFuturas cancelacion;
     private PasswordEncoder passEncoder;
     private UsuarioService service;
 
@@ -49,11 +51,12 @@ class UsuarioServiceDarDeBajaTest {
         consentRepo = mock(ConsentimientoMenorRepository.class);
         autorizacionRepo = mock(AutorizacionTutorRepository.class);
         verificador = mock(VerificadorReservasFuturas.class);
+        cancelacion = mock(CancelacionReservasFuturas.class);
         passEncoder = mock(PasswordEncoder.class);
         when(passEncoder.encode(any())).thenReturn("hash-baja");
         service = new UsuarioService(usuarioRepo, mock(OcrService.class),
                 passEncoder, mock(OcrBackoffService.class),
-                consentRepo, autorizacionRepo, verificador);
+                consentRepo, autorizacionRepo, verificador, cancelacion);
     }
 
     private Usuario adultoResponsable() {

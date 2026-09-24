@@ -14,8 +14,13 @@ import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.model.EstadoReserva;
+import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.repository.ReservaRepository;
+import com.tinku.reservas.repository.SolicitudSesionRepository;
+import com.tinku.reservas.service.ReservaService;
+import com.tinku.reservas.service.SolicitudNoPendienteException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +46,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -81,6 +87,8 @@ class BajaMenorAnonimizacionIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
+    @Autowired SolicitudSesionRepository solicitudSesionRepository;
+    @Autowired ReservaService reservaService;
 
     @MockBean OcrService ocrService;
     @MockBean NotificadorResetPassword notificadorResetPassword;
@@ -256,5 +264,143 @@ class BajaMenorAnonimizacionIntegracionTest {
         assertThat(dni1).startsWith("BAJA-").hasSizeLessThanOrEqualTo(20);
         assertThat(dni2).startsWith("BAJA-").hasSizeLessThanOrEqualTo(20);
         assertThat(dni1).isNotEqualTo(dni2);
+    }
+
+    // ------------------------------------------------ reservas futuras (decisión del usuario, 2026-09-24)
+    //
+    // La baja confirmada cancela las reservas futuras del menor por la misma vía
+    // que cualquier cancelación: reserva.cancelada con canceladaPor = el Adulto
+    // Responsable (pagador), y M5 aplica FR-RES-008 sin reglas nuevas. Sin esto,
+    // el Tutor iba a una clase con un "Perfil dado de baja" y el escrow quedaba
+    // retenido para siempre.
+
+    private record Futura(String token, UUID menorId, UUID reservaId, UUID transaccionId) {}
+
+    private Futura menorConReservaFutura(String dniBase, Instant horario, EstadoReserva estado)
+            throws Exception {
+        String token = registrarAdultoYToken(dniBase + "1", "Maria", "Perez");
+        UUID menorId = registrarMenor(token, dniBase + "2", "Sofia");
+        Usuario ar = usuarioRepository.findByDni(dniBase + "1").orElseThrow();
+
+        Usuario tutor = new Usuario();
+        tutor.setDni(dniBase + "3");
+        tutor.setNombre("Pablo");
+        tutor.setApellido("Sosa");
+        tutor.setFechaNacimiento(LocalDate.of(1988, 9, 9));
+        tutor.setTipo(TipoUsuario.TUTOR);
+        tutor.setEmail(dniBase + "3@tinku.test");
+        tutor.setPasswordHash("x");
+        tutor = usuarioRepository.save(tutor);
+
+        Reserva reserva = new Reserva();
+        reserva.setPagador(ar);
+        reserva.setBeneficiario(usuarioRepository.findById(menorId).orElseThrow());
+        reserva.setTutor(tutor);
+        reserva.setHorario(horario);
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(estado);
+        reserva = reservaRepository.save(reserva);
+
+        UUID transaccionId = null;
+        if (estado == EstadoReserva.CONFIRMADA) {
+            Transaccion t = new Transaccion();
+            t.setReservaId(reserva.getId());
+            t.setMpPaymentId("mp-" + UUID.randomUUID());
+            t.setMontoBruto(BigDecimal.valueOf(15000));
+            t.setComisionPlataforma(BigDecimal.valueOf(4050));
+            t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+            t.setEnBypass(true);
+            transaccionId = transaccionRepository.save(t).getId();
+        }
+        return new Futura(token, menorId, reserva.getId(), transaccionId);
+    }
+
+    private void darDeBajaConfirmando(Futura f) throws Exception {
+        mockMvc.perform(delete("/api/usuarios/menores/{id}", f.menorId())
+                        .param("confirmar", "true")
+                        .header("Authorization", "Bearer " + f.token()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void bajaConfirmada_reservaFuturaConMargen_seCancelaYSeReembolsa() throws Exception {
+        Futura f = menorConReservaFutura("4211500",
+                Instant.now().plus(3, ChronoUnit.DAYS), EstadoReserva.CONFIRMADA);
+
+        darDeBajaConfirmando(f);
+
+        Reserva cancelada = reservaRepository.findById(f.reservaId()).orElseThrow();
+        assertThat(cancelada.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(cancelada.getMotivoCancelacion())
+                .isEqualTo(com.tinku.reservas.model.MotivoCancelacion.VOLUNTARIA);
+        assertThat(transaccionRepository.findById(f.transaccionId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.REEMBOLSADO);
+    }
+
+    /** FR-RES-008: la baja es un acto del pagador. Con <24hs aplica la misma
+     *  asimetría que su cancelación tardía — si no, borrar al menor sería la vía
+     *  para esquivar la penalidad. */
+    @Test
+    void bajaConfirmada_reservaFuturaSinMargen_elTutorCobra() throws Exception {
+        Futura f = menorConReservaFutura("4211600",
+                Instant.now().plus(2, ChronoUnit.HOURS), EstadoReserva.CONFIRMADA);
+
+        darDeBajaConfirmando(f);
+
+        assertThat(reservaRepository.findById(f.reservaId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(transaccionRepository.findById(f.transaccionId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.LIBERADO);
+    }
+
+    @Test
+    void bajaConfirmada_reservaPendienteDePago_seCancelaSinTransaccion() throws Exception {
+        Futura f = menorConReservaFutura("4211700",
+                Instant.now().plus(3, ChronoUnit.DAYS), EstadoReserva.PENDIENTE_PAGO);
+
+        darDeBajaConfirmando(f);
+
+        assertThat(reservaRepository.findById(f.reservaId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(transaccionRepository.existsByReservaId(f.reservaId())).isFalse();
+    }
+
+    /** Una Solicitud pendiente del menor no sobrevive a la baja: si quedara
+     *  pendiente, el Adulto Responsable podría aprobarla después (aprobarSolicitud
+     *  no re-chequea al menor) y crear una Reserva paga para un perfil dado de baja.
+     *  La baja es un acto del AR, así que la Solicitud queda rechazada (US-3). */
+    @Test
+    void bajaConfirmada_solicitudPendiente_quedaRechazadaYNoSePuedeAprobar() throws Exception {
+        String token = registrarAdultoYToken("42118001", "Maria", "Perez");
+        UUID menorId = registrarMenor(token, "42118002", "Sofia");
+
+        Usuario tutor = new Usuario();
+        tutor.setDni("42118003");
+        tutor.setNombre("Pablo");
+        tutor.setApellido("Sosa");
+        tutor.setFechaNacimiento(LocalDate.of(1988, 9, 9));
+        tutor.setTipo(TipoUsuario.TUTOR);
+        tutor.setEmail("42118003@tinku.test");
+        tutor.setPasswordHash("x");
+        tutor = usuarioRepository.save(tutor);
+
+        SolicitudSesion solicitud = new SolicitudSesion();
+        solicitud.setMenor(usuarioRepository.findById(menorId).orElseThrow());
+        solicitud.setTutor(tutor);
+        solicitud.setHorarioPropuesto(Instant.now().plus(3, ChronoUnit.DAYS));
+        solicitud.setExpiraAt(Instant.now().plus(48, ChronoUnit.HOURS));
+        solicitud.setEstado(EstadoSolicitud.PENDIENTE);
+        UUID solicitudId = solicitudSesionRepository.save(solicitud).getId();
+
+        mockMvc.perform(delete("/api/usuarios/menores/{id}", menorId)
+                        .param("confirmar", "true")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        assertThat(solicitudSesionRepository.findById(solicitudId).orElseThrow().getEstado())
+                .isEqualTo(EstadoSolicitud.RECHAZADA);
+        Usuario ar = usuarioRepository.findByDni("42118001").orElseThrow();
+        assertThatThrownBy(() -> reservaService.aprobarSolicitud(ar, solicitudId))
+                .isInstanceOf(SolicitudNoPendienteException.class);
     }
 }

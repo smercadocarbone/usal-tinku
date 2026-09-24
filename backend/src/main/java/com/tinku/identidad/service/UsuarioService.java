@@ -11,6 +11,7 @@ import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.ocr.DatosDniDeclarados;
 import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.ocr.ResultadoOcr;
+import com.tinku.identidad.port.CancelacionReservasFuturas;
 import com.tinku.identidad.port.VerificadorReservasFuturas;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.ConsentimientoMenorRepository;
@@ -54,6 +55,7 @@ public class UsuarioService {
     private final ConsentimientoMenorRepository consentimientoRepo;
     private final AutorizacionTutorRepository autorizacionRepo;
     private final VerificadorReservasFuturas verificadorReservas;
+    private final CancelacionReservasFuturas cancelacionReservas;
 
     @Autowired
     public UsuarioService(UsuarioRepository usuarioRepository,
@@ -62,7 +64,8 @@ public class UsuarioService {
                           OcrBackoffService ocrBackoffService,
                           ConsentimientoMenorRepository consentimientoRepo,
                           AutorizacionTutorRepository autorizacionRepo,
-                          VerificadorReservasFuturas verificadorReservas) {
+                          VerificadorReservasFuturas verificadorReservas,
+                          CancelacionReservasFuturas cancelacionReservas) {
         this.usuarioRepository = usuarioRepository;
         this.ocrService = ocrService;
         this.passwordEncoder = passwordEncoder;
@@ -70,6 +73,7 @@ public class UsuarioService {
         this.consentimientoRepo = consentimientoRepo;
         this.autorizacionRepo = autorizacionRepo;
         this.verificadorReservas = verificadorReservas;
+        this.cancelacionReservas = cancelacionReservas;
     }
 
     /** Constructor de test de chunks M1-C/D (sin autorizaciones ni reservas). */
@@ -79,7 +83,7 @@ public class UsuarioService {
                           OcrBackoffService ocrBackoffService,
                           ConsentimientoMenorRepository consentimientoRepo) {
         this(usuarioRepository, ocrService, passwordEncoder, ocrBackoffService,
-                consentimientoRepo, null, null);
+                consentimientoRepo, null, null, null);
     }
 
     @Transactional
@@ -305,13 +309,10 @@ public class UsuarioService {
             throw new ReservasFuturasPendientesException(reservasFuturas);
         }
 
-        // FASE2-06: PARAR documentado (spec §4) — las reservas FUTURAS que el
-        // AR confirmó no se cancelan acá. No existe un método de cancelación por
-        // sistema que cubra el rol @beneficiario de un menor:
-        // ReservaService.cancelarFuturasPorSancion solo opera sobre tutor_id y
-        // pagador_id (motivo SANCION); un menor nunca es ninguno de los dos
-        // (Artículo II: no paga, no dicta). Inventar una cancelación acá
-        // saltearía el reembolso de M5 — se reportó como bloqueo.
+        // Reservas futuras: se cancelan por la vía normal, en nombre del AR (el
+        // pagador) — M5 reembolsa o libera según FR-RES-008 y M3 desagenda la
+        // Sesión. Antes que la anonimización, así los listeners ven al menor real.
+        cancelacionReservas.cancelarFuturasDeMenor(menorId, adultoResponsable.getId());
 
         // Vínculos de confianza operativos del menor: se siguen borrando (FK limpia).
         autorizacionRepo.deleteByMenorId(menorId);
