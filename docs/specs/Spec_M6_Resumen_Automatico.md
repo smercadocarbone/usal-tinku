@@ -4,15 +4,20 @@
 **Estado:** Borrador para revisión
 **Depende de:** M3 (transcript de la sesión + evento `sesion.finalizada`), M4 (contexto de la reserva: materia, tutor, duración), M1 (perfil, minoría de edad), M9 (pausa de generación si hay Denuncia activa sobre la sesión, FR-SEC-003)
 
-> **ESTADO AL 2026-09-21 (AUD-024):** M6 no puede generar un resumen por **dos** motivos
-> independientes:
-> 1. No hay proveedor de LLM (ADR pendiente, ya registrado en T-FIN-03).
-> 2. **No hay transcript.** M3 no lo produce: `LiveKitService` no usa Egress y
->    `sesiones_aprendizaje` no tiene columna de transcript. El bean por defecto
->    `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre, y el pipeline marca
->    la fila como `fallido` (caso borde #2).
+> **ESTADO AL 2026-09-24 (AUD-024, `EN CURSO`):** M6 no puede generar un resumen todavía por
+> **un** motivo (el otro ya se resolvió):
+> 1. ~~No hay proveedor de LLM~~ **Resuelto (T07, ADR-M6-03):** Gemini 3.5 Flash-Lite, activo con
+>    la property `tinku.resumen.proveedor=gemini` (`ResumenProveedorGemini`,
+>    `TranscriptSesionProveedorGemini`). Sin esa property siguen los fail-closed — ningún entorno
+>    llama a Google salvo que se configure explícitamente.
+> 2. **Sigue sin haber audio de la sesión.** M3 no lo produce todavía: `LiveKitService` no usa
+>    Egress y `sesiones_aprendizaje` no tiene columna de audio. Con la property activa,
+>    `TranscriptSesionProveedorGemini` devuelve `null` hasta que T08 provea el origen del audio
+>    (almacenamiento + lectura); el pipeline marca la fila como `fallido` (caso borde #2) mientras
+>    tanto — nunca inventa contenido.
 >
-> Resolver el ADR del LLM **no** desbloquea M6 por sí solo.
+> T08 (`tesis/T08-grabacion-audio-resumen.md`) es lo único que falta para desbloquear M6 por
+> completo.
 >
 > **Advertencia de alcance:** grabar audio de sesiones donde hay un menor presente es
 > exactamente lo que el Artículo V restringe. El ADR de Egress/retención es más delicado que
@@ -85,7 +90,7 @@ Este módulo genera, de forma automática y para toda sesión que lo amerite, un
 | 4 | Denuncia activa sobre la sesión | La generación se pausa (coherente con FR-SEC-003 de M9); el material queda disponible para M9/Admin. **Decisión explícita:** si la disputa se resuelve con reembolso, el resumen igual queda accesible para el Estudiante — el reembolso es sobre el dinero, no sobre el valor educativo ya generado. |
 | 5 | Dos sesiones finalizan al mismo tiempo | Procesamiento independiente por sesión; no hay estado compartido entre resúmenes. |
 | 6 | El transcript contiene datos de contacto intercambiados entre los participantes | La anonimización (FR-SUM-005) los excluye del resumen. La captura de contacto fuera de plataforma es tema de M9, no del resumen. |
-| 7 _(agregado, auditoría 2026-09-18)_ | Sesión degradada a texto desde el inicio (sin ningún tramo de audio, no solo parcial) | Es fuente igualmente válida (FR-SUM-002); el ADR de proveedor LLM pendiente (Constitución, fila "LLM — Pendiente") debe soportar generar el resumen a partir de texto puro, no asumir que siempre hay audio de entrada. |
+| 7 _(agregado, auditoría 2026-09-18)_ | Sesión degradada a texto desde el inicio (sin ningún tramo de audio, no solo parcial) | Es fuente igualmente válida (FR-SUM-002); resuelto por diseño en el pipeline de ADR-M6-03: `ResumenProveedorGemini.generarResumen` toma directamente `transcriptAnonimizado` (texto), sin pasar por la llamada de transcripción de audio — soporta texto puro sin asumir que siempre hay audio de entrada. |
 
 **Supuestos validados en esta ronda:** umbral de 10 minutos, mismo resumen visible para Tutor y Estudiante, sin regeneración en el MVP — los tres se mantienen tal como estaban propuestos.
 

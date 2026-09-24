@@ -6,6 +6,7 @@ import com.tinku.aula.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.resumen.PromptResumen;
 import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
 import com.tinku.resumen.jobs.ReintentoResumenJob;
@@ -58,11 +59,13 @@ import java.util.UUID;
  * generacion al resolverse la disputa (caso borde #4 solo aclara que un
  * reembolso no anula un resumen ya generado): lo minimo es pausar y no filtrar.</p>
  *
- * <p><b>T-M6-05:</b> la generacion va por {@link ResumenProveedor} (puerto,
- * ADR del proveedor PENDIENTE — el bean default es fail-closed). El transcript
- * pasa SIEMPRE por {@link AnonimizadorTranscript} antes de armar el prompt y
- * antes de cualquier llamada saliente (FR-SUM-005); el texto anonimizado queda
- * persistido aunque el LLM no exista (T-M6-04).</p>
+ * <p><b>T-M6-05:</b> la generacion va por {@link ResumenProveedor} (puerto;
+ * ADR-M6-03: Gemini 3.5 Flash-Lite, pipeline de dos llamadas). El bean default
+ * (sin la property {@code tinku.resumen.proveedor=gemini}) es fail-closed; con
+ * la property se activan los adapters reales de Gemini. El transcript pasa
+ * SIEMPRE por {@link AnonimizadorTranscript} antes de armar el prompt y antes de
+ * cualquier llamada saliente (FR-SUM-005); el texto anonimizado queda persistido
+ * aun si la generacion falla (T-M6-04).</p>
  *
  * <p><b>T-M6-06:</b> si la llamada falla, backoff identico al de M5
  * ({@code LiberacionEscrowService}): 3 reintentos {@code 5min → 15min → 1h}
@@ -250,7 +253,7 @@ public class ResumenService {
         // FR-SUM-005: la anonimizacion corre SIEMPRE y antes de toda llamada saliente.
         String anonimizado = anonimizador.anonimizar(crudo);
         fila.setTranscriptAnonimizado(anonimizado);
-        fila.setPromptAnonimizado(armarPrompt(anonimizado));
+        fila.setPromptAnonimizado(PromptResumen.armar(anonimizado));
         resumenRepo.save(fila);
 
         // El request al proveedor lleva UNICAMENTE el transcript ya anonimizado.
@@ -272,8 +275,9 @@ public class ResumenService {
             fila.setProximoReintentoAt(null);
             resumenRepo.save(fila);
             cancelarReintento(sesionId);
-            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — ADR del proveedor pendiente "
-                    + "(T-FIN-03); el transcript anonimizado queda persistido.", sesionId);
+            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — sin property tinku.resumen.proveedor=gemini "
+                    + "el resumen no se genera (fail-closed, ADR-M6-03); el transcript "
+                    + "anonimizado queda persistido.", sesionId);
         } catch (RuntimeException e) {
             reintentarOAgotar(fila);
         }
@@ -435,24 +439,5 @@ public class ResumenService {
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                         .withMisfireHandlingInstructionIgnoreMisfires())
                 .build();
-    }
-
-    // ---------------------------------------------------------------- prompt
-
-    /** FR-SUM-003/008: estructura fija + prohibiciones de evaluacion. */
-    private static String armarPrompt(String transcriptAnonimizado) {
-        return "Resumi la sesion de tutoria en espanol, con tono claro y adaptado al nivel "
-                + "escolar del estudiante. Estructura fija:\n"
-                + "1. Temas tratados\n"
-                + "2. Conceptos clave explicados\n"
-                + "3. Ejercicios o ejemplos trabajados\n"
-                + "4. Dudas que quedaron abiertas\n"
-                + "5. Sugerencia de que reforzar en la proxima sesion\n"
-                + "\n"
-                + "Reglas: NO evalues a ninguna persona, NO uses tono moralizante y NO hagas "
-                + "predicciones de desempeno. El texto esta anonimizado: no reconstruyas "
-                + "identidades ni datos personales; referite a los participantes como "
-                + "\"el tutor\" y \"el estudiante\".\n"
-                + "\nTranscript:\n" + transcriptAnonimizado;
     }
 }

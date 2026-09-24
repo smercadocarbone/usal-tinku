@@ -33,7 +33,7 @@
 | AUD-021 | MEDIA | `subirEvidencia` acepta cualquier URL http(s) provista por el cliente | ABIERTO | 2 | — | — |
 | AUD-022 | MEDIA | Los eventos de dominio viven en el módulo consumidor, no el emisor | ABIERTO | 3 | — | — |
 | AUD-023 | MEDIA | `ReservasExceptionHandler` traduce cualquier conflicto de FK a 409 | ABIERTO | 3 | — | — |
-| AUD-024 | MEDIA | M6 no puede generar resumen: falta proveedor de transcript | ABIERTO | 3 | — | — |
+| AUD-024 | MEDIA | M6 no puede generar resumen: falta proveedor de transcript | EN CURSO | 3 | 915b825 + 2688d00 — ADR-M6-03 (T07): proveedor de LLM Gemini 3.5 Flash-Lite implementado y probado; sigue EN CURSO porque `TranscriptSesionProveedorGemini` devuelve `null` hasta que T08 provea el audio de la sesión | `GeminiClienteTest` (3), `ResumenProveedorGeminiTest`, `BeansProveedorGeminiTest` (2), `ResumenProveedorFailClosedTest` (regresión fail-closed) |
 | AUD-025 | MEDIA | `FranjaService.publicar` no valida solapamiento entre franjas | ABIERTO | 3 | — | — |
 | AUD-026 | MEDIA | `getCatalogos` cae a un mock local ante cualquier error, no sólo 404 | ABIERTO | 3 | — | — |
 | AUD-027 | MEDIA | JWT con DNI como subject y sin invalidación al resetear password | ABIERTO | 3 | — | — |

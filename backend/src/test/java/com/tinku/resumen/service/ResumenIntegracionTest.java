@@ -57,12 +57,13 @@ import static org.mockito.Mockito.when;
 /**
  * M6 — Resumen Automatico de la Sesion, de punta a punta (T-M6-01..T-M6-08).
  *
- * <p>El proveedor de LLM va mockeado (el archivo del provider real no existe:
- * ADR pendiente, T-FIN-03) y el transcript va mockeado (M3-E almacenara el
- * egress real en V? — hoy {@code TranscriptSesionProveedorNoDisponible}
- * devuelve null). El job REAL de Quartz (JOB_STORE) se verifica en los
- * reintentos y el recordatorio. Solo entran al sistema transcripts con datos
- * personales; se verifica que NADA personal llegue al proveedor (T-M6-08).
+ * <p>Los proveedores van mockeados: sin la property
+ * {@code tinku.resumen.proveedor} el modulo usa los fail-closed (T07, ADR-M6-03),
+ * y el adaptador real de Gemini (que estaria activo solo con esa property)
+ * llamaria a Google — no pasa en tests. El transcript va mockeado (hoy M3 no
+ * genera transcript y T08 proveera el audio). El job REAL de Quartz (JOB_STORE) se
+ * verifica en los reintentos y el recordatorio. Solo entran al sistema transcripts
+ * con datos personales; se verifica que NADA personal llegue al proveedor (T-M6-08).
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -94,8 +95,8 @@ class ResumenIntegracionTest {
     @MockBean TranscriptSesionProveedor transcript;
     @MockBean ResumenProveedor proveedor;
 
-    @Value("${tinku.resumen.llm.proveedor:}") String llmProveedor;
-    @Value("${tinku.resumen.llm.api-key:}") String llmApiKey;
+    @Value("${tinku.resumen.proveedor:}") String resumenProveedor;
+    @Value("${tinku.resumen.gemini.api-key:}") String geminiApiKey;
 
     /** Transcript realista con datos personales de prueba. */
     private static final String TRANSCRIPT_CON_DATOS =
@@ -341,11 +342,12 @@ class ResumenIntegracionTest {
     // ------------------------------------------------ solo configuración (T-M6-05)
 
     @Test
-    void placeholdersDelProveedorExistenVaciosPorDefecto() {
-        // Property test: la clave del LLM vive en application.yml como placeholder
-        // (ADR pendiente, T-FIN-03); sin env, resuelve vacío → fail-closed.
-        assertThat(llmProveedor).isEmpty();
-        assertThat(llmApiKey).isEmpty();
+    void placeholdersDelProveedorTienenDefaultFailClosed() {
+        // Property test: la property del proveedor y la API key (ADR-M6-03) viven en
+        // application.yml como placeholders; sin env el proveedor cae en "none"
+        // (fail-closed) y la clave queda vacía → nunca se llama a Google en tests.
+        assertThat(resumenProveedor).isEqualTo("none");
+        assertThat(geminiApiKey).isEmpty();
     }
 
     // ---------------------------------------------------------------- helpers
