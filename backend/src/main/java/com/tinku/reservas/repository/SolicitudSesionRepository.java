@@ -32,6 +32,9 @@ public interface SolicitudSesionRepository extends JpaRepository<SolicitudSesion
             @Param("adultoResponsableId") UUID adultoResponsableId,
             @Param("estado") EstadoSolicitud estado);
 
+    /** FR-ID-014: Solicitudes pendientes de un menor, para rechazarlas en su baja. */
+    List<SolicitudSesion> findByMenorIdAndEstado(UUID menorId, EstadoSolicitud estado);
+
     /** Defensivo (US-2): el mismo menor no genera dos Solicitudes pendientes idénticas. */
     boolean existsByMenorIdAndTutorIdAndHorarioPropuestoAndEstado(
             UUID menorId, UUID tutorId, Instant horarioPropuesto, EstadoSolicitud estado);

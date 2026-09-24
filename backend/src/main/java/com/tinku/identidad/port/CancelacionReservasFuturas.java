@@ -12,7 +12,7 @@ import java.util.UUID;
 @FunctionalInterface
 public interface CancelacionReservasFuturas {
 
-    /** Cancela las reservas futuras del menor en nombre de su Adulto Responsable.
-     *  Devuelve cuántas canceló. */
+    /** Cancela las reservas futuras del menor en nombre de su Adulto Responsable
+     *  y rechaza sus Solicitudes pendientes. Devuelve cuántas reservas canceló. */
     int cancelarFuturasDeMenor(UUID menorId, UUID adultoResponsableId);
 }

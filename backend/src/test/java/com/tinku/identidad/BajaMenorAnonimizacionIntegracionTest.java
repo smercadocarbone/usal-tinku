@@ -14,8 +14,13 @@ import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.model.EstadoReserva;
+import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.repository.ReservaRepository;
+import com.tinku.reservas.repository.SolicitudSesionRepository;
+import com.tinku.reservas.service.ReservaService;
+import com.tinku.reservas.service.SolicitudNoPendienteException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +46,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -81,6 +87,8 @@ class BajaMenorAnonimizacionIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
+    @Autowired SolicitudSesionRepository solicitudSesionRepository;
+    @Autowired ReservaService reservaService;
 
     @MockBean OcrService ocrService;
     @MockBean NotificadorResetPassword notificadorResetPassword;
@@ -355,5 +363,44 @@ class BajaMenorAnonimizacionIntegracionTest {
         assertThat(reservaRepository.findById(f.reservaId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.CANCELADA);
         assertThat(transaccionRepository.existsByReservaId(f.reservaId())).isFalse();
+    }
+
+    /** Una Solicitud pendiente del menor no sobrevive a la baja: si quedara
+     *  pendiente, el Adulto Responsable podría aprobarla después (aprobarSolicitud
+     *  no re-chequea al menor) y crear una Reserva paga para un perfil dado de baja.
+     *  La baja es un acto del AR, así que la Solicitud queda rechazada (US-3). */
+    @Test
+    void bajaConfirmada_solicitudPendiente_quedaRechazadaYNoSePuedeAprobar() throws Exception {
+        String token = registrarAdultoYToken("42118001", "Maria", "Perez");
+        UUID menorId = registrarMenor(token, "42118002", "Sofia");
+
+        Usuario tutor = new Usuario();
+        tutor.setDni("42118003");
+        tutor.setNombre("Pablo");
+        tutor.setApellido("Sosa");
+        tutor.setFechaNacimiento(LocalDate.of(1988, 9, 9));
+        tutor.setTipo(TipoUsuario.TUTOR);
+        tutor.setEmail("42118003@tinku.test");
+        tutor.setPasswordHash("x");
+        tutor = usuarioRepository.save(tutor);
+
+        SolicitudSesion solicitud = new SolicitudSesion();
+        solicitud.setMenor(usuarioRepository.findById(menorId).orElseThrow());
+        solicitud.setTutor(tutor);
+        solicitud.setHorarioPropuesto(Instant.now().plus(3, ChronoUnit.DAYS));
+        solicitud.setExpiraAt(Instant.now().plus(48, ChronoUnit.HOURS));
+        solicitud.setEstado(EstadoSolicitud.PENDIENTE);
+        UUID solicitudId = solicitudSesionRepository.save(solicitud).getId();
+
+        mockMvc.perform(delete("/api/usuarios/menores/{id}", menorId)
+                        .param("confirmar", "true")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        assertThat(solicitudSesionRepository.findById(solicitudId).orElseThrow().getEstado())
+                .isEqualTo(EstadoSolicitud.RECHAZADA);
+        Usuario ar = usuarioRepository.findByDni("42118001").orElseThrow();
+        assertThatThrownBy(() -> reservaService.aprobarSolicitud(ar, solicitudId))
+                .isInstanceOf(SolicitudNoPendienteException.class);
     }
 }

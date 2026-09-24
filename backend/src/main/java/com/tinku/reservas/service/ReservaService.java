@@ -317,9 +317,14 @@ public class ReservaService {
      * cancelación tardía (con &lt;24hs el Tutor cobra), para que dar de baja al
      * menor no sea la vía para esquivar la penalidad. Misma mecánica que la
      * sanción: {@code pendiente_pago} sin evento, {@code confirmada} con evento.
+     * Las Solicitudes pendientes del menor quedan rechazadas (US-3): si no,
+     * {@link #aprobarSolicitud} podría convertirlas después en una Reserva paga
+     * para un perfil dado de baja.
      */
     @Transactional
     public int cancelarFuturasPorBajaDeMenor(UUID menorId, UUID adultoResponsableId) {
+        solicitudRepo.findByMenorIdAndEstado(menorId, EstadoSolicitud.PENDIENTE)
+                .forEach(s -> s.setEstado(EstadoSolicitud.RECHAZADA));
         List<Reserva> futuras = reservaRepo.findByEstadoInAndHorarioAfterAndBeneficiario_Id(
                 List.of(EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA),
                 Instant.now(), menorId);
