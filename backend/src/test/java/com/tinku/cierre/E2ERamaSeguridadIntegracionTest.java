@@ -377,7 +377,7 @@ class E2ERamaSeguridadIntegracionTest {
 
         // M8 — la Alerta entra a la cola de moderación (admin de moderación real).
         Usuario admin = adminModeracion();
-        String tokenAdmin = jwtUtil.generateToken(admin.getDni(), "ADULTO", true, true);
+        String tokenAdmin = jwtUtil.generateToken(admin);
         String cola = mockMvc.perform(get("/api/admin/moderacion/alertas")
                         .header("Authorization", "Bearer " + tokenAdmin))
                 .andExpect(status().isOk())

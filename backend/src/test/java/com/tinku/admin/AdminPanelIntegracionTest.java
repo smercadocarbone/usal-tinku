@@ -150,7 +150,7 @@ class AdminPanelIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return jwtUtil.generateToken(u.getDni(), u.getTipo().name(), true, true);
+        return jwtUtil.generateToken(u);
     }
 
     private CredencialAcademica credencial(Usuario tutor, EstadoCredencial estado,

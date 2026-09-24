@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
@@ -34,8 +35,16 @@ public class AdminActivoAuthorizationManager implements AuthorizationManager<Req
     @Override
     public AuthorizationDecision check(Supplier<Authentication> authentication, RequestAuthorizationContext context) {
         Authentication auth = authentication.get();
-        String dni = (auth == null || !auth.isAuthenticated()) ? null : auth.getName();
-        boolean esAdminActivo = dni != null && adminRepository.findByUsuario_DniAndActivoTrue(dni).isPresent();
+        // AUD-027: el nombre del principal es el UUID del usuario.
+        UUID usuarioId = null;
+        if (auth != null && auth.isAuthenticated()) {
+            try {
+                usuarioId = UUID.fromString(auth.getName());
+            } catch (IllegalArgumentException e) {
+                usuarioId = null; // p. ej. anonymousUser
+            }
+        }
+        boolean esAdminActivo = usuarioId != null && adminRepository.findByUsuario_IdAndActivoTrue(usuarioId).isPresent();
         return new AuthorizationDecision(esAdminActivo);
     }
 }

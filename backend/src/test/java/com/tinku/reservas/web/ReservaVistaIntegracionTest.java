@@ -82,8 +82,7 @@ class ReservaVistaIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return "Bearer " + jwtUtil.generateToken(u.getDni(), u.getTipo().name(),
-                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable());
+        return "Bearer " + jwtUtil.generateToken(u);
     }
 
     /** Reserva de 90 min (la franja puntual que la cubre define la duración, FR-RES-023). */

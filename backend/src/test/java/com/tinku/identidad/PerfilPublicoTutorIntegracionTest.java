@@ -93,8 +93,7 @@ class PerfilPublicoTutorIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return "Bearer " + jwtUtil.generateToken(u.getDni(), u.getTipo().name(),
-                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable());
+        return "Bearer " + jwtUtil.generateToken(u);
     }
 
     private String bio(String texto) throws Exception {

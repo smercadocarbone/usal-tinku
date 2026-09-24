@@ -58,8 +58,7 @@ public class AdminModeracionGate {
      * para atribuir auditoría por {@code admins.id}) o 403.
      */
     public Admin requiereAdmin(Authentication authentication, RolAdmin rol) {
-        String dni = authentication == null ? null : authentication.getName();
-        return adminRepository.findByUsuario_DniAndRolAndActivoTrue(dni, rol)
+        return adminRepository.findByUsuario_IdAndRolAndActivoTrue(usuarioId(authentication), rol)
                 .orElseThrow(AccesoModeracionDenegadoException::new);
     }
 
@@ -69,8 +68,16 @@ public class AdminModeracionGate {
      * roles, filtrada después por el rol propio del Admin).
      */
     public Admin adminAutenticado(Authentication authentication) {
-        String dni = authentication == null ? null : authentication.getName();
-        return adminRepository.findByUsuario_DniAndActivoTrue(dni)
+        return adminRepository.findByUsuario_IdAndActivoTrue(usuarioId(authentication))
                 .orElseThrow(AccesoModeracionDenegadoException::new);
+    }
+
+    /** AUD-027: el principal es el UUID; sin sesión o con un nombre que no lo es → 403. */
+    private static UUID usuarioId(Authentication authentication) {
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (NullPointerException | IllegalArgumentException e) {
+            throw new AccesoModeracionDenegadoException();
+        }
     }
 }

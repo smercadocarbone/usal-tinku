@@ -85,6 +85,7 @@ public class PasswordResetService {
         Usuario usuario = token.getUsuario();
         PoliticaPassword.exigirDistintaDelDni(passwordNueva, usuario.getDni());
         usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
+        usuario.invalidarCredenciales(); // AUD-027: las sesiones abiertas dejan de valer
         usuarioRepository.save(usuario);
 
         token.setUsadoEn(Instant.now());

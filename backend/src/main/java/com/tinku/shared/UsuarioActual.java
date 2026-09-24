@@ -5,6 +5,8 @@ import com.tinku.identidad.repository.UsuarioRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 /**
  * Resuelve el {@link Usuario} autenticado desde el principal del {@link
  * Authentication}. Los controllers lo usan en lugar de repetir el lookup
@@ -21,7 +23,8 @@ public class UsuarioActual {
     }
 
     public Usuario obtener(Authentication authentication) {
-        return usuarioRepository.findByDni(authentication.getName())
+        // AUD-027: el nombre del principal es el UUID del usuario.
+        return usuarioRepository.findById(UUID.fromString(authentication.getName()))
                 .orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
 }

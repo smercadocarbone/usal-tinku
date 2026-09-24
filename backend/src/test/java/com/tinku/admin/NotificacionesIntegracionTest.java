@@ -85,7 +85,7 @@ class NotificacionesIntegracionTest {
     }
 
     private String token(Usuario u) {
-        return "Bearer " + jwtUtil.generateToken(u.getDni(), u.getTipo().name(), true, true);
+        return "Bearer " + jwtUtil.generateToken(u);
     }
 
     private Notificacion aviso(Usuario destinatario) {

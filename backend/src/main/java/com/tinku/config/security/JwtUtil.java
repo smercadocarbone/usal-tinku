@@ -1,5 +1,6 @@
 package com.tinku.config.security;
 
+import com.tinku.identidad.model.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -12,6 +13,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -26,14 +28,19 @@ public class JwtUtil {
         this.expirationMillis = expirationMinutes * 60 * 1000;
     }
 
-    public String generateToken(String dni, String tipo, boolean capacidadEstudiante,
-                                 boolean capacidadAdultoResponsable) {
+    /**
+     * AUD-027: {@code sub} es el UUID del usuario, nunca el DNI (el token se decodifica
+     * sin secreto). {@code cv} es su versión de credenciales: un cambio o reset de
+     * contraseña la sube y deja sin efecto los tokens anteriores.
+     */
+    public String generateToken(Usuario usuario) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .subject(dni)
-                .claim("tipo", tipo)
-                .claim("cap_est", capacidadEstudiante)
-                .claim("cap_ar", capacidadAdultoResponsable)
+                .subject(usuario.getId().toString())
+                .claim("tipo", usuario.getTipo().name())
+                .claim("cap_est", usuario.isCapacidadEstudiante())
+                .claim("cap_ar", usuario.isCapacidadAdultoResponsable())
+                .claim("cv", usuario.getCredentialsVersion())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusMillis(expirationMillis)))
                 .signWith(signingKey)
@@ -48,8 +55,13 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public String extractDni(String token) {
-        return validateToken(token).getSubject();
+    /** @throws IllegalArgumentException si el {@code sub} no es un UUID (token previo a AUD-027). */
+    public UUID extractUsuarioId(String token) {
+        return UUID.fromString(validateToken(token).getSubject());
+    }
+
+    public Integer extractCredentialsVersion(String token) {
+        return validateToken(token).get("cv", Integer.class);
     }
 
     public boolean isTokenValid(String token) {

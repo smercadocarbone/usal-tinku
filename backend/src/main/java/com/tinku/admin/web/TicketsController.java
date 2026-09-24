@@ -3,8 +3,8 @@ package com.tinku.admin.web;
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.service.TicketSoporteService;
 import com.tinku.admin.model.TicketSoporte;
-import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.shared.AdminModeracionGate;
+import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -34,22 +34,21 @@ public class TicketsController {
 
     private final AdminModeracionGate gate;
     private final TicketSoporteService ticketService;
-    private final UsuarioRepository usuarioRepository;
+    private final UsuarioActual usuarioActual;
 
     public TicketsController(AdminModeracionGate gate,
                              TicketSoporteService ticketService,
-                             UsuarioRepository usuarioRepository) {
+                             UsuarioActual usuarioActual) {
         this.gate = gate;
         this.ticketService = ticketService;
-        this.usuarioRepository = usuarioRepository;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping("/api/soporte/tickets")
     public ResponseEntity<TicketResponse> crearTicket(
             @Valid @RequestBody CrearTicketRequest request, Authentication authentication) {
-        String dni = authentication.getName();
         TicketSoporte ticket = ticketService.crear(
-                usuarioRepository.findByDni(dni).orElseThrow(),
+                usuarioActual.obtener(authentication),
                 request.origenModulo(), request.asunto(), request.detalle());
         return ResponseEntity.created(URI.create("/api/soporte/tickets/" + ticket.getId()))
                 .body(TicketResponse.from(ticket));

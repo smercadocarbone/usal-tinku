@@ -161,8 +161,7 @@ class KillswitchIntegracionTest {
     }
 
     private String tokenDe(Usuario u) {
-        return jwtUtil.generateToken(u.getDni(), u.getTipo().name(),
-                u.isCapacidadEstudiante(), u.isCapacidadAdultoResponsable());
+        return jwtUtil.generateToken(u);
     }
 
     /** Sesión CONFIRMADA con beneficiario = {@code usuario} (adulto o menor). */

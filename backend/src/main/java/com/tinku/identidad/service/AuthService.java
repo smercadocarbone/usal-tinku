@@ -54,11 +54,7 @@ public class AuthService {
             throw new DisabledException("Cuenta suspendida");
         }
 
-        String token = jwtUtil.generateToken(
-                usuario.getDni(),
-                usuario.getTipo().name(),
-                usuario.isCapacidadEstudiante(),
-                usuario.isCapacidadAdultoResponsable());
+        String token = jwtUtil.generateToken(usuario);
 
         return new TokenResponse(token, usuario.getTipo().name(), expirationMinutes);
     }

@@ -276,6 +276,7 @@ public class UsuarioService {
         }
         PoliticaPassword.exigirDistintaDelDni(passwordNueva, usuario.getDni());
         usuario.setPasswordHash(passwordEncoder.encode(passwordNueva));
+        usuario.invalidarCredenciales(); // AUD-027: las sesiones abiertas dejan de valer
         usuarioRepository.save(usuario);
     }
 
@@ -337,6 +338,7 @@ public class UsuarioService {
         new SecureRandom().nextBytes(secreto);
         menor.setPasswordHash(passwordEncoder.encode(Base64.getEncoder().encodeToString(secreto)));
         menor.setEstadoCuenta(EstadoCuenta.BAJA);
+        menor.invalidarCredenciales(); // AUD-027: además de BAJA, ningún token suyo vuelve a valer
         menor.setActivoParaMatching(false);
         usuarioRepository.save(menor);
     }
