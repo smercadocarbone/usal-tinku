@@ -6,10 +6,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Tarifa por sesión del Tutor (US-6 / M5-H) — lo que el Tutor cobra por sesión. */
-public record TarifaTutorResponse(UUID tutorId, BigDecimal precioSesion, Instant updatedAt) {
+/** Tarifa del Tutor (US-6 / M5-H) — lo que cobra POR HORA de clase (D6). */
+public record TarifaTutorResponse(UUID tutorId, BigDecimal precioHora, Instant updatedAt) {
 
     public static TarifaTutorResponse from(TarifaTutor t) {
-        return new TarifaTutorResponse(t.getTutorId(), t.getPrecioSesion(), t.getUpdatedAt());
+        return new TarifaTutorResponse(t.getTutorId(), t.getPrecioHora(), t.getUpdatedAt());
     }
 }

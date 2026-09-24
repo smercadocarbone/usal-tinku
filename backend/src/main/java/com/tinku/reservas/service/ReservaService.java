@@ -419,8 +419,8 @@ public class ReservaService {
         reserva.setBeneficiario(beneficiario);
         reserva.setTutor(tutor);
         reserva.definirHorario(horario, duracionMinutos);
-        // D6 regla 5: precio = tarifa por hora × minutos / 60. TODO paso 6: el puerto pasa a precioHora.
-        reserva.setPrecio(tarifaProveedor.tarifaPorSesion(tutor.getId())
+        // D6 regla 5: precio = tarifa por hora × minutos / 60.
+        reserva.setPrecio(tarifaProveedor.precioHora(tutor.getId())
                 .multiply(BigDecimal.valueOf(duracionMinutos))
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
         reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);

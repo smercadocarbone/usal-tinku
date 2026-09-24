@@ -21,6 +21,6 @@ public class TarifaPerfilProviderPagos implements TarifaPerfilProvider {
 
     @Override
     public Optional<BigDecimal> tarifaConfigurada(UUID tutorId) {
-        return tarifaRepo.findByTutorId(tutorId).map(TarifaTutor::getPrecioSesion);
+        return tarifaRepo.findByTutorId(tutorId).map(TarifaTutor::getPrecioHora);
     }
 }

@@ -132,16 +132,16 @@ public class PagoService {
     // ------------------------------------------------------ US-6 (M5-H, tarifa del Tutor)
 
     /**
-     * El Tutor fija el precio por sesión de su perfil (Spec M5 US-6, FR-PAG-006,
+     * El Tutor fija el precio por hora de su perfil (Spec M5 US-6, FR-PAG-006,
      * Chunk M5-H). Upsert sobre {@code pagos.tarifas_tutor}: una fila por Tutor,
      * se actualiza in-place cuando él cambia su precio. FR-PAG-013 garantiza que
      * las Reservas ya creadas conservan su precio congelado — este cambio solo
      * aplica hacia adelante.
      */
     @Transactional
-    public TarifaTutor actualizarTarifaTutor(Usuario tutor, BigDecimal precioSesion) {
+    public TarifaTutor actualizarTarifaTutor(Usuario tutor, BigDecimal precioHora) {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
-            throw new SoloTutorException("Solo las cuentas de Tutor pueden fijar su tarifa por sesión.");
+            throw new SoloTutorException("Solo las cuentas de Tutor pueden fijar su tarifa por hora.");
         }
         TarifaTutor tarifa = tarifaTutorRepo.findByTutorId(tutor.getId())
                 .orElseGet(() -> {
@@ -149,7 +149,7 @@ public class PagoService {
                     nueva.setTutorId(tutor.getId());
                     return nueva;
                 });
-        tarifa.setPrecioSesion(precioSesion);
+        tarifa.setPrecioHora(precioHora);
         tarifa.setUpdatedAt(Instant.now());
         return tarifaTutorRepo.save(tarifa);
     }

@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * referencia regional (US-6, T-M5-09) — el Tutor la consulta al configurar su
  * perfil para no adivinar cuánto cobrar en su zona.
  *
- * {@code PUT /api/pagos/tarifa}: el Tutor fija el precio por sesión de su
+ * {@code PUT /api/pagos/tarifa}: el Tutor fija el precio por hora de su
  * perfil (US-6, FR-PAG-006, Chunk M5-H). {@code GET /api/pagos/tarifa}: la
  * lee (UX-06 §4; antes la pantalla de precio no tenía de dónde leerla). 204 si
  * todavía no la definió.
@@ -74,6 +74,6 @@ public class PagoController {
             Authentication authentication) {
         return ResponseEntity.ok(TarifaTutorResponse.from(
                 pagoService.actualizarTarifaTutor(
-                        usuarioActual.obtener(authentication), request.precioSesion())));
+                        usuarioActual.obtener(authentication), request.precioHora())));
     }
 }

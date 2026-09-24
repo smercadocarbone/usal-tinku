@@ -380,29 +380,29 @@ class PagosFlujosIntegracionTest {
     // ---------------------------------------------------- US-6 (M5-H, tarifa del Tutor)
 
     @Test
-    void us6_tutor_configuraTarifaPorSesion_yLaReservaLaCongela() throws Exception {
+    void us6_tutor_configuraTarifaPorHora_yLaReservaLaCongela() throws Exception {
         String dniTutor = dniUnico();
         String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
         UUID tutorId = usuarioPorDni(dniTutor).getId();
 
-        // El Tutor fija su precio por sesión (FR-PAG-006, upsert sobre tarifas_tutor).
+        // El Tutor fija su precio por hora (FR-PAG-006, upsert sobre tarifas_tutor).
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 22000))))
+                        .content(objectMapper.writeValueAsString(Map.of("precioHora", 22000))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tutorId").value(tutorId.toString()))
-                .andExpect(jsonPath("$.precioSesion").value(new BigDecimal("22000")));
-        assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioSesion())
+                .andExpect(jsonPath("$.precioHora").value(new BigDecimal("22000")));
+        assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioHora())
                 .isEqualByComparingTo(new BigDecimal("22000"));
 
         // Actualizar de nuevo = upsert, no una fila duplicada.
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 23000))))
+                        .content(objectMapper.writeValueAsString(Map.of("precioHora", 23000))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.precioSesion").value(new BigDecimal("23000")));
+                .andExpect(jsonPath("$.precioHora").value(new BigDecimal("23000")));
         assertThat(tarifaTutorRepository.findAll()).hasSize(1);
 
         // La Reserva congela ESE precio (FR-PAG-013): 22000+, no el stub de dev.
@@ -423,6 +423,43 @@ class PagosFlujosIntegracionTest {
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("23000"));
     }
 
+    /** D6 + T4: el contrato es {@code precioHora} en camelCase (el frontend mandaba
+     *  snake_case y el backend lo rechazaba siempre) y la Reserva se cotiza por hora. */
+    @Test
+    void putTarifa_conPrecioHoraCamelCase_200_yLaReservaSeCotizaPorHora() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"precioHora\": 10000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").value(10000));
+        mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.precioHora").value(10000));
+
+        String tokenEst = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        MvcResult res = mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 30))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID reservaId = UUID.fromString(
+                objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        // 10000 por hora × 30 minutos.
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getPrecio())
+                .isEqualByComparingTo(new BigDecimal("5000"));
+    }
+
     @Test
     void us6_noTutor_noPuedeFijarTarifa_403() throws Exception {
         String dniEst = dniUnico();
@@ -431,7 +468,7 @@ class PagosFlujosIntegracionTest {
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenEst)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 22000))))
+                        .content(objectMapper.writeValueAsString(Map.of("precioHora", 22000))))
                 .andExpect(status().isForbidden());
     }
 
@@ -443,7 +480,7 @@ class PagosFlujosIntegracionTest {
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("precioSesion", 0))))
+                        .content(objectMapper.writeValueAsString(Map.of("precioHora", 0))))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)

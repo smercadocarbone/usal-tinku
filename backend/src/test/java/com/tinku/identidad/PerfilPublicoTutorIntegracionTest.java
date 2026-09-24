@@ -231,7 +231,7 @@ class PerfilPublicoTutorIntegracionTest {
 
         mvc.perform(get("/api/tutores/{id}", tutor.getId()).header("Authorization", token(familia)))
                 .andExpect(jsonPath("$.verificado").value(false))
-                .andExpect(jsonPath("$.precioSesion").doesNotExist());
+                .andExpect(jsonPath("$.precioHora").doesNotExist());
         mvc.perform(get("/api/pagos/tarifa").header("Authorization", token(tutor)))
                 .andExpect(status().isNoContent());
 
@@ -243,15 +243,15 @@ class PerfilPublicoTutorIntegracionTest {
         c.setNumeroIntento(1);
         credencialRepository.save(c);
         mvc.perform(put("/api/pagos/tarifa").header("Authorization", token(tutor))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"precioSesion\": 18000}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"precioHora\": 18000}"))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/api/tutores/{id}", tutor.getId()).header("Authorization", token(familia)))
                 .andExpect(jsonPath("$.verificado").value(true))
-                .andExpect(jsonPath("$.precioSesion").value(18000));
+                .andExpect(jsonPath("$.precioHora").value(18000));
         mvc.perform(get("/api/pagos/tarifa").header("Authorization", token(tutor)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.precioSesion").value(18000));
+                .andExpect(jsonPath("$.precioHora").value(18000));
     }
 
     private Usuario admin(RolAdmin rol) {
@@ -278,7 +278,7 @@ class PerfilPublicoTutorIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON).content(bio("Hola")))
                 .andExpect(status().isOk());
         mvc.perform(put("/api/pagos/tarifa").header("Authorization", token(tutor))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"precioSesion\": 9000}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"precioHora\": 9000}"))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", token(tutor)))

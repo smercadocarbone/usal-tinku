@@ -621,7 +621,7 @@ class ReservasFlujosIntegracionTest {
         mockMvc.perform(put("/api/pagos/tarifa")
                         .header("Authorization", "Bearer " + tokenTutor)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"precioSesion\": " + precio + "}"))
+                        .content("{\"precioHora\": " + precio + "}"))
                 .andExpect(status().isOk());
     }
 
