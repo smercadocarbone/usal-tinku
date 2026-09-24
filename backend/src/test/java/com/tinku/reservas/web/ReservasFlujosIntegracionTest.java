@@ -366,45 +366,20 @@ class ReservasFlujosIntegracionTest {
 
     @Test
     void frRes013_aprobarConMenosDe15MinDeAnticipacion_quedaRechazada() throws Exception {
-        String dniAr = dniUnico();
-        String dniTutor = dniUnico();
-        String dniMenor = dniUnico();
-        String tokenAr = registrarAdultoYToken(dniAr, "Ana", "Lopez", true, true);
-        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
-        UUID tutorId = usuarioPorDni(dniTutor).getId();
-        UUID menorId = registrarMenor(dniMenor, tokenAr);
-
-        // Franja PUNTUAL que cubre "ahora+5min" respetando FR-RES-024 (30-180
-        // min), sin depender de la hora del día: arranca en el horario y termina
-        // 2h después; si cruzara la medianoche lo recorto al borde del día.
-        Instant pronto = Instant.now().plusSeconds(5 * 60).truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
-        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
-        LocalDate hoy = punto.toLocalDate();
-        LocalTime hora = punto.toLocalTime();
-        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
-        LocalTime inicioFranja = hora;
-        LocalTime finFranja = hora.plusHours(2);
-        if (inicioFranja.isAfter(hora)) {
-            inicioFranja = LocalTime.MIDNIGHT; // inicio cayó en el día anterior
-        } else if (finFranja.isBefore(inicioFranja)) {
-            finFranja = LocalTime.of(23, 59, 59); // fin cruzó la medianoche
-        }
-        mockMvc.perform(post("/api/tutores/franjas")
-                        .header("Authorization", "Bearer " + tokenTutor)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "fechaEspecifica", hoy.toString(),
-                                "horaInicio", inicioFranja.toString(),
-                                "horaFin", finFranja.toString()))))
-                .andExpect(status().isCreated());
-        autorizar(tutorId, menorId, tokenAr);
-        String tokenMenor = login(dniMenor);
-
-        UUID solicitudId = crearSolicitud(tokenMenor, tutorId, pronto);
+        // Sin depender de la hora del día: la Solicitud se crea en un horario tranquilo
+        // (pasado mañana 15:30) y después su horario se acerca a "ahora + 5 min", que es
+        // lo que ve el AR si aprueba tarde. Antes la franja se armaba desde now() y cerca
+        // de la medianoche quedaba con menos de 30 min (FR-RES-024) o sin lugar para la clase.
+        Escenario e = escenarioBase();
+        UUID solicitudId = crearSolicitud(e.tokenMenor(), e.tutorId(), e.horario());
+        SolicitudSesion solicitud = solicitudRepo.findById(solicitudId).orElseThrow();
+        solicitud.setHorarioPropuesto(Instant.now().plusSeconds(5 * 60));
+        solicitudRepo.save(solicitud);
 
         mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
-                        .header("Authorization", "Bearer " + tokenAr))
-                .andExpect(status().isUnprocessableEntity());
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("15 minutos")));
     }
 
     @Test
@@ -933,41 +908,21 @@ class ReservasFlujosIntegracionTest {
 
     @Test
     void frRes013_directaFueraDeVentana15Min_queda422() throws Exception {
-        String dniEst = dniUnico();
-        String dniTutor = dniUnico();
-        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
-        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
-        UUID tutorId = usuarioPorDni(dniTutor).getId();
-
-        Instant pronto = Instant.now().plusSeconds(5 * 60).truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
-        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
-        LocalDate hoy = punto.toLocalDate();
-        LocalTime hora = punto.toLocalTime();
-        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
-        LocalTime inicioFranja = hora;
-        LocalTime finFranja = hora.plusHours(2);
-        if (inicioFranja.isAfter(hora)) {
-            inicioFranja = LocalTime.MIDNIGHT;
-        } else if (finFranja.isBefore(inicioFranja)) {
-            finFranja = LocalTime.of(23, 59, 59);
-        }
-        mockMvc.perform(post("/api/tutores/franjas")
-                        .header("Authorization", "Bearer " + tokenTutor)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "fechaEspecifica", hoy.toString(),
-                                "horaInicio", inicioFranja.toString(),
-                                "horaFin", finFranja.toString()))))
-                .andExpect(status().isCreated());
+        // La ventana mínima (FR-RES-013) se valida antes que la franja: no hace falta
+        // publicar una franja desde now() (cerca de la medianoche no entraba). El
+        // mensaje confirma que el rechazo es por la ventana y no por otra regla.
+        EscenarioAdulto e = escenarioAdulto();
+        Instant pronto = Instant.now().plusSeconds(5 * 60);
 
         mockMvc.perform(post("/api/reservas")
-                        .header("Authorization", "Bearer " + tokenEst)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "tutorId", tutorId.toString(),
+                                "tutorId", e.tutorId().toString(),
                                 "horario", pronto.toString(),
                                 "duracionMinutos", 30))))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("15 minutos")));
     }
 
     @Test
@@ -1111,6 +1066,12 @@ class ReservasFlujosIntegracionTest {
         // FR-RES-024 (30-180 min) sin depender de la hora del día.
         Instant pronto = Instant.now().plus(2, java.time.temporal.ChronoUnit.HOURS)
                 .truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
+        if (pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isAfter(LocalTime.of(23, 0))) {
+            // Cerca de la medianoche la franja de 2 h no entra en el día: las 9:00 de mañana
+            // siguen estando a menos de 24 hs (ahora son más de las 21:00).
+            pronto = pronto.atZone(ReservasZonaHoraria.ZONA).toLocalDate().plusDays(1)
+                    .atTime(9, 0).atZone(ReservasZonaHoraria.ZONA).toInstant();
+        }
         ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
         // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
         LocalTime inicio = punto.toLocalTime();

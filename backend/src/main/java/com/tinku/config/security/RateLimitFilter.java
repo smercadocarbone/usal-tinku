@@ -22,11 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * dependencia nueva.
  *
  * <ul>
- *   <li>La clave es {@code request.getRemoteAddr()}. NO se lee {@code X-Forwarded-For}:
- *       sin un proxy de confianza configurado, cualquiera evade el límite mandando el
- *       header. Si el despliegue pone un proxy adelante, hay que configurar Tomcat
- *       ({@code server.forward-headers-strategy}) para que {@code remoteAddr} sea el del
- *       cliente real.</li>
+ *   <li>La clave es {@code request.getRemoteAddr()}, salvo que se configure
+ *       {@code tinku.rate-limit.header-ip-cliente}: detrás de Cloudflare Tunnel todas las
+ *       requests llegan desde cloudflared y la IP real viaja en {@code CF-Connecting-IP}
+ *       (ADR-000-07). Solo se configura cuando el backend NO es alcanzable salvo por ese
+ *       proxy; si no, cualquiera evade el límite mandando el header. Nunca se lee
+ *       {@code X-Forwarded-For} por defecto.</li>
  *   <li>Un reinicio del proceso resetea los contadores: falla benigna, aceptada.</li>
  *   <li><strong>Instancia única</strong> (ADR-000-04): con 2+ réplicas cada una cuenta por
  *       su lado y el límite efectivo se multiplica. Deja de servir junto con el scheduler
@@ -49,15 +50,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final int limiteVerificarDni;
     private final int limitePublicos;
     private final int limiteWebhooks;
+    private final String headerIpCliente;
     private final Clock reloj;
     private final Map<String, Deque<Long>> ventanas = new ConcurrentHashMap<>();
     private volatile long ultimaLimpieza;
 
-    public RateLimitFilter(int limiteVerificarDni, int limitePublicos, int limiteWebhooks, Clock reloj) {
+    public RateLimitFilter(int limiteVerificarDni, int limitePublicos, int limiteWebhooks,
+                           String headerIpCliente, Clock reloj) {
         this.limiteVerificarDni = limiteVerificarDni;
         this.limitePublicos = limitePublicos;
         this.limiteWebhooks = limiteWebhooks;
+        this.headerIpCliente = headerIpCliente == null ? "" : headerIpCliente.trim();
         this.reloj = reloj;
+    }
+
+    private String ipCliente(HttpServletRequest request) {
+        if (!headerIpCliente.isEmpty()) {
+            String ip = request.getHeader(headerIpCliente);
+            if (ip != null && !ip.isBlank()) {
+                return ip.trim();
+            }
+        }
+        return request.getRemoteAddr();
     }
 
     @Override
@@ -78,7 +92,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         long desde = ahora - VENTANA.toMillis();
         limpiarSiCorresponde(ahora, desde);
 
-        Deque<Long> ventana = ventanas.computeIfAbsent(grupo + "|" + request.getRemoteAddr(), k -> new ArrayDeque<>());
+        Deque<Long> ventana = ventanas.computeIfAbsent(grupo + "|" + ipCliente(request), k -> new ArrayDeque<>());
         long reintentarEnMs;
         synchronized (ventana) {
             while (!ventana.isEmpty() && ventana.peekFirst() <= desde) {
