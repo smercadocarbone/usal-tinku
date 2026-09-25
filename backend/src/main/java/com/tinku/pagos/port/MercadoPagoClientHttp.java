@@ -118,6 +118,35 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
+    public List<PagoMercadoPago> buscarPagosPorReferencia(String externalReference) {
+        exigirTokenConfigurado();
+        MpBusquedaRespuesta respuesta;
+        try {
+            respuesta = restClient.get()
+                    .uri(uri -> uri.path(PATH_PAGOS + "search")
+                            .queryParam("external_reference", externalReference)
+                            .queryParam("sort", "date_created")
+                            .queryParam("criteria", "desc")
+                            .build())
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        throw new MercadoPagoNoDisponibleException();
+                    })
+                    .body(MpBusquedaRespuesta.class);
+        } catch (RestClientException ex) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+        if (respuesta == null || respuesta.results() == null) {
+            return List.of();
+        }
+        return respuesta.results().stream()
+                .filter(p -> p.id() != null && p.status() != null)
+                .map(p -> new PagoMercadoPago(String.valueOf(p.id()), p.status(), p.externalReference(), p.transactionAmount()))
+                .toList();
+    }
+
+    @Override
     public void reembolsarPago(String mpPaymentId) {
         exigirTokenConfigurado();
         try {
@@ -175,8 +204,18 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                 request.reservaId().toString(),
                 notificacion,
                 backUrls(request.reservaId()),
-                autoReturn());
+                autoReturn(),
+                request.expiraAt() == null ? null : true,
+                request.expiraAt() == null ? null : FECHA_MP.format(request.expiraAt()),
+                // R2: el efectivo (Rapipago, Pago Fácil, cajero) se acredita después de la
+                // ventana de 15 min y terminaría siempre en reembolso.
+                new MpMediosDePago(List.of(new MpTipoExcluido("ticket"), new MpTipoExcluido("atm"))));
     }
+
+    /** Formato de fechas de MP: ISO-8601 con milisegundos y offset (hora de Argentina). */
+    private static final java.time.format.DateTimeFormatter FECHA_MP =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+                    .withZone(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
 
     /** Sin back_urls el comprador se quedaba en MercadoPago después de pagar
      *  (producción, 2026-09-25). Vuelve a /pagar, que lee el estado que agrega MP. */
@@ -201,7 +240,28 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
             @JsonProperty("external_reference") String externalReference,
             @JsonProperty("notification_url") String notificationUrl,
             @JsonProperty("back_urls") MpBackUrls backUrls,
-            @JsonProperty("auto_return") String autoReturn) {
+            @JsonProperty("auto_return") String autoReturn,
+            Boolean expires,
+            @JsonProperty("expiration_date_to") String expirationDateTo,
+            @JsonProperty("payment_methods") MpMediosDePago paymentMethods) {
+    }
+
+    private record MpMediosDePago(
+            @JsonProperty("excluded_payment_types") List<MpTipoExcluido> excludedPaymentTypes) {
+    }
+
+    private record MpTipoExcluido(String id) {
+    }
+
+    private record MpBusquedaRespuesta(List<MpPagoBuscado> results) {
+    }
+
+    /** {@code id} llega como número en la API de MP; se acepta cualquier escalar. */
+    private record MpPagoBuscado(
+            Object id,
+            String status,
+            @JsonProperty("external_reference") String externalReference,
+            @JsonProperty("transaction_amount") BigDecimal transactionAmount) {
     }
 
     private record MpBackUrls(String success, String failure, String pending) {

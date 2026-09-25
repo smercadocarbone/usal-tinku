@@ -436,4 +436,56 @@ class MercadoPagoClientHttpTest {
             server.stop(0);
         }
     }
+
+    /** R2: la preferencia vence con la Reserva y excluye efectivo (ticket, cajero). */
+    @Test
+    void r2_creaPreferencia_conVencimientoYSinEfectivo() throws Exception {
+        AtomicReference<String> captor = new AtomicReference<>();
+        HttpServer server = serverQueDevuelve("201", RESPUESTA_PREFERENCIA, captor);
+        try {
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
+                    "http://localhost:" + server.getAddress().getPort(), "mp-token", null);
+            java.time.Instant vence = java.time.Instant.parse("2026-09-25T15:15:00Z");
+            cliente.crearPreferencia(new PreferenciaRequest(reservaId, new BigDecimal("150.00"),
+                    new BigDecimal("22.50"), "Sesión de tutoría Tinku", vence));
+
+            JsonNode root = objectMapper.readTree(captor.get());
+            assertThat(root.get("expires").asBoolean()).isTrue();
+            assertThat(root.get("expiration_date_to").asText()).isEqualTo("2026-09-25T12:15:00.000-03:00");
+            assertThat(root.get("payment_methods").get("excluded_payment_types").findValuesAsString("id"))
+                    .containsExactlyInAnyOrder("ticket", "atm");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** R2: la búsqueda por external_reference parsea el id numérico de MP y filtra lo incompleto. */
+    @Test
+    void r2_buscaPagosPorReferencia() throws Exception {
+        AtomicReference<String> query = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/payments/search", exchange -> {
+            query.set(exchange.getRequestURI().getQuery());
+            responder(exchange, "200", """
+                    {"results":[
+                      {"id":123456789,"status":"approved","external_reference":"%s","transaction_amount":150.0},
+                      {"id":null,"status":"approved"}]}
+                    """.formatted(reservaId));
+        });
+        server.start();
+        try {
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
+                    "http://localhost:" + server.getAddress().getPort(), "mp-token", null);
+            java.util.List<PagoMercadoPago> pagos = cliente.buscarPagosPorReferencia(reservaId.toString());
+
+            assertThat(query.get()).contains("external_reference=" + reservaId);
+            assertThat(pagos).singleElement().satisfies(p -> {
+                assertThat(p.mpPaymentId()).isEqualTo("123456789");
+                assertThat(p.aprobado()).isTrue();
+                assertThat(p.monto()).isEqualByComparingTo("150");
+            });
+        } finally {
+            server.stop(0);
+        }
+    }
 }

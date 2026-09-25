@@ -119,6 +119,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | FR-PAG-014 _(agregado)_ | El precio configurado por el Tutor es un valor por hora. El monto final de cada Reserva = precio_hora × (duración_franja_minutos / 60), redondeado a 2 decimales. Aplica tanto al precio de referencia regional (US-6) como al precio final que ve el Estudiante (Artículo III). |
 | FR-PAG-015 _(agregado, auditoría 2026-09-18)_ | Contracargo bancario sobre escrow ya liberado: cola de intervención manual de Soporte Financiero (M8); sin reversión automática de fondos ya liberados. |
 | FR-PAG-016 _(agregado)_ | Contracargo bancario sobre escrow todavía retenido: pausa la liberación con el mismo criterio que una Denuncia con escrow activo, hasta resolución manual. |
+| FR-PAG-017 _(agregado 2026-09-25, R2)_ | Conciliación del pago sin depender de la vuelta del navegador ni del webhook: cada preferencia queda registrada (`pagos.preferencias_pago`), vence junto con la Reserva sin pagar y no acepta efectivo (ticket, cajero). Antes de vencer una `pendiente_pago` y cada 5 min durante 48 hs (Tabla de Tiempos), M5 busca los pagos por `external_reference` y procesa los aprobados por el mismo camino del webhook: confirma, o reembolsa si la Reserva ya venció. Un pago aprobado que no puede resolver (monto distinto) abre un ticket de Soporte Financiero una sola vez. |
 
 ## 5. Casos Borde — Resueltos, 1 Diferido a Propósito
 

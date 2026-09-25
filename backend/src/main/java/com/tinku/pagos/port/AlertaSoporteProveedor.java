@@ -1,5 +1,7 @@
 package com.tinku.pagos.port;
 
+import java.util.UUID;
+
 import com.tinku.pagos.model.Transaccion;
 
 /**
@@ -16,4 +18,11 @@ import com.tinku.pagos.model.Transaccion;
 public interface AlertaSoporteProveedor {
 
     void notificarFalloLiberacion(Transaccion transaccion);
+
+    /**
+     * R2: la conciliación encontró un pago aprobado de una Reserva que no puede confirmar ni
+     * reembolsar sola (por ejemplo, el monto no coincide). Se llama una sola vez por Reserva.
+     * Nunca lanza.
+     */
+    void notificarPagoSinConciliar(UUID reservaId, String mpPaymentId, String motivo);
 }

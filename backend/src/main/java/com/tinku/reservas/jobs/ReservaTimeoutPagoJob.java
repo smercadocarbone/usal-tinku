@@ -1,5 +1,6 @@
 package com.tinku.reservas.jobs;
 
+import com.tinku.reservas.port.ConciliacionPagoProveedor;
 import com.tinku.reservas.service.ReservaService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -25,15 +26,20 @@ public class ReservaTimeoutPagoJob implements Job {
     public static final String PARAM_RESERVA_ID = "reservaId";
 
     private final ReservaService reservaService;
+    private final ConciliacionPagoProveedor conciliacion;
 
-    public ReservaTimeoutPagoJob(ReservaService reservaService) {
+    public ReservaTimeoutPagoJob(ReservaService reservaService, ConciliacionPagoProveedor conciliacion) {
         this.reservaService = reservaService;
+        this.conciliacion = conciliacion;
     }
 
     @Override
     public void execute(JobExecutionContext context) {
         UUID reservaId = UUID.fromString(
                 context.getMergedJobDataMap().getString(PARAM_RESERVA_ID));
+        // R2: si ya pagó y no llegó ni la vuelta ni el webhook, se confirma en vez de vencer.
+        // Mejor esfuerzo (no lanza): sin respuesta de MP vence igual y el barrido reembolsa.
+        conciliacion.conciliarAntesDeVencer(reservaId);
         reservaService.expirarPorTimeoutPago(reservaId);
     }
 }

@@ -1,6 +1,8 @@
 package com.tinku.pagos.port;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -46,8 +48,24 @@ public interface MercadoPagoClient {
      */
     void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto);
 
+    /**
+     * Pagos de MercadoPago con esa {@code external_reference} (= id de la Reserva), vía
+     * {@code GET /v1/payments/search} (R2). Es la conciliación: no depende de que vuelva el
+     * navegador ni de que llegue el webhook.
+     */
+    List<PagoMercadoPago> buscarPagosPorReferencia(String externalReference);
+
+    /**
+     * {@code expiraAt} (R2): la preferencia no acepta pagos después (el timeout de la Reserva
+     * sin pagar, Tabla de Tiempos). {@code null} = sin vencimiento.
+     */
     record PreferenciaRequest(UUID reservaId, BigDecimal montoBruto,
-                              BigDecimal comisionPlataforma, String descripcion) {
+                              BigDecimal comisionPlataforma, String descripcion, Instant expiraAt) {
+
+        public PreferenciaRequest(UUID reservaId, BigDecimal montoBruto,
+                                  BigDecimal comisionPlataforma, String descripcion) {
+            this(reservaId, montoBruto, comisionPlataforma, descripcion, null);
+        }
     }
 
     /** {@code bypass=true} cuando la preferencia se generó en modo Bypass (V22):
