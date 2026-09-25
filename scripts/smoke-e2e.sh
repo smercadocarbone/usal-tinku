@@ -33,6 +33,14 @@ for _ in $(seq 1 90); do
 done
 [ "$code" = "403" ] || falla "el backend no respondió (último código: $code)"
 
+paso "Esperando al matching-service (carga el modelo al arrancar)"
+for _ in $(seq 1 120); do
+    $COMPOSE exec -T matching python -c "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=5)" \
+        > /dev/null 2>&1 && ok=1 && break
+    sleep 5
+done
+[ "${ok:-}" = "1" ] || falla "el matching-service no respondió /health"
+
 paso "Embeddings de los tutores del seed (recompute real del matching-service)"
 $COMPOSE exec -T matching python -c "import os,urllib.request as u; r=u.Request('http://localhost:8000/recompute-embeddings', method='POST', headers={'X-Matching-Token': os.environ['TINKU_MATCHING_TOKEN']}); print(u.urlopen(r, timeout=900).read().decode())"
 
