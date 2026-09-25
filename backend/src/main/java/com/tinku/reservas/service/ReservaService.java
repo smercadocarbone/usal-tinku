@@ -1,5 +1,6 @@
 package com.tinku.reservas.service;
 
+import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
@@ -425,6 +426,7 @@ public class ReservaService {
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
                                  Instant horario, Integer duracionMinutos, boolean conResumen) {
+        exigirTutorReservable(tutor, pagador, beneficiario);
         // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {
@@ -511,6 +513,25 @@ public class ReservaService {
         }
     }
 
+    /**
+     * Revisión por rol, punto 1 (una sola regla para directa, aprobación y reprogramación):
+     * el tutor tiene que ser un TUTOR con la cuenta ACTIVA (si no, 404: no se filtra su estado),
+     * distinto del pagador y del beneficiario, y nunca el Adulto Responsable del menor (422).
+     */
+    static void exigirTutorReservable(Usuario tutor, Usuario pagador, Usuario beneficiario) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR || tutor.getEstadoCuenta() != EstadoCuenta.ACTIVA) {
+            throw new TutorNoEncontradoException();
+        }
+        if (tutor.getId().equals(pagador.getId()) || tutor.getId().equals(beneficiario.getId())) {
+            throw new AutoReservaNoPermitidaException("No podés reservar una clase con vos mismo.");
+        }
+        if (beneficiario.getAdultoResponsable() != null
+                && tutor.getId().equals(beneficiario.getAdultoResponsable().getId())) {
+            throw new AutoReservaNoPermitidaException(
+                    "Un tutor no puede dar clases a un menor del que es el adulto responsable.");
+        }
+    }
+
     private void exigirCapacidadAdultoResponsable(Usuario usuario) {
         if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadAdultoResponsable()) {
             throw new SoloAdultoResponsableException(
@@ -525,6 +546,7 @@ public class ReservaService {
     }
 
     private void validarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
+        exigirTutorReservable(reserva.getTutor(), reserva.getPagador(), reserva.getBeneficiario());
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
                     "Faltan menos de 15 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");

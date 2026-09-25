@@ -98,9 +98,14 @@ export default function CuentaPerfilPage() {
         </Link>
       )}
 
-      {perfil?.tipo === "ADULTO" && (
+      {(perfil?.tipo === "ADULTO" || perfil?.tipo === "TUTOR") && (
         <Tarjeta>
-          <h2 className="text-lg font-bold">¿Cómo usás Tinku?</h2>
+          <h2 className="text-lg font-bold">{esTutor ? "¿También usás Tinku para aprender?" : "¿Cómo usás Tinku?"}</h2>
+          {esTutor && (
+            <p className="mt-1 text-sm text-tinta-suave">
+              Podés tomar clases o sumar a tus chicos, siempre con otros tutores: nunca con vos mismo.
+            </p>
+          )}
           <div className="mt-5 flex flex-col gap-5">
             <Interruptor
               id="capEstudiante"

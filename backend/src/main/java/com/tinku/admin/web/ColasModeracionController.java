@@ -187,6 +187,7 @@ public class ColasModeracionController {
         if (credencial == null) {
             return ResponseEntity.notFound().build();
         }
+        AdminModeracionGate.exigirNoEsParteDelCaso(adminId, credencial.getTutor().getId());
         // Solo una credencial PENDIENTE se resuelve (una ya resuelta no se re-toca).
         if (credencial.getEstado() != EstadoCredencial.PENDIENTE) {
             return ResponseEntity.unprocessableEntity()

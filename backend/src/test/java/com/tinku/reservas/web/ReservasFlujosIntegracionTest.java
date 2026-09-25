@@ -1459,4 +1459,123 @@ class ReservasFlujosIntegracionTest {
                         .header("Authorization", "Bearer " + e.tokenEstudiante()))
                 .andExpect(status().isNotFound());
     }
+
+    // ------------------------------------------------ R1: revisión por rol
+
+    private void capacidades(String token, boolean est, boolean ar) throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/usuarios/me/capacidades")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "capacidadEstudiante", est, "capacidadAdultoResponsable", ar))))
+                .andExpect(status().isOk());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions altaMenor(String dniMenor, String token)
+            throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado(dniMenor, "Sofia", "Perez", LocalDate.of(2015, 7, 20)));
+        return mockMvc.perform(multipart("/api/usuarios/menores")
+                .file(jsonPart("datos", new RegistroMenorRequest(
+                        dniMenor, "Sofia", "Perez", LocalDate.of(2015, 7, 20), PASSWORD, true, "v1")))
+                .file(foto())
+                .header("Authorization", "Bearer " + token));
+    }
+
+    /** FR-ID-020 / Art. II: solo un Adulto Responsable da de alta a un menor. */
+    @Test
+    void r1_altaDeMenor_soloConCapacidadAdultoResponsable_403() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+        altaMenor(dniUnico(), tokenTutor).andExpect(status().isForbidden());
+
+        String tokenEst = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        altaMenor(dniUnico(), tokenEst).andExpect(status().isForbidden());
+
+        String tokenAr = registrarAdultoYToken(dniUnico(), "Ana", "Lopez", true, true);
+        String dniMenor = dniUnico();
+        registrarMenor(dniMenor, tokenAr);
+        altaMenor(dniUnico(), login(dniMenor)).andExpect(status().isForbidden());
+    }
+
+    /** Un Tutor con capacidad de Estudiante no puede reservarse una clase a sí mismo. */
+    @Test
+    void r1_tutorConCapacidadEstudiante_noSeReservaASiMismo_422() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        capacidades(tokenTutor, true, false);
+
+        postReserva(tokenTutor, tutorId, dentroDeFranja(fecha), 30)
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(reservaRepo.findAll()).noneMatch(r -> r.getTutor().getId().equals(tutorId));
+        // Para un Tutor las capacidades son opcionales: puede volver a no tener ninguna.
+        capacidades(tokenTutor, false, false);
+    }
+
+    /**
+     * Decisión del dueño (tutor-padre): un Tutor puede ser Adulto Responsable, pero nunca darle
+     * clase a un menor a su cargo — ni autorizándose ni reservando directo.
+     */
+    @Test
+    void r1_tutorAdultoResponsable_noDaClaseASuPropioMenor() throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        capacidades(tokenTutor, false, true);
+        UUID menorId = registrarMenor(dniUnico(), tokenTutor);
+
+        com.tinku.testsupport.CapVigente.para(capJdbc, tutorId);
+        mockMvc.perform(post("/api/autorizaciones")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AutorizarTutorRequest(menorId, tutorId))))
+                .andExpect(status().isForbidden());
+
+        // Aunque exista una autorización (dato previo a esta regla), la reserva no pasa.
+        jdbcTemplate.update("INSERT INTO identidad.autorizaciones_tutor (adulto_responsable_id, menor_id, tutor_id)"
+                + " VALUES (?, ?, ?)", tutorId, menorId, tutorId);
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", tutorId.toString(),
+                                "beneficiarioId", menorId.toString(),
+                                "horario", dentroDeFranja(fecha).toString(),
+                                "duracionMinutos", 30))))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(reservaRepo.findAll()).noneMatch(r -> r.getBeneficiario().getId().equals(menorId));
+    }
+
+    /** Solo se reserva a un TUTOR con cuenta ACTIVA; lo demás es 404, sin filtrar el estado. */
+    @Test
+    void r1_reservaATutorSuspendidoOAUnAdulto_404() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        jdbcTemplate.update("UPDATE identidad.usuarios SET estado_cuenta = 'SUSPENDIDA' WHERE id = ?", e.tutorId());
+        postReserva(e.tokenEstudiante(), e.tutorId(), e.horario(), 30).andExpect(status().isNotFound());
+
+        String dniOtro = dniUnico();
+        registrarAdultoYToken(dniOtro, "Otro", "Adulto", true, false);
+        postReserva(e.tokenEstudiante(), usuarioPorDni(dniOtro).getId(), e.horario(), 30)
+                .andExpect(status().isNotFound());
+    }
+
+    /** V37: la base rechaza una Reserva con el Tutor como pagador o beneficiario. */
+    @Test
+    void r1_v37_checkTutorNoEsParteDeSuReserva() throws Exception {
+        String dniTutor = dniUnico();
+        registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO reservas.reservas (pagador_id, beneficiario_id, tutor_id, horario, horario_fin,
+                                                      duracion_minutos, precio, estado)
+                        VALUES (?, ?, ?, now() + interval '2 days', now() + interval '2 days 30 minutes',
+                                30, 1000, 'pendiente_pago')""",
+                tutorId, tutorId, tutorId))
+                .hasMessageContaining("ck_reservas_tutor_no_es_parte");
+    }
 }

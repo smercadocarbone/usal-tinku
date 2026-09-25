@@ -782,6 +782,94 @@ class AdminPanelIntegracionTest {
                 .hasSize(1);
     }
 
+    /**
+     * Revisión por rol (R1): un Tutor puede ser además Admin, pero nunca resuelve un caso en el
+     * que es parte — su credencial, una Denuncia o Alerta que lo involucra, el dinero de una
+     * Reserva suya → 403 sin tocar nada. Y una cuenta de Menor nunca opera el panel (Art. II).
+     */
+    private Usuario tutorAdmin(RolAdmin rol) {
+        Usuario u = usuario(TipoUsuario.TUTOR);
+        com.tinku.admin.model.Admin fila = new com.tinku.admin.model.Admin();
+        fila.setUsuario(u);
+        fila.setRol(rol);
+        adminRepository.save(fila);
+        return u;
+    }
+
+    @Test
+    void r1_adminNoResuelveCasosPropios_yUnMenorNuncaEsAdmin_403() throws Exception {
+        Usuario tutorAdmin = tutorAdmin(RolAdmin.MODERACION_SEGURIDAD);
+        String tk = token(tutorAdmin);
+
+        CredencialAcademica propia = credencial(tutorAdmin, EstadoCredencial.PENDIENTE, null);
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + propia.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isForbidden());
+        assertThat(credencialRepository.findById(propia.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoCredencial.PENDIENTE);
+
+        Denuncia contraEl = denuncia(usuario(TipoUsuario.ADULTO), tutorAdmin, false,
+                Instant.now().plusSeconds(3600));
+        mvc.perform(post("/api/admin/moderacion/denuncias/" + contraEl.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("resolucion", "infundada"))))
+                .andExpect(status().isForbidden());
+        assertThat(denunciaRepository.findById(contraEl.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoDenuncia.EN_REVISION);
+
+        AlertaSeguridad sobreEl = alerta(tutorAdmin, Instant.now());
+        mvc.perform(post("/api/admin/moderacion/alertas-seguridad/" + sobreEl.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "reactivar"))))
+                .andExpect(status().isForbidden());
+
+        Usuario tutorSoporte = tutorAdmin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva suya = new Reserva();
+        suya.setPagador(pagador);
+        suya.setBeneficiario(pagador);
+        suya.setTutor(tutorSoporte);
+        suya.setHorario(Instant.now().plusSeconds(3600));
+        suya.setPrecio(BigDecimal.valueOf(15000));
+        suya.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(suya);
+        Transaccion t = new Transaccion();
+        t.setReservaId(suya.getId());
+        t.setMpPaymentId("mp-propia-" + CONTADOR.incrementAndGet());
+        t.setMontoBruto(new BigDecimal("15000.00"));
+        t.setComisionPlataforma(new BigDecimal("2250.00"));
+        t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+        transaccionRepository.save(t);
+        mvc.perform(post("/api/admin/financiero/transacciones/" + t.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(tutorSoporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(reembolsoParcial);
+
+        // Art. II: aunque alguien le cargue una fila en admins, un Menor no entra al panel.
+        Usuario menor = new Usuario();
+        menor.setDni(String.format("%08d", 41_000_000 + CONTADOR.incrementAndGet()));
+        menor.setNombre("Menor");
+        menor.setApellido("Lopez");
+        menor.setFechaNacimiento(LocalDate.of(2014, 5, 15));
+        menor.setTipo(TipoUsuario.MENOR);
+        menor.setPasswordHash("hash");
+        menor.setAdultoResponsable(usuario(TipoUsuario.ADULTO));
+        menor = usuarioRepository.save(menor);
+        com.tinku.admin.model.Admin filaMenor = new com.tinku.admin.model.Admin();
+        filaMenor.setUsuario(menor);
+        filaMenor.setRol(RolAdmin.MODERACION_SEGURIDAD);
+        adminRepository.save(filaMenor);
+        mvc.perform(get("/api/admin/moderacion/denuncias")
+                        .header("Authorization", "Bearer " + token(menor)))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void adminInactivo_noAutoriza_403() throws Exception {
         Usuario moderador = usuario(TipoUsuario.ADULTO);

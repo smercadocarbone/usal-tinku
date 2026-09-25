@@ -2,6 +2,7 @@ package com.tinku.admin.repository;
 
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.model.RolAdmin;
+import com.tinku.identidad.model.TipoUsuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -23,4 +24,7 @@ public interface AdminRepository extends JpaRepository<Admin, UUID> {
     Optional<Admin> findByUsuario_DniAndActivoTrue(String dni);
 
     Optional<Admin> findByUsuario_IdAndActivoTrue(UUID usuarioId);
+
+    /** Art. II: una cuenta de Menor nunca opera el panel, aunque tenga una fila en admins. */
+    boolean existsByUsuario_IdAndUsuario_Tipo(UUID usuarioId, TipoUsuario tipo);
 }

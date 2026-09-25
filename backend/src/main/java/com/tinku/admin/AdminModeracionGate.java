@@ -5,6 +5,7 @@ import com.tinku.shared.AccesoModeracionDenegadoException;
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.model.RolAdmin;
 import com.tinku.admin.repository.AdminRepository;
+import com.tinku.identidad.model.TipoUsuario;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -60,8 +61,8 @@ public class AdminModeracionGate {
      * para atribuir auditoría por {@code admins.id}) o 403.
      */
     public Admin requiereAdmin(Authentication authentication, RolAdmin rol) {
-        return adminRepository.findByUsuario_IdAndRolAndActivoTrue(usuarioId(authentication), rol)
-                .orElseThrow(AccesoModeracionDenegadoException::new);
+        return nuncaMenor(adminRepository.findByUsuario_IdAndRolAndActivoTrue(usuarioId(authentication), rol)
+                .orElseThrow(AccesoModeracionDenegadoException::new));
     }
 
     /**
@@ -70,8 +71,29 @@ public class AdminModeracionGate {
      * roles, filtrada después por el rol propio del Admin).
      */
     public Admin adminAutenticado(Authentication authentication) {
-        return adminRepository.findByUsuario_IdAndActivoTrue(usuarioId(authentication))
-                .orElseThrow(AccesoModeracionDenegadoException::new);
+        return nuncaMenor(adminRepository.findByUsuario_IdAndActivoTrue(usuarioId(authentication))
+                .orElseThrow(AccesoModeracionDenegadoException::new));
+    }
+
+    /**
+     * Conflicto de interés (revisión por rol, R1): un Admin nunca resuelve un caso en el que él
+     * mismo es parte (su credencial, su CAP, una Denuncia o Alerta que lo involucra, una
+     * transacción de una Reserva suya). Un Tutor puede ser además Admin; esto lo cubre. → 403.
+     */
+    public static void exigirNoEsParteDelCaso(UUID adminUsuarioId, UUID... involucrados) {
+        for (UUID involucrado : involucrados) {
+            if (adminUsuarioId.equals(involucrado)) {
+                throw new AccesoModeracionDenegadoException();
+            }
+        }
+    }
+
+    /** Art. II: una cuenta de Menor nunca opera el panel, aunque alguien le cargue una fila en admins. */
+    private Admin nuncaMenor(Admin admin) {
+        if (adminRepository.existsByUsuario_IdAndUsuario_Tipo(admin.getUsuario().getId(), TipoUsuario.MENOR)) {
+            throw new AccesoModeracionDenegadoException();
+        }
+        return admin;
     }
 
     /** AUD-027: el principal es el UUID; sin sesión o con un nombre que no lo es → 403. */

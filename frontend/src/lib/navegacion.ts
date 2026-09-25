@@ -23,6 +23,7 @@ export function navegacionPorRol(payload: PayloadSesion | null | undefined, esAd
   }
 
   if (payload.tipo === "TUTOR") {
+    // Un Tutor puede además tomar clases o tener chicos a cargo (nunca con él como tutor).
     return [
       { href: "/cuenta/horarios", label: "Mi agenda", icono: "agenda" },
       { href: "/cuenta/reservas", label: "Mis clases", icono: "clases", tambien: ["/cuenta/reservas/"] },
@@ -32,6 +33,10 @@ export function navegacionPorRol(payload: PayloadSesion | null | undefined, esAd
         icono: "perfil",
         tambien: ["/cuenta/materias", "/cuenta/precio"],
       },
+      ...(payload.cap_est === true || payload.cap_ar === true
+        ? [{ href: "/buscar", label: "Buscar", icono: "buscar", tambien: ["/tutores/", "/reservar"] } as ItemNav]
+        : []),
+      ...(payload.cap_ar === true ? [{ href: "/cuenta/menores", label: "Mis chicos", icono: "chicos" } as ItemNav] : []),
       cuenta,
     ];
   }

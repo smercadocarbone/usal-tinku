@@ -10,7 +10,7 @@
 
 ## 1. Resumen
 
-Este módulo gestiona el ciclo de vida de las identidades del sistema. Un Usuario adulto verificado (por OCR) puede tener activas dos **capacidades independientes y combinables**: **Estudiante** (reserva sesiones para sí mismo) y **Adulto Responsable** (gestiona uno o más perfiles de menor). El **Tutor** es un camino de registro separado y exclusivo.
+Este módulo gestiona el ciclo de vida de las identidades del sistema. Un Usuario adulto verificado (por OCR) puede tener activas dos **capacidades independientes y combinables**: **Estudiante** (reserva sesiones para sí mismo) y **Adulto Responsable** (gestiona uno o más perfiles de menor). El **Tutor** es un camino de registro separado; _(enmendado 2026-09-25, ADR-M1-07)_ un Tutor puede además activar esas dos capacidades, pero nunca reservarse a sí mismo ni darle clase a un menor a su cargo.
 
 **Decisión de arquitectura clave (corregida): el menor sí tiene su propia cuenta y sesión, pero no puede crearla por sí mismo.** Es el Adulto Responsable quien da de alta la cuenta del menor (datos, credenciales de acceso, consentimiento). Una vez creada, el menor inicia sesión de forma independiente, con permisos restringidos: puede buscar y generar una Solicitud de Sesión (ver Spec de M4), pero no puede pagar, no puede autorizar Tutores nuevos por sí mismo, y no puede presentar Denuncias directamente — eso lo hace su Adulto Responsable en su nombre (ver Spec de M9), como restricción de permisos, no por falta de cuenta.
 
@@ -122,6 +122,7 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 | FR-ID-028 | _(enmendado 2026-09-25)_ Foto **obligatoria** del Tutor en su perfil público: sin foto no aparece en búsquedas ni recomendaciones (el filtro vive en la consulta de candidatos del matching). Solo JPG o PNG verificado por contenido, mismo tamaño máximo que la Credencial; se sirve autenticada y nunca como URL pública del almacenamiento (U1). |
 | FR-ID-031 | _(2026-09-25)_ El registro (adulto y Tutor) incluye un paso "Condiciones" con los puntos clave de los Términos y Condiciones en tarjetas (título, párrafo breve, ilustración) y aceptación explícita obligatoria. Los plazos que se citan salen de la Tabla de Tiempos. El texto legal completo lo redacta la asesoría legal antes del lanzamiento. |
 | FR-ID-029 | El Admin de Moderación y Seguridad puede quitar la presentación y/o la foto de un Tutor (U1). |
+| FR-ID-032 | _(2026-09-25, revisión por rol R1)_ Solo un Adulto (tipo ADULTO o TUTOR) con la capacidad Adulto Responsable da de alta un menor; si no, 403 (Art. II, FR-ID-020). Un Tutor **puede** activar las capacidades de Estudiante y/o Adulto Responsable (para él son opcionales; FR-ID-001 exige al menos una solo al ADULTO), pero **nunca** se autoriza a sí mismo como Tutor de un menor a su cargo (403). Una cuenta de Menor nunca opera el panel de Admin, y un Admin nunca resuelve un caso en el que es parte (su credencial o CAP, una Denuncia/Alerta que lo involucra, el dinero de una Reserva suya) → 403. |
 
 ## 5. Reglas de Negocio Aplicables
 
@@ -134,7 +135,7 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 ## 6. Fuera de Alcance de este Spec
 
 - La lógica de "Solicitud de Sesión" del menor y su conversión en Reserva por el adulto (ver Spec de M4).
-- La combinación de Tutor con las otras capacidades — descartada para este MVP.
+- ~~La combinación de Tutor con las otras capacidades — descartada para este MVP.~~ _Habilitada por ADR-M1-07 (2026-09-25), con las restricciones de FR-ID-032._
 
 ## 7. Checklist de Revisión
 

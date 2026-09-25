@@ -63,6 +63,12 @@ public class AutorizacionService {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new TutorNoAutorizadoException("Solo perfiles de Tutor pueden ser autorizados.");
         }
+        // Art. II (decisión 2026-09-25): un tutor no da clases a un menor del que es el Adulto
+        // Responsable; tiene que haber un adulto independiente entre los dos.
+        if (tutor.getId().equals(adultoResponsable.getId())) {
+            throw new TutorNoAutorizadoException(
+                    "No podés autorizarte como tutor de un menor a tu cargo.");
+        }
         // FR-ID-026 (T02): autorizar es solo para menores → exige CAP aprobado y vigente.
         if (!habilitacion.habilitadoParaMenores(tutorId)) {
             throw new TutorNoHabilitadoParaMenoresException();

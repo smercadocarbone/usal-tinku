@@ -77,6 +77,8 @@ public class SolicitudService {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new TutorNoAutorizadoParaMenorException();
         }
+        // Revisión por rol, punto 1: tutor ACTIVO, y nunca el propio AR del menor.
+        ReservaService.exigirTutorReservable(tutor, menor.getAdultoResponsable(), menor);
 
         // FR-RES-021: solo Tutores autorizados por el AR de ese menor y no no-confiable.
         if (!autorizacionRepo.findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(

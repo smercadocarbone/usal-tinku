@@ -58,6 +58,7 @@ public class AdminCapController {
                                                @Valid @RequestBody RevisarCapRequest request,
                                                Authentication authentication) {
         UUID adminId = gate.requiereModeracion(authentication);
+        AdminModeracionGate.exigirNoEsParteDelCaso(adminId, certificadoService.tutorDelCap(id));
         CertificadoAntecedentesPenales cap = certificadoService.revisar(
                 id, adminId, request.accion(), request.categoria());
         return ResponseEntity.ok(CapResponse.from(cap));

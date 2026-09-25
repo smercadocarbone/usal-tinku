@@ -156,6 +156,11 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(AltaMenorNoPermitidaException.class)
+    public ResponseEntity<Map<String, String>> handleAltaMenorNoPermitida(AltaMenorNoPermitidaException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(MenorNoPerteneceException.class)
     public ResponseEntity<Map<String, String>> handleMenorNoPertenece(MenorNoPerteneceException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
