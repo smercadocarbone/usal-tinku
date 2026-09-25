@@ -74,7 +74,7 @@ paso "Búsqueda semántica: 'función cuadrática' tiene que traer a la tutora d
 RESULTADOS=$(curl -sf -X POST "$BASE/api/busquedas" -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' -d '{"texto_busqueda":"no entiendo la función cuadrática"}') \
     || falla "POST /api/busquedas"
-echo "$RESULTADOS" | json "'$TUTOR_ID' in [r['tutor_id'] for r in d]" | grep -q True \
+echo "$RESULTADOS" | json "'$TUTOR_ID' in [r['tutorId'] for r in d]" | grep -q True \
     || falla "la búsqueda no trajo a la tutora: $RESULTADOS"
 
 paso "Reserva de 60 min mañana 18:00"
