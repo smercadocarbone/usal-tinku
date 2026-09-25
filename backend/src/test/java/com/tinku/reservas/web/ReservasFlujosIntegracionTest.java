@@ -51,6 +51,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -262,6 +263,33 @@ class ReservasFlujosIntegracionTest {
     }
 
     /** Escenario base reutilizado: tutor con franja puntual 15:00-16:00 en `fecha`. */
+    /** AUD-025: una franja que se pisa con otra activa del mismo Tutor — mismo modo o
+     *  semanal contra puntual de ese día de la semana — se rechaza con 409. */
+    @Test
+    void aud025_franjaSuperpuesta_409() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(3);
+        short dia = (short) (fecha.getDayOfWeek().getValue() % 7);
+        publicarFranjaSemanal(tokenTutor, dia); // 15:00-16:00 semanal
+
+        for (Map<String, Object> pisa : List.<Map<String, Object>>of(
+                Map.of("diaSemana", dia, "horaInicio", "15:30", "horaFin", "16:30"),
+                Map.of("fechaEspecifica", fecha.toString(), "horaInicio", "14:30", "horaFin", "15:30"))) {
+            mockMvc.perform(post("/api/tutores/franjas")
+                            .header("Authorization", "Bearer " + tokenTutor)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(pisa)))
+                    .andExpect(status().isConflict());
+        }
+        // Pegada (termina donde empieza la otra): no se pisa.
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("diaSemana", dia, "horaInicio", "16:00", "horaFin", "17:00"))))
+                .andExpect(status().isCreated());
+    }
+
     private record Escenario(String dniAr, String tokenAr, String tokenMenor, String tokenTutor, UUID menorId,
                              UUID tutorId, LocalDate fecha, Instant horario) {
     }

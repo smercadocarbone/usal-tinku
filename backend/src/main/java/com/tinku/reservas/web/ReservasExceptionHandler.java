@@ -3,6 +3,7 @@ package com.tinku.reservas.web;
 import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
+import com.tinku.reservas.service.FranjaSuperpuestaException;
 import com.tinku.reservas.service.DuracionMinutosInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
 import com.tinku.reservas.service.NoPuedeCancelarReservaException;
@@ -39,6 +40,8 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.tinku.reservas")
 public class ReservasExceptionHandler {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ReservasExceptionHandler.class);
+
     @ExceptionHandler({SoloAdultoResponsableException.class, SoloMenorException.class,
             SoloTutorException.class, SolicitudMenorNoPerteneceException.class,
             TutorNoAutorizadoParaMenorException.class, CapacidadDePagoRequeridaException.class,
@@ -69,10 +72,44 @@ public class ReservasExceptionHandler {
     }
 
     /** FR-RES-007: la constraint EXCLUDE de V9 ganó la condición de carrera. */
+    /**
+     * AUD-023: solo la superposición de reservas (EXCLUDE {@code ex_reservas_rango_*}, V30)
+     * es "horario ocupado". Cualquier otra violación de integridad (FK, CHECK) era un bug
+     * que se disfrazaba de 409: ahora es 500 con log, sin filtrar el detalle al cliente.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleSuperposicion(DataIntegrityViolationException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("error", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007)."));
+        String constraint = constraintVioladaDe(ex);
+        if (constraint != null && constraint.startsWith("ex_reservas_rango_")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007)."));
+        }
+        if (constraint != null && constraint.startsWith("ex_franjas_")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", new FranjaSuperpuestaException().getMessage()));
+        }
+        LOG.error("Violación de integridad inesperada en reservas (constraint={})", constraint, ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "No se pudo completar la operación."));
+    }
+
+    @ExceptionHandler(FranjaSuperpuestaException.class)
+    public ResponseEntity<Map<String, String>> handleFranjaSuperpuesta(FranjaSuperpuestaException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
+    /** Nombre de la constraint de Postgres, buscando la causa de Hibernate en la cadena. */
+    private static String constraintVioladaDe(DataIntegrityViolationException ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof org.hibernate.exception.ConstraintViolationException cve) {
+                return cve.getConstraintName();
+            }
+        }
+        // Sin la excepción de Hibernate (p. ej. JdbcTemplate): el mensaje de Postgres la nombra.
+        String mensaje = ex.getMostSpecificCause().getMessage();
+        java.util.regex.Matcher m = mensaje == null ? null
+                : java.util.regex.Pattern.compile("constraint \"([^\"]+)\"").matcher(mensaje);
+        return m != null && m.find() ? m.group(1) : null;
     }
 
     @ExceptionHandler(TarifaNoConfiguradaException.class)

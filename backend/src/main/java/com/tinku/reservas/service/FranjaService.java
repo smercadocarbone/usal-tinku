@@ -51,6 +51,10 @@ public class FranjaService {
                     "La duración de la franja debe ser de 30 a 180 minutos (FR-RES-024).");
         }
 
+        if (seSuperpone(tutor.getId(), request)) {
+            throw new FranjaSuperpuestaException();
+        }
+
         FranjaDisponibilidad franja = new FranjaDisponibilidad();
         franja.setTutor(tutor);
         franja.setDiaSemana(request.diaSemana());
@@ -59,6 +63,32 @@ public class FranjaService {
         franja.setHoraFin(request.horaFin());
         franja.setActiva(true);
         return franjaRepo.save(franja);
+    }
+
+    /**
+     * AUD-025: dos franjas activas del mismo Tutor que cubren el mismo día y se pisan en
+     * horario. Antes {@link #franjaQueCubre} elegía una con {@code findFirst()} en orden
+     * arbitrario. Cruza los dos modos: una semanal choca con una puntual de ese día de la
+     * semana. La base cubre además los choques dentro de un mismo modo (V34).
+     */
+    private boolean seSuperpone(UUID tutorId, PublicarFranjaRequest nueva) {
+        Short diaNueva = nueva.diaSemana() != null
+                ? nueva.diaSemana()
+                : toDomingoCero(nueva.fechaEspecifica().getDayOfWeek().getValue());
+        return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
+                .filter(f -> mismoDia(f, nueva, diaNueva))
+                .anyMatch(f -> nueva.horaInicio().isBefore(f.getHoraFin())
+                        && f.getHoraInicio().isBefore(nueva.horaFin()));
+    }
+
+    private boolean mismoDia(FranjaDisponibilidad f, PublicarFranjaRequest nueva, short diaNueva) {
+        if (nueva.fechaEspecifica() != null && f.getFechaEspecifica() != null) {
+            return nueva.fechaEspecifica().equals(f.getFechaEspecifica());
+        }
+        short diaExistente = f.getDiaSemana() != null
+                ? f.getDiaSemana()
+                : toDomingoCero(f.getFechaEspecifica().getDayOfWeek().getValue());
+        return diaExistente == diaNueva;
     }
 
     /** FR-RES-012: true si dentro de una franja activa del tutor que cubre ese día/hora. */
