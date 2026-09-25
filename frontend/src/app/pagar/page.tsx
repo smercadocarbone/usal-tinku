@@ -86,6 +86,13 @@ function PagarFlujo() {
     // tardar unos segundos. No se ofrece pagar de nuevo mientras tanto (cobro doble).
     if (vueltaMp === "approved" || vueltaMp === "pending" || vueltaMp === "in_process") {
       setEstado("esperandoAviso");
+      // Con el pago aprobado, no se depende solo del aviso de MercadoPago: el backend
+      // consulta ese pago a MP y confirma la reserva si corresponde. Si falla, el
+      // polling sigue esperando el webhook.
+      const pagoId = params.get("payment_id") ?? params.get("collection_id");
+      if (vueltaMp === "approved" && pagoId) {
+        api.post("/api/pagos/confirmar-retorno", { reservaId, paymentId: pagoId }).catch(() => {});
+      }
       return;
     }
     try {
@@ -95,7 +102,7 @@ function PagarFlujo() {
       setEstado("error");
       setError(err instanceof ApiError && err.message ? err.message : "No pudimos generar el pago. Probá de nuevo.");
     }
-  }, [reservaId, vueltaMp]);
+  }, [reservaId, vueltaMp, params]);
 
   useEffect(() => {
     void cargar();

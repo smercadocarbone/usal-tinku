@@ -125,6 +125,21 @@ public class EscrowService {
      * veían {@code pendiente_pago} y el perdedor caía en el catch del índice único,
      * con su plata cobrada y nunca devuelta.</p>
      */
+    /**
+     * Confirmación al volver de MercadoPago (producción 2026-09-25: los avisos no siempre
+     * llegan en un formato verificable). No confía en nada del navegador: consulta el pago a
+     * MercadoPago con el token de Tinku y exige que su external_reference sea ESTA reserva;
+     * después sigue exactamente el camino del webhook (monto, lock, idempotencia).
+     */
+    @Transactional
+    public void confirmarDesdeRetorno(UUID reservaId, String mpPaymentId) {
+        PagoMercadoPago pago = mercadopago.getPago(mpPaymentId);
+        if (!reservaId.toString().equals(pago.externalReference())) {
+            throw new PagoNoCorrespondeException();
+        }
+        procesarPagoAprobado(mpPaymentId);
+    }
+
     @Transactional
     public void procesarPagoAprobado(String mpPaymentId) {
         if (transaccionRepo.findByMpPaymentId(mpPaymentId).isPresent()) {

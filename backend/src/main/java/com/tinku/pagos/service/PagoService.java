@@ -69,6 +69,15 @@ public class PagoService {
         this.pisoTarifa = pisoTarifa;
     }
 
+    /** Solo el pagador de la reserva (Artículo II) puede pedir que se confirme su pago. */
+    @Transactional(readOnly = true)
+    public void exigirPagador(Usuario usuario, UUID reservaId) {
+        Reserva reserva = reservaRepo.findById(reservaId).orElseThrow(ReservaNoEncontradaException::new);
+        if (reserva.getPagador() == null || !reserva.getPagador().getId().equals(usuario.getId())) {
+            throw new SoloPagadorPreferenciaException();
+        }
+    }
+
     @Transactional
     public PreferenciaPago generarPreferencia(Usuario usuario, UUID reservaId) {
         Reserva reserva = reservaRepo.findById(reservaId)

@@ -30,6 +30,9 @@ import java.io.IOException;
 @RequestMapping("/api/webhooks/mercadopago")
 public class MercadoPagoWebhookController {
 
+    private static final org.slf4j.Logger LOG =
+            org.slf4j.LoggerFactory.getLogger(MercadoPagoWebhookController.class);
+
     private final MercadoPagoWebhookVerificador verificador;
     private final EscrowService escrowService;
     private final ObjectMapper objectMapper;
@@ -52,23 +55,62 @@ public class MercadoPagoWebhookController {
         // (producción, 2026-09-25) y en ese caso firma el data.id del cuerpo. Leerlo acá
         // no le da confianza a nada: si el id no es el firmado, la firma no coincide.
         JsonNode notificacion = leerCuerpo(request);
-        String dataIdQuery = request.getParameter("data.id");
-        String dataIdBody = notificacion.path("data").path("id").asText(null);
-        String mpPaymentId = (dataIdQuery != null && !dataIdQuery.isBlank())
-                ? dataIdQuery
-                : dataIdBody;
+        String mpPaymentId = idDelPago(request, notificacion);
         if (!verificador.esFirmaValida(xSignature, xRequestId, mpPaymentId)) {
+            // Qué formato mandó MP (nombres de parámetros y campos, sin valores sensibles):
+            // producción mostró avisos sin data.id y hacía falta verlo para entenderlos.
+            LOG.warn("Webhook de MP rechazado. Query: {} · campos del cuerpo: {}",
+                    request.getParameterMap().keySet(), camposDe(notificacion));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        if (mpPaymentId == null || mpPaymentId.isBlank()
-                || !"payment".equals(notificacion.path("type").asText())) {
-            // No es una notificación de pago (hay otros topics): ack sin efecto.
+        if (mpPaymentId == null || mpPaymentId.isBlank() || !esDePago(request, notificacion)) {
+            // No es una notificación de pago (merchant_order u otros topics): ack sin efecto.
             return ResponseEntity.ok().build();
         }
 
         escrowService.procesarPagoAprobado(mpPaymentId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * El id del pago según el formato del aviso. Webhooks: {@code ?data.id=} o
+     * {@code data.id} en el cuerpo. IPN (el formato viejo, que MP sigue mandando a la
+     * notification_url): {@code ?id=&topic=payment} o {@code resource} en el cuerpo
+     * (un id o una URL que termina en el id).
+     */
+    private static String idDelPago(HttpServletRequest request, JsonNode n) {
+        for (String candidato : new String[]{
+                request.getParameter("data.id"),
+                n.path("data").path("id").asText(null),
+                request.getParameter("id"),
+                ultimoSegmento(n.path("resource").asText(null))}) {
+            if (candidato != null && !candidato.isBlank()) {
+                return candidato;
+            }
+        }
+        return null;
+    }
+
+    private static boolean esDePago(HttpServletRequest request, JsonNode n) {
+        return "payment".equals(n.path("type").asText(null))
+                || "payment".equals(request.getParameter("type"))
+                || "payment".equals(request.getParameter("topic"))
+                || "payment".equals(n.path("topic").asText(null));
+    }
+
+    private static String ultimoSegmento(String resource) {
+        if (resource == null || resource.isBlank()) {
+            return null;
+        }
+        String s = resource.replaceAll("/+$", "");
+        return s.substring(s.lastIndexOf('/') + 1);
+    }
+
+    private static java.util.List<String> camposDe(JsonNode n) {
+        java.util.List<String> campos = new java.util.ArrayList<>();
+        n.fieldNames().forEachRemaining(campos::add);
+        return campos;
     }
 
     /** Cuerpo vacío o que no es JSON = notificación sin id (el verificador decide). */

@@ -1,5 +1,6 @@
 package com.tinku.pagos.web;
 
+import com.tinku.pagos.service.EscrowService;
 import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.repository.TarifaTutorRepository;
@@ -43,13 +44,25 @@ public class PagoController {
     private final UsuarioActual usuarioActual;
     private final TarifaTutorRepository tarifaRepo;
     private final PisoTarifa pisoTarifa;
+    private final EscrowService escrowService;
 
     public PagoController(PagoService pagoService, UsuarioActual usuarioActual, TarifaTutorRepository tarifaRepo,
-                          PisoTarifa pisoTarifa) {
+                          PisoTarifa pisoTarifa, EscrowService escrowService) {
         this.pagoService = pagoService;
         this.usuarioActual = usuarioActual;
         this.tarifaRepo = tarifaRepo;
         this.pisoTarifa = pisoTarifa;
+        this.escrowService = escrowService;
+    }
+
+    /** Al volver de MercadoPago con el pago aprobado: confirma consultando a MP (ver
+     *  {@link EscrowService#confirmarDesdeRetorno}). Idempotente con el webhook. */
+    @PostMapping("/confirmar-retorno")
+    public ResponseEntity<Void> confirmarRetorno(@Valid @RequestBody ConfirmarRetornoRequest request,
+                                                 Authentication authentication) {
+        pagoService.exigirPagador(usuarioActual.obtener(authentication), request.reservaId());
+        escrowService.confirmarDesdeRetorno(request.reservaId(), request.paymentId());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/preferencia")

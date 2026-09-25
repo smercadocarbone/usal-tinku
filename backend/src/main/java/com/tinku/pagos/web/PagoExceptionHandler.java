@@ -1,5 +1,6 @@
 package com.tinku.pagos.web;
 
+import com.tinku.pagos.service.PagoNoCorrespondeException;
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
 import com.tinku.pagos.service.MercadoPagoNoDisponibleException;
 import com.tinku.pagos.service.PagoInconsistenteException;
@@ -41,6 +42,11 @@ public class PagoExceptionHandler {
         // T06: el piso viaja en el cuerpo para que el frontend lo muestre sin otra llamada.
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage(), "pisoHora", ex.getPisoHora()));
+    }
+
+    @ExceptionHandler(PagoNoCorrespondeException.class)
+    public ResponseEntity<Map<String, String>> handlePagoNoCorresponde(PagoNoCorrespondeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(ReservaNoEncontradaException.class)
