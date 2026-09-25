@@ -172,6 +172,18 @@ class MatchingFlujosIntegracionTest {
         UUID credencialId = UUID.fromString(objectMapper.readTree(
                 cargada.getResponse().getContentAsString()).get("id").asText());
         credencialService.marcarAprobada(credencialId, null);
+        subirFotoDe(token);
+    }
+
+    /** FR-ID-028: la foto es obligatoria para aparecer en búsquedas. PNG mínimo real. */
+    private void subirFotoDe(String token) throws Exception {
+        byte[] png = java.util.Base64.getDecoder().decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+        mockMvc.perform(multipart("/api/tutores/me/foto")
+                        .file(new MockMultipartFile("archivo", "foto.png", MediaType.IMAGE_PNG_VALUE, png))
+                        .with(req -> { req.setMethod("PUT"); return req; })
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     private UUID registrarMenor(String dniMenor, String tokenAr) throws Exception {
@@ -266,6 +278,25 @@ class MatchingFlujosIntegracionTest {
         // tutor suspendido nunca llega al servicio Python.
         List<UUID> candidatos = candidatosRecibidos();
         assertThat(candidatos).contains(tutorActivo).doesNotContain(tutorSuspendido);
+    }
+
+    @Test
+    void frId028_tutorSinFotoQuedaFueraDeLosCandidatos() throws Exception {
+        String tokenEstudiante = registrarAdultoYToken("20144445", "Ana", "Lopez", true, false);
+        String tokenConFoto = registrarTutorYToken("20155556", "Pablo", "Sosa");
+        aprobarCredencialDe(tokenConFoto);
+        String tokenSinFoto = registrarTutorYToken("20166667", "Diego", "Mendez");
+        aprobarCredencialDe(tokenSinFoto);
+        UUID conFoto = usuarioPorDni("20155556").getId();
+        Usuario sinFoto = usuarioPorDni("20166667");
+        sinFoto.setFotoRef(null); // credencial aprobada y todo completo, menos la foto
+        usuarioRepository.save(sinFoto);
+
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(conFoto, 0.8)));
+        buscar("fisica", tokenEstudiante);
+
+        assertThat(candidatosRecibidos()).contains(conFoto).doesNotContain(sinFoto.getId());
     }
 
     // ------------------------------------------------ US-2 / T-M2-10: menor

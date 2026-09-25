@@ -222,6 +222,18 @@ class CatalogoTemasIntegracionTest {
         UUID credencialId = UUID.fromString(objectMapper.readTree(
                 cargada.getResponse().getContentAsString()).get("id").asText());
         credencialService.marcarAprobada(credencialId, null);
+        subirFotoDe(token);
+    }
+
+    /** FR-ID-028: la foto es obligatoria para aparecer en búsquedas. PNG mínimo real. */
+    private void subirFotoDe(String token) throws Exception {
+        byte[] png = java.util.Base64.getDecoder().decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+        mockMvc.perform(multipart("/api/tutores/me/foto")
+                        .file(new MockMultipartFile("archivo", "foto.png", MediaType.IMAGE_PNG_VALUE, png))
+                        .with(req -> { req.setMethod("PUT"); return req; })
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     private UUID registrarMenor(String dniMenor, String tokenAr) throws Exception {

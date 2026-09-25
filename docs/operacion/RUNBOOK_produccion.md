@@ -183,6 +183,9 @@ aprobada y un historial de clases ya dictadas con calificaciones, pagos liberado
    Tiene que responder `{"actualizados": N}`. Hace falta acá porque el script carga los temas
    directo en la base; cuando un tutor cambia sus temas desde la app, el backend pide el recompute
    solo.
+3. **Foto de cada tutor de la demo** (FR-ID-028, obligatoria desde 2026-09-25): sin foto un tutor
+   **no aparece en la búsqueda**. El script no puede crear archivos, así que entrá con cada tutor
+   de la demo → **Mi perfil → Subir foto** (cualquier JPG o PNG).
 
 ### 10.2 Qué hace falta para el recorrido completo
 - **Pagar una reserva:** credenciales de **prueba** de MercadoPago (`MP_ACCESS_TOKEN` que empieza

@@ -3,6 +3,7 @@ package com.tinku.matching;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,15 +48,18 @@ public class TutorSeedRunner implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final PerfilTutorTemasRepository perfilRepo;
     private final JdbcTemplate jdbc;
+    private final Almacenamiento almacenamiento;
 
     public TutorSeedRunner(UsuarioRepository usuarioRepo,
                            PasswordEncoder passwordEncoder,
                            PerfilTutorTemasRepository perfilRepo,
-                           JdbcTemplate jdbc) {
+                           JdbcTemplate jdbc,
+                           Almacenamiento almacenamiento) {
         this.usuarioRepo = usuarioRepo;
         this.passwordEncoder = passwordEncoder;
         this.perfilRepo = perfilRepo;
         this.jdbc = jdbc;
+        this.almacenamiento = almacenamiento;
     }
 
     @Override
@@ -71,6 +80,8 @@ public class TutorSeedRunner implements CommandLineRunner {
             usuario.setPasswordHash(passwordEncoder.encode(PASSWORD_DEV));
             usuario.setEstadoCuenta(EstadoCuenta.ACTIVA);
             usuario.setActivoParaMatching(true);
+            // FR-ID-028: la foto es obligatoria para aparecer en búsquedas; en dev, un avatar liso.
+            usuario.setFotoRef(almacenamiento.guardar(avatar(creados.size()), "avatar-seed.png"));
             usuarioRepo.saveAndFlush(usuario);
 
             List<UUID> temaIds = resolverTemas(tutor.temas());
@@ -179,5 +190,20 @@ public class TutorSeedRunner implements CommandLineRunner {
 
     private static TemaRef tema(String nivel, String curso, String materia, String nombre) {
         return new TemaRef(nivel, curso, materia, nombre);
+    }
+
+    /** PNG liso de 96x96 (solo dev): distinto color por tutor para distinguirlos. */
+    private static byte[] avatar(int n) {
+        BufferedImage img = new BufferedImage(96, 96, BufferedImage.TYPE_INT_RGB);
+        var g = img.createGraphics();
+        g.setColor(Color.getHSBColor((n * 0.137f) % 1f, 0.45f, 0.85f));
+        g.fillRect(0, 0, 96, 96);
+        g.dispose();
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            ImageIO.write(img, "png", out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudo generar el avatar de seed", e);
+        }
     }
 }

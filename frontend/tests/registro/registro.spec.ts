@@ -4,7 +4,7 @@ import { mockApi, jsonRoute } from "../helpers";
 
 test.describe("Registro de Usuario adulto", () => {
   test(
-    "un adulto completa el wizard de 4 pasos y, si no se puede abrir la sesión sola, termina en login",
+    "un adulto completa el wizard de 5 pasos y, si no se puede abrir la sesión sola, termina en login",
     { tag: ["@critical", "@e2e", "@registro", "@REGISTRO-E2E-001"] },
     async ({ page }) => {
       await mockApi(page, {
@@ -50,6 +50,7 @@ test.describe("Registro de Usuario adulto", () => {
         email: "carla@example.com", password: "",
       });
       await registro.verificarIdentidad();
+      await registro.aceptarCondiciones();
       await registro.crearAcceso("unaClaveSegura1");
 
       await expect(page.getByRole("heading", { name: /Bienvenido\/a, Carla/ })).toBeVisible();

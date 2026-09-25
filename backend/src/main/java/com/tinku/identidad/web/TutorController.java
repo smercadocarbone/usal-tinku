@@ -129,7 +129,7 @@ public class TutorController {
         }
         UUID id = tutor.getId();
         return ResponseEntity.ok(new EstadoPerfilTutorResponse(
-                tutor.isActivoParaMatching(),
+                tutor.isActivoParaMatching() && tutor.getFotoRef() != null, // FR-ID-028: foto obligatoria
                 credencialService.obtenerUltima(id).map(CredencialAcademica::getEstado).orElse(null),
                 credencialService.existeAprobada(id),
                 perfilMatchingProvider.materiasYNivel(id).map(m -> !m.materias().isEmpty()).orElse(false),

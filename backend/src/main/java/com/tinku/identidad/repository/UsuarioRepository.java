@@ -39,12 +39,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      * restricción = Tutores con matching habilitado (CAP aprobado en M1) y
      * cuenta activa. `activo_para_matching` es exactamente donde M9 apaga el
      * matching al sancionar (ver Usuario#activoParaMatching), así que leer este
-     * flag ES la exclusión de suspendidos sin duplicar estado.
+     * flag ES la exclusión de suspendidos sin duplicar estado. FR-ID-028 (2026-09-25): sin
+     * foto de perfil el Tutor no aparece en búsquedas (la foto es obligatoria).
      */
     @Query("""
             select u.id from Usuario u
              where u.tipo = com.tinku.identidad.model.TipoUsuario.TUTOR
                and u.activoParaMatching = true
+               and u.fotoRef is not null
                and u.estadoCuenta = com.tinku.identidad.model.EstadoCuenta.ACTIVA
             """)
     List<UUID> tutoresActivosParaMatching();
@@ -58,6 +60,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
             select u.id from Usuario u
              where u.id in :ids
                and u.activoParaMatching = true
+               and u.fotoRef is not null
                and u.estadoCuenta = com.tinku.identidad.model.EstadoCuenta.ACTIVA
             """)
     List<UUID> idsActivosParaMatching(@Param("ids") Collection<UUID> ids);

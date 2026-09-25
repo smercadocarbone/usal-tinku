@@ -33,6 +33,7 @@ _Como_ persona adulta, _quiero_ crear una cuenta, _para_ usar la plataforma para
 - **Dado** que el DNI ya esté registrado por otra cuenta, **cuando** eso se detecte, **entonces** el registro se rechaza con un mensaje claro, sin exponer a quién pertenece esa cuenta (FR-ID-018).
 - **Dado** que la persona declare sus datos, **cuando** esté por crear la cuenta, **entonces** las credenciales de acceso son **email + contraseña**, y el email queda persistido como parte de la cuenta (credencial de login). El flujo pide el email recién después de verificar el documento, no antes.
 - **Dado** que la persona suba la foto de su DNI para verificar, **cuando** el sistema procese el OCR, **entonces** esa verificación previa **no crea la cuenta**: es solo la compuerta que habilita el paso de credenciales. La cuenta se crea en el envío final (con email + contraseña incluidos).
+- _(agregado 2026-09-25)_ **Dado** que la identidad quedó verificada, **cuando** pase al paso "Condiciones", **entonces** ve los **puntos clave de los Términos y Condiciones** —incluido cómo funciona la plataforma— como tarjetas con un título corto y grande, un párrafo breve y una ilustración al costado (no un bloque de texto), con contenido distinto para Usuario adulto y para Tutor, y no puede crear la cuenta sin marcar la aceptación explícita (FR-ID-031).
 
 ### US-1bis — Activar/desactivar capacidades desde Configuración
 
@@ -89,6 +90,7 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 
 - **Dado** que escriba una presentación de hasta 500 caracteres, **cuando** la guarde, **entonces** cualquier usuario que vea mi perfil la lee; si la dejo vacía, el perfil no muestra la sección (FR-ID-027).
 - **Dado** que suba una foto JPG o PNG, **cuando** el contenido real del archivo lo confirme (no la extensión ni lo que declara el navegador), **entonces** aparece en mi perfil público; cualquier otro formato se rechaza sin guardarse (FR-ID-028).
+- _(agregado 2026-09-25)_ **Dado** que no haya subido una foto de perfil, **cuando** un alumno o una familia busque tutores, **entonces** no aparezco en los resultados aunque tenga todo lo demás completo, y mi checklist de perfil me lo indica: la foto es **obligatoria** (FR-ID-028).
 - **Dado** que la presentación o la foto tengan contenido inapropiado o datos de contacto, **cuando** el Admin de Moderación y Seguridad las revise, **entonces** puede quitar cualquiera de las dos (FR-ID-029).
 
 ## 4. Requisitos Funcionales
@@ -117,7 +119,8 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 | FR-ID-026 | Un Tutor queda habilitado para Menores solo con un CAP `aprobado` y vigente (12 meses desde la emisión, Tabla_Tiempos_Tinku.md). _Implementado (T02, 2026-09-25): se exige al autorizar un Tutor, al reservar/aprobar/solicitar para un menor, en la búsqueda de un menor y al abrir la sala; el vencimiento cancela las clases futuras con menores con reembolso total (PT10)._ |
 | FR-ID-030 | Contraseña de al menos 10 caracteres, con letras y números, que no contenga el DNI (registro de adulto, menor y tutor; cambio y reseteo). Tras 5 intentos fallidos de login para un mismo DNI, bloqueo de 15 min que se duplica hasta 24 hs, con el mismo mensaje exista o no el DNI (FASE2-02, Tabla de Tiempos). |
 | FR-ID-027 | Presentación ("bio") opcional del Tutor, hasta 500 caracteres, visible en su perfil público (U1). |
-| FR-ID-028 | Foto opcional del Tutor en su perfil público: solo JPG o PNG verificado por contenido, mismo tamaño máximo que la Credencial; se sirve autenticada y nunca como URL pública del almacenamiento (U1). |
+| FR-ID-028 | _(enmendado 2026-09-25)_ Foto **obligatoria** del Tutor en su perfil público: sin foto no aparece en búsquedas ni recomendaciones (el filtro vive en la consulta de candidatos del matching). Solo JPG o PNG verificado por contenido, mismo tamaño máximo que la Credencial; se sirve autenticada y nunca como URL pública del almacenamiento (U1). |
+| FR-ID-031 | _(2026-09-25)_ El registro (adulto y Tutor) incluye un paso "Condiciones" con los puntos clave de los Términos y Condiciones en tarjetas (título, párrafo breve, ilustración) y aceptación explícita obligatoria. Los plazos que se citan salen de la Tabla de Tiempos. El texto legal completo lo redacta la asesoría legal antes del lanzamiento. |
 | FR-ID-029 | El Admin de Moderación y Seguridad puede quitar la presentación y/o la foto de un Tutor (U1). |
 
 ## 5. Reglas de Negocio Aplicables
