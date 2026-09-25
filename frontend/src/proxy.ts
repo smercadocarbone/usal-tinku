@@ -10,7 +10,7 @@ import { COOKIE_NAME } from "@/lib/auth";
  * firma acá obligaría a repartir el secreto del JWT al frontend, sin ganar protección.
  * La cookie es la "copia" del token que setSession() escribe en el login (ver src/lib/auth.ts).
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
 

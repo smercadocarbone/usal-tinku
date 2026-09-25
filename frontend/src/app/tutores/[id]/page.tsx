@@ -1,5 +1,7 @@
 "use client";
 
+import { useParams } from "next/navigation";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, ChevronLeft, Flag, IdCard, ShieldCheck, UserX } from "lucide-react";
@@ -38,7 +40,8 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   );
 }
 
-export default function TutorPerfilPage({ params }: { params: { id: string } }) {
+export default function TutorPerfilPage() {
+  const params = useParams<{ id: string }>();
   const sesion = useSesion();
   const payload = sesion?.payload;
   const toast = useToast();

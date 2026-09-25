@@ -52,14 +52,14 @@ print(d.date().isoformat(), d.isoformat())
 PY
 )"
 
-paso "Tutor: tarifa y franja de mañana 17–21"
+paso "Tutor: tarifa y franja de mañana 17–20 (máximo 180 min, FR-RES-024)"
 TUTOR_TOKEN=$(login "$TUTOR_DNI" "$TUTOR_PASSWORD") || falla "login del tutor del seed"
 TUTOR_ID=$(psql_tAc "SELECT id FROM identidad.usuarios WHERE dni='$TUTOR_DNI'")
 curl -sf -X PUT "$BASE/api/pagos/tarifa" -H "Authorization: Bearer $TUTOR_TOKEN" \
     -H 'Content-Type: application/json' -d '{"precioHora":12000}' > /dev/null || falla "PUT tarifa"
 curl -sf -X POST "$BASE/api/tutores/franjas" -H "Authorization: Bearer $TUTOR_TOKEN" \
     -H 'Content-Type: application/json' \
-    -d "{\"fechaEspecifica\":\"$FECHA\",\"horaInicio\":\"17:00\",\"horaFin\":\"21:00\"}" > /dev/null \
+    -d "{\"fechaEspecifica\":\"$FECHA\",\"horaInicio\":\"17:00\",\"horaFin\":\"20:00\"}" > /dev/null \
     || falla "POST franja"
 
 paso "Registro y login de un estudiante nuevo ($EST_DNI)"
@@ -74,7 +74,7 @@ paso "Búsqueda semántica: 'función cuadrática' tiene que traer a la tutora d
 RESULTADOS=$(curl -sf -X POST "$BASE/api/busquedas" -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' -d '{"texto_busqueda":"no entiendo la función cuadrática"}') \
     || falla "POST /api/busquedas"
-echo "$RESULTADOS" | json "'$TUTOR_ID' in [r['tutor_id'] for r in d]" | grep -q True \
+echo "$RESULTADOS" | json "'$TUTOR_ID' in [r['tutorId'] for r in d]" | grep -q True \
     || falla "la búsqueda no trajo a la tutora: $RESULTADOS"
 
 paso "Reserva de 60 min mañana 18:00"
