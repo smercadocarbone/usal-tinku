@@ -19,7 +19,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 2. **Comunicación entre módulos:** llamada síncrona in-process para flujos que necesitan respuesta inmediata; evento de dominio en memoria (`ApplicationEventPublisher` o equivalente) para efectos secundarios de un solo disparo con múltiples reacciones. Prohibido introducir un message broker externo (Kafka, RabbitMQ, SQS...).
 3. **Ningún timeout de negocio en memoria.** Escrow, kill-switch, cancelaciones, aprobaciones: todos con Quartz (u otro scheduler) persistido en la misma base. Si escribís un `Thread.sleep`, un `@Scheduled` sin persistencia, o un timer en memoria para algo que involucra plata o seguridad, parate y corregilo.
 4. **Ante dos soluciones que cumplen el mismo requisito, la más simple.** No justifiques una decisión técnica con "buena práctica genérica" — justificala contra 1 desarrollador y USD 0-100/mes, o no la tomes.
-5. **Minimización de datos.** No persistas video ni ningún dato más allá de lo que una regla de negocio ya aprobada necesita. El buffer del kill-switch es rotativo de 30s y se descarta salvo disparo — nunca grabación continua, bajo ninguna circunstancia ni como "feature futura".
+5. **Minimización de datos.** No persistas video ni ningún dato más allá de lo que una regla de negocio ya aprobada necesita. El buffer del kill-switch es rotativo de 30s y se descarta salvo disparo — nunca grabación continua, bajo ninguna circunstancia ni como "feature futura", **salvo la excepción de ADR-M3-04**: solo audio, solo con el adicional de resumen, solo entre adultos, con consentimiento de los dos, borrado al transcribir (24 hs como máximo). Video nunca; con un Menor, nunca.
 6. **Alcance cerrado a 9 módulos.** Si una tarea te lleva a considerar una función que no está en ningún Spec, no la agregues — señalalo y seguí.
 
 ## 2. Cuándo un ADR es obligatorio (no seguir sin uno)
@@ -71,7 +71,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 
 ## 8. Gobernanza de este archivo
 
-Este archivo refleja la Constitución v2.3. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
+Este archivo refleja la Constitución v2.4. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
 
 `docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan juntos o no se actualiza ninguno — la divergencia entre los dos fue AUD-030.
 

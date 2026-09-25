@@ -38,7 +38,10 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                               boolean puedePagar,
                               boolean puedeCancelar,
                               Boolean cancelarReembolsaTotal,
-                              Instant horarioFin) {
+                              Instant horarioFin,
+                              boolean resumenContratado,
+                              BigDecimal precioAdicionalResumen,
+                              BigDecimal montoTotal) {
 
     public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora) {
         boolean pendiente = r.getEstado() == EstadoReserva.PENDIENTE_PAGO;
@@ -60,6 +63,7 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                 r.getTutor().getNombre(), r.getTutor().getApellido(),
                 beneficiario.getNombre(), beneficiario.getApellido(),
                 r.getDuracionMinutos(),
-                vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin());
+                vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin(),
+                r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal());
     }
 }

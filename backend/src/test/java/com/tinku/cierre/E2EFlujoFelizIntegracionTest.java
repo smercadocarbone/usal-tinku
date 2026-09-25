@@ -26,14 +26,12 @@ import com.tinku.pagos.service.LiberacionEscrowService;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservasZonaHoraria;
-import com.tinku.resumen.model.ResumenSesion;
 import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.TranscriptSesionProveedor;
 import com.tinku.resumen.repository.ResumenSesionRepository;
 import com.tinku.resumen.service.ResumenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -67,6 +65,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -83,7 +82,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tutor → Solicitud del menor → aprobación del AR → preferencia + webhook de
  * MercadoPago (client mockeado) → Reserva CONFIRMADA que agenda la Sesión por
  * evento (M4→M3) → `sesion.finalizada` (US-8) → escrow retenido con liberación a
- * +24hs (M5) → resumen LLM (M6) → calificación pública + perfil (M7).
+ * +24hs (M5) → sin resumen, porque con un menor nunca se graba (M6, ADR-M3-04) →
+ * calificación pública + perfil (M7).
  *
  * <p>Únicas excepciones al "todas las APIs": la simulación del JOIN de LiveKit
  * (proveedor externo) se siembra por repositorio igual que
@@ -399,18 +399,11 @@ class E2EFlujoFelizIntegracionTest {
                 .isBetween(Instant.now().plus(Duration.ofHours(23)),
                         Instant.now().plus(Duration.ofHours(25)));
 
-        // M6 — el resumen se genera con el transcript YA anonimizado (T-M6-08).
+        // M6 — clase con un menor: el adicional de resumen nunca se ofrece (T09, Art. II /
+        // ADR-M3-04), así que no hay audio ni resumen, y nada sale hacia el proveedor.
         resumenService.ejecutarGenerar(sesion.getId());
-        ResumenSesion fila = resumenRepository.findBySesionId(sesion.getId()).orElseThrow();
-        assertThat(fila.getEstado()).isEqualTo(ResumenSesion.ESTADO_GENERADO);
-        assertThat(fila.getResumenFinal()).isEqualTo("Resumen de la clase.");
-        ArgumentCaptor<ResumenProveedor.ResumenRequest> captor =
-                ArgumentCaptor.forClass(ResumenProveedor.ResumenRequest.class);
-        verify(resumenProveedor).generarResumen(captor.capture());
-        assertThat(captor.getValue().transcriptAnonimizado())
-                .doesNotContain("Pablo", "María", "gmail", "5555")
-                .contains("[nombre]", "[telefono]", "[email]", "[pago]");
-        assertThat(fila.getTranscriptAnonimizado()).isEqualTo(captor.getValue().transcriptAnonimizado());
+        assertThat(resumenRepository.findBySesionId(sesion.getId())).isNotPresent();
+        verify(resumenProveedor, never()).generarResumen(any());
 
         // M5 — las 24hs del escrow se liberan automáticamente (disparo vencido).
         retenida.setLiberarAt(Instant.now().minusSeconds(60));

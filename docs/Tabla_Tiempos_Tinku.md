@@ -12,6 +12,7 @@
 | Tolerancia de gracia al fin de la sesión          | +5 min                   | Corte automático si nadie finalizó manualmente                                                                        | M3     |
 | Buffer rotativo de evidencia (kill-switch)        | 30 seg                   | Local, no persistente salvo disparo                                                                                   | M3     |
 | Retención del clip de evidencia _(AUD-021)_       | 30 días desde la resolución de la Alerta | BR-KS-02. Job de Quartz persistido por Alerta borra el archivo y la referencia                         | M3, M9 |
+| Retención máxima del audio del resumen _(ADR-M3-04)_ | Hasta obtener el transcript; 24 hs como máximo desde el fin de la sesión | Job de Quartz persistido por Sesión borra el audio aunque el resumen falle | M3, M6 |
 | Timeout de reserva sin pagar                      | 15 min                   | `pendiente_pago` vence y libera el slot                                                                               | M4     |
 | Cancelación sin penalidad                         | 24 hs antes              | —                                                                                                                     | M4     |
 | Recordatorio de sesión (T-24h)                    | 24 hs antes              | No se dispara si la reserva se hizo con menos margen                                                                  | M4     |

@@ -82,6 +82,7 @@ public class ReservaService {
     private final Scheduler scheduler;
     private final PoliticaSesionesMenores politicaMenores;
     private final Notificador notificador;
+    private final AdicionalResumen adicionalResumen;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
@@ -93,7 +94,8 @@ public class ReservaService {
                           ApplicationEventPublisher events,
                           Scheduler scheduler,
                           PoliticaSesionesMenores politicaMenores,
-                          Notificador notificador) {
+                          Notificador notificador,
+                          AdicionalResumen adicionalResumen) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -105,6 +107,7 @@ public class ReservaService {
         this.scheduler = scheduler;
         this.politicaMenores = politicaMenores;
         this.notificador = notificador;
+        this.adicionalResumen = adicionalResumen;
     }
 
     /**
@@ -128,7 +131,7 @@ public class ReservaService {
         }
 
         Reserva reserva = crearReserva(adultoResponsable, menor, solicitud.getTutor(),
-                solicitud.getHorarioPropuesto(), solicitud.getDuracionMinutos());
+                solicitud.getHorarioPropuesto(), solicitud.getDuracionMinutos(), false);
 
         solicitud.setEstado(EstadoSolicitud.CONVERTIDA);
         solicitudRepo.save(solicitud);
@@ -150,7 +153,8 @@ public class ReservaService {
 
         if (request.beneficiarioId() == null) {
             exigirCapacidadEstudiante(pagador);
-            return crearReserva(pagador, pagador, tutor, request.horario(), request.duracionMinutos());
+            return crearReserva(pagador, pagador, tutor, request.horario(), request.duracionMinutos(),
+                    request.conResumen());
         }
 
         exigirCapacidadAdultoResponsable(pagador);
@@ -165,7 +169,8 @@ public class ReservaService {
                 pagador.getId(), beneficiario.getId()).contains(request.tutorId())) {
             throw new TutorNoAutorizadoParaMenorException();
         }
-        return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos());
+        return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos(),
+                request.conResumen());
     }
 
     /**
@@ -419,7 +424,7 @@ public class ReservaService {
     }
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
-                                 Instant horario, Integer duracionMinutos) {
+                                 Instant horario, Integer duracionMinutos, boolean conResumen) {
         // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {
@@ -442,6 +447,11 @@ public class ReservaService {
                     "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
 
+        // T09: el adicional de resumen se valida en el backend (Art. II: nunca con un menor).
+        if (conResumen) {
+            adicionalResumen.validarContratacion(pagador, beneficiario, tutor);
+        }
+
         // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
         Reserva reserva = new Reserva();
         reserva.setPagador(pagador);
@@ -452,6 +462,10 @@ public class ReservaService {
         reserva.setPrecio(tarifaProveedor.precioHora(tutor.getId())
                 .multiply(BigDecimal.valueOf(duracionMinutos))
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
+        if (conResumen) {
+            reserva.setResumenContratado(true);
+            reserva.setPrecioAdicionalResumen(adicionalResumen.precio()); // congelado como el precio
+        }
         reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
         Reserva guardada = reservaRepo.save(reserva);
         programarTimeoutPago(guardada);

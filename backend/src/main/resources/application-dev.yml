@@ -7,3 +7,10 @@ spring:
     url: jdbc:postgresql://localhost:5432/tinku
     username: ${DB_USER:tinku_dev}
     password: ${DB_PASSWORD:changeme}
+
+tinku:
+  # T09: en desarrollo el adicional de resumen está habilitado para poder probarlo
+  # (en prod queda apagado hasta tener el texto legal de la cláusula, ADR-M3-04).
+  resumen:
+    adicional:
+      habilitado: true

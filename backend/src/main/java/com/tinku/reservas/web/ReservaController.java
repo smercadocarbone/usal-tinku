@@ -2,6 +2,7 @@ package com.tinku.reservas.web;
 
 import com.tinku.identidad.model.Usuario;
 import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.service.AdicionalResumen;
 import com.tinku.reservas.service.ReservaService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -29,8 +31,11 @@ public class ReservaController {
 
     private final ReservaService reservaService;
     private final UsuarioActual usuarioActual;
+    private final AdicionalResumen adicionalResumen;
 
-    public ReservaController(ReservaService reservaService, UsuarioActual usuarioActual) {
+    public ReservaController(ReservaService reservaService, UsuarioActual usuarioActual,
+                             AdicionalResumen adicionalResumen) {
+        this.adicionalResumen = adicionalResumen;
         this.reservaService = reservaService;
         this.usuarioActual = usuarioActual;
     }
@@ -71,5 +76,15 @@ public class ReservaController {
         Usuario yo = usuarioActual.obtener(authentication);
         reservaService.cancelar(yo, id);
         return ResponseEntity.ok(reservaService.vista(yo, id));
+    }
+
+    public record AdicionalResumenResponse(boolean disponible, java.math.BigDecimal precio) {
+    }
+
+    /** T09: si este Tutor ofrece el resumen automático y a qué precio (para el checkbox al reservar). */
+    @GetMapping("/adicional-resumen")
+    public ResponseEntity<AdicionalResumenResponse> adicionalResumen(@RequestParam UUID tutorId) {
+        return ResponseEntity.ok(new AdicionalResumenResponse(
+                adicionalResumen.disponibleCon(tutorId), adicionalResumen.precio()));
     }
 }

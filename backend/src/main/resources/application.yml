@@ -145,14 +145,24 @@ tinku:
     # valor para desarrollo/pruebas; si queda vacio, crear una Reserva falla con
     # mensaje claro (mismo enfoque que livekit sin credenciales, T-000-06).
     tarifa-stub: ${RESERVAS_TARIFA_STUB:}
+  # PT5 (T08): version vigente de la clausula de grabacion de solo audio. Al cambiar el
+  # texto se sube la version y todos vuelven a aceptar.
+  clausulas:
+    grabacion-audio:
+      version: ${TINKU_CLAUSULA_GRABACION_VERSION:borrador-1}
   menores:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
     sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}
   # M6 — resumen automatico con GPT-4o (ADR-M6-03). Solo LLM_PROVEEDOR=gpt-4o
-  # activa OpenAI; vacio u otro valor = fail-closed, NO sale nada hacia ningun
-  # modelo. Hoy no hay transcript (AUD-024/T08), asi que aun activo no se envia nada.
+  # activa OpenAI (transcripcion + resumen); vacio u otro valor = fail-closed, NO sale
+  # nada hacia ningun modelo.
   resumen:
+    # T09 (DT3/PT5): adicional pago. Apagado hasta tener el texto legal de la clausula
+    # de grabacion (ADR-M3-04) — no habilitar en prod antes.
+    adicional:
+      habilitado: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:false}
+      precio-ars: ${TINKU_RESUMEN_ADICIONAL_PRECIO_ARS:770}
     llm:
       proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
       api-key: ${LLM_API_KEY:}       # API key de OpenAI

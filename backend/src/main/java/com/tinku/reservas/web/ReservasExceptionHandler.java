@@ -24,6 +24,7 @@ import com.tinku.reservas.service.TutorNoAutorizadoParaMenorException;
 import com.tinku.reservas.service.TutorNoEncontradoException;
 import com.tinku.reservas.service.TutorPendienteCalificacionException;
 import com.tinku.reservas.service.VentanaMinimaException;
+import com.tinku.reservas.service.AdicionalResumenNoDisponibleException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +55,8 @@ public class ReservasExceptionHandler {
 
     @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class,
             DuracionFranjaInvalidaException.class, DuracionMinutosInvalidaException.class,
-            ReservaNoReprogramableException.class, ReservaNoCancelableException.class})
+            ReservaNoReprogramableException.class, ReservaNoCancelableException.class,
+            AdicionalResumenNoDisponibleException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));

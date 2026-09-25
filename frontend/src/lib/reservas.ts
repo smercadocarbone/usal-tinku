@@ -29,6 +29,11 @@ export interface Reserva {
   puedeCancelar?: boolean;
   /** Si cancelar AHORA devuelve todo al pagador (`PoliticaCancelacion`). */
   cancelarReembolsaTotal?: boolean | null;
+  /** T09: adicional de resumen automático contratado. */
+  resumenContratado?: boolean;
+  precioAdicionalResumen?: number | null;
+  /** Lo que se paga: clase + adicional. */
+  montoTotal?: number | null;
 }
 
 /** Solicitud de clase de un menor (`/api/solicitudes`). */

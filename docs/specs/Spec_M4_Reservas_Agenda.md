@@ -136,3 +136,12 @@ _Como_ Estudiante, Tutor, o Adulto Responsable, _quiero_ recibir recordatorios a
 ---
 
 **Estado: APROBADO.**
+
+
+## Adicional de resumen al reservar (T09, 2026-09-25)
+
+`POST /api/reservas` acepta `resumenContratado: true`. El backend responde **422** si el adicional
+está deshabilitado, si el beneficiario es Menor (Art. II), si el Tutor no aceptó la cláusula de
+grabación o si el pagador no la aceptó. El precio del adicional se congela en la Reserva
+(`precio_adicional_resumen`) y `ReservaResponse` expone `montoTotal`. Las Solicitudes de un Menor
+nunca llevan el adicional. `GET /api/reservas/adicional-resumen?tutorId=` dice si el Tutor lo ofrece.

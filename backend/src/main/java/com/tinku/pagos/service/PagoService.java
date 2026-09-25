@@ -97,8 +97,11 @@ public class PagoService {
         if (!pasarela.estaHabilitada()) {
             return confirmarEnBypass(reserva, comision);
         }
+        // T09: se cobra sesión + adicional; el adicional va íntegro a la plataforma
+        // (marketplace_fee = comisión sobre la sesión + adicional). La comisión NO se
+        // calcula sobre el adicional.
         return mercadopago.crearPreferencia(new PreferenciaRequest(
-                reserva.getId(), reserva.getPrecio(), comision, DESCRIPCION_ITEM));
+                reserva.getId(), reserva.montoTotal(), comision.add(adicional(reserva)), DESCRIPCION_ITEM));
     }
 
     /**
@@ -115,8 +118,9 @@ public class PagoService {
             Transaccion transaccion = new Transaccion();
             transaccion.setReservaId(reserva.getId());
             transaccion.setMpPaymentId("bypass-" + reserva.getId());
-            transaccion.setMontoBruto(reserva.getPrecio());
+            transaccion.setMontoBruto(reserva.montoTotal());
             transaccion.setComisionPlataforma(comision);
+            transaccion.setMontoAdicionalResumen(adicional(reserva));
             transaccion.setEnBypass(true);
             transaccionRepo.save(transaccion);
         }
@@ -165,5 +169,10 @@ public class PagoService {
         tarifa.setPrecioHora(precioHora);
         tarifa.setUpdatedAt(Instant.now());
         return tarifaTutorRepo.save(tarifa);
+    }
+
+    /** T09: el adicional de resumen de la Reserva, o cero. */
+    static BigDecimal adicional(Reserva reserva) {
+        return reserva.getPrecioAdicionalResumen() == null ? BigDecimal.ZERO : reserva.getPrecioAdicionalResumen();
     }
 }

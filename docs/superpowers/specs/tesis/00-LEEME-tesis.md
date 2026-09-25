@@ -90,7 +90,7 @@ la tarea, y se tilda en el commit que la cierra.
 | PT8 | ¿Cuándo y cómo se pregunta el NPS (I-04)? | **Una vez por usuario al cierre del piloto**, in-app, pregunta 0–10. | **Una vez al cierre del piloto, in-app**, 0–10. _(2026-09-23)_ |
 | PT9 | ¿Dónde escribe LiveKit Cloud el audio grabado? (no escribe en un disco local: necesita un endpoint compatible con S3) | **Supabase Storage** (compatible con S3, incluido en el plan Pro), bucket privado. | **Garage autoalojado en el VPS** (compatible con S3). **No MinIO:** su edición Community fue archivada en feb-2026 y no recibe parches de seguridad. Requiere ADR. _(2026-09-23)_ |
 | PT10 | Si vence o se revoca el CAP de un Tutor con reservas confirmadas con Menores | Cancelar esas reservas con **reembolso total** y aviso al Adulto Responsable; el Tutor sigue habilitado para adultos. | **Cancelar con reembolso total** y aviso al Adulto Responsable. _(2026-09-23)_ |
-| TS1 | ¿Cómo lee y borra el backend el audio en Garage? (T08) | **AWS SDK for Java v2, solo `s3` + `url-connection-client`**, declarado en ADR-000-06. Implementar la firma SigV4 a mano es la fuente de bugs más probable de T08. | _pendiente_ |
+| TS1 | ¿Cómo lee y borra el backend el audio en Garage? (T08) | **AWS SDK for Java v2, solo `s3` + `url-connection-client`**, declarado en ADR-000-06. Implementar la firma SigV4 a mano es la fuente de bugs más probable de T08. | _Sin objeto (2026-09-25, ADR-M3-04): el audio lo graba el navegador del Tutor y se guarda en el almacenamiento existente; no hay Garage ni SDK de S3._ |
 
 ---
 

@@ -836,3 +836,47 @@ export function borrarFotoTutor(): Promise<unknown> {
 export function moderarPerfilTutor(tutorId: string, que: "bio" | "foto"): Promise<void> {
   return api.delete(`/api/admin/moderacion/tutores/${tutorId}/${que}`);
 }
+
+// ---------------------------------------------------------------- T08/T09: resumen automático
+
+/** T09: si el tutor ofrece el resumen automático y a qué precio (ADR-M3-04). */
+export interface AdicionalResumen {
+  disponible: boolean;
+  precio: number;
+}
+
+export function getAdicionalResumen(tutorId: string): Promise<AdicionalResumen> {
+  return api.get<AdicionalResumen>(`/api/reservas/adicional-resumen?tutorId=${encodeURIComponent(tutorId)}`);
+}
+
+export const CLAUSULA_GRABACION = "GRABACION_AUDIO_RESUMEN";
+
+export interface EstadoClausula {
+  clausula: string;
+  versionVigente: string;
+  aceptada: boolean;
+}
+
+export function getClausula(clausula: string): Promise<EstadoClausula> {
+  return api.get<EstadoClausula>(`/api/usuarios/me/clausulas/${clausula}`);
+}
+
+export function aceptarClausula(clausula: string): Promise<EstadoClausula> {
+  return api.post<EstadoClausula>(`/api/usuarios/me/clausulas/${clausula}`);
+}
+
+/** ADR-M3-04: el navegador del tutor sube el audio de la clase (cuerpo crudo, no multipart). */
+export async function subirAudioResumen(sesionId: string, audio: Blob): Promise<void> {
+  const headers = headersConToken();
+  headers.set("Content-Type", audio.type.startsWith("audio/ogg") ? "audio/ogg" : "audio/webm");
+  const res = await fetch(`${API_BASE_URL}/api/sesiones/${sesionId}/audio`, {
+    method: "POST",
+    headers,
+    body: audio,
+    keepalive: false,
+  });
+  if (!res.ok) {
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
+  }
+}

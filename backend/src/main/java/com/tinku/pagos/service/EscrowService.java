@@ -166,15 +166,16 @@ public class EscrowService {
             reembolsarPagoTardio(pago, reserva);
             return;
         }
-        // Fail-closed: monto pagado ≠ precio congelado → no se confirma.
-        if (pago.monto() == null || pago.monto().compareTo(reserva.getPrecio()) != 0) {
+        // Fail-closed: monto pagado ≠ precio congelado (+ adicional de resumen, T09) → no se confirma.
+        if (pago.monto() == null || pago.monto().compareTo(reserva.montoTotal()) != 0) {
             throw new PagoInconsistenteException(reserva.getId(), mpPaymentId);
         }
         Transaccion transaccion = new Transaccion();
         transaccion.setReservaId(reserva.getId());
         transaccion.setMpPaymentId(mpPaymentId);
-        transaccion.setMontoBruto(reserva.getPrecio());
+        transaccion.setMontoBruto(reserva.montoTotal());
         transaccion.setComisionPlataforma(comision.calcular(reserva.getPrecio()));
+        transaccion.setMontoAdicionalResumen(PagoService.adicional(reserva));
         try {
             // flush inmediato: fuerza el INSERT ahora (no en el commit del
             // proxy transaccional) para poder capturar la violación de unicidad

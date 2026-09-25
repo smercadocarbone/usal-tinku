@@ -162,3 +162,18 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 ---
 
 **Estado: APROBADO.**
+
+
+## Grabación de solo audio para el resumen (ADR-M3-04, 2026-09-25)
+
+Única excepción a la prohibición de grabar (Constitución v2.4, Art. V). Condiciones, todas a la vez:
+solo audio, la Reserva contrató el adicional de resumen (T09), ningún participante es Menor, y
+Tutor y pagador aceptaron la cláusula `GRABACION_AUDIO_RESUMEN` en su versión vigente.
+
+- **Quién graba:** el navegador del Tutor (MediaRecorder, Opus 16 kbps). El token de la sala trae
+  `grabarAudioResumen` y la sala muestra "Grabando solo audio para el resumen".
+- **Subida:** `POST /api/sesiones/{id}/audio` (cuerpo `audio/webm` u `audio/ogg`, ≤ 25 MB, una sola
+  vez, solo el Tutor). El backend vuelve a controlar las cuatro condiciones.
+- **Evento:** `AudioResumenRecibidoEvent` (en memoria, lo consume M6 para disparar la generación).
+  No es un `SesionEvento`: no cambia el estado de la Sesión.
+- **Borrado:** al obtener el transcript, o a las 24 hs del fin como máximo (Tabla de Tiempos).

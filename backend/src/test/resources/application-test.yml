@@ -16,6 +16,10 @@ spring:
             idleWaitTime: 1000
 
 tinku:
+  # T09: la suite prueba el adicional de resumen (en prod queda apagado hasta el texto legal).
+  resumen:
+    adicional:
+      habilitado: true
   # FASE2-02: la suite hace cientos de registros/logins desde 127.0.0.1. Límites
   # altos para no depender del filtro; RateLimitYBloqueoLoginIntegracionTest los
   # prueba con valores bajos propios. NUNCA subir los de producción por esto.

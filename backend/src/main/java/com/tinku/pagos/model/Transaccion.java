@@ -70,4 +70,12 @@ public class Transaccion {
      */
     @Column(name = "en_bypass", nullable = false)
     private boolean enBypass = false;
+
+    /** T09: parte del cobro que es el adicional de resumen (va íntegra a la plataforma). */
+    @Column(name = "monto_adicional_resumen", nullable = false, precision = 10, scale = 2)
+    private BigDecimal montoAdicionalResumen = BigDecimal.ZERO;
+
+    /** BR-PAG-11: reembolso parcial del adicional cuando el resumen falla. */
+    @Column(name = "adicional_reembolsado_at")
+    private Instant adicionalReembolsadoAt;
 }

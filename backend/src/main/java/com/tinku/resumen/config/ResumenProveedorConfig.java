@@ -2,7 +2,11 @@ package com.tinku.resumen.config;
 
 import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.ResumenProveedorFailClosed;
+import com.tinku.aula.AudioResumenService;
 import com.tinku.resumen.port.ResumenProveedorOpenAi;
+import com.tinku.resumen.port.TranscriptSesionProveedor;
+import com.tinku.resumen.port.TranscriptSesionProveedorNoDisponible;
+import com.tinku.resumen.port.TranscriptSesionProveedorOpenAi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,5 +40,18 @@ public class ResumenProveedorConfig {
                     + "gpt-4o): el resumen falla cerrado.", proveedor);
         }
         return new ResumenProveedorFailClosed();
+    }
+
+    /** ADR-M3-04: el transcript sale del audio de la clase con la misma cuenta de OpenAI. */
+    @Bean
+    TranscriptSesionProveedor transcriptSesionProveedor(
+            @Value("${tinku.resumen.llm.proveedor:}") String proveedor,
+            @Value("${tinku.resumen.llm.api-key:}") String apiKey,
+            @Value("${tinku.resumen.llm.base-url:https://api.openai.com}") String baseUrl,
+            AudioResumenService audio) {
+        if ("gpt-4o".equals(proveedor)) {
+            return new TranscriptSesionProveedorOpenAi(baseUrl, apiKey, audio);
+        }
+        return new TranscriptSesionProveedorNoDisponible();
     }
 }

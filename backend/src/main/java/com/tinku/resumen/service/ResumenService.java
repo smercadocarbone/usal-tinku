@@ -5,12 +5,16 @@ import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.Usuario;
+import com.tinku.aula.AudioResumenService;
+import com.tinku.aula.evento.AudioResumenRecibidoEvent;
 import com.tinku.aula.evento.SesionFinalizadaEvent;
 import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
+import com.tinku.resumen.jobs.PurgaAudioResumenJob;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
 import com.tinku.resumen.jobs.ReintentoResumenJob;
 import com.tinku.resumen.model.ResumenSesion;
 import com.tinku.resumen.port.PromptResumen;
+import com.tinku.resumen.port.ReembolsoAdicionalResumen;
 import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.ResumenProveedorNoConfiguradoException;
 import com.tinku.resumen.port.TranscriptSesionProveedor;
@@ -107,6 +111,9 @@ public class ResumenService {
      *  SLA de <=10min de FR-SUM-007. Los reintentos usan 5/15/60min (BACKOFF). */
     private static final Duration DEMORA_PRIMERA_GENERACION = Duration.ofSeconds(30);
 
+    /** Tabla_Tiempos: "Retención máxima del audio del resumen" — 24 hs desde el fin (PT6). */
+    static final Duration RETENCION_MAXIMA_AUDIO = Duration.ofHours(24);
+
     private final ResumenSesionRepository resumenRepo;
     private final SesionAprendizajeRepository sesionRepo;
     private final ReservaRepository reservaRepo;
@@ -116,6 +123,8 @@ public class ResumenService {
     private final TranscriptSesionProveedor transcriptProveedor;
     private final ResumenProveedor proveedor;
     private final Scheduler scheduler;
+    private final AudioResumenService audioResumen;
+    private final ReembolsoAdicionalResumen reembolsoAdicional;
 
     public ResumenService(ResumenSesionRepository resumenRepo,
                           SesionAprendizajeRepository sesionRepo,
@@ -125,7 +134,9 @@ public class ResumenService {
                           AnonimizadorTranscript anonimizador,
                           TranscriptSesionProveedor transcriptProveedor,
                           ResumenProveedor proveedor,
-                          Scheduler scheduler) {
+                          Scheduler scheduler,
+                          AudioResumenService audioResumen,
+                          ReembolsoAdicionalResumen reembolsoAdicional) {
         this.resumenRepo = resumenRepo;
         this.sesionRepo = sesionRepo;
         this.reservaRepo = reservaRepo;
@@ -135,6 +146,8 @@ public class ResumenService {
         this.transcriptProveedor = transcriptProveedor;
         this.proveedor = proveedor;
         this.scheduler = scheduler;
+        this.audioResumen = audioResumen;
+        this.reembolsoAdicional = reembolsoAdicional;
     }
 
     // ------------------------------------------------------- consulta (T-M6-08)
@@ -187,13 +200,42 @@ public class ResumenService {
     @EventListener
     @Transactional
     public void onSesionFinalizada(SesionFinalizadaEvent event) {
-        sesionRepo.findByReservaId(event.getReservaId())
-                .filter(s -> s.getDuracionEfectivaSegundos() != null
-                        && s.getDuracionEfectivaSegundos() >= DURACION_MINIMA_SEGUNDOS)
-                .ifPresent(sesion -> crearFilaOElegirSuspendido(sesion.getId()));
+        // FR-SUM-001 (T09): el resumen es un adicional pago — sin contratarlo no se genera.
+        Reserva reserva = reservaRepo.findById(event.getReservaId()).orElse(null);
+        if (reserva == null || !reserva.isResumenContratado()) {
+            return;
+        }
+        SesionAprendizaje sesion = sesionRepo.findByReservaId(event.getReservaId()).orElse(null);
+        if (sesion == null) {
+            return;
+        }
+        // PT6: el tope de 24 hs corre desde el fin, llegue o no el audio.
+        programarPurgaAudio(sesion.getId(), Instant.now().plus(RETENCION_MAXIMA_AUDIO));
+        if (sesion.getDuracionEfectivaSegundos() == null
+                || sesion.getDuracionEfectivaSegundos() < DURACION_MINIMA_SEGUNDOS) {
+            // Clase corta: no hay resumen (Tabla_Tiempos). El adicional se reembolsa.
+            reembolsoAdicional.reembolsarAdicional(reserva.getId());
+            audioResumen.borrar(sesion.getId());
+            return;
+        }
+        crearFilaOElegirSuspendido(sesion.getId(), sesion.getAudioReferencia() != null);
     }
 
-    private void crearFilaOElegirSuspendido(UUID sesionId) {
+    /**
+     * ADR-M3-04: llegó el audio. Si la fila ya espera (la clase terminó antes de la subida), se
+     * dispara la generación; si todavía no existe, la crea {@link #onSesionFinalizada} al ver el audio.
+     */
+    @EventListener
+    @Transactional
+    public void onAudioRecibido(AudioResumenRecibidoEvent event) {
+        programarPurgaAudio(event.sesionId(), Instant.now().plus(RETENCION_MAXIMA_AUDIO));
+        resumenRepo.findBySesionId(event.sesionId())
+                .filter(f -> ResumenSesion.ESTADO_PENDIENTE.equals(f.getEstado()))
+                .ifPresent(f -> programarReintento(event.sesionId(),
+                        Instant.now().plus(DEMORA_PRIMERA_GENERACION)));
+    }
+
+    private void crearFilaOElegirSuspendido(UUID sesionId, boolean audioDisponible) {
         if (resumenRepo.findBySesionId(sesionId).isPresent()) {
             return; // FR-SUM-006: una sola generacion por sesion.
         }
@@ -209,7 +251,10 @@ public class ResumenService {
             return;
         }
         resumenRepo.save(fila);
-        programarReintento(sesionId, Instant.now().plus(DEMORA_PRIMERA_GENERACION));
+        // TG2 (T08): el resumen espera al audio. Si todavía no llegó, lo dispara onAudioRecibido.
+        if (audioDisponible) {
+            programarReintento(sesionId, Instant.now().plus(DEMORA_PRIMERA_GENERACION));
+        }
     }
 
     // --------------------------------------------- generacion + reintentos (T-M6-05/06)
@@ -239,15 +284,28 @@ public class ResumenService {
                     sesionId);
             return;
         }
-        String crudo = transcriptProveedor.transcript(sesionId);
+        String crudo;
+        try {
+            crudo = transcriptProveedor.transcript(sesionId);
+        } catch (ResumenProveedorNoConfiguradoException e) {
+            agotarSinProveedor(fila);
+            return;
+        } catch (RuntimeException e) {
+            reintentarOAgotar(fila); // el audio queda hasta el próximo intento o el tope de 24 hs
+            return;
+        }
         if (crudo == null || crudo.trim().length() < MIN_LONGITUD_TRANSCRIPT) {
             fila.setEstado(ResumenSesion.ESTADO_FALLIDO);
             resumenRepo.save(fila);
+            reembolsarAdicional(sesionId);
+            audioResumen.borrar(sesionId);
             cancelarReintento(sesionId);
             log.warn("RESUMEN_SIN_CONTENIDO sesionId={} — transcript no util; no se genera "
                     + "resumen ni se inventa contenido (caso borde #2).", sesionId);
             return;
         }
+        // PT6 (ADR-M3-04): con el transcript en mano, el audio ya no hace falta.
+        audioResumen.borrar(sesionId);
         // FR-SUM-005: la anonimizacion corre SIEMPRE y antes de toda llamada saliente.
         String anonimizado = anonimizador.anonimizar(crudo);
         fila.setTranscriptAnonimizado(anonimizado);
@@ -267,17 +325,24 @@ public class ResumenService {
             cancelarReintento(sesionId);
             log.info("RESUMEN_GENERADO sesionId={}", sesionId);
         } catch (ResumenProveedorNoConfiguradoException e) {
-            // Fail-closed T-M6-05: sin proveedor la falla es deterministica; reintentar
-            // 1h no va a configurar el ADR. Queda el estado de "sin resumen", no fallida.
-            fila.setEstado(ResumenSesion.ESTADO_REINTENTO_AGOTADO);
-            fila.setProximoReintentoAt(null);
-            resumenRepo.save(fila);
-            cancelarReintento(sesionId);
-            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — falta LLM_PROVEEDOR=gpt-4o o LLM_API_KEY "
-                    + "(ADR-M6-03); el transcript anonimizado queda persistido.", sesionId);
+            agotarSinProveedor(fila);
         } catch (RuntimeException e) {
             reintentarOAgotar(fila);
         }
+    }
+
+    /** Fail-closed T-M6-05: sin proveedor la falla es determinística; reintentar no la
+     *  arregla. Queda el estado de "sin resumen", no fallida, y se reembolsa el adicional. */
+    private void agotarSinProveedor(ResumenSesion fila) {
+        UUID sesionId = fila.getSesionId();
+        fila.setEstado(ResumenSesion.ESTADO_REINTENTO_AGOTADO);
+        fila.setProximoReintentoAt(null);
+        resumenRepo.save(fila);
+        cancelarReintento(sesionId);
+        reembolsarAdicional(sesionId);
+        audioResumen.borrar(sesionId);
+        log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — falta LLM_PROVEEDOR=gpt-4o o LLM_API_KEY "
+                + "(ADR-M6-03).", sesionId);
     }
 
     /** FR-SUM-007: registra el fallo y reprograma con backoff (5/15/1h), o agota. */
@@ -296,6 +361,8 @@ public class ResumenService {
             fila.setEstado(ResumenSesion.ESTADO_REINTENTO_AGOTADO);
             resumenRepo.save(fila);
             cancelarReintento(fila.getSesionId());
+            reembolsarAdicional(fila.getSesionId());
+            audioResumen.borrar(fila.getSesionId());
             log.error("RESUMEN_REINTENTOS_AGOTADOS sesionId={} — sin resumen final; la sesion "
                     + "no se marca fallida (FR-SUM-007), queda para monitoreo.", fila.getSesionId());
         }
@@ -309,6 +376,59 @@ public class ResumenService {
         }
         return alertaRepo.existsBySesionIdAndEstado(sesionId,
                 AlertaSeguridad.ESTADO_PENDIENTE_REVISION);
+    }
+
+    // ------------------------------------------------ audio y adicional (T08/T09)
+
+    /**
+     * PT6: tope de 24 hs. Borra el audio si sigue ahí y, si el resumen nunca se generó (el
+     * audio no llegó o la generación sigue pendiente), lo deja fallido y reembolsa el adicional.
+     * Un resumen suspendido por seguridad no se toca: lo resuelve M9.
+     */
+    @Transactional
+    public void purgarAudio(UUID sesionId) {
+        audioResumen.borrar(sesionId);
+        resumenRepo.findBySesionId(sesionId)
+                .filter(f -> ResumenSesion.ESTADO_PENDIENTE.equals(f.getEstado()))
+                .ifPresent(f -> {
+                    f.setEstado(ResumenSesion.ESTADO_FALLIDO);
+                    f.setProximoReintentoAt(null);
+                    resumenRepo.save(f);
+                    cancelarReintento(sesionId);
+                    reembolsarAdicional(sesionId);
+                    log.warn("RESUMEN_SIN_AUDIO sesionId={} — pasaron 24 hs sin resumen; fallido y "
+                            + "adicional reembolsado (BR-PAG-11).", sesionId);
+                });
+    }
+
+    /** BR-PAG-11: reembolso parcial del adicional (idempotente en M5). */
+    private void reembolsarAdicional(UUID sesionId) {
+        sesionRepo.findById(sesionId)
+                .flatMap(s -> reservaRepo.findById(s.getReservaId()))
+                .filter(Reserva::isResumenContratado)
+                .ifPresent(r -> reembolsoAdicional.reembolsarAdicional(r.getId()));
+    }
+
+    void programarPurgaAudio(UUID sesionId, Instant disparo) {
+        TriggerKey key = triggerPurgaAudio(sesionId);
+        try {
+            if (scheduler.checkExists(key)) {
+                return; // el primero (fin de la clase) manda; no se estira el tope
+            }
+            JobDetail detail = JobBuilder.newJob(PurgaAudioResumenJob.class)
+                    .withIdentity(new JobKey("resumen-purga-audio-job-" + sesionId, GRUPO_JOB))
+                    .usingJobData(PurgaAudioResumenJob.PARAM_SESION_ID, sesionId.toString())
+                    .storeDurably()
+                    .build();
+            scheduler.scheduleJob(detail, trigger(key, disparo));
+        } catch (SchedulerException e) {
+            // Fail-closed (Art. V): un audio sin su tope de borrado no se acepta en silencio.
+            throw new IllegalStateException("No se pudo agendar el borrado del audio de la sesion " + sesionId, e);
+        }
+    }
+
+    public static TriggerKey triggerPurgaAudio(UUID sesionId) {
+        return TriggerKey.triggerKey("resumen-purga-audio-trigger-" + sesionId, GRUPO_JOB);
     }
 
     // --------------------------------------------------- recordatorio unico (T-M6-07)
