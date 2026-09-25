@@ -163,7 +163,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-M6-02: Listener de `sesion.finalizada` que valida duración ≥10min antes de crear cualquier registro.
 - [x] T-M6-03: Consulta a M9/M3 para verificar Denuncia/Alerta activa antes de generar (`suspendido_seguridad`).
 - [x] T-M6-04: Módulo de anonimización (regex + NER liviano) — **ejecutar y testear como componente aislado antes de conectarlo al pipeline de LLM.**
-- [x] T-M6-05: Integración con el proveedor de LLM elegido (audio directo o transcript, según ADR ya resuelto en la Constitución) — puerto fail-closed; ADR (T-FIN-03) sigue pendiente.
+- [x] T-M6-05: Integración con el proveedor de LLM elegido (audio directo o transcript, según ADR ya resuelto en la Constitución) — puerto fail-closed. _2026-09-25: proveedor GPT-4o (ADR-M6-03), activo con `LLM_PROVEEDOR=gpt-4o` + `LLM_API_KEY`; sigue sin generar resúmenes reales porque falta el transcript (AUD-024, T08)._
 - [x] T-M6-06: Job de reintento con el mismo patrón de backoff que M5 (reutilizar, no reinventar).
 - [x] T-M6-07: Job de recordatorio único a 24hs.
 - [x] T-M6-08: Tests: verificar que el transcript anonimizado nunca llega con datos personales al proveedor externo (test con datos de prueba que contengan nombres/teléfonos reales de prueba).
@@ -196,7 +196,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 
 - [x] T-FIN-01: Test end-to-end: alta de Adulto Responsable → alta de menor → autorización de Tutor → Solicitud → Reserva → pago → sesión → resumen → calificación — el flujo feliz completo, sin mocks en los puntos de integración entre módulos propios. (`com.tinku.cierre.E2EFlujoFelizIntegracionTest`).
 - [x] T-FIN-02: Test end-to-end de la rama de seguridad: sesión con menor → disparo simulado de kill-switch → suspensión → Alerta en M8 → resolución del Admin → efectos propagados a M1/M2/M4/M5. (`com.tinku.cierre.E2ERamaSeguridadIntegracionTest`; suite completa: 383 tests, 0 failures, 0 errors, 0 skipped — verificado con JDK 21 al cierre de FASE 0, 2026-09-21).
-- [x] T-FIN-03: Revisión final de ADRs — M1 (ADR-M1-01), M2 (ADR-M2-01) y M3 (ADR-M3-01) resueltos, con su archivo en `docs/adr/`. M5 (MercadoPago): decisión tomada (sandbox de test users para desarrollo, escrow); el salto a productivo queda pendiente por la infra (T-000) y no bloquea el cierre del código. M6 (LLM para resumen + transcripción): la elección GPT-4o vs. Gemini 2.0 Flash sigue pendiente de ADR (fila "Pendiente — ADR" en la Constitución); el código ya la aisló tras el puerto `ResumenProveedor` fail-closed, así que el cierre no la bloquea.
+- [x] T-FIN-03: Revisión final de ADRs — M1 (ADR-M1-01), M2 (ADR-M2-01) y M3 (ADR-M3-01) resueltos, con su archivo en `docs/adr/`. M5 (MercadoPago): decisión tomada (sandbox de test users para desarrollo, escrow); el salto a productivo queda pendiente por la infra (T-000) y no bloquea el cierre del código. M6 (LLM para resumen): GPT-4o, resuelto 2026-09-25 por ADR-M6-03; el código ya la aisló tras el puerto `ResumenProveedor` fail-closed, así que el cierre no la bloquea.
 
 ---
 

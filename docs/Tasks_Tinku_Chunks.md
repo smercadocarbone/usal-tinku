@@ -104,7 +104,7 @@ _(requiere M3 cerrado)_
 - [x] **Chunk M6-A** — Migración + listener de `sesion.finalizada` con validación de duración (T-M6-01, T-M6-02)
 - [x] **Chunk M6-B** — Verificación de Denuncia/Alerta activa antes de generar (T-M6-03)
 - [x] **Chunk M6-C** — Módulo de anonimización, aislado y testeado antes de conectar al pipeline (T-M6-04)
-- [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **el ADR de proveedor (GPT-4o vs. Gemini 2.0 Flash) sigue pendiente**, así que hoy no genera un resumen real, solo falla cerrado de forma segura. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
+- [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **proveedor GPT-4o decidido 2026-09-25 (ADR-M6-03)**, activo con `LLM_PROVEEDOR=gpt-4o`; sin transcript todavía no genera un resumen real. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
   _Auditoría 2026-09-21: además del ADR del proveedor, **falta el transcript**: `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre y M3 no genera transcript (sin LiveKit Egress). Elegir proveedor de LLM no desbloquea M6 por sí solo — AUD-024._
 - [x] **Chunk M6-E** — Recordatorio único a 24hs (T-M6-07)
 - [x] **Chunk M6-F** — Test de anonimización con datos reales de prueba (T-M6-08)
@@ -195,7 +195,7 @@ archivo antes de esta revisión era un falso negativo de tracking, no trabajo fa
 | M5-B (listeners de eventos de sesión) | M3-E, M9-D ✅                                      | Cerrado — M3-E/M9-D publican las clases definidas por M5 en `chunk/m5-b` (`sesion.*`, `denuncia.registrada`, `denuncia.resuelta` vía M5-C/D). |
 | M5-B (webhook MP real + confirmación) | M5-B ✅                                           | El webhook real con validación de firma reemplazó a `confirmar-pago-simulado` (stub M3-B dev/test) |
 | M3-C (endpoint backend del killswitch)| M3-C ✅ (T-M3-07)                                  | Rama decidida en backend, cerrado y testeado (`KillswitchIntegracionTest`). |
-| M6-D (proveedor LLM real)             | Pendiente — requiere ADR (GPT-4o vs. Gemini)       | Código detrás de puerto fail-closed; no bloqueante para el resto del sistema (T-FIN-03). |
+| M6-D (proveedor LLM real)             | GPT-4o decidido (ADR-M6-03); falta transcript (T08) | Proveedor real detrás del puerto; sin `LLM_PROVEEDOR=gpt-4o` sigue fail-closed. |
 
 **Único stub real que sigue sin reemplazar, y SÍ es bloqueante — distinto a los de arriba, no es
 un stub de integración entre módulos sino la mitad cliente de un control de seguridad:**

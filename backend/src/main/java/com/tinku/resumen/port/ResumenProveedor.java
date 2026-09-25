@@ -3,22 +3,16 @@ package com.tinku.resumen.port;
 import java.util.UUID;
 
 /**
- * Puerto del proveedor de LLM para el resumen (T-M6-05). La Constitucion
- * (Registro de Decisiones Tecnicas) manda: transcripcion + resumen en UNA sola
- * llamada al LLM elegido — GPT-4o o Gemini 2.0 Flash — que aceptan audio directo;
- * Whisper queda fuera del stack. El ADR del proveedor esta PENDIENTE (T-FIN-03):
- * por eso este puerto solo tiene el contrato y la implementacion activa por
- * default es {@link ResumenProveedorFailClosed} — nada sale a ningun modelo
- * externo mientras el ADR no se resuelva.
+ * Puerto del proveedor de LLM para el resumen (T-M6-05). Proveedor decidido:
+ * GPT-4o (ADR-M6-03), activo con {@code LLM_PROVEEDOR=gpt-4o}; sin eso el bean
+ * es {@link ResumenProveedorFailClosed} y nada sale a ningun modelo externo.
  *
  * <p>Anonimizacion (FR-SUM-005): {@code transcriptAnonimizado} ES lo que se
  * envia — el pipeline (ResumenService) corre {@code AnonimizadorTranscript}
  * antes de construir este request, y el transcript crudo jamas llega aca.
- * {@code audioBase64}/{@code audioMimeType} quedan en el contrato por la
- * decision const. de audio directo, pero hoy no se usan: el audio crudo no es
- * anonimizable antes de salir, asi que mientras el ADR no resuelva como
- * combinar audio-directo con anonimizacion, el flujo manda solo el transcript
- * ya limpio. (Flag para T-FIN-03.)
+ * {@code audioBase64}/{@code audioMimeType} quedan en el contrato pero no se
+ * usan: el audio crudo no es anonimizable antes de salir, por eso ADR-M6-03
+ * descarta el "audio directo" de la Constitucion y el LLM solo recibe texto.
  */
 public interface ResumenProveedor {
 
