@@ -1,7 +1,7 @@
 package com.tinku.reputacion;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.admin.model.Admin;
@@ -36,9 +36,9 @@ import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.TriggerKey;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -47,7 +47,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -75,7 +75,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Flujos de calificaciones y reputacion (Chunk M7) ejercitados de punta a
- * punta. Sin {@code @MockBean} de los puertos de reputacion: se usa la
+ * punta. Sin {@code @MockitoBean} de los puertos de reputacion: se usa la
  * implementacion real sobre la BD (solo se mockean los puertos ajenos — OCR,
  * almacenamiento y matching). Cubre T-M7-02 (crear, direccion derivada del
  * rol), T-M7-04 (ocultas del panel de moderacion), T-M7-06 (editar/eliminar en
@@ -94,8 +94,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CalificacionesFlujosIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -120,9 +120,9 @@ class CalificacionesFlujosIntegracionTest {
     @Autowired ReputacionSignalProvider reputacionSignal;
     @Autowired SenalesImplicitasService senalesImplicitasService;
 
-    @MockBean com.tinku.identidad.port.Almacenamiento almacenamiento;
-    @MockBean PerfilMatchingProvider perfilMatching;
-    @MockBean OcrService ocrService;
+    @MockitoBean com.tinku.identidad.port.Almacenamiento almacenamiento;
+    @MockitoBean PerfilMatchingProvider perfilMatching;
+    @MockitoBean OcrService ocrService;
 
     private static final String PASSWORD = "password-seguro-123";
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();

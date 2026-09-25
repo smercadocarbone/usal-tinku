@@ -1,7 +1,7 @@
 package com.tinku.pagos.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.pagos.MercadoPagoWebhookVerificador;
 import com.tinku.pagos.service.EscrowService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -109,7 +109,7 @@ public class MercadoPagoWebhookController {
 
     private static java.util.List<String> camposDe(JsonNode n) {
         java.util.List<String> campos = new java.util.ArrayList<>();
-        n.fieldNames().forEachRemaining(campos::add);
+        n.propertyNames().forEach(campos::add);
         return campos;
     }
 
@@ -121,7 +121,7 @@ public class MercadoPagoWebhookController {
         }
         try {
             return objectMapper.readTree(bytes);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             return objectMapper.createObjectNode();
         }
     }

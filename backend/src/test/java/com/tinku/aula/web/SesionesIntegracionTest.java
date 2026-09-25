@@ -1,6 +1,6 @@
 package com.tinku.aula.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.aula.LiveKitService;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.evento.SesionEvento;
@@ -33,10 +33,10 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
@@ -47,7 +47,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -99,8 +99,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SesionesIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -122,10 +122,10 @@ class SesionesIntegracionTest {
     @Autowired Scheduler scheduler;
     @Autowired com.tinku.reservas.repository.FranjaDisponibilidadRepository franjaRepository;
 
-    @MockBean OcrService ocrService;
-    @MockBean MatchingServiceClient matchingClient;
-    @MockBean ReputacionSignalProvider reputacion;
-    @MockBean LiveKitService liveKitService;
+    @MockitoBean OcrService ocrService;
+    @MockitoBean MatchingServiceClient matchingClient;
+    @MockitoBean ReputacionSignalProvider reputacion;
+    @MockitoBean LiveKitService liveKitService;
 
     @Value("${tinku.livekit.api-key}") String apiKey;
     @Value("${tinku.livekit.api-secret}") String apiSecret;

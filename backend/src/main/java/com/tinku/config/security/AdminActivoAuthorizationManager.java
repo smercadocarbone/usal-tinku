@@ -33,7 +33,8 @@ public class AdminActivoAuthorizationManager implements AuthorizationManager<Req
     }
 
     @Override
-    public AuthorizationDecision check(Supplier<Authentication> authentication, RequestAuthorizationContext context) {
+    public AuthorizationDecision authorize(Supplier<? extends Authentication> authentication,
+                                           RequestAuthorizationContext context) {
         Authentication auth = authentication.get();
         // AUD-027: el nombre del principal es el UUID del usuario.
         UUID usuarioId = null;

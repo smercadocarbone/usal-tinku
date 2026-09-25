@@ -17,12 +17,12 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -64,8 +64,8 @@ import static org.mockito.Mockito.verify;
 class ReembolsoAutomaticoTotalIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     /** Stub de MercadoPago levantado ANTES del contexto (puerto asignado por el OS). */
@@ -140,7 +140,7 @@ class ReembolsoAutomaticoTotalIntegracionTest {
     @Autowired ReservaRepository reservaRepository;
     @Autowired TransaccionRepository transaccionRepository;
 
-    @MockBean LiberacionProveedor liberacion;
+    @MockitoBean LiberacionProveedor liberacion;
 
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 

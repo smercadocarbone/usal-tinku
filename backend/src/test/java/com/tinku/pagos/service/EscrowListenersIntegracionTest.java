@@ -27,12 +27,12 @@ import org.junit.jupiter.api.Test;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -68,8 +68,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class EscrowListenersIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -85,8 +85,8 @@ class EscrowListenersIntegracionTest {
     @Autowired TransaccionRepository transaccionRepository;
     @Autowired Scheduler scheduler;
 
-    @MockBean LiberacionProveedor liberacion;
-    @MockBean ReembolsoProveedor reembolso;
+    @MockitoBean LiberacionProveedor liberacion;
+    @MockitoBean ReembolsoProveedor reembolso;
 
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 

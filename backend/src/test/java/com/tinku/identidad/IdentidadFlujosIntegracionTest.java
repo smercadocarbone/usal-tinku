@@ -1,6 +1,6 @@
 package com.tinku.identidad;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.EstadoCredencial;
@@ -19,9 +19,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,7 +29,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -71,8 +71,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class IdentidadFlujosIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(
             DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
@@ -91,8 +91,8 @@ class IdentidadFlujosIntegracionTest {
     @Autowired CredencialAcademicaRepository credencialRepo;
     @Autowired CredencialService credencialService;
 
-    @MockBean OcrService ocrService;
-    @MockBean NotificadorResetPassword notificadorResetPassword;
+    @MockitoBean OcrService ocrService;
+    @MockitoBean NotificadorResetPassword notificadorResetPassword;
     @org.springframework.beans.factory.annotation.Value("${tinku.jwt.secret}") String jwtSecret;
 
     private static final String PASSWORD = "password123";
