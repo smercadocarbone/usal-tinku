@@ -905,4 +905,121 @@ class AdminPanelIntegracionTest {
                         .header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
                 .andExpect(status().isForbidden());
     }
+
+    // ---------------------------------------------------------------- R4: reembolso del adicional
+
+    @Autowired com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional;
+    @Autowired org.quartz.Scheduler scheduler;
+
+    private Transaccion conAdicional(boolean bypass) {
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(usuario(TipoUsuario.TUTOR));
+        reserva.setHorario(Instant.now().minusSeconds(7200));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepository.save(reserva);
+        Transaccion t = new Transaccion();
+        t.setReservaId(reserva.getId());
+        t.setMpPaymentId("mp-adic-" + CONTADOR.incrementAndGet());
+        t.setMontoBruto(new BigDecimal("15770.00"));
+        t.setComisionPlataforma(new BigDecimal("4050.00"));
+        t.setMontoAdicionalResumen(new BigDecimal("770.00"));
+        t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+        t.setEnBypass(bypass);
+        return transaccionRepository.save(t);
+    }
+
+    /** Corre el job a mano (sacando el trigger real para que Quartz no compita con el test). */
+    private java.util.Date correrJobAdicional(UUID transaccionId) throws Exception {
+        org.quartz.TriggerKey key = com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago.trigger(transaccionId);
+        scheduler.unscheduleJob(key);
+        reembolsoAdicional.ejecutar(transaccionId);
+        org.quartz.Trigger siguiente = scheduler.getTrigger(key);
+        return siguiente == null ? null : siguiente.getStartTime();
+    }
+
+    private Transaccion recargar(Transaccion t) {
+        return transaccionRepository.findById(t.getId()).orElseThrow();
+    }
+
+    /** Regresión: un fallo de MP ya no queda solo en un log; reintenta 5/15/60 y cae en la cola. */
+    @Test
+    void r4_adicionalFallaMp_reintentaConBackoff_yQuedaFallidoEnLaCola() throws Exception {
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Transaccion t = conAdicional(false);
+        org.mockito.Mockito.doThrow(new com.tinku.pagos.service.MercadoPagoNoDisponibleException())
+                .when(reembolsoParcial).reembolsarParcial(org.mockito.ArgumentMatchers.eq(t.getMpPaymentId()),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId());
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId()); // idempotente
+        assertThat(recargar(t).getAdicionalReembolsoEstado())
+                .isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.PENDIENTE);
+
+        long[] minutos = {5, 15, 60};
+        for (long m : minutos) {
+            java.util.Date proximo = correrJobAdicional(t.getId());
+            assertThat(proximo).isNotNull();
+            assertThat(java.time.Duration.between(Instant.now(), proximo.toInstant()).toMinutes())
+                    .isBetween(m - 1, m);
+        }
+        assertThat(correrJobAdicional(t.getId())).isNull();
+        Transaccion fallida = recargar(t);
+        assertThat(fallida.getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        assertThat(fallida.getAdicionalReembolsoIntentos()).isEqualTo(4);
+        assertThat(fallida.getAdicionalReembolsadoAt()).isNull();
+        verify(reembolsoParcial, org.mockito.Mockito.times(4)).reembolsarParcial(t.getMpPaymentId(),
+                new BigDecimal("770.00"), "adicional-" + t.getId());
+
+        mvc.perform(get("/api/admin/financiero/reembolsos-adicional")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == '" + t.getId() + "')].intentos").value(4));
+    }
+
+    @Test
+    void r4_soporteReintentaOResuelveAMano_soloSobreFallidos() throws Exception {
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        Transaccion t = conAdicional(false);
+        t.setAdicionalReembolsoEstado(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        t.setAdicionalReembolsoIntentos(4);
+        transaccionRepository.save(t);
+
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(moderador)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"));
+        assertThat(correrJobAdicional(t.getId())).isNull();
+        assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);
+        assertThat(recargar(t).getAdicionalReembolsadoAt()).isNotNull();
+        // Ya no está fallido: no se reintenta de nuevo.
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isUnprocessableEntity());
+
+        Transaccion otra = conAdicional(false);
+        otra.setAdicionalReembolsoEstado(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        transaccionRepository.save(otra);
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + otra.getId() + "/resuelto-manual")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nota\":\"Devuelto desde el panel de MP, operación 123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("RESUELTO_MANUAL"));
+    }
+
+    @Test
+    void r4_bypass_soloMarca_sinLlamarAMercadoPago() {
+        Transaccion t = conAdicional(true);
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId());
+        assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);
+        verifyNoInteractions(reembolsoParcial);
+    }
 }

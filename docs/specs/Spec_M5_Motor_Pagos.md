@@ -7,6 +7,8 @@
 
 **BR-PAG-11 — Adicional de resumen (T09, DT3):** el pagador puede sumar el resumen automático al reservar ($770, `tinku.resumen.adicional.precio-ars`, congelado en la Reserva). Se cobra sesión + adicional; el adicional va **íntegro a la plataforma** (`marketplace_fee` = 27 % de la sesión + adicional) y la comisión **no** se calcula sobre él (`transacciones.monto_adicional_resumen`). Si el resumen termina fallido o sin generarse, se hace un **reembolso parcial por el monto exacto del adicional** — única excepción a los reembolsos totales de M5. No aplica si la Reserva ya se reembolsó entera; si MercadoPago falla, lo resuelve el Admin financiero por la cola de reembolsos parciales (FR-PAG-010).
 
+_(R4, 2026-09-25)_ El reembolso del adicional es un outbox persistido: queda `PENDIENTE` y lo ejecuta un job Quartz con `X-Idempotency-Key: adicional-{transaccionId}`; si MercadoPago falla reintenta con backoff 5/15/60 min (Tabla de Tiempos) y, agotado, queda `FALLIDO` en la cola "Reembolsos del resumen" de Soporte Financiero (`/api/admin/financiero/reembolsos-adicional`), que puede reintentar o registrar que lo devolvió por fuera (`RESUELTO_MANUAL`, con nota). Se abre un ticket al pagador-reclamante. No se confunde con la cola de parciales por disputa (FR-PAG-010).
+
 **Historial BR-PAG-01:** comisión de plataforma al **27 %** del monto bruto desde el 2026-09-23, calibrada en el Cap. 5 de la tesis (por debajo de 23,4 % el VAN del escenario base es negativo). Antes: **15 %**.
 
 ---

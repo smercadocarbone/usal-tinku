@@ -38,10 +38,10 @@ public class ReembolsoParcialProveedorMercadoPago implements ReembolsoParcialPro
     }
 
     @Override
-    public void reembolsarParcial(String mpPaymentId, BigDecimal monto) {
+    public void reembolsarParcial(String mpPaymentId, BigDecimal monto, String claveIdempotencia) {
         // ADR-M5-02: con el token del Tutor dueño del pago (sin OAuth, el de la plataforma).
         String token = transaccionRepo.findByMpPaymentId(mpPaymentId)
                 .map(cuentasMp::tokenParaTransaccion).orElse(null);
-        mercadopago.reembolsarPagoParcial(mpPaymentId, monto, token);
+        mercadopago.reembolsarPagoParcial(mpPaymentId, monto, token, claveIdempotencia);
     }
 }

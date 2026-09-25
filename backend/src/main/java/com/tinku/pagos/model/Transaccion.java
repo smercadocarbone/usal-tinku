@@ -3,6 +3,8 @@ package com.tinku.pagos.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -78,4 +80,18 @@ public class Transaccion {
     /** BR-PAG-11: reembolso parcial del adicional cuando el resumen falla. */
     @Column(name = "adicional_reembolsado_at")
     private Instant adicionalReembolsadoAt;
+
+    /** R4: outbox del reembolso del adicional (null = no corresponde / no se pidió). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "adicional_reembolso_estado", length = 20)
+    private EstadoReembolsoAdicional adicionalReembolsoEstado;
+
+    @Column(name = "adicional_reembolso_intentos", nullable = false)
+    private int adicionalReembolsoIntentos = 0;
+
+    @Column(name = "adicional_reembolso_error", length = 300)
+    private String adicionalReembolsoError;
+
+    @Column(name = "adicional_reembolso_nota", length = 300)
+    private String adicionalReembolsoNota;
 }

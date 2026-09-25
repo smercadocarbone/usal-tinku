@@ -23,6 +23,10 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, UUID> 
 
     Optional<Transaccion> findByReservaId(UUID reservaId);
 
+    /** R4: cola de reembolsos del adicional por estado. */
+    List<Transaccion> findByAdicionalReembolsoEstadoOrderByCreatedAtAsc(
+            com.tinku.pagos.model.EstadoReembolsoAdicional estado);
+
     /**
      * ¿Alguna {@code Transaccion} para la Reserva? La usa el reembolso de pagos
      * tardíos (T-M5-07): si la Reserva llegó a tener escrow, un segundo pago

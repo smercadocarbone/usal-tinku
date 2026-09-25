@@ -48,10 +48,11 @@ public interface MercadoPagoClient {
      * Reembolso PARCIAL (POST /v1/payments/{id}/refunds con {@code amount}
      * explícito, Plan M5 §3.3, FR-PAG-010) — flujo MANUAL de disputa ejecutado
      * desde M8. El monto lo decide Soporte; la diferencia de comisión la
-     * absorbe Tinku. Solo lo invoca {@code ReembolsoParcialProveedor}, nunca un
-     * listener/job automático (T-M5-08).
+     * absorbe Tinku. Solo lo invoca {@code ReembolsoParcialProveedor}. {@code claveIdempotencia}
+     * (opcional, header {@code X-Idempotency-Key}): un reintento tras un timeout no devuelve dos
+     * veces (R4, reembolso del adicional).
      */
-    void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto, String tokenVendedor);
+    void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto, String tokenVendedor, String claveIdempotencia);
 
     /**
      * Pagos de MercadoPago con esa {@code external_reference} (= id de la Reserva), vía

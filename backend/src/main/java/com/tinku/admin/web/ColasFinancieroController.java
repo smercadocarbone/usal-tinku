@@ -60,6 +60,7 @@ public class ColasFinancieroController {
     private final ReembolsoParcialProveedor reembolsoParcial;
     private final PasarelaService pasarela;
     private final ReservaRepository reservaRepo;
+    private final com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
@@ -67,7 +68,8 @@ public class ColasFinancieroController {
                                      LiberacionEscrowService liberacionEscrow,
                                      ReembolsoParcialProveedor reembolsoParcial,
                                      PasarelaService pasarela,
-                                     ReservaRepository reservaRepo) {
+                                     ReservaRepository reservaRepo,
+                                     com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional) {
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;
@@ -75,6 +77,56 @@ public class ColasFinancieroController {
         this.reembolsoParcial = reembolsoParcial;
         this.pasarela = pasarela;
         this.reservaRepo = reservaRepo;
+        this.reembolsoAdicional = reembolsoAdicional;
+    }
+
+    // -------------------------------------------- R4: reembolsos del adicional de resumen
+
+    /** Cola de reembolsos del adicional (BR-PAG-11); por defecto, los FALLIDO. */
+    @GetMapping("/reembolsos-adicional")
+    public ResponseEntity<List<ReembolsoAdicionalResponse>> reembolsosAdicional(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "FALLIDO")
+            com.tinku.pagos.model.EstadoReembolsoAdicional estado,
+            Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(transaccionRepo.findByAdicionalReembolsoEstadoOrderByCreatedAtAsc(estado)
+                .stream().map(ReembolsoAdicionalResponse::from).toList());
+    }
+
+    @PostMapping("/reembolsos-adicional/{transaccionId}/reintentar")
+    public ResponseEntity<?> reintentarReembolsoAdicional(@PathVariable UUID transaccionId,
+                                                          Authentication authentication) {
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
+        return resolverAdicional(adminUsuarioId, transaccionId,
+                () -> reembolsoAdicional.reintentarManual(transaccionId));
+    }
+
+    /** Soporte lo devolvió por fuera (panel de MercadoPago): queda la nota. */
+    @PostMapping("/reembolsos-adicional/{transaccionId}/resuelto-manual")
+    public ResponseEntity<?> resolverReembolsoAdicional(@PathVariable UUID transaccionId,
+                                                        @RequestBody Map<String, String> cuerpo,
+                                                        Authentication authentication) {
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
+        String nota = cuerpo == null ? null : cuerpo.get("nota");
+        if (nota == null || nota.isBlank() || nota.length() > 300) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Contá cómo lo devolviste (hasta 300 caracteres)."));
+        }
+        return resolverAdicional(adminUsuarioId, transaccionId,
+                () -> reembolsoAdicional.resolverManual(transaccionId, nota.trim()));
+    }
+
+    private ResponseEntity<?> resolverAdicional(UUID adminUsuarioId, UUID transaccionId,
+                                                java.util.function.Supplier<Transaccion> accion) {
+        Transaccion t = transaccionRepo.findById(transaccionId).orElse(null);
+        if (t == null) {
+            return ResponseEntity.notFound().build();
+        }
+        exigirNoEsParteDeLaReserva(adminUsuarioId, t);
+        try {
+            return ResponseEntity.ok(ReembolsoAdicionalResponse.from(accion.get()));
+        } catch (com.tinku.pagos.service.ReembolsoAdicionalNoFallidoException e) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /** Conflicto de interés: Soporte no opera el dinero de una Reserva en la que es parte. */

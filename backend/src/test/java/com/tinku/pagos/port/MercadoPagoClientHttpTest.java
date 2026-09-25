@@ -392,7 +392,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            cliente.reembolsarPagoParcial("pago-parcial", new BigDecimal("60.00"), null);
+            cliente.reembolsarPagoParcial("pago-parcial", new BigDecimal("60.00"), null, null);
 
             // FR-PAG-010: reembolso TOTAL lleva body vacío ({}); el PARCIAL es el
             // único que manda amount explícito, y solo lo invoca el flujo manual
@@ -413,7 +413,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-500", new BigDecimal("10.00"), null))
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-500", new BigDecimal("10.00"), null, null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -429,7 +429,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-2", new BigDecimal("10.00"), null))
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-2", new BigDecimal("10.00"), null, null))
                     .isInstanceOf(MercadoPagoNoConfiguradoException.class);
             assertThat(hits.get()).isZero();
         } finally {

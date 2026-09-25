@@ -22,5 +22,10 @@ import java.math.BigDecimal;
  */
 public interface ReembolsoParcialProveedor {
 
-    void reembolsarParcial(String mpPaymentId, BigDecimal monto);
+    default void reembolsarParcial(String mpPaymentId, BigDecimal monto) {
+        reembolsarParcial(mpPaymentId, monto, null);
+    }
+
+    /** Con {@code claveIdempotencia}: un reintento no devuelve dos veces (R4). */
+    void reembolsarParcial(String mpPaymentId, BigDecimal monto, String claveIdempotencia);
 }
