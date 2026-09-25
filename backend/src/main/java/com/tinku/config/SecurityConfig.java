@@ -126,6 +126,8 @@ public class SecurityConfig {
                 // x-signature (HMAC-SHA256). Sin firma válida → 401.
                 .requestMatchers("/api/webhooks/livekit",
                         "/api/webhooks/mercadopago").permitAll()
+                // Healthcheck del contenedor (sin detalles, ver application.yml).
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Defensa en profundidad (auditoría 2026-09-18): antes solo
                 // `authenticated()` cubría /api/admin/**, dejando la autorización
                 // real 100% en manos de que cada controller nuevo recuerde llamar

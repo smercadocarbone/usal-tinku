@@ -1,4 +1,6 @@
-package com.tinku.pagos.evento;
+package com.tinku.seguridad.evento;
+
+import com.tinku.aula.evento.SesionEvento;
 
 import java.util.UUID;
 

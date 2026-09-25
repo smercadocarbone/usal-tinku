@@ -7,7 +7,7 @@ import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.NotificadorResetPassword;
 import com.tinku.identidad.repository.TokenResetPasswordRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

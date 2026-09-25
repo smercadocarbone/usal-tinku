@@ -27,5 +27,5 @@ ENV SPRING_PROFILES_ACTIVE=prod
 # reinicia) ante un OutOfMemoryError en vez de quedar zombi.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-    CMD bash -c '</dev/tcp/127.0.0.1/8080' || exit 1
+    CMD curl -fsS -o /dev/null http://127.0.0.1:8080/actuator/health || exit 1
 CMD ["java", "-jar", "app.jar"]

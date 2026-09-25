@@ -1,29 +1,40 @@
 package com.tinku.seguridad.service;
 
-import com.tinku.aula.model.AlertaSeguridad;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.pagos.evento.AlertaResueltaEvent;
+import com.tinku.seguridad.evento.AlertaResueltaEvent;
 import com.tinku.seguridad.AlertaSeguridadNoEncontradaException;
 import com.tinku.seguridad.AlertaYaResueltaException;
 import com.tinku.seguridad.DescargoInvalidoException;
 import com.tinku.seguridad.SancionInvalidaException;
 import com.tinku.seguridad.SoloParteInteresadaException;
 import com.tinku.seguridad.evento.SancionAplicadaEvent;
+import com.tinku.seguridad.jobs.PurgaClipEvidenciaJob;
 import com.tinku.seguridad.model.DecisionAlerta;
 import com.tinku.seguridad.model.OrigenSancion;
 import com.tinku.seguridad.model.Sancion;
 import com.tinku.seguridad.model.TipoSancion;
 import com.tinku.seguridad.repository.SancionRepository;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.JobKey;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.SimpleScheduleBuilder;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
+import org.quartz.TriggerKey;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,17 +58,20 @@ public class AlertaSeguridadService {
     private final UsuarioRepository usuarioRepo;
     private final SesionAprendizajeRepository sesionRepo;
     private final ApplicationEventPublisher events;
+    private final Scheduler scheduler;
 
     public AlertaSeguridadService(AlertaSeguridadRepository alertaRepo,
                                   SancionRepository sancionRepo,
                                   UsuarioRepository usuarioRepo,
                                   SesionAprendizajeRepository sesionRepo,
-                                  ApplicationEventPublisher events) {
+                                  ApplicationEventPublisher events,
+                                  Scheduler scheduler) {
         this.alertaRepo = alertaRepo;
         this.sancionRepo = sancionRepo;
         this.usuarioRepo = usuarioRepo;
         this.sesionRepo = sesionRepo;
         this.events = events;
+        this.scheduler = scheduler;
     }
 
     /**
@@ -123,12 +137,33 @@ public class AlertaSeguridadService {
                     sancion.getDiasSuspension(), sancion.getVigenteHasta(), sancion.getOrigen()));
         }
         alerta.setClipRetencionHasta(Instant.now().plus(RETENCION_CLIP));
+        programarPurgaClip(alerta.getId(), alerta.getClipRetencionHasta());
         usuarioRepo.save(detectado);
         // ADR-M3-02: el kill-switch dejó el escrow en pausa; resolver la Alerta (en
         // cualquier sentido) libera el reembolso total al Estudiante.
         sesionRepo.findById(alerta.getSesionId()).ifPresent(sesion ->
                 events.publishEvent(new AlertaResueltaEvent(this, sesion.getReservaId())));
         return alertaRepo.save(alerta);
+    }
+
+    /** BR-KS-02 / AUD-021: job one-shot persistido que borra el clip al vencer la retención. */
+    private void programarPurgaClip(UUID alertaId, Instant vence) {
+        JobDetail detail = JobBuilder.newJob(PurgaClipEvidenciaJob.class)
+                .withIdentity(new JobKey("purga-clip-job-" + alertaId, "m9-seguridad"))
+                .usingJobData(PurgaClipEvidenciaJob.PARAM_ALERTA_ID, alertaId.toString())
+                .storeDurably()
+                .build();
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity(TriggerKey.triggerKey("purga-clip-trigger-" + alertaId, "m9-seguridad"))
+                .startAt(Date.from(vence))
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withMisfireHandlingInstructionFireNow())
+                .build();
+        try {
+            scheduler.scheduleJob(detail, trigger);
+        } catch (SchedulerException e) {
+            throw new IllegalStateException("No se pudo agendar la purga del clip de la Alerta " + alertaId, e);
+        }
     }
 
     private Sancion registrarSancion(AlertaSeguridad alerta, UUID adminId, UUID detectadoId,

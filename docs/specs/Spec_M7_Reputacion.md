@@ -48,7 +48,7 @@ Este módulo gestiona la confianza bidireccional entre Estudiante y Tutor: la ca
 
 | ID | Requisito |
 |---|---|
-| FR-REP-001 | Calificación pública (1-5 estrellas + comentario opcional) del Estudiante hacia el Tutor al finalizar la sesión. |
+| FR-REP-001 | Calificación pública (1-5 estrellas + comentario opcional) del Estudiante hacia el Tutor al finalizar la sesión. _Quién califica (D9, AUD-028, 2026-09-25): el **pagador** de la Reserva — una sola calificación pública por sesión. Si el beneficiario es un menor, califica su Adulto Responsable (Artículo II); el menor no califica._ |
 | FR-REP-002 | Calificación oculta (1-5 estrellas) del Tutor hacia el Estudiante — visible solo para uso interno del Admin de Moderación y Seguridad. |
 | FR-REP-003 | Registro interno de señales implícitas de comportamiento del Tutor, sin exposición ni fusión con la calificación explícita. |
 | FR-REP-004 | Recordatorio único a las 24hs si el Estudiante no calificó, sin insistencia posterior. |

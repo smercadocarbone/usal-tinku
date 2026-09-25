@@ -56,6 +56,17 @@ spring:
 server:
   port: 8080
 
+# AUD-036 / 4.6: solo health (sin detalles: no filtra el estado de la base ni de
+# integraciones) e info. El resto de los endpoints de Actuator no se exponen.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
 # CORS para el frontend: orígenes que pueden llamar a /api/* desde el navegador.
 # Lista separada por comas. Default = dev local (Next.js en :3000). No usar "*".
 cors:

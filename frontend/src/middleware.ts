@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { COOKIE_NAME } from "@/lib/auth";
 
-// FIXME AUD-016 (auditoría 2026-09-21): esto NO es una protección de seguridad. Solo verifica
-// que la cookie exista: no valida firma ni expiración. Cualquiera puede setear
-// document.cookie = "tinku_jwt=x" y cargar el shell de /admin. La autorización real la hace
-// el backend en cada request. Se decide en FASE 3: verificar la firma, o renombrar esto
-// honestamente como redirección de UX.
 /**
- * Protección de rutas desde el server: sin cookie de sesión → /login.
- * La cookie es la "copia" del token que setSession() escribe en el login
- * (misma clave que en localStorage, ver src/lib/auth.ts).
+ * Redirección de UX, NO un control de seguridad (AUD-016, decidido en FASE 3): sin cookie
+ * de sesión → /login, para no mostrar un shell vacío. No valida firma ni expiración: una
+ * cookie inventada solo carga el esqueleto de la página, sin datos. La autorización real
+ * la hace el backend en cada request (JWT firmado + credentials_version). Verificar la
+ * firma acá obligaría a repartir el secreto del JWT al frontend, sin ganar protección.
+ * La cookie es la "copia" del token que setSession() escribe en el login (ver src/lib/auth.ts).
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

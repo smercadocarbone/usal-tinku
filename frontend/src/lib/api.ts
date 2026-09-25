@@ -8,7 +8,6 @@
  */
 
 import { clearSession, TOKEN_KEY } from "./auth";
-import { catalogoMock } from "./catalogoMock";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -167,17 +166,9 @@ export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[
   if (filtros?.curso) params.set("curso", filtros.curso);
   if (filtros?.materia) params.set("materia", filtros.materia);
   const qs = params.toString();
-  return api.get<NivelCatalogo[]>(`/api/catalogos${qs ? `?${qs}` : ""}`).catch((err) => {
-    // FIXME AUD-026 (auditoría 2026-09-21): el catch también atrapa errores de red (un
-    // TypeError de fetch no es ApiError), así que con el backend caído el usuario ve un
-    // catálogo falso que parece real. Se acota en FASE 3.
-    if (err instanceof ApiError && err.status !== 404) throw err;
-    // ponytail: fallback local hasta que el backend aterrice en FASE 3
-    // (orquestador). El GET real es la fuente; este fixture solo cubre
-    // red caída / endpoint 404. Los filtros no aplican al fixture: nadie
-    // los usa en este chunk todavía.
-    return catalogoMock;
-  });
+  // AUD-026: sin fallback a un catálogo local. Con el backend caído, el usuario ve el
+  // error, no un catálogo falso que parece real (GET /api/catalogos existe desde M2-F).
+  return api.get<NivelCatalogo[]>(`/api/catalogos${qs ? `?${qs}` : ""}`);
 }
 
 interface MisTemasRaw {
@@ -347,7 +338,21 @@ export interface AlertaSeguridadCola {
   descargoTexto: string | null;
   descargoRecibidoAt: string | null;
   clipRetencionHasta: string | null;
+  tieneClip: boolean;
   createdAt: string;
+}
+
+/** Clip de evidencia del kill-switch (AUD-021): lo sirve Tinku, nunca un enlace externo. */
+export async function getClipAlerta(id: string): Promise<Blob> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/moderacion/alertas/${id}/clip`,
+    { headers: headersConToken() }
+  );
+  if (!res.ok) {
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
+  }
+  return res.blob();
 }
 
 export interface ResolverAlertaBody {

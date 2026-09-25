@@ -4,7 +4,7 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.reservas.evento.DenunciaResueltaEvent;
+import com.tinku.seguridad.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.evento.ReservaCanceladaEvent;
 import com.tinku.reservas.evento.ReservaConfirmadaEvent;
 import com.tinku.reservas.evento.ReservaReprogramadaEvent;

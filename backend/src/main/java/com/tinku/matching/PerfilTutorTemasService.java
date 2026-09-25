@@ -12,19 +12,23 @@ import java.util.UUID;
 /**
  * Temas elegidos por un Tutor para su perfil de matching (contrato 2b): GET
  * devuelve los propios de cualquier perfil; el PUT guarda SOLO {@code tema_ids}
- * mediante upsert y no toca {@code embedding} ni {@code activo_para_matching}
- * (los embeddings se repueblan por el recompute de 2c, nunca acá).
+ * mediante upsert y no toca {@code embedding} ni {@code activo_para_matching}.
+ * El embedding lo repuebla el recompute de 2c, que se pide después del commit
+ * ({@link RecomputeEmbeddingsDisparador}), nunca dentro de este PUT.
  */
 @Service
 public class PerfilTutorTemasService {
 
     private final PerfilTutorTemasRepository perfilRepo;
     private final CatalogoService catalogoService;
+    private final RecomputeEmbeddingsDisparador recompute;
 
     public PerfilTutorTemasService(PerfilTutorTemasRepository perfilRepo,
-                                   CatalogoService catalogoService) {
+                                   CatalogoService catalogoService,
+                                   RecomputeEmbeddingsDisparador recompute) {
         this.perfilRepo = perfilRepo;
         this.catalogoService = catalogoService;
+        this.recompute = recompute;
     }
 
     /** GET /api/tutores/me/temas: sin fila en el perfil -> lista vacía. */
@@ -53,6 +57,7 @@ public class PerfilTutorTemasService {
         }
         List<UUID> normalizados = List.copyOf(ids);
         perfilRepo.upsertTemaIds(usuario.getId(), normalizados);
+        recompute.dispararDespuesDelCommit();
         return normalizados;
     }
 }

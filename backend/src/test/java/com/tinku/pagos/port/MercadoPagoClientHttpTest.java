@@ -130,6 +130,47 @@ class MercadoPagoClientHttpTest {
         }
     }
 
+    /** Producción 2026-09-25: sin back_urls el comprador quedaba en MercadoPago. */
+    @Test
+    void creaPreferencia_conBackUrlsAPagarYAutoReturnEnHttps() throws Exception {
+        AtomicReference<String> captor = new AtomicReference<>();
+        HttpServer server = serverQueDevuelve("201", RESPUESTA_PREFERENCIA, captor);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
+                    baseUrl, "mp-token", null, "https://tinku.site/");
+
+            cliente.crearPreferencia(pedido());
+
+            JsonNode root = objectMapper.readTree(captor.get());
+            String vuelta = "https://tinku.site/pagar?reserva=" + reservaId;
+            assertThat(root.get("back_urls").get("success").asText()).isEqualTo(vuelta);
+            assertThat(root.get("back_urls").get("failure").asText()).isEqualTo(vuelta);
+            assertThat(root.get("back_urls").get("pending").asText()).isEqualTo(vuelta);
+            assertThat(root.get("auto_return").asText()).isEqualTo("approved");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void creaPreferencia_urlPublicaSinHttps_backUrlsSinAutoReturn() throws Exception {
+        AtomicReference<String> captor = new AtomicReference<>();
+        HttpServer server = serverQueDevuelve("201", RESPUESTA_PREFERENCIA, captor);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            new MercadoPagoClientHttp(baseUrl, "mp-token", null, "http://localhost:3000")
+                    .crearPreferencia(pedido());
+
+            JsonNode root = objectMapper.readTree(captor.get());
+            assertThat(root.get("back_urls").get("success").asText())
+                    .isEqualTo("http://localhost:3000/pagar?reserva=" + reservaId);
+            assertThat(root.has("auto_return")).isFalse();
+        } finally {
+            server.stop(0);
+        }
+    }
+
     @Test
     void sinAccessToken_noLlamaAlProvider_yFallaConMensajeClaro() throws Exception {
         AtomicInteger hits = new AtomicInteger();

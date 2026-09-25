@@ -5,7 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.pagos.evento.SesionInterrumpidaEvent;
+import com.tinku.aula.evento.SesionInterrumpidaEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.port.LiberacionProveedor;

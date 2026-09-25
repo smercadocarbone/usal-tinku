@@ -1,7 +1,7 @@
 package com.tinku.admin.web;
 
-import com.tinku.aula.model.AlertaSeguridad;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
@@ -16,7 +16,7 @@ import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.seguridad.web.AlertaSeguridadResponse;
 import com.tinku.seguridad.web.DenunciaResponse;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -147,6 +147,31 @@ public class ColasModeracionController {
                 .contentType(tipo.map(t -> MediaType.parseMediaType(t.getMediaType()))
                         .orElse(MediaType.APPLICATION_OCTET_STREAM))
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposicion.toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "sandbox")
+                .cacheControl(CacheControl.noStore())
+                .body(contenido);
+    }
+
+    /** AUD-021: el clip de evidencia del kill-switch lo sirve Tinku (se subió como
+     *  archivo), nunca un enlace externo. Mismos headers que el visor de credenciales. */
+    @GetMapping("/alertas/{alertaId}/clip")
+    public ResponseEntity<byte[]> clipAlerta(@PathVariable UUID alertaId, Authentication authentication) {
+        gate.requiereModeracion(authentication);
+        AlertaSeguridad alerta = alertaRepo.findById(alertaId).orElse(null);
+        if (alerta == null || alerta.getClipUrl() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] contenido;
+        try {
+            contenido = almacenamiento.leer(alerta.getClipUrl());
+        } catch (ArchivoNoDisponibleException e) {
+            return ResponseEntity.notFound().build();
+        }
+        boolean webm = contenido.length >= 4 && (contenido[0] & 0xFF) == 0x1A;
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(webm ? "video/webm" : "video/mp4"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().build().toString())
                 .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Security-Policy", "sandbox")
                 .cacheControl(CacheControl.noStore())

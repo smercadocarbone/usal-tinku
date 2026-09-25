@@ -9,26 +9,35 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Implementación real del puerto {@link PerfilMatchingProvider}: lee el perfil
- * del Tutor de {@code matching.perfiles_tutor_matching} (V7) y resuelve los ids
- * del catálogo a materias concretas. Un Tutor sin perfil o sin materias
- * seleccionadas devuelve {@code Optional.empty()} — el perfil público se
- * serializa con listas vacías (idéntico al comportamiento del stub retirado).
+ * Implementación real del puerto {@link PerfilMatchingProvider}: las materias
+ * del Tutor salen de los temas que eligió ({@code tema_ids}, M2-F: el camino que
+ * usa la app). Solo si no eligió ningún tema se cae al catálogo viejo
+ * ({@code materias_niveles_ids}, V7, que únicamente llena PUT /api/perfil-matching).
+ * Sin nada de eso → {@code Optional.empty()} y el perfil público va con listas vacías.
  */
 @Component
 public class PerfilMatchingProviderReal implements PerfilMatchingProvider {
 
     private final PerfilTutorMatchingRepository perfilRepo;
     private final MateriaNivelRepository catalogoRepo;
+    private final PerfilTutorTemasRepository temasRepo;
 
     public PerfilMatchingProviderReal(PerfilTutorMatchingRepository perfilRepo,
-                                      MateriaNivelRepository catalogoRepo) {
+                                      MateriaNivelRepository catalogoRepo,
+                                      PerfilTutorTemasRepository temasRepo) {
         this.perfilRepo = perfilRepo;
         this.catalogoRepo = catalogoRepo;
+        this.temasRepo = temasRepo;
     }
 
     @Override
     public Optional<MateriasNivel> materiasYNivel(UUID tutorId) {
+        List<String[]> deTemas = temasRepo.nivelYMateriaDeTemas(tutorId);
+        if (!deTemas.isEmpty()) {
+            // La misma materia puede venir de dos cursos (4° y 5° de Matemática): una sola vez.
+            List<String> materias = deTemas.stream().map(f -> f[1]).distinct().toList();
+            return Optional.of(new MateriasNivel(materias, deTemas.getFirst()[0]));
+        }
         return perfilRepo.findById(tutorId)
                 .filter(p -> p.getMateriasNivelesIds().length > 0)
                 .map(p -> {

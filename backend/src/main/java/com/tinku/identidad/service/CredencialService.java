@@ -8,7 +8,7 @@ import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.VerificadorSancionVigente;
 import com.tinku.identidad.repository.CredencialAcademicaRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;

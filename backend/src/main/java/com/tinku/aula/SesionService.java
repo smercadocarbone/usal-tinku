@@ -1,20 +1,20 @@
 package com.tinku.aula;
 
-import com.tinku.pagos.evento.SesionEvento;
-import com.tinku.pagos.evento.SesionFinalizadaEvent;
-import com.tinku.pagos.evento.SesionInterrumpidaEvent;
-import com.tinku.pagos.evento.SesionKillswitchAdultosEvent;
-import com.tinku.pagos.evento.SesionKillswitchMenorEvent;
-import com.tinku.pagos.evento.SesionNoShowDobleEvent;
-import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
-import com.tinku.pagos.evento.SesionNoShowTutorEvent;
+import com.tinku.aula.evento.SesionEvento;
+import com.tinku.aula.evento.SesionFinalizadaEvent;
+import com.tinku.aula.evento.SesionInterrumpidaEvent;
+import com.tinku.aula.evento.SesionKillswitchAdultosEvent;
+import com.tinku.aula.evento.SesionKillswitchMenorEvent;
+import com.tinku.aula.evento.SesionNoShowDobleEvent;
+import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
+import com.tinku.aula.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.jobs.CrearSalaJob;
 import com.tinku.aula.jobs.NoShowJob;
-import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.aula.model.ConfirmacionKillswitch;
 import com.tinku.aula.model.SesionAprendizaje;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.ConfirmacionKillswitchRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.TipoUsuario;
@@ -635,35 +635,6 @@ public class SesionService {
                 this, reserva.getId(), confirmacion.getDetectadoId()));
         cancelarNoShow(sesion.getId());
         return sesion;
-    }
-
-    /**
-     * Subida de la evidencia del kill-switch (T-M3-08): solo la REFERENCIA al
-     * clip de 30s (Artículo V, BR-KS-01). Solo alcanzable tras un kill-switch
-     * ya registrado (existe la Alerta) — si no → 404 {@link
-     * AlertaNoEncontradaException}.
-     */
-    @Transactional
-    public AlertaSeguridad subirEvidencia(Usuario usuario, UUID sesionId, String clipUrl,
-                                          Integer duracionSegundos) {
-        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
-                .orElseThrow(SesionNoEncontradaException::new);
-        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
-                .orElseThrow(ReservaNoEncontradaException::new);
-        if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
-        }
-        if (!(clipUrl.startsWith("https://") || clipUrl.startsWith("http://"))) {
-            throw new EvidenciaInvalidaException("la URL del clip debe ser http(s).");
-        }
-        if (duracionSegundos != null && (duracionSegundos <= 0 || duracionSegundos > 30)) {
-            throw new EvidenciaInvalidaException(
-                    "el clip del buffer tiene un máximo de 30 segundos (BR-KS-01).");
-        }
-        AlertaSeguridad alerta = alertaRepo.findBySesionId(sesionId)
-                .orElseThrow(AlertaNoEncontradaException::new);
-        alerta.setClipUrl(clipUrl);
-        return alertaRepo.save(alerta);
     }
 
     /**

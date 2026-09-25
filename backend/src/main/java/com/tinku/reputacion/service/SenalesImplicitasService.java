@@ -2,9 +2,9 @@ package com.tinku.reputacion.service;
 
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
-import com.tinku.pagos.evento.SesionFinalizadaEvent;
-import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
-import com.tinku.pagos.evento.SesionNoShowTutorEvent;
+import com.tinku.aula.evento.SesionFinalizadaEvent;
+import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
+import com.tinku.aula.evento.SesionNoShowTutorEvent;
 import com.tinku.reputacion.jobs.RecordatorioCalificacionJob;
 import com.tinku.reputacion.model.SenalesImplicitasTutor;
 import com.tinku.reputacion.repository.SenalesImplicitasTutorRepository;

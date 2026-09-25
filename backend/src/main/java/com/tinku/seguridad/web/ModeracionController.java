@@ -2,7 +2,7 @@ package com.tinku.seguridad.web;
 
 import com.tinku.seguridad.service.AlertaSeguridadService;
 import com.tinku.seguridad.service.DenunciaService;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

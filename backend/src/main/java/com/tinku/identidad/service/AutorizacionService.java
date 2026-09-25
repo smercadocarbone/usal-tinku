@@ -5,7 +5,7 @@ import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
 import com.tinku.identidad.repository.UsuarioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

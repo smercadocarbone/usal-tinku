@@ -1,6 +1,6 @@
-package com.tinku.aula.repository;
+package com.tinku.seguridad.repository;
 
-import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.seguridad.model.AlertaSeguridad;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

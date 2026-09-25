@@ -1,4 +1,4 @@
-package com.tinku.reservas.evento;
+package com.tinku.seguridad.evento;
 
 import com.tinku.shared.ResolucionDenuncia;
 import org.springframework.context.ApplicationEvent;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import {
+  getClipAlerta,
   getColaAlertas,
   mensajeDeError,
   resolverAlerta,
@@ -157,7 +158,22 @@ function FilaAlerta({
   onResuelto: (id: string) => void;
 }) {
   const [abierta, setAbierta] = useState(false);
+  const [clip, setClip] = useState<string | null>(null);
+  const [errorClip, setErrorClip] = useState<string | null>(null);
   const esMenor = alerta.rama === "menor";
+
+  useEffect(() => () => {
+    if (clip) URL.revokeObjectURL(clip);
+  }, [clip]);
+
+  async function verClip() {
+    setErrorClip(null);
+    try {
+      setClip(URL.createObjectURL(await getClipAlerta(alerta.id)));
+    } catch (err) {
+      setErrorClip(mensajeDeError(err, "No se pudo abrir el clip."));
+    }
+  }
 
   return (
     <Tarjeta as="li" className="p-5">
@@ -189,6 +205,16 @@ function FilaAlerta({
           {alerta.descargoTexto}
         </div>
       )}
+
+      {alerta.tieneClip && !clip && (
+        <Boton variante="secundario" tamano="sm" className="mt-3 mr-2" onClick={() => void verClip()}>
+          Ver clip de evidencia
+        </Boton>
+      )}
+      {clip && (
+        <video src={clip} controls className="mt-3 w-full max-w-md rounded-lg" />
+      )}
+      {errorClip && <Alerta tono="peligro" className="mt-3">{errorClip}</Alerta>}
 
       <Boton
         variante="secundario"

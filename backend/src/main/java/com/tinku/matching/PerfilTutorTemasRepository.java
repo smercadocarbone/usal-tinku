@@ -93,4 +93,20 @@ public class PerfilTutorTemasRepository {
             return ps;
         }, (rs, rowNum) -> rs.getObject("tutor_id", UUID.class));
     }
+
+    /** (nivel, materia) de los temas elegidos, en el orden en que el Tutor los eligió
+     *  (primera aparición de cada trayecto en {@code tema_ids}). Sin fila o sin temas → []. */
+    public List<String[]> nivelYMateriaDeTemas(UUID tutorId) {
+        return jdbc.query("""
+                SELECT tr.nivel, tr.materia, MIN(array_position(p.tema_ids, t.id)) AS pos
+                  FROM matching.perfiles_tutor_matching p
+                  JOIN matching.temas t ON t.id = ANY(p.tema_ids)
+                  JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+                 WHERE p.tutor_id = ?
+                 GROUP BY tr.nivel, tr.materia
+                 ORDER BY pos
+                """,
+                (rs, rowNum) -> new String[]{rs.getString("nivel"), rs.getString("materia")},
+                tutorId);
+    }
 }

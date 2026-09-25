@@ -11,7 +11,7 @@ import com.tinku.identidad.ocr.OcrService;
 import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.matching.MatchingServiceClient;
 import com.tinku.matching.ReputacionSignalProvider;
-import com.tinku.pagos.evento.SesionNoShowTutorEvent;
+import com.tinku.aula.evento.SesionNoShowTutorEvent;
 import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.port.AlertaSoporteProveedor;
 import com.tinku.pagos.port.LiberacionProveedor;

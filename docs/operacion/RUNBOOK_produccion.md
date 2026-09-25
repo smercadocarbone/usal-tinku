@@ -177,8 +177,9 @@ aprobada y un historial de clases ya dictadas con calificaciones, pagos liberado
    ```
    python -c "import os,urllib.request as u; r=u.Request('http://localhost:8000/recompute-embeddings', method='POST', headers={'X-Matching-Token': os.environ['TINKU_MATCHING_TOKEN']}); print(u.urlopen(r, timeout=600).read().decode())"
    ```
-   Tiene que responder `{"actualizados": N}`. Repetirlo si un tutor cambia sus temas: el recompute
-   no es automático.
+   Tiene que responder `{"actualizados": N}`. Hace falta acá porque el script carga los temas
+   directo en la base; cuando un tutor cambia sus temas desde la app, el backend pide el recompute
+   solo.
 
 ### 10.2 Qué hace falta para el recorrido completo
 - **Pagar una reserva:** credenciales de **prueba** de MercadoPago (`MP_ACCESS_TOKEN` que empieza

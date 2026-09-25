@@ -228,31 +228,31 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-AUD-018: Acotar el Modo Bypass (perfil no productivo, TTL o alerta) y extender ADR-M5-01 (AUD-018) — _CERRADO 2026-09-24 (FASE2-07, P2 opción a): en `prod` apagar la pasarela → 409 (`BypassNoPermitidoException`), reactivar siempre; `bypassPermitido` en el GET; log WARN; toggle deshabilitado con explicación y banner persistente en `/admin`._
 - [x] T-AUD-019: Reconciliar `Tasks_Tinku_Implementacion.md` con el código y elegir una sola fuente de verdad (AUD-030) — CERRADO, ver `REGISTRO_FINDINGS.md` (commits 8707da6, 64fe386, 352d065, 2d4e108)
 - [x] T-AUD-020: Guards de estado en `marcarAprobada`/`marcarRechazada` (AUD-033) — CERRADO en FASE 1 junto con AUD-013 (Task 1.8)
-- [ ] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031)
-- [ ] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021)
+- [~] T-AUD-021: CI para `matching-service` + un smoke E2E contra el stack real (AUD-031) — _2026-09-25: `ci-matching.yml` en PRs y `ci-e2e.yml` nocturno (`scripts/smoke-e2e.sh`: registro → búsqueda real → reserva → bypass → confirmada). Falta la primera corrida verde._
+- [x] T-AUD-022: Evidencia del kill-switch por upload, no por URL declarada; exigir `https://` si se mantiene (AUD-021) — _2026-09-25: multipart por `Almacenamiento`, visor admin, purga a 30 días de resuelta (BR-KS-02)._
 - [~] T-AUD-023: Escribir los ADR faltantes de §4.4, empezando por Java/Spring (ADR-000-02) y por el acoplamiento entre módulos (AUD-019, §7.2) — FASE 0 Task 0.8 escribió 5 de 7 (`ADR-000-02`, `ADR-000-03`, `ADR-000-04`, `ADR-M1-03`, `ADR-M6-02`). Faltan 2, deliberadamente: DNI como `sub` del JWT y notificador-como-log, ambos por revertirse/reemplazarse en FASE 1/2 (ver Task 0.8 del plan y AGENTS.md §9). _2026-09-24: ya no hacen falta — las dos decisiones se revirtieron (FASE3-03: `sub` = UUID; FASE2-03: notificador por email, ADR-000-06)._
 - [x] T-AUD-024: Anexo a ADR-M3-01: modelo de amenaza del clasificador on-device y controles compensatorios (AUD-005) — escrito en FASE 1 como `ADR-M3-02` (Task 1.10). CERRADO en FASE 2 por `FASE2-10-colision-alerta-denuncia.md` (2026-09-23): estado propio `pausado_alerta`, la Alerta manda sobre la Denuncia; regresión: `EscrowListenersIntegracionTest` (4 tests de colisión) + `AdminPanelIntegracionTest.reembolsoParcial_sobrePausadoAlerta_422`
 
 ### FASE 3 — P2 Mejoras recomendables
-- [ ] T-AUD-025: Romper el ciclo `shared ↔ admin`; mover `AlertaSeguridad` a `seguridad` (AUD-019)
-- [ ] T-AUD-026: Mover cada evento al módulo que lo publica (o a `shared.evento`) (AUD-022)
-- [ ] T-AUD-027: `EXCLUDE` de superposición en `franjas_disponibilidad` + `franjaQueCubre` como query (AUD-025)
-- [ ] T-AUD-028: Distinguir la constraint violada antes de devolver 409 "horario ocupado" (AUD-023)
+- [x] T-AUD-025: Romper el ciclo `shared ↔ admin`; mover `AlertaSeguridad` a `seguridad` (AUD-019) — _2026-09-25._
+- [x] T-AUD-026: Mover cada evento al módulo que lo publica (o a `shared.evento`) (AUD-022) — _2026-09-25._
+- [x] T-AUD-027: `EXCLUDE` de superposición en `franjas_disponibilidad` + `franjaQueCubre` como query (AUD-025) — _2026-09-25: V34 + validación en `publicar`; sin superposición, `franjaQueCubre` ya no es ambiguo._
+- [x] T-AUD-028: Distinguir la constraint violada antes de devolver 409 "horario ocupado" (AUD-023) — _2026-09-25._
 - [x] T-AUD-029: `credentials_version` en el JWT para invalidar sesiones al resetear contraseña (AUD-027) — _FASE3-03, 2026-09-24: V33, `sub` = UUID, claim `cv`; cambiar/resetear la contraseña (y la baja de un menor) invalidan los tokens anteriores; principal = UUID en filtro, `UsuarioActual`, gates de admin y tickets; limpieza de la rama DNI de LiveKit (AUD-003). Tras el deploy todos vuelven a iniciar sesión una vez. Suite 522/0; E2E 79/79._
-- [ ] T-AUD-030: Acotar el fallback a `catalogoMock` a 404 estricto o a no-producción (AUD-026)
-- [ ] T-AUD-031: Decidir una calificación pública por sesión (o documentar el sesgo) (AUD-028)
+- [x] T-AUD-030: Acotar el fallback a `catalogoMock` a 404 estricto o a no-producción (AUD-026) — _2026-09-25: fallback eliminado (el endpoint real existe)._
+- [x] T-AUD-031: Decidir una calificación pública por sesión (o documentar el sesgo) (AUD-028) — _2026-09-25: D9, solo el pagador._
 - [-] T-AUD-032: ~~Migración que dropee las tablas de CAP (V6) referenciando ADR-M1-02 (AUD-035)~~ — **CANCELADA — cancelada por ADR-M1-04**: las tablas de V6 vuelven a usarse (tesis T02). AUD-035 pasa a `EN CURSO` en T01 y lo cierra T02.
-- [ ] T-AUD-033: Dependabot + actualización de Spring Boot (AUD-032)
+- [x] T-AUD-033: Dependabot + actualización de Spring Boot (AUD-032) — _2026-09-25: Spring Boot 3.5.16._
 - [x] T-AUD-034: Declarar el transcript de M6 como pendiente explícito en los chunks (AUD-024) — hecho por FASE 0 Task 0.4 (`Tasks_Tinku_Chunks.md`) y Task 0.6 (bloqueante real de M6)
-- [ ] T-AUD-035: Middleware de Next.js: verificar firma, o renombrarlo honestamente como redirección de UX (AUD-016)
+- [x] T-AUD-035: Middleware de Next.js: verificar firma, o renombrarlo honestamente como redirección de UX (AUD-016) — _2026-09-25: renombrado (redirección de UX)._
 
 ### FASE 4 — P3 Mejoras opcionales
 - [ ] T-AUD-036: Poner el `Usuario` en el principal del filtro para eliminar la doble consulta (AUD-036.1)
-- [ ] T-AUD-037: Unificar `@Transactional` en el de Spring (AUD-036.3)
+- [x] T-AUD-037: Unificar `@Transactional` en el de Spring (AUD-036.3) — _2026-09-25._
 - [ ] T-AUD-038: Subpaquetes de capa en `matching` (AUD-036.2)
-- [ ] T-AUD-039: `@JsonIgnore` en `Usuario.getEdad()` (AUD-036.6)
+- [x] T-AUD-039: `@JsonIgnore` en `Usuario.getEdad()` (AUD-036.6) — _2026-09-25._
 - [x] T-AUD-040: Lock en la carga lazy del embedder de Python (AUD-036.7) — CERRADO (verificado en FASE2-04): lock + doble chequeo ya presente para el fallback de precarga; la precarga fallida reintenta en la primera request sin cargar el modelo 2 veces (test concurrente)
-- [ ] T-AUD-041: Actuator con `/health` e `/info` (AUD-034)
+- [x] T-AUD-041: Actuator con `/health` e `/info` (AUD-034) — _2026-09-25: sin detalles; healthcheck de la imagen._
 
 ---
 

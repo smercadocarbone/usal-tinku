@@ -2,7 +2,7 @@ package com.tinku.identidad.service;
 
 import com.tinku.identidad.model.IntentoCredencial;
 import com.tinku.identidad.repository.IntentoCredencialRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

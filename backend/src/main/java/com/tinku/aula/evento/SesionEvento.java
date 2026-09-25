@@ -1,4 +1,4 @@
-package com.tinku.pagos.evento;
+package com.tinku.aula.evento;
 
 import org.springframework.context.ApplicationEvent;
 
