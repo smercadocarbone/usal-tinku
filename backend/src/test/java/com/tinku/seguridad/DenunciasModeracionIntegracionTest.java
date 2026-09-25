@@ -2,7 +2,7 @@ package com.tinku.seguridad;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tinku.aula.model.SesionAprendizaje;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.model.RolAdmin;
@@ -23,7 +23,7 @@ import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.MotivoCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
-import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.seguridad.model.Denuncia;
 import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.model.OrigenSancion;

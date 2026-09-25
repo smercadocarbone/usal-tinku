@@ -9,7 +9,7 @@ import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.pagos.service.LiberacionEscrowService;
 import com.tinku.pagos.service.PasarelaService;
 import com.tinku.pagos.web.PrecioReferenciaResponse;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import jakarta.validation.Valid;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;

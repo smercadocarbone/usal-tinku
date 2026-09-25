@@ -2,7 +2,7 @@ package com.tinku.aula.web;
 
 import com.tinku.aula.EvidenciaService;
 import com.tinku.aula.LiveKitService;
-import com.tinku.aula.model.AlertaSeguridad;
+import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.model.SesionAprendizaje;

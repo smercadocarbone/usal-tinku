@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * que el principal autenticado (DNI, {@link com.tinku.identidad.service.UsuarioDetailsService})
  * tenga una fila activa en {@code admin.admins}, cualquiera sea su rol.
  *
- * No reemplaza el chequeo granular por rol de {@link com.tinku.shared.AdminModeracionGate}
+ * No reemplaza el chequeo granular por rol de {@link com.tinku.admin.AdminModeracionGate}
  * (Moderación y Seguridad vs. Soporte Financiero) que cada controller sigue
  * necesitando — es la red que evita que un endpoint nuevo bajo /api/admin/**
  * quede accesible a cualquier usuario autenticado si alguien olvida invocar el

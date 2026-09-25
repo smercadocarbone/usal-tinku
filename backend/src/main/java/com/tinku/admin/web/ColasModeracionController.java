@@ -1,7 +1,7 @@
 package com.tinku.admin.web;
 
-import com.tinku.aula.model.AlertaSeguridad;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.dto.CredencialResponse;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
@@ -16,7 +16,7 @@ import com.tinku.seguridad.model.EstadoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.seguridad.web.AlertaSeguridadResponse;
 import com.tinku.seguridad.web.DenunciaResponse;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;

@@ -1,6 +1,6 @@
 package com.tinku.seguridad.jobs;
 
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.port.Almacenamiento;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;

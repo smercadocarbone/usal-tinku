@@ -1,4 +1,4 @@
-package com.tinku.aula.model;
+package com.tinku.seguridad.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

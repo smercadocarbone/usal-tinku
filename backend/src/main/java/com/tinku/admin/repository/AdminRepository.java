@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /**
  * Acceso a {@code admin.admins} (V16). El gate de autorización
- * ({@code com.tinku.shared.AdminModeracionGate}) resuelve la fila por el DNI del
+ * ({@code com.tinku.admin.AdminModeracionGate}) resuelve la fila por el DNI del
  * principal del JWT ({@code UsuarioDetailsService} autentica contra
  * {@code identidad.usuarios.dni}; este repo cruza por {@code Admin#getUsuario()}).
  */

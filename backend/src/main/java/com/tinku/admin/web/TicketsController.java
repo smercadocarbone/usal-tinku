@@ -3,7 +3,7 @@ package com.tinku.admin.web;
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.service.TicketSoporteService;
 import com.tinku.admin.model.TicketSoporte;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

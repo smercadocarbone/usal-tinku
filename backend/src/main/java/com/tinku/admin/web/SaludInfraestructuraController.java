@@ -1,7 +1,7 @@
 package com.tinku.admin.web;
 
 import com.tinku.admin.service.SaludInfraestructuraService;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,4 +1,6 @@
-package com.tinku.shared;
+package com.tinku.admin;
+
+import com.tinku.shared.AccesoModeracionDenegadoException;
 
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.model.RolAdmin;

@@ -23,7 +23,7 @@ import java.util.UUID;
  * Tabla separada de {@code usuarios} (un Admin no es un Estudiante/Tutor/menor),
  * aunque vinculada 1:1 a la cuenta real: el JWT existente lleva el DNI como
  * principal ({@code UsuarioDetailsService}) y el gate de autorización
- * ({@code com.tinku.shared.AdminModeracionGate}) resuelve esta fila por ese DNI.
+ * ({@code com.tinku.admin.AdminModeracionGate}) resuelve esta fila por ese DNI.
  */
 @Entity
 @Table(name = "admins", schema = "admin")

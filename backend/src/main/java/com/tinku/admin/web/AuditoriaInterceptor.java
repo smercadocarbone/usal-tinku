@@ -2,7 +2,7 @@ package com.tinku.admin.web;
 
 import com.tinku.admin.model.Admin;
 import com.tinku.admin.service.AuditoriaAdminService;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;

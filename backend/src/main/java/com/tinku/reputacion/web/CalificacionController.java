@@ -2,7 +2,7 @@ package com.tinku.reputacion.web;
 
 import com.tinku.identidad.model.Usuario;
 import com.tinku.reputacion.service.CalificacionService;
-import com.tinku.shared.AdminModeracionGate;
+import com.tinku.admin.AdminModeracionGate;
 import com.tinku.shared.UsuarioActual;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

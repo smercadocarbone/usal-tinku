@@ -1,7 +1,7 @@
 package com.tinku.aula;
 
-import com.tinku.aula.model.AlertaSeguridad;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.port.Almacenamiento;
 import org.springframework.stereotype.Service;

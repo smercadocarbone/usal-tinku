@@ -1,7 +1,7 @@
 package com.tinku.seguridad.service;
 
-import com.tinku.aula.model.AlertaSeguridad;
-import com.tinku.aula.repository.AlertaSeguridadRepository;
+import com.tinku.seguridad.model.AlertaSeguridad;
+import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
