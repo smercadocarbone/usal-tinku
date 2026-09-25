@@ -123,5 +123,6 @@ jobs:
             echo "::warning::Sin COOLIFY_WEBHOOK / COOLIFY_TOKEN: imágenes publicadas, deploy no disparado (ver RUNBOOK_produccion.md)"
             exit 0
           fi
-          curl --fail-with-body -sS -X GET "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+          # Coolify 4 (versiones recientes) solo acepta POST en /api/v1/deploy: con GET responde 405.
+          curl --fail-with-body -sS -X POST "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
           echo "Desplegado ${{ github.sha }} (rollback: TINKU_TAG=<hash anterior> en Coolify)" >> "$GITHUB_STEP_SUMMARY"
