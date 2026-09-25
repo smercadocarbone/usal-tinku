@@ -27,6 +27,8 @@ import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
+import com.tinku.shared.notificacion.Notificador;
+import com.tinku.shared.notificacion.TipoNotificacion;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -79,6 +81,7 @@ public class ReservaService {
     private final ApplicationEventPublisher events;
     private final Scheduler scheduler;
     private final PoliticaSesionesMenores politicaMenores;
+    private final Notificador notificador;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
@@ -89,7 +92,8 @@ public class ReservaService {
                           ReputacionBloqueoProveedor reputacionBloqueo,
                           ApplicationEventPublisher events,
                           Scheduler scheduler,
-                          PoliticaSesionesMenores politicaMenores) {
+                          PoliticaSesionesMenores politicaMenores,
+                          Notificador notificador) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -100,6 +104,7 @@ public class ReservaService {
         this.events = events;
         this.scheduler = scheduler;
         this.politicaMenores = politicaMenores;
+        this.notificador = notificador;
     }
 
     /**
@@ -332,6 +337,30 @@ public class ReservaService {
     }
 
     /**
+     * PT10 (T02): el Tutor perdió la habilitación para menores. Se cancelan sus reservas
+     * futuras cuyo beneficiario es un MENOR, con el Tutor como quien cancela: M5 hace
+     * reembolso total (canceló alguien que no es el pagador). Las de adultos siguen.
+     * Aviso al Adulto Responsable por cada una.
+     */
+    @Transactional
+    public int cancelarFuturasConMenoresPorCap(UUID tutorId) {
+        List<Reserva> conMenores = reservaRepo.findByEstadoInAndHorarioAfterAndTutor_Id(
+                        List.of(EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA), Instant.now(), tutorId)
+                .stream()
+                .filter(r -> r.getBeneficiario().getTipo() == TipoUsuario.MENOR)
+                .toList();
+        conMenores.forEach(r -> {
+            cancelarPorSistema(r, MotivoCancelacion.CAP_VENCIDO, tutorId);
+            notificador.notificar(r.getPagador().getId(),
+                    TipoNotificacion.CLASE_CANCELADA_TUTOR_SIN_HABILITACION,
+                    Map.of("reservaId", r.getId().toString(), "horario", r.getHorario().toString()));
+        });
+        solicitudRepo.findByTutorIdAndEstado(tutorId, EstadoSolicitud.PENDIENTE)
+                .forEach(sol -> sol.setEstado(EstadoSolicitud.RECHAZADA));
+        return conMenores.size();
+    }
+
+    /**
      * FR-ID-014 — baja confirmada de un menor: se cancelan sus reservas futuras
      * (él es siempre el beneficiario). Es un acto del Adulto Responsable, que es el
      * pagador, así que el motivo es {@code voluntaria} y {@code reserva.cancelada}
@@ -394,7 +423,7 @@ public class ReservaService {
         // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {
-            politicaMenores.validarSesionesHabilitadas();
+            politicaMenores.validarClaseConMenor(tutor.getId()); // T-TES-10 + FR-ID-026 (CAP)
         }
         // FR-REP-006 (T-M4-10): Tutor con calificación pendiente no toma reservas nuevas.
         if (reputacionBloqueo.tutoresConCalificacionPendiente().contains(tutor.getId())) {

@@ -13,7 +13,12 @@ public enum TipoNotificacion {
 
     /** FR-SEC-010: al denunciado, para que sepa que corre su plazo de descargo. Sin
      *  nada del denunciante (FR-SEC-006). Datos: denunciaId, descargoVenceAt. */
-    DENUNCIA_RECIBIDA(true);
+    DENUNCIA_RECIBIDA(true),
+
+    /** PT10 (T02): el Tutor perdió la habilitación para menores (CAP vencido) y se canceló
+     *  la clase con reembolso total. Al Adulto Responsable. Sin datos del CAP (T03 §2.3).
+     *  Datos: reservaId, horario. */
+    CLASE_CANCELADA_TUTOR_SIN_HABILITACION(true);
 
     private final boolean porEmail;
 

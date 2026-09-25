@@ -1,5 +1,9 @@
 package com.tinku.identidad.web;
 
+import com.tinku.identidad.service.CertificadoService;
+import com.tinku.identidad.model.CertificadoAntecedentesPenales;
+import com.tinku.identidad.dto.CargarCapRequest;
+import com.tinku.identidad.dto.CapResponse;
 import com.tinku.identidad.dto.ActualizarPerfilPublicoRequest;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.CredencialResponse;
@@ -62,6 +66,7 @@ public class TutorController {
     private final ReputacionPerfilProvider reputacionPerfilProvider;
     private final TarifaPerfilProvider tarifaPerfilProvider;
     private final PerfilPublicoTutorService perfilPublicoService;
+    private final CertificadoService certificadoService;
     /** Mismo valor que corta el contenedor; se re-chequea acá (ver cargarCredencial). */
     private final DataSize maxArchivoCredencial;
 
@@ -73,6 +78,7 @@ public class TutorController {
                            ReputacionPerfilProvider reputacionPerfilProvider,
                            TarifaPerfilProvider tarifaPerfilProvider,
                            PerfilPublicoTutorService perfilPublicoService,
+                           CertificadoService certificadoService,
                            @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial) {
         this.maxArchivoCredencial = maxArchivoCredencial;
         this.usuarioService = usuarioService;
@@ -83,6 +89,7 @@ public class TutorController {
         this.reputacionPerfilProvider = reputacionPerfilProvider;
         this.tarifaPerfilProvider = tarifaPerfilProvider;
         this.perfilPublicoService = perfilPublicoService;
+        this.certificadoService = certificadoService;
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -109,7 +116,8 @@ public class TutorController {
         ReputacionTutor reputacion = reputacionPerfilProvider.reputacion(id);
         return TutorPerfilResponse.of(tutor, materiasNivel.orElse(null), reputacion,
                 credencialService.existeAprobada(id),
-                tarifaPerfilProvider.tarifaConfigurada(id).orElse(null));
+                tarifaPerfilProvider.tarifaConfigurada(id).orElse(null),
+                certificadoService.habilitadoParaMenores(id));
     }
 
     /** UX-06 §1: checklist de "qué me falta para recibir alumnos". Solo Tutores. */
@@ -127,7 +135,33 @@ public class TutorController {
                 perfilMatchingProvider.materiasYNivel(id).map(m -> !m.materias().isEmpty()).orElse(false),
                 tarifaPerfilProvider.tarifaConfigurada(id).isPresent(),
                 tutor.getBio() != null,
-                tutor.getFotoRef() != null));
+                tutor.getFotoRef() != null,
+                certificadoService.ultimo(id).map(CapResponse::from).orElse(null),
+                certificadoService.habilitadoParaMenores(id)));
+    }
+
+    /**
+     * FR-ID-021 (T02): el Tutor que quiere dar clases a menores sube su CAP (PDF de
+     * argentina.gob.ar / Mi Argentina). Mismas validaciones que la credencial (AUD-007):
+     * tamaño y tipo real por magic bytes, antes de guardar nada.
+     */
+    @PostMapping(value = "/antecedentes-penales", consumes = "multipart/form-data")
+    public ResponseEntity<CapResponse> cargarCap(
+            @Valid @RequestPart("datos") CargarCapRequest request,
+            @RequestPart("archivo") MultipartFile archivo,
+            Authentication authentication
+    ) throws IOException {
+        Usuario tutor = usuarioActual.obtener(authentication);
+        byte[] contenido = archivo.getBytes();
+        if (archivo.getSize() > maxArchivoCredencial.toBytes()) {
+            throw new ArchivoCredencialDemasiadoGrandeException(maxArchivoCredencial);
+        }
+        if (TipoArchivoCredencial.detectar(contenido).isEmpty()) {
+            throw new ArchivoCredencialInvalidoException();
+        }
+        String archivoUrl = almacenamiento.guardar(contenido, "cap-" + archivo.getOriginalFilename());
+        CertificadoAntecedentesPenales cap = certificadoService.cargarCap(tutor, archivoUrl, request.fechaEmision());
+        return ResponseEntity.status(HttpStatus.CREATED).body(CapResponse.from(cap));
     }
 
     /** U1: el Tutor autenticado actualiza la bio de su perfil público (≤ 500 caracteres). */

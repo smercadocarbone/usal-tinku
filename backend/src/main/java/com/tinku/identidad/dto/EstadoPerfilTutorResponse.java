@@ -10,6 +10,7 @@ import com.tinku.identidad.model.EstadoCredencial;
  *
  * @param ultimaCredencial estado de la última credencial cargada; {@code null} si no cargó ninguna.
  * @param tieneCredencialAprobada tiene al menos una aprobada (aunque la última siga en revisión, B12).
+ * @param cap su último CAP (T03 §2.1); {@code null} si nunca cargó. Opcional: solo hace falta para menores.
  */
 public record EstadoPerfilTutorResponse(
         boolean visibleEnBusquedas,
@@ -18,6 +19,8 @@ public record EstadoPerfilTutorResponse(
         boolean tieneMaterias,
         boolean tienePrecio,
         boolean tieneBio,
-        boolean tieneFoto
+        boolean tieneFoto,
+        CapResponse cap,
+        boolean habilitadoParaMenores
 ) {
 }

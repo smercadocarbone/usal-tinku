@@ -25,11 +25,14 @@ public class AutorizacionService {
 
     private final AutorizacionTutorRepository autorizacionRepo;
     private final UsuarioRepository usuarioRepo;
+    private final HabilitacionMenoresCap habilitacion;
 
     public AutorizacionService(AutorizacionTutorRepository autorizacionRepo,
-                               UsuarioRepository usuarioRepo) {
+                               UsuarioRepository usuarioRepo,
+                               HabilitacionMenoresCap habilitacion) {
         this.autorizacionRepo = autorizacionRepo;
         this.usuarioRepo = usuarioRepo;
+        this.habilitacion = habilitacion;
     }
 
     /** El usuario debe ser Adulto Responsable con esa capacidad activa (FR-ID-009, Artículo II). */
@@ -59,6 +62,10 @@ public class AutorizacionService {
                 .orElseThrow(TutorNoAutorizadoException::new);
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new TutorNoAutorizadoException("Solo perfiles de Tutor pueden ser autorizados.");
+        }
+        // FR-ID-026 (T02): autorizar es solo para menores → exige CAP aprobado y vigente.
+        if (!habilitacion.habilitadoParaMenores(tutorId)) {
+            throw new TutorNoHabilitadoParaMenoresException();
         }
 
         // Idempotente sobre la constraint única (adulto, menor, tutor).

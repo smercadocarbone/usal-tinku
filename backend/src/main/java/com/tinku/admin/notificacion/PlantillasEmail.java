@@ -46,6 +46,16 @@ public class PlantillasEmail {
                     Presentá tu descargo en:
                     %s/cuenta/seguridad
                     """.formatted(nombre, fecha(n.getDatos().get("descargoVenceAt")), urlPublica));
+            case CLASE_CANCELADA_TUTOR_SIN_HABILITACION -> new MensajeEmail(email,
+                    "Tinku: cancelamos una clase de tu hijo o hija", """
+                    Hola %s:
+
+                    Cancelamos la clase del %s (hora de Argentina) porque el tutor ya no está habilitado \
+                    para dar clases a menores. Te devolvemos el total de lo que pagaste.
+
+                    Podés buscar otro tutor en:
+                    %s/buscar
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica));
         };
     }
 

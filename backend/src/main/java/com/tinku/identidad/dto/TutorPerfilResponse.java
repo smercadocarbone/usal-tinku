@@ -31,10 +31,13 @@ public record TutorPerfilResponse(
         String bio,
         boolean tieneFoto,
         boolean verificado,
-        BigDecimal precioHora
+        BigDecimal precioHora,
+        /** FR-ID-026 / T03 §2.2: CAP aprobado y vigente. Nada más del CAP se expone a terceros. */
+        boolean habilitadoParaMenores
 ) {
     public static TutorPerfilResponse of(Usuario tutor, MateriasNivel materiasNivel, ReputacionTutor reputacion,
-                                         boolean verificado, BigDecimal precioHora) {
+                                         boolean verificado, BigDecimal precioHora,
+                                         boolean habilitadoParaMenores) {
         return new TutorPerfilResponse(
                 tutor.getId(),
                 tutor.getNombre(),
@@ -47,7 +50,8 @@ public record TutorPerfilResponse(
                 tutor.getBio(),
                 tutor.getFotoRef() != null,
                 verificado,
-                precioHora
+                precioHora,
+                habilitadoParaMenores
         );
     }
 }

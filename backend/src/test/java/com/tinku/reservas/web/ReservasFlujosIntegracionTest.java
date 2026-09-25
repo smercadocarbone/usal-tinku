@@ -108,6 +108,8 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Autowired MockMvc mockMvc;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate capJdbc; // T02: CAP vigente de los tutores de menores
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired SolicitudSesionRepository solicitudRepo;
@@ -213,6 +215,7 @@ class ReservasFlujosIntegracionTest {
     }
 
     private void autorizar(UUID tutorId, UUID menorId, String tokenAr) throws Exception {
+        com.tinku.testsupport.CapVigente.para(capJdbc, tutorId); // FR-ID-026 (T02)
         mockMvc.perform(post("/api/autorizaciones")
                         .header("Authorization", "Bearer " + tokenAr)
                         .contentType(MediaType.APPLICATION_JSON)
