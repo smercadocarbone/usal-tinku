@@ -344,6 +344,27 @@ class PagosWebhookIntegracionTest {
         assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
     }
 
+    /** Producción (2026-09-25): MP notificó SIN {@code ?data.id=} en la URL; el id del
+     *  pago venía solo en el cuerpo y la firma se calcula sobre ese id. Antes se armaba
+     *  el manifest sin id → "la firma no coincide" y la reserva vencía con el pago aprobado. */
+    @Test
+    void webhookFirmado_sinDataIdEnLaUrl_usaElIdDelCuerpo_confirmaLaReserva() throws Exception {
+        UUID reservaId = crearReservaEnPendiente();
+        String mpPaymentId = "pago-sin-query";
+        pagoAprobado(mpPaymentId, reservaId, new BigDecimal("15000"));
+
+        mockMvc.perform(post("/api/webhooks/mercadopago")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("x-signature", firma(mpPaymentId, "req-cuerpo"))
+                        .header("x-request-id", "req-cuerpo")
+                        .content(cuerpoNotificacion(mpPaymentId)))
+                .andExpect(status().isOk());
+
+        assertThat(transaccionRepository.findByReservaId(reservaId)).isPresent();
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CONFIRMADA);
+    }
+
     @Test
     void webhookFirmaInvalida_401_sinEfectos() throws Exception {
         UUID reservaId = crearReservaEnPendiente();

@@ -48,18 +48,19 @@ public class MercadoPagoWebhookController {
                                         String xSignature,
                                         @RequestHeader(value = "x-request-id", required = false)
                                         String xRequestId) throws IOException {
+        // El cuerpo se lee ANTES de verificar: MP no siempre agrega ?data.id= a la URL
+        // (producción, 2026-09-25) y en ese caso firma el data.id del cuerpo. Leerlo acá
+        // no le da confianza a nada: si el id no es el firmado, la firma no coincide.
+        JsonNode notificacion = leerCuerpo(request);
         String dataIdQuery = request.getParameter("data.id");
-        if (!verificador.esFirmaValida(xSignature, xRequestId, dataIdQuery)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        JsonNode notificacion = objectMapper.readTree(request.getInputStream().readAllBytes());
-        // NOTA: el manifest firma el data.id del QUERY PARAM (lowercased); el body
-        // lo repite. Para procesar usamos query si viene, sino el del body.
         String dataIdBody = notificacion.path("data").path("id").asText(null);
         String mpPaymentId = (dataIdQuery != null && !dataIdQuery.isBlank())
                 ? dataIdQuery
                 : dataIdBody;
+        if (!verificador.esFirmaValida(xSignature, xRequestId, mpPaymentId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         if (mpPaymentId == null || mpPaymentId.isBlank()
                 || !"payment".equals(notificacion.path("type").asText())) {
             // No es una notificación de pago (hay otros topics): ack sin efecto.
@@ -68,5 +69,18 @@ public class MercadoPagoWebhookController {
 
         escrowService.procesarPagoAprobado(mpPaymentId);
         return ResponseEntity.ok().build();
+    }
+
+    /** Cuerpo vacío o que no es JSON = notificación sin id (el verificador decide). */
+    private JsonNode leerCuerpo(HttpServletRequest request) throws IOException {
+        byte[] bytes = request.getInputStream().readAllBytes();
+        if (bytes.length == 0) {
+            return objectMapper.createObjectNode();
+        }
+        try {
+            return objectMapper.readTree(bytes);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return objectMapper.createObjectNode();
+        }
     }
 }
