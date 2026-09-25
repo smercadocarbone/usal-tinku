@@ -94,6 +94,26 @@ public class MatchingServiceClient {
         }
     }
 
+    /**
+     * Repuebla el embedding de todos los perfiles desde sus {@code tema_ids}
+     * (contrato 2c, POST /recompute-embeddings). Idempotente del lado Python.
+     * Error del servicio o conexión caída → {@link MatchingNoDisponibleException}.
+     */
+    public void recomputarEmbeddings() {
+        try {
+            restClient.post()
+                    .uri("/recompute-embeddings")
+                    .retrieve()
+                    .onStatus(status -> status.isError(),
+                            (request, response) -> {
+                                throw new MatchingNoDisponibleException();
+                            })
+                    .toBodilessEntity();
+        } catch (RestClientException ex) {
+            throw new MatchingNoDisponibleException();
+        }
+    }
+
     private static final ParameterizedTypeReference<List<ResultadoMatch>> MATCH_RESPONSE_TYPE =
             new ParameterizedTypeReference<>() {
             };

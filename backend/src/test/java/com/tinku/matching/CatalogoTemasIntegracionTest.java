@@ -44,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -358,6 +359,40 @@ class CatalogoTemasIntegracionTest {
         putTemas(token, List.of(divisionId, factorizacionId));
 
         assertThat(getTemas(token)).containsExactly(divisionId, factorizacionId);
+    }
+
+    /** Producción 2026-09-25: el perfil público leía las materias de la columna legacy
+     *  (V7, materias_niveles_ids), que el flujo de temas nunca llena → todo Tutor real
+     *  se veía "sin materias" y el checklist nunca tildaba "Elegí qué materias enseñás". */
+    @Test
+    void putTemas_elPerfilPublicoMuestraLasMateriasDeEsosTemas() throws Exception {
+        String token = registrarTutorYToken("30177701");
+        aprobarCredencialDe(token);
+        UUID tutorId = usuarioPorDni("30177701").getId();
+
+        putTemas(token, List.of(divisionId, cuentoId, factorizacionId));
+
+        mockMvc.perform(get("/api/tutores/" + tutorId).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.materias.length()").value(2))
+                .andExpect(jsonPath("$.materias[0]").value("Matemática"))
+                .andExpect(jsonPath("$.materias[1]").value("Lengua"))
+                .andExpect(jsonPath("$.nivel").value("primario"));
+        mockMvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tieneMaterias").value(true));
+    }
+
+    /** Producción 2026-09-25: nadie pedía el recompute de embeddings (contrato 2c), así
+     *  que un Tutor real que elegía temas nunca aparecía en la búsqueda semántica. */
+    @Test
+    void putTemas_pideElRecomputeDeEmbeddingsDespuesDelCommit() throws Exception {
+        String token = registrarTutorYToken("30177702");
+        aprobarCredencialDe(token);
+
+        putTemas(token, List.of(divisionId));
+
+        verify(matchingClient, timeout(5000)).recomputarEmbeddings();
     }
 
     @Test

@@ -85,37 +85,29 @@ BEGIN
         SELECT * FROM (VALUES
           (1, '99900001', 'María',  'Pérez',     'maria',  DATE '1995-03-12', 9000::numeric, 6,
            'Profesora de Matemática (UNLP). Hace 8 años que preparo a chicos de secundaria para exámenes y previas: vamos de lo que te trabó a lo que te toman.',
-           '[["secundario","4°","Matemática",4],["secundario","5°","Matemática",3],["secundario","3°","Matemática",2]]',
-           '[["secundario","Matemática"]]'),
+           '[["secundario","4°","Matemática",4],["secundario","5°","Matemática",3],["secundario","3°","Matemática",2]]'),
           (2, '99900002', 'Juan',   'García',    'juan',   DATE '1992-07-01', 8500, 6,
            'Traductor público de inglés. Clases de gramática y conversación para secundaria, con foco en que puedas usarlo, no solo aprobar.',
-           '[["secundario","4°","Inglés",4],["secundario","5°","Inglés",3],["primario","4°","Inglés",2]]',
-           '[["secundario","Inglés"]]'),
+           '[["secundario","4°","Inglés",4],["secundario","5°","Inglés",3],["primario","4°","Inglés",2]]'),
           (3, '99900003', 'Ana',    'Rodríguez', 'ana',    DATE '1989-11-25', 10000, 6,
            'Licenciada en Física (UBA). Física y Química de secundaria con muchos ejemplos de la vida cotidiana y problemas resueltos paso a paso.',
-           '[["secundario","4°","Física",4],["secundario","4°","Química",3],["secundario","5°","Química",2]]',
-           '[["secundario","Física"],["secundario","Química"]]'),
+           '[["secundario","4°","Física",4],["secundario","4°","Química",3],["secundario","5°","Química",2]]'),
           (4, '99900004', 'Carlos', 'López',     'carlos', DATE '1998-02-19', 12000, 6,
            'Ingeniero en Sistemas (UTN). Programación desde cero y Algoritmos para primer año: pensamos juntos el problema antes de escribir código.',
-           '[["universitario","Ingeniería en Sistemas de Información","Algoritmos y Estructuras de Datos",5],["universitario","Ingeniería en Sistemas de Información","Matemática Discreta",2],["secundario","4°","Programación",2]]',
-           '[["universitario","Programación"],["universitario","Estructura de Datos"]]'),
+           '[["universitario","Ingeniería en Sistemas de Información","Algoritmos y Estructuras de Datos",5],["universitario","Ingeniería en Sistemas de Información","Matemática Discreta",2],["secundario","4°","Programación",2]]'),
           (5, '99900005', 'Laura',  'Martínez',  'laura',  DATE '1994-09-03', 8000, 6,
            'Profesora de Historia. Te ayudo a entender los procesos (no a memorizar fechas) y a armar buenas respuestas para las pruebas escritas.',
-           '[["secundario","4°","Historia",4],["secundario","5°","Historia",3],["secundario","4°","Geografía",2]]',
-           '[["secundario","Historia"],["secundario","Geografía"]]'),
+           '[["secundario","4°","Historia",4],["secundario","5°","Historia",3],["secundario","4°","Geografía",2]]'),
           (6, '99900006', 'Diego',  'Fernández', 'diego',  DATE '1991-05-30', 15000, 3,
            'Médico, ayudante de Anatomía. Clases para primer año de Medicina con esquemas y repaso de parciales.',
-           '[["universitario","Medicina","Anatomía",5],["universitario","Medicina","Fisiología y Biofísica",3]]',
-           '[["universitario","Anatomía"],["universitario","Fisiología"]]'),
+           '[["universitario","Medicina","Anatomía",5],["universitario","Medicina","Fisiología y Biofísica",3]]'),
           (7, '99900007', 'Sofía',  'Gómez',     'sofia',  DATE '2000-08-15', 7000, 6,
            'Maestra de primaria. Apoyo escolar de Matemática y Lengua para chicos de 3° a 5° grado, con juegos y mucha práctica.',
-           '[["primario","3°","Matemática",4],["primario","4°","Matemática",3],["primario","4°","Lengua",3]]',
-           '[["primario","Matemática"],["primario","Lengua"]]'),
+           '[["primario","3°","Matemática",4],["primario","4°","Matemática",3],["primario","4°","Lengua",3]]'),
           (8, '99900008', 'Paula',  'Sánchez',   'paula',  DATE '1997-01-22', 11000, 0,
            'Estudiante avanzada de Ingeniería Civil. Análisis Matemático I y Álgebra para ingresantes. Soy nueva en Tinku.',
-           '[["universitario","Ingeniería Civil","Análisis Matemático I",5],["universitario","Ingeniería Civil","Álgebra y Geometría Analítica",3]]',
-           '[["universitario","Cálculo"],["universitario","Álgebra Lineal"]]')
-        ) AS x(n, dni, nombre, apellido, alias, nacimiento, tarifa, clases, bio, temas, materias)
+           '[["universitario","Ingeniería Civil","Análisis Matemático I",5],["universitario","Ingeniería Civil","Álgebra y Geometría Analítica",3]]')
+        ) AS x(n, dni, nombre, apellido, alias, nacimiento, tarifa, clases, bio, temas)
         ORDER BY n
     LOOP
         INSERT INTO identidad.usuarios (dni, nombre, apellido, fecha_nacimiento, tipo, password_hash,
@@ -141,19 +133,6 @@ BEGIN
                ) te ON TRUE;
         IF (SELECT cardinality(tema_ids) FROM matching.perfiles_tutor_matching p WHERE p.tutor_id = v_tutor) = 0 THEN
             RAISE EXCEPTION 'El catálogo no tiene los temas del Tutor % (¿cambió V20?).', t.dni;
-        END IF;
-
-        -- El perfil público todavía lee las materias del catálogo viejo (V7, materias_niveles_ids):
-        -- ver PerfilMatchingProviderReal. Sin esto el Tutor se ve sin materias.
-        UPDATE matching.perfiles_tutor_matching p
-           SET materias_niveles_ids = (
-                SELECT array_agg(mn.id ORDER BY sel.ord)
-                  FROM jsonb_array_elements(t.materias::jsonb) WITH ORDINALITY AS sel(j, ord)
-                  JOIN matching.materias_niveles mn ON mn.nivel = sel.j->>0 AND mn.materia = sel.j->>1)
-         WHERE p.tutor_id = v_tutor;
-        IF (SELECT cardinality(materias_niveles_ids) FROM matching.perfiles_tutor_matching p
-             WHERE p.tutor_id = v_tutor) IS DISTINCT FROM jsonb_array_length(t.materias::jsonb) THEN
-            RAISE EXCEPTION 'El catálogo V7 no tiene las materias del Tutor %.', t.dni;
         END IF;
 
         INSERT INTO pagos.tarifas_tutor (tutor_id, precio_hora) VALUES (v_tutor, t.tarifa);
