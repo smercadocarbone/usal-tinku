@@ -64,7 +64,7 @@ test.describe("Accesibilidad", () => {
     "el registro no tiene violaciones graves en ningún paso del wizard",
     { tag: ["@a11y", "@critical", "@A11Y-003"] },
     async ({ page }) => {
-      // Recorre los 4 pasos: los pasos de más adelante son justamente donde se
+      // Recorre los 5 pasos (incluidos los puntos clave de los Términos): los pasos de más adelante son justamente donde se
       // escondían fallos de contraste (texto de ayuda, separador "o", números
       // de paso) que no se veían quedándose en la primera pantalla.
       await mockApi(page, {
@@ -95,6 +95,11 @@ test.describe("Accesibilidad", () => {
         ),
       });
       await page.getByRole("button", { name: "Verificar", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Cómo funciona Tinku" })).toBeVisible();
+      expect(await violacionesGraves(page)).toEqual([]);
+
+      await page.getByLabel("Acepto los Términos y Condiciones").check();
+      await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await expect(page.getByLabel("Repetí la contraseña")).toBeVisible();
       expect(await violacionesGraves(page)).toEqual([]);
     }

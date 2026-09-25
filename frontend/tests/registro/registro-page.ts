@@ -56,12 +56,18 @@ export class RegistroPage extends BasePage {
     await this.botonVerificar.click();
   }
 
+  /** Paso "Condiciones": los puntos clave de los Términos, con aceptación explícita. */
+  async aceptarCondiciones(): Promise<void> {
+    await this.page.getByRole("heading", { name: "Cómo funciona Tinku" }).waitFor();
+    await this.page.getByLabel("Acepto los Términos y Condiciones").check();
+    await this.botonContinuar.click();
+  }
+
   async crearAcceso(password: string): Promise<void> {
     // "Contraseña" es substring de "Repetí la contraseña" — exact evita el
     // choque entre los dos campos.
     await this.page.getByLabel("Contraseña", { exact: true }).fill(password);
     await this.page.getByLabel("Repetí la contraseña").fill(password);
-    await this.page.getByLabel("Acepto los Términos y Condiciones").check();
     await this.botonCrearCuenta.click();
   }
 
@@ -69,6 +75,7 @@ export class RegistroPage extends BasePage {
     await this.elegirRolAdulto();
     await this.completarDatosPersonales(datos);
     await this.verificarIdentidad();
+    await this.aceptarCondiciones();
     await this.crearAcceso(datos.password);
   }
 }

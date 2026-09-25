@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   BookOpen,
   CalendarClock,
+  Camera,
   Check,
   ChevronLeft,
   CircleDollarSign,
@@ -22,13 +23,14 @@ import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { cn } from "@/lib/cn";
 import { Alerta, Boton, Campo, CampoCheckbox, Pasos, RequisitosPassword, Selector, SubidaArchivo, clasesBoton } from "@/components/ui";
 import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
+import TerminosClave from "@/components/auth/TerminosClave";
 
 type Uso = "clases" | "hijos" | "ambos";
 type Tipo = "adulto" | "tutor";
 
 const PASOS: Record<Tipo, string[]> = {
-  adulto: ["Para quién", "Tus datos", "Identidad", "Acceso"],
-  tutor: ["Tus datos", "Identidad", "Acceso", "Qué sigue"],
+  adulto: ["Para quién", "Tus datos", "Identidad", "Condiciones", "Acceso"],
+  tutor: ["Tus datos", "Identidad", "Condiciones", "Acceso", "Qué sigue"],
 };
 
 const USOS: { id: Uso; titulo: string; texto: string; icono: LucideIcon }[] = [
@@ -118,7 +120,8 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
   // Paso de identidad y acceso: sus índices dependen del tipo.
   const iDatos = tipo === "adulto" ? 1 : 0;
   const iIdentidad = iDatos + 1;
-  const iAcceso = iDatos + 2;
+  const iCondiciones = iDatos + 2;
+  const iAcceso = iDatos + 3;
 
   const base = tipo === "adulto" ? "/api/usuarios" : "/api/tutores";
   const edadDeclarada = edad(fechaNacimiento);
@@ -171,7 +174,7 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
     form.append("fotoDni", fotoDni);
     try {
       await api.post(`${base}/verificar-dni`, form);
-      ir(iAcceso);
+      ir(iCondiciones);
     } catch (err) {
       mapaError(err);
     } finally {
@@ -357,6 +360,29 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
         </section>
       )}
 
+      {/* ---------------- Condiciones (puntos clave de los Términos) ---------------- */}
+      {paso === iCondiciones && (
+        <section>
+          <Encabezado
+            titulo="Cómo funciona Tinku"
+            texto="Antes de crear tu cuenta, lo más importante de los Términos y Condiciones en pocas palabras."
+          />
+          <TerminosClave tipo={tipo} />
+          <div className="mt-6 flex flex-col gap-2">
+            <CampoCheckbox id="terminos" etiqueta="Acepto los Términos y Condiciones" checked={terminos} required
+              onChange={(e) => setTerminos(e.target.checked)} />
+            <p className="text-[13px] leading-relaxed text-tinta-tenue">
+              Versión provisoria: al aceptar confirmás que sos mayor de 18 y que tus datos son verdaderos. El texto legal completo se publica antes del lanzamiento.
+            </p>
+          </div>
+          <Navegacion onVolver={() => ir(iIdentidad)}>
+            <Boton tamano="lg" anchoCompleto disabled={!terminos} onClick={() => ir(iAcceso)}>
+              Continuar
+            </Boton>
+          </Navegacion>
+        </section>
+      )}
+
       {/* ---------------- Acceso ---------------- */}
       {paso === iAcceso && (
         <form onSubmit={crearCuenta}>
@@ -368,13 +394,8 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
             <Campo id="confirmarPassword" etiqueta="Repetí la contraseña" variante="password" autoComplete="new-password"
               required minLength={LARGO_MINIMO_PASSWORD} value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
               error={confirmar && password !== confirmar ? "No coincide con la contraseña de arriba." : undefined} />
-            <CampoCheckbox id="terminos" etiqueta="Acepto los Términos y Condiciones" checked={terminos} required
-              onChange={(e) => setTerminos(e.target.checked)} />
-            <p className="-mt-2 text-[13px] leading-relaxed text-tinta-tenue">
-              Versión provisoria: al crear tu cuenta confirmás que sos mayor de 18 y que tus datos son verdaderos. El texto completo se publica antes del lanzamiento.
-            </p>
           </div>
-          <Navegacion onVolver={() => ir(iIdentidad)}>
+          <Navegacion onVolver={() => ir(iCondiciones)}>
             <Boton type="submit" tamano="lg" anchoCompleto disabled={!passwordValida(password, dni) || password !== confirmar || !terminos}
               cargando={trabajando} textoCargando="Creando tu cuenta…">
               Crear cuenta
@@ -451,6 +472,7 @@ function QueSigueTutor({ conSesion }: { conSesion: boolean }) {
 
   const pasosTutor = [
     { i: GraduationCap, t: "Subí tu título o certificado", d: "Lo revisa una persona del equipo de Tinku." },
+    { i: Camera, t: "Subí tu foto de perfil", d: "Es obligatoria: los alumnos y las familias ven con quién toman clase." },
     { i: BookOpen, t: "Elegí qué materias enseñás" },
     { i: CalendarClock, t: "Publicá tus horarios" },
     { i: CircleDollarSign, t: "Poné tu precio" },
@@ -460,7 +482,7 @@ function QueSigueTutor({ conSesion }: { conSesion: boolean }) {
     <section>
       <Encabezado
         titulo="Cuenta de tutor creada"
-        texto="Te faltan cuatro cosas para aparecer en las búsquedas. La primera la podés hacer ya."
+        texto="Te faltan cinco cosas para aparecer en las búsquedas. La primera la podés hacer ya."
       />
       <ol className="mt-6 flex list-none flex-col gap-2 p-0">
         {pasosTutor.map(({ i: I, t, d }, n) => (

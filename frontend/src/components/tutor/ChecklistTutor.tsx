@@ -33,7 +33,8 @@ function items(e: EstadoPerfilTutor, tieneHorarios: boolean): Item[] {
     { titulo: "Elegí qué materias enseñás", hecho: e.tieneMaterias, href: "/cuenta/materias" },
     { titulo: "Publicá tus horarios", hecho: tieneHorarios, href: "/cuenta/horarios" },
     { titulo: "Poné tu precio", hecho: e.tienePrecio, href: "/cuenta/precio" },
-    { titulo: "Presentación y foto", hecho: e.tieneBio && e.tieneFoto, href: "/cuenta/perfil-tutor", opcional: true },
+    { titulo: "Subí tu foto de perfil", detalle: "Es obligatoria: sin foto no aparecés en las búsquedas.", hecho: e.tieneFoto, href: "/cuenta/perfil-tutor" },
+    { titulo: "Escribí tu presentación", hecho: e.tieneBio, href: "/cuenta/perfil-tutor", opcional: true },
   ];
 }
 

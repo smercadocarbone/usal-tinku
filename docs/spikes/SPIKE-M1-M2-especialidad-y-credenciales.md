@@ -1,6 +1,6 @@
 # SPIKE — Especialidad del Tutor y verificación de títulos (M1 + M2)
 
-**Fecha:** 2026-09-25 · **Estado:** investigación cerrada, **pendiente de decisión** (§6).
+**Fecha:** 2026-09-25 · **Estado:** investigación cerrada. **Decidido en ADR-M1-06** (1: sí; 2: sí, marcados; 3: triaje automático + Admin contra registro). Queda pendiente la cláusula (4).
 **Preguntas:**
 1. ¿Cuál es la mejor forma de que el Tutor declare su especialidad?
 2. ¿Se pueden subir títulos secundarios, universitarios, docentes y otros? ¿Se verifican bien, sin que se pueda subir cualquier cosa?
