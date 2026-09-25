@@ -19,6 +19,12 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+
+  /** R5: código estable del error (p. ej. `HORARIO_OCUPADO`); decidir por esto, no por el texto. */
+  get codigo(): string | undefined {
+    const c = this.detalles?.codigo;
+    return typeof c === "string" ? c : undefined;
+  }
 }
 
 type Cuerpo = Record<string, unknown> | FormData | string | undefined;
@@ -879,4 +885,46 @@ export async function subirAudioResumen(sesionId: string, audio: Blob): Promise<
     const [mensaje, detalles] = await leerError(res);
     throw new ApiError(res.status, mensaje, detalles);
   }
+}
+
+/** R5: Tutores autorizados para un menor (solo su Adulto Responsable). */
+export interface AutorizacionMenor {
+  tutorId: string;
+  tutorNombre: string;
+  tutorApellido: string;
+  tieneFoto: boolean;
+  noConfiable: boolean;
+  autorizadoAt: string;
+}
+
+export function getAutorizaciones(menorId: string): Promise<AutorizacionMenor[]> {
+  return api.get(`/api/autorizaciones?menorId=${encodeURIComponent(menorId)}`);
+}
+
+export function marcarNoConfiable(tutorId: string, noConfiable: boolean): Promise<void> {
+  return api.patch("/api/autorizaciones/no-confiable", { tutorId, noConfiable });
+}
+
+/** R4: cola de reembolsos del adicional de resumen (BR-PAG-11). */
+export interface ReembolsoAdicional {
+  id: string;
+  reservaId: string;
+  monto: number;
+  estado: "PENDIENTE" | "FALLIDO" | "HECHO" | "RESUELTO_MANUAL";
+  intentos: number;
+  ultimoError: string | null;
+  nota: string | null;
+  reembolsadoAt: string | null;
+}
+
+export function getColaReembolsosAdicional(): Promise<ReembolsoAdicional[]> {
+  return api.get("/api/admin/financiero/reembolsos-adicional");
+}
+
+export function reintentarReembolsoAdicional(id: string): Promise<ReembolsoAdicional> {
+  return api.post(`/api/admin/financiero/reembolsos-adicional/${id}/reintentar`);
+}
+
+export function resolverReembolsoAdicional(id: string, nota: string): Promise<ReembolsoAdicional> {
+  return api.post(`/api/admin/financiero/reembolsos-adicional/${id}/resuelto-manual`, { nota });
 }

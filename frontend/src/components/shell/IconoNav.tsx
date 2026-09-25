@@ -1,4 +1,4 @@
-import { CalendarDays, GraduationCap, LayoutDashboard, Search, UserRound, UsersRound, BookOpenCheck } from "lucide-react";
+import { CalendarDays, Wallet, GraduationCap, LayoutDashboard, Search, UserRound, UsersRound, BookOpenCheck } from "lucide-react";
 import type { IconoNav as TipoIcono } from "@/lib/navegacion";
 
 const MAPA = {
@@ -9,6 +9,7 @@ const MAPA = {
   agenda: CalendarDays,
   perfil: GraduationCap,
   panel: LayoutDashboard,
+  cobros: Wallet,
 } as const;
 
 export default function IconoNav({ icono, className }: { icono: TipoIcono; className?: string }) {

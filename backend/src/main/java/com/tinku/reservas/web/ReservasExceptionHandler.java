@@ -70,11 +70,21 @@ public class ReservasExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
-    /** 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate del piloto (T-TES-10). */
+    /**
+     * 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate del piloto (T-TES-10).
+     * R5: cada 409 lleva un {@code codigo} estable; el frontend decide por él, no por el texto.
+     */
     @ExceptionHandler({SolicitudDuplicadaException.class, SesionesConMenoresDeshabilitadasException.class,
             TutorSinHabilitacionMenoresException.class})
     public ResponseEntity<Map<String, String>> handleConflicto(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        String codigo = ex instanceof SolicitudDuplicadaException ? "SOLICITUD_DUPLICADA"
+                : ex instanceof SesionesConMenoresDeshabilitadasException ? "MENORES_PILOTO"
+                : "TUTOR_SIN_CAP";
+        return conflicto(codigo, ex.getMessage());
+    }
+
+    private static ResponseEntity<Map<String, String>> conflicto(String codigo, String mensaje) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", mensaje, "codigo", codigo));
     }
 
     /** FR-RES-007: la constraint EXCLUDE de V9 ganó la condición de carrera. */
@@ -87,12 +97,10 @@ public class ReservasExceptionHandler {
     public ResponseEntity<Map<String, String>> handleSuperposicion(DataIntegrityViolationException ex) {
         String constraint = constraintVioladaDe(ex);
         if (constraint != null && constraint.startsWith("ex_reservas_rango_")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007)."));
+            return conflicto("HORARIO_OCUPADO", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007).");
         }
         if (constraint != null && constraint.startsWith("ex_franjas_")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", new FranjaSuperpuestaException().getMessage()));
+            return conflicto("FRANJA_SUPERPUESTA", new FranjaSuperpuestaException().getMessage());
         }
         LOG.error("Violación de integridad inesperada en reservas (constraint={})", constraint, ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -101,7 +109,7 @@ public class ReservasExceptionHandler {
 
     @ExceptionHandler(FranjaSuperpuestaException.class)
     public ResponseEntity<Map<String, String>> handleFranjaSuperpuesta(FranjaSuperpuestaException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        return conflicto("FRANJA_SUPERPUESTA", ex.getMessage());
     }
 
     /** Nombre de la constraint de Postgres, buscando la causa de Hibernate en la cadena. */

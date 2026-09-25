@@ -60,7 +60,7 @@ public class ColasFinancieroController {
     private final ReembolsoParcialProveedor reembolsoParcial;
     private final PasarelaService pasarela;
     private final ReservaRepository reservaRepo;
-    private final com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional;
+    private final com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
@@ -69,7 +69,7 @@ public class ColasFinancieroController {
                                      ReembolsoParcialProveedor reembolsoParcial,
                                      PasarelaService pasarela,
                                      ReservaRepository reservaRepo,
-                                     com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional) {
+                                     com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional) {
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;

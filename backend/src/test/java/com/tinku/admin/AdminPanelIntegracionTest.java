@@ -908,7 +908,7 @@ class AdminPanelIntegracionTest {
 
     // ---------------------------------------------------------------- R4: reembolso del adicional
 
-    @Autowired com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago reembolsoAdicional;
+    @Autowired com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
     @Autowired org.quartz.Scheduler scheduler;
 
     private Transaccion conAdicional(boolean bypass) {
@@ -934,7 +934,7 @@ class AdminPanelIntegracionTest {
 
     /** Corre el job a mano (sacando el trigger real para que Quartz no compita con el test). */
     private java.util.Date correrJobAdicional(UUID transaccionId) throws Exception {
-        org.quartz.TriggerKey key = com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago.trigger(transaccionId);
+        org.quartz.TriggerKey key = com.tinku.pagos.service.ReembolsoAdicionalOutbox.trigger(transaccionId);
         scheduler.unscheduleJob(key);
         reembolsoAdicional.ejecutar(transaccionId);
         org.quartz.Trigger siguiente = scheduler.getTrigger(key);
@@ -1021,5 +1021,49 @@ class AdminPanelIntegracionTest {
         reembolsoAdicional.reembolsarAdicional(t.getReservaId());
         assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);
         verifyNoInteractions(reembolsoParcial);
+    }
+
+    // ---------------------------------------------------------------- R5: Mis cobros
+
+    private Transaccion cobroDe(Usuario tutor, EstadoTransaccion estado, String adicional) {
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(tutor);
+        reserva.setHorario(Instant.now().minusSeconds(3600L * CONTADOR.incrementAndGet()));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepository.save(reserva);
+        Transaccion t = new Transaccion();
+        t.setReservaId(reserva.getId());
+        t.setMpPaymentId("mp-cobro-" + CONTADOR.incrementAndGet());
+        t.setMontoAdicionalResumen(new BigDecimal(adicional));
+        t.setMontoBruto(new BigDecimal("15000.00").add(new BigDecimal(adicional)));
+        t.setComisionPlataforma(new BigDecimal("4050.00"));
+        t.setEstado(estado);
+        return transaccionRepository.save(t);
+    }
+
+    /** El neto excluye comisión y adicional; la pausa no dice el motivo; solo lo propio; solo Tutor. */
+    @Test
+    void r5_misCobros_netoSinAdicional_pausaComoEnRevision_soloLoPropio() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        cobroDe(tutor, EstadoTransaccion.RETENIDO_ESCROW, "770.00");
+        cobroDe(tutor, EstadoTransaccion.LIBERADO, "0");
+        cobroDe(tutor, EstadoTransaccion.PAUSADO_DENUNCIA, "0");
+        cobroDe(usuario(TipoUsuario.TUTOR), EstadoTransaccion.LIBERADO, "0");
+
+        mvc.perform(get("/api/pagos/mis-cobros").header("Authorization", "Bearer " + token(tutor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cobros.length()").value(3))
+                .andExpect(jsonPath("$.retenido").value(10950.0))
+                .andExpect(jsonPath("$.liberado").value(10950.0))
+                .andExpect(jsonPath("$.enRevision").value(10950.0))
+                .andExpect(jsonPath("$.cobros[?(@.estado == 'retenido')].precioSesion").value(15000.0))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("denuncia"))));
+
+        mvc.perform(get("/api/pagos/mis-cobros").header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
+                .andExpect(status().isForbidden());
     }
 }

@@ -1,6 +1,6 @@
 package com.tinku.pagos.jobs;
 
-import com.tinku.pagos.service.ReembolsoAdicionalResumenMercadoPago;
+import com.tinku.pagos.service.ReembolsoAdicionalOutbox;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -10,7 +10,7 @@ import java.util.UUID;
 
 /**
  * Reembolso del adicional de resumen (R4, BR-PAG-11), persistido en Quartz. Lo agenda y reagenda
- * con backoff {@link ReembolsoAdicionalResumenMercadoPago}; idempotente por el estado del outbox.
+ * con backoff {@link ReembolsoAdicionalOutbox}; idempotente por el estado del outbox.
  */
 @Component
 @DisallowConcurrentExecution
@@ -18,9 +18,9 @@ public class ReembolsoAdicionalJob implements Job {
 
     public static final String PARAM_TRANSACCION_ID = "transaccionId";
 
-    private final ReembolsoAdicionalResumenMercadoPago reembolso;
+    private final ReembolsoAdicionalOutbox reembolso;
 
-    public ReembolsoAdicionalJob(ReembolsoAdicionalResumenMercadoPago reembolso) {
+    public ReembolsoAdicionalJob(ReembolsoAdicionalOutbox reembolso) {
         this.reembolso = reembolso;
     }
 

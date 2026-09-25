@@ -57,6 +57,7 @@ class UsuarioServiceRegistroUnitTest {
         a.setNombre("MARIA");
         a.setApellido("LOPEZ");
         a.setTipo(TipoUsuario.ADULTO);
+        a.setCapacidadAdultoResponsable(true); // R1: solo un AR da de alta un menor
         return a;
     }
 

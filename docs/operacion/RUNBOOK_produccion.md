@@ -82,6 +82,15 @@ SELECT id, 'MODERACION_SEGURIDAD' FROM identidad.usuarios WHERE dni = '<DNI>';
 ```
 El admin tiene que volver a iniciar sesión.
 
+Desactivar o cambiar el rol de un admin (no hay pantalla de equipo en el piloto; revisión por rol §8):
+```sql
+UPDATE admin.admins SET activo = false WHERE usuario_id = (SELECT id FROM identidad.usuarios WHERE dni = '<DNI>');
+UPDATE admin.admins SET rol = 'SOPORTE_FINANCIERO' WHERE usuario_id = (SELECT id FROM identidad.usuarios WHERE dni = '<DNI>');
+```
+Un admin nunca resuelve un caso en el que es parte (su credencial o CAP, una denuncia o alerta
+que lo involucra, el dinero de una reserva suya): el panel responde 403 y lo tiene que tomar otro.
+Una cuenta de menor nunca opera el panel.
+
 ## 3. Variables de entorno (Coolify → recurso → Environment Variables)
 
 | Nombre | Obligatoria | Qué es / de dónde sale |

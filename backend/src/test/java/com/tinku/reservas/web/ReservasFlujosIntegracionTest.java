@@ -619,7 +619,8 @@ class ReservasFlujosIntegracionTest {
 
         postReserva(e.tokenEstudiante(), e.tutorId(), a(dia, 10, 0), 60).andExpect(status().isCreated());
         // 10:30-11:30 pisa a 10:00-11:00 del mismo tutor: antes entraba (igualdad exacta).
-        postReserva(otroEstudiante, e.tutorId(), a(dia, 10, 30), 60).andExpect(status().isConflict());
+        postReserva(otroEstudiante, e.tutorId(), a(dia, 10, 30), 60).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("HORARIO_OCUPADO")); // R5: el frontend decide por codigo
     }
 
     /** Tarifa del Tutor vía el endpoint de M5 (la cotización de la Reserva sale de acá). */
@@ -1577,5 +1578,24 @@ class ReservasFlujosIntegracionTest {
                                 30, 1000, 'pendiente_pago')""",
                 tutorId, tutorId, tutorId))
                 .hasMessageContaining("ck_reservas_tutor_no_es_parte");
+    }
+
+    /** R5: el AR ve los Tutores autorizados de cada hijo; nadie más (ni el propio menor). */
+    @Test
+    void r5_listarAutorizaciones_soloElAdultoResponsableDelMenor() throws Exception {
+        Escenario e = escenarioBase();
+        mockMvc.perform(get("/api/autorizaciones").param("menorId", e.menorId().toString())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tutorId").value(e.tutorId().toString()))
+                .andExpect(jsonPath("$[0].noConfiable").value(false));
+
+        String otroAr = registrarAdultoYToken(dniUnico(), "Otro", "Adulto", true, true);
+        mockMvc.perform(get("/api/autorizaciones").param("menorId", e.menorId().toString())
+                        .header("Authorization", "Bearer " + otroAr))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/autorizaciones").param("menorId", e.menorId().toString())
+                        .header("Authorization", "Bearer " + e.tokenMenor()))
+                .andExpect(status().isForbidden());
     }
 }

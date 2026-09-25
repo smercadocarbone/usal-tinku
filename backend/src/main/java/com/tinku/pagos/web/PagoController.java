@@ -45,14 +45,17 @@ public class PagoController {
     private final TarifaTutorRepository tarifaRepo;
     private final PisoTarifa pisoTarifa;
     private final EscrowService escrowService;
+    private final com.tinku.pagos.service.CobrosTutorService cobrosTutor;
 
     public PagoController(PagoService pagoService, UsuarioActual usuarioActual, TarifaTutorRepository tarifaRepo,
-                          PisoTarifa pisoTarifa, EscrowService escrowService) {
+                          PisoTarifa pisoTarifa, EscrowService escrowService,
+                          com.tinku.pagos.service.CobrosTutorService cobrosTutor) {
         this.pagoService = pagoService;
         this.usuarioActual = usuarioActual;
         this.tarifaRepo = tarifaRepo;
         this.pisoTarifa = pisoTarifa;
         this.escrowService = escrowService;
+        this.cobrosTutor = cobrosTutor;
     }
 
     /** Al volver de MercadoPago con el pago aprobado: confirma consultando a MP (ver
@@ -79,6 +82,12 @@ public class PagoController {
             @PathVariable String provincia) {
         PrecioReferenciaRegional precio = pagoService.sugerirPrecioReferencia(provincia);
         return ResponseEntity.ok(PrecioReferenciaResponse.from(precio));
+    }
+
+    /** R5: "Mis cobros" del Tutor (403 para cualquier otro). */
+    @GetMapping("/mis-cobros")
+    public com.tinku.pagos.service.CobrosTutorService.MisCobros misCobros(Authentication authentication) {
+        return cobrosTutor.de(usuarioActual.obtener(authentication));
     }
 
     @GetMapping("/tarifa")

@@ -31,6 +31,9 @@ public interface AutorizacionTutorRepository extends JpaRepository<AutorizacionT
 
     boolean existsByAdultoResponsableIdAndTutorId(UUID adultoResponsableId, UUID tutorId);
 
+    java.util.List<AutorizacionTutor> findByAdultoResponsableIdAndMenorIdOrderByCreatedAtDesc(
+            UUID adultoResponsableId, UUID menorId);
+
     /**
      * FR-ID-009: el "no confiable" es a nivel de cuenta del Adulto Responsable
      * — se aplica a todas sus autorizaciones de ese Tutor, sin importar el

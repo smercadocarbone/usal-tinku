@@ -23,6 +23,11 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, UUID> 
 
     Optional<Transaccion> findByReservaId(UUID reservaId);
 
+    /** R5 "Mis cobros": [Transaccion, Reserva] de un Tutor, la clase más reciente primero. */
+    @org.springframework.data.jpa.repository.Query("select t, r from Transaccion t, com.tinku.reservas.model.Reserva r "
+            + "where r.id = t.reservaId and r.tutor.id = :tutorId order by r.horario desc")
+    List<Object[]> cobrosDelTutor(UUID tutorId, org.springframework.data.domain.Pageable pagina);
+
     /** R4: cola de reembolsos del adicional por estado. */
     List<Transaccion> findByAdicionalReembolsoEstadoOrderByCreatedAtAsc(
             com.tinku.pagos.model.EstadoReembolsoAdicional estado);
