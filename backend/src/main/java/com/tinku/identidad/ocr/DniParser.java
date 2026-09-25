@@ -26,6 +26,12 @@ import java.util.regex.Pattern;
  *   - Tarjeta plástica (2009+): sin rótulos; apellido en una línea, nombres
  *     en la siguiente, número de DNI en gran formato ("Nº ..."), luego
  *     "Fecha de nacimiento".
+ *   - Tarjeta actual (2012+, la que tiene casi todo el mundo): rótulos bilingües
+ *     sin dos puntos ("Apellido / Surname", valor en la línea siguiente) y fechas
+ *     con el mes en letras ("15 MAY/ MAY 1990"). Hasta 2026-09-25 el parser no la
+ *     entendía: todo DNI real salía "ilegible".
+ *   - Dorso de la tarjeta: zona de lectura mecánica (MRZ, 3 líneas con {@code <})
+ *     con dígitos de control. Si está y valida, manda sobre el frente.
  *
  * Invariante: nunca retornar un {@link ResultadoOcr} con campos parciales
  * inconsistentes. Si no se puede extraer el juego completo de forma confiable,
@@ -44,6 +50,17 @@ public class DniParser {
 
     private static final Pattern MARCA_DNI =
             Pattern.compile("(?:N\\s*[º°]|N\\s*\\.?\\s*\\d|N[uú]?mero|N\\s+DE\\b|\\bDNI\\b|D\\.N\\.I\\.|\\bDoc(?:umento)?\\b)", Pattern.CASE_INSENSITIVE);
+    // Fecha con el mes en letras: "15 MAY/ MAY 1990", "03 ENE/JAN 1985", "3 SET 1990".
+    private static final Pattern FECHA_MES_LETRAS = Pattern.compile(
+            "(\\d{1,2})\\s*([A-Za-zÁÉÍÓÚ]{3})\\.?(?:\\s*/\\s*[A-Za-z]{3}\\.?)?\\s*(\\d{4})");
+    private static final java.util.Map<String, Integer> MESES = java.util.Map.ofEntries(
+            java.util.Map.entry("ENE", 1), java.util.Map.entry("JAN", 1), java.util.Map.entry("FEB", 2),
+            java.util.Map.entry("MAR", 3), java.util.Map.entry("ABR", 4), java.util.Map.entry("APR", 4),
+            java.util.Map.entry("MAY", 5), java.util.Map.entry("JUN", 6), java.util.Map.entry("JUL", 7),
+            java.util.Map.entry("AGO", 8), java.util.Map.entry("AUG", 8), java.util.Map.entry("SEP", 9),
+            java.util.Map.entry("SET", 9), java.util.Map.entry("OCT", 10), java.util.Map.entry("NOV", 11),
+            java.util.Map.entry("DIC", 12), java.util.Map.entry("DEC", 12));
+    private static final Pattern MARCA_DOCUMENTO = Pattern.compile("\\bDOCUMENT", Pattern.CASE_INSENSITIVE);
     private static final Pattern MARCA_NACIMIENTO =
             Pattern.compile("nac(imiento|id[oa])|fecha\\s+de\\s+nac|nac\\.", Pattern.CASE_INSENSITIVE);
 
@@ -62,6 +79,11 @@ public class DniParser {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+
+        ResultadoOcr mrz = MrzDni.parse(orden);
+        if (mrz != null) {
+            return mrz;
+        }
 
         String textoCompleto = String.join("\n", orden);
 
@@ -85,6 +107,16 @@ public class DniParser {
     // ------------------------------------------------------------------
 
     private String extraerDni(List<String> orden, String texto) {
+        // 0) Tarjeta actual: "Documento / Document" y el número debajo. Va primero porque
+        //    el "Trámite Nº" de más arriba también matchea la marca genérica "Nº".
+        for (int i = 0; i < orden.size(); i++) {
+            if (MARCA_DOCUMENTO.matcher(orden.get(i)).find()) {
+                String normalizado = normalizarDni(colorearDesdeMarca(orden, i));
+                if (esDniValido(normalizado)) {
+                    return normalizado;
+                }
+            }
+        }
         // 1) Preferir el número asociado a una marca tipo "Nº", "DNI", "Número".
         int indiceMarca = -1;
         for (int i = 0; i < orden.size(); i++) {
@@ -142,10 +174,15 @@ public class DniParser {
     // ------------------------------------------------------------------
 
     private LocalDate extraerFechaNacimiento(List<String> orden, String texto) {
-        // Preferir una fecha en una línea que mencione nacimiento.
-        for (String linea : orden) {
-            if (MARCA_NACIMIENTO.matcher(linea).find()) {
-                LocalDate fecha = fechaDeLinea(linea);
+        // Preferir una fecha en la línea que menciona nacimiento, o en la siguiente
+        // (tarjeta actual: rótulo arriba, valor abajo). Sin esto, la tarjeta tiene
+        // también emisión y vencimiento y se podía tomar la fecha equivocada.
+        for (int i = 0; i < orden.size(); i++) {
+            if (MARCA_NACIMIENTO.matcher(orden.get(i)).find()) {
+                LocalDate fecha = fechaDeLinea(orden.get(i));
+                if (fecha == null && i + 1 < orden.size()) {
+                    fecha = fechaDeLinea(orden.get(i + 1));
+                }
                 if (fecha != null) return fecha;
             }
         }
@@ -165,6 +202,15 @@ public class DniParser {
         Matcher m = FECHA.matcher(linea);
         if (m.find()) {
             return aFecha(m.group(1), m.group(2), m.group(3));
+        }
+        Matcher l = FECHA_MES_LETRAS.matcher(linea);
+        if (l.find()) {
+            String mes = java.text.Normalizer.normalize(l.group(2), java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "").toUpperCase(Locale.ROOT);
+            Integer numero = MESES.get(mes);
+            if (numero != null) {
+                return aFecha(l.group(1), numero.toString(), l.group(3));
+            }
         }
         return null;
     }
@@ -221,7 +267,15 @@ public class DniParser {
         return may.startsWith(rotulo + ":")
                 || may.startsWith(rotulo + " :")
                 || may.startsWith(rotulo + " -")
-                || may.startsWith(rotulo + " : ");
+                || may.startsWith(rotulo + " : ")
+                || esRotuloBilingue(may, rotulo);
+    }
+
+    /** Tarjeta actual: "APELLIDO / SURNAME", "NOMBRE / NAME" solos en su línea (valor debajo). */
+    private boolean esRotuloBilingue(String may, String rotulo) {
+        String base = rotulo.equals("NOMBRES") ? "NOMBRES?" : "APELLIDOS?";
+        String ingles = rotulo.equals("NOMBRES") ? "NAMES?" : "SURNAMES?";
+        return may.trim().matches(base + "\\s*(/\\s*" + ingles + ")?\\s*:?");
     }
 
     private String valorDeRotulo(List<String> orden, int i, String rotulo) {

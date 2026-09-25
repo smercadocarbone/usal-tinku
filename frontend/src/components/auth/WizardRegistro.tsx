@@ -339,14 +339,14 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
             </ul>
             <SubidaArchivo
               id="fotoDni"
-              etiqueta="Foto de tu DNI (frente)"
+              etiqueta="Foto de tu DNI (frente o dorso)"
               formatosTexto="JPG o PNG"
               accept="image/jpeg,image/png"
               maxMb={5}
               capturar
               archivo={fotoDni}
               onCambio={setFotoDni}
-              ayuda="La usamos solo para verificarte: no se guarda ni se le muestra a nadie."
+              ayuda="Si el frente no se lee, probá con el dorso: las 3 líneas con <<< se leen mejor. La usamos solo para verificarte: no se guarda ni se le muestra a nadie."
             />
           </div>
           <Navegacion onVolver={() => ir(iDatos)}>

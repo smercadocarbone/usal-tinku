@@ -460,9 +460,43 @@ public class UsuarioService {
         return s == null ? "" : s.replaceAll("\\D", "");
     }
 
+    /**
+     * Nombre o apellido declarado contra el leído. El número de DNI y la fecha de
+     * nacimiento se exigen exactos; acá se toleran dos cosas del mundo real (2026-09-25,
+     * nadie con un DNI real lograba registrarse): el OCR que confunde un carácter cada
+     * tanto (distancia de edición ≤ 1 cada 6 letras) y el usuario que escribe solo su
+     * primer nombre cuando el documento trae dos ("Juan" contra "JUAN CARLOS").
+     */
     private boolean coincideAproximado(String declarado, String extraido) {
         if (declarado == null || extraido == null) return false;
-        return normalizar(declarado).equals(normalizar(extraido));
+        String d = normalizar(declarado).replaceAll("\\s+", " ");
+        String e = normalizar(extraido).replaceAll("\\s+", " ");
+        if (d.isEmpty()) return false;
+        if (parecidos(d, e)) return true;
+        // Solo el primer nombre/apellido: tiene que coincidir con la primera palabra del documento.
+        String primera = e.split(" ")[0];
+        return !d.contains(" ") && parecidos(d, primera);
+    }
+
+    private static boolean parecidos(String a, String b) {
+        int tolerancia = Math.max(1, Math.max(a.length(), b.length()) / 6);
+        return distancia(a, b) <= tolerancia;
+    }
+
+    /** Distancia de Levenshtein (nombres cortos: la matriz entera no pesa). */
+    private static int distancia(String a, String b) {
+        int[] previa = new int[b.length() + 1];
+        int[] actual = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) previa[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            actual[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int costo = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                actual[j] = Math.min(Math.min(actual[j - 1] + 1, previa[j] + 1), previa[j - 1] + costo);
+            }
+            int[] t = previa; previa = actual; actual = t;
+        }
+        return previa[b.length()];
     }
 
     private String normalizar(String s) {

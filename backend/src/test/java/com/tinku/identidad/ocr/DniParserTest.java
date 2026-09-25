@@ -149,4 +149,65 @@ class DniParserTest {
     private LineaTexto linea(String texto, double y) {
         return new LineaTexto(texto, y);
     }
+
+    /** Tarjeta actual (2012+): rótulos bilingües con el valor debajo, mes en letras y tres
+     *  fechas (nacimiento, emisión, vencimiento). Antes salía ilegible con cualquier DNI real. */
+    @Test
+    void parseTarjetaActualRotulosBilinguesYMesEnLetras() {
+        List<LineaTexto> lineas = List.of(
+                linea("REPUBLICA ARGENTINA - MERCOSUR", 0),
+                linea("REGISTRO NACIONAL DE LAS PERSONAS", 20),
+                linea("Apellido / Surname", 40),
+                linea("GONZALEZ", 60),
+                linea("Nombre / Name", 80),
+                linea("MARIA SOFIA", 100),
+                linea("Sexo / Sex Nacionalidad / Nationality", 120),
+                linea("F ARGENTINA", 140),
+                linea("Fecha de nacimiento / Date of birth", 160),
+                linea("15 MAY/ MAY 1990", 180),
+                linea("Fecha de emision / Date of issue", 200),
+                linea("03 ABR/ APR 2019", 220),
+                linea("Tramite N° / Of. ident. 00512345678 9", 240),
+                linea("Documento / Document", 260),
+                linea("34.567.890", 280)
+        );
+
+        ResultadoOcr r = parser.parse(lineas);
+
+        assertTrue(r.documentoLegible());
+        assertEquals("34567890", r.dniExtraido());
+        assertEquals("GONZALEZ", r.apellidoExtraido());
+        assertEquals("MARIA SOFIA", r.nombreExtraido());
+        assertEquals(LocalDate.of(1990, 5, 15), r.fechaNacimientoExtraida());
+    }
+
+    /** Dorso: MRZ con dígitos de control válidos (con una O leída en vez de 0). */
+    @Test
+    void parseDorsoMrz() {
+        List<LineaTexto> lineas = List.of(
+                linea("IDARG34567890<2<<<<<<<<<<<<<<<", 0),
+                linea("9OO5156F3005154ARG<<<<<<<<<<<0", 20),
+                linea("GONZALEZ<<MARIA<SOFIA<<<<<<<<<", 40)
+        );
+
+        ResultadoOcr r = parser.parse(lineas);
+
+        assertTrue(r.documentoLegible());
+        assertEquals("34567890", r.dniExtraido());
+        assertEquals("GONZALEZ", r.apellidoExtraido());
+        assertEquals("MARIA SOFIA", r.nombreExtraido());
+        assertEquals(LocalDate.of(1990, 5, 15), r.fechaNacimientoExtraida());
+    }
+
+    /** MRZ con un dígito mal leído: el control no cierra y nunca se devuelve un dato dudoso. */
+    @Test
+    void parseDorsoMrzConControlInvalidoEsIlegible() {
+        List<LineaTexto> lineas = List.of(
+                linea("IDARG34567899<2<<<<<<<<<<<<<<<", 0),
+                linea("9005156F3005154ARG<<<<<<<<<<<0", 20),
+                linea("GONZALEZ<<MARIA<SOFIA<<<<<<<<<", 40)
+        );
+
+        assertFalse(parser.parse(lineas).documentoLegible());
+    }
 }

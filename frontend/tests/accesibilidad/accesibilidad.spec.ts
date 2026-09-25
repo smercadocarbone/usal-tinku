@@ -86,7 +86,7 @@ test.describe("Accesibilidad", () => {
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       expect(await violacionesGraves(page)).toEqual([]);
 
-      await page.getByLabel("Foto de tu DNI (frente)").setInputFiles({
+      await page.getByLabel("Foto de tu DNI (frente o dorso)").setInputFiles({
         name: "dni.png",
         mimeType: "image/png",
         buffer: Buffer.from(

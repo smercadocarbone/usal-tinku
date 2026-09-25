@@ -52,7 +52,7 @@ export class RegistroPage extends BasePage {
   }
 
   async verificarIdentidad(): Promise<void> {
-    await this.page.getByLabel("Foto de tu DNI (frente)").setInputFiles(FOTO_DNI_FAKE);
+    await this.page.getByLabel("Foto de tu DNI (frente o dorso)").setInputFiles(FOTO_DNI_FAKE);
     await this.botonVerificar.click();
   }
 
