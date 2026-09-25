@@ -270,6 +270,23 @@ class CalificacionesFlujosIntegracionTest {
         calificarStatus(tokenTutor, sesion, 5, "Alumno aplicado", 422, null);
     }
 
+    /** AUD-028 (D9): una calificación pública por sesión, la del pagador. El beneficiario
+     *  que no pagó (el menor, en la práctica) ya no suma una segunda: 403. */
+    @Test
+    void aud028_califica_soloElPagador_elBeneficiarioQueNoPago403() throws Exception {
+        String dniPagador = dniUnico();
+        registrarAdulto(dniPagador, "Rosa", true, true);
+        String dniBenef = dniUnico();
+        registrarAdulto(dniBenef, "Leo", true, false);
+        String dniTutor = dniUnico();
+        registrarTutor(dniTutor, "Pablo");
+        UUID sesion = escenaFinalizada(usuarioPorDni(dniTutor).getId(),
+                usuarioPorDni(dniBenef).getId(), usuarioPorDni(dniPagador).getId(), 40);
+
+        calificarStatus(login(dniBenef), sesion, 5, null, 403, null);
+        calificarStatus(login(dniPagador), sesion, 5, "Muy bien", 201, "estudiante_a_tutor");
+    }
+
     @Test
     void calificar_soloSesionesFinalizadasYEstrellas1a5() throws Exception {
         String dniEst = dniUnico();

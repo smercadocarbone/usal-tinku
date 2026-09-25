@@ -152,7 +152,8 @@ export default function ReservaDetallePage({ params }: { params: { id: string } 
   const puedePagar = r.puedePagar ?? r.estado === "pendiente_pago";
   const puedeCancelar = r.puedeCancelar ?? (r.estado === "pendiente_pago" || r.estado === "confirmada");
   const puedeEntrar = sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
-  const puedeCalificar = sesion !== null && sesion.estado === "finalizada";
+  // AUD-028: califica quien pagó; en la clase de un menor, su Adulto Responsable.
+  const puedeCalificar = sesion !== null && sesion.estado === "finalizada" && !esMenor;
   const puedeReprogramar = r.estado === "confirmada" && !esMenor;
   const cancelada = r.estado === "cancelada";
   const empiezaPronto = ahora > 0 && new Date(r.horario).getTime() - ahora < 60 * 60000;

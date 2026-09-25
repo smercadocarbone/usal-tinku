@@ -136,7 +136,11 @@ public class CalificacionService {
         if (reserva.getTutor().getId().equals(id)) {
             return Calificacion.DIR_TUTOR_A_ESTUDIANTE;
         }
-        if (reserva.getBeneficiario().getId().equals(id) || reserva.getPagador().getId().equals(id)) {
+        // AUD-028 (D9): una sola calificación pública por sesión, la del pagador. Para un
+        // adulto que reserva para sí mismo no cambia nada (pagador == beneficiario); en la
+        // sesión de un menor califica su Adulto Responsable (Artículo II: el menor no paga,
+        // no autoriza, no denuncia). Antes contaban las dos y la sesión pesaba doble.
+        if (reserva.getPagador().getId().equals(id)) {
             return Calificacion.DIR_ESTUDIANTE_A_TUTOR;
         }
         throw new CalificacionNoPermitidaException();
