@@ -1,5 +1,7 @@
 package com.tinku.pagos;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +41,8 @@ public class MercadoPagoWebhookVerificador {
 
     static final Duration TOLERANCIA_REPLAY = Duration.ofMinutes(5);
 
+    private static final Logger LOG = LoggerFactory.getLogger(MercadoPagoWebhookVerificador.class);
+
     private final String webhookSecret;
 
     public MercadoPagoWebhookVerificador(
@@ -47,27 +51,41 @@ public class MercadoPagoWebhookVerificador {
     }
 
     public boolean esFirmaValida(String xSignature, String xRequestId, String dataId) {
-        if (webhookSecret == null || webhookSecret.isBlank()
-                || xSignature == null || xSignature.isBlank()) {
-            return false;
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            return rechazar("MP_WEBHOOK_SECRET sin configurar", dataId);
+        }
+        if (xSignature == null || xSignature.isBlank()) {
+            return rechazar("sin header x-signature", dataId);
         }
         try {
             Map<String, String> partes = parsearHeader(xSignature);
             String ts = partes.get("ts");
             String v1 = partes.get("v1");
             if (ts == null || v1 == null || v1.isBlank()) {
-                return false;
+                return rechazar("x-signature sin ts o v1", dataId);
             }
             long tsMillis = aMillis(ts);
-            if (Math.abs(System.currentTimeMillis() - tsMillis) > TOLERANCIA_REPLAY.toMillis()) {
-                return false;
+            long desfasajeMillis = Math.abs(System.currentTimeMillis() - tsMillis);
+            if (desfasajeMillis > TOLERANCIA_REPLAY.toMillis()) {
+                return rechazar("ts fuera de la tolerancia anti-replay (" + desfasajeMillis / 1000 + " s)", dataId);
             }
             String manifest = manifest(dataId, xRequestId, ts);
             String esperado = hmacSha256Hex(webhookSecret, manifest);
-            return constantTimeEquals(esperado, v1);
+            if (!constantTimeEquals(esperado, v1)) {
+                // El manifest no tiene secretos (id, request-id, ts): se loguea para poder comparar.
+                return rechazar("la firma no coincide (manifest " + manifest + ")", dataId);
+            }
+            return true;
         } catch (IllegalArgumentException e) {
-            return false;
+            return rechazar("x-signature ilegible", dataId);
         }
+    }
+
+    /** Un rechazo silencioso era imposible de diagnosticar en producción: se deja el motivo
+     *  (nunca el secreto ni la firma) en el log. */
+    private boolean rechazar(String motivo, String dataId) {
+        LOG.warn("Webhook de MercadoPago rechazado: {} (data.id={})", motivo, dataId);
+        return false;
     }
 
     private Map<String, String> parsearHeader(String xSignature) {
