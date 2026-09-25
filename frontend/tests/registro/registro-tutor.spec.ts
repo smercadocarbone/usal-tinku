@@ -39,7 +39,7 @@ test.describe("Registro de Tutor", () => {
       await page.getByLabel("Fecha de nacimiento").fill("1985-06-10");
       await page.getByLabel("Email").fill("jorge.gomez@example.com");
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
-      await page.getByLabel("Foto de tu DNI (frente)").setInputFiles(FOTO_FAKE);
+      await page.getByLabel("Foto de tu DNI (frente o dorso)").setInputFiles(FOTO_FAKE);
       await page.getByRole("button", { name: "Verificar", exact: true }).click();
       await page.getByLabel("Contraseña", { exact: true }).fill("unaClaveSegura1");
       await page.getByLabel("Repetí la contraseña").fill("unaClaveSegura1");
