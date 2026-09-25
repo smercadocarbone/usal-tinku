@@ -15,11 +15,12 @@ public record AlertaSeguridadResponse(
         String descargoTexto,
         Instant descargoRecibidoAt,
         Instant clipRetencionHasta,
+        boolean tieneClip,
         Instant createdAt) {
 
     public static AlertaSeguridadResponse from(AlertaSeguridad a) {
         return new AlertaSeguridadResponse(a.getId(), a.getSesionId(), a.getRama(),
                 a.getDetectadoId(), a.getEstado(), a.getDescargoTexto(), a.getDescargoRecibidoAt(),
-                a.getClipRetencionHasta(), a.getCreatedAt());
+                a.getClipRetencionHasta(), a.getClipUrl() != null, a.getCreatedAt());
     }
 }

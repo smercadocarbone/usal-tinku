@@ -347,7 +347,21 @@ export interface AlertaSeguridadCola {
   descargoTexto: string | null;
   descargoRecibidoAt: string | null;
   clipRetencionHasta: string | null;
+  tieneClip: boolean;
   createdAt: string;
+}
+
+/** Clip de evidencia del kill-switch (AUD-021): lo sirve Tinku, nunca un enlace externo. */
+export async function getClipAlerta(id: string): Promise<Blob> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/moderacion/alertas/${id}/clip`,
+    { headers: headersConToken() }
+  );
+  if (!res.ok) {
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
+  }
+  return res.blob();
 }
 
 export interface ResolverAlertaBody {

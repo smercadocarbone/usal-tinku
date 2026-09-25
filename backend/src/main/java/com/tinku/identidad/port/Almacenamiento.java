@@ -22,4 +22,10 @@ public interface Almacenamiento {
      * este almacenamiento o resuelve fuera de él (path traversal).
      */
     byte[] leer(String referencia);
+
+    /**
+     * Borra un archivo guardado por {@link #guardar} (retención vencida, BR-KS-02).
+     * Idempotente: si ya no existe no falla. Misma validación de referencia que {@link #leer}.
+     */
+    void borrar(String referencia);
 }

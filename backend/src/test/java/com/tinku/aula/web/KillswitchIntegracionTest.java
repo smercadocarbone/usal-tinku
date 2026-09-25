@@ -58,7 +58,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -625,6 +627,21 @@ class KillswitchIntegracionTest {
 
     // ------------------------------------------------ T-M3-08 — evidencia
 
+    /** Encabezado WebM (EBML) + relleno: alcanza para la detección por magic bytes. */
+    private static final byte[] CLIP_WEBM = {0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 0, 0, 0, 0};
+
+    private org.springframework.test.web.servlet.ResultActions postEvidencia(
+            UUID sesionId, String token, byte[] clip, Integer duracion) throws Exception {
+        var req = multipart("/api/sesiones/{id}/evidencia", sesionId)
+                .file(new org.springframework.mock.web.MockMultipartFile(
+                        "clip", "clip.webm", "video/webm", clip))
+                .header("Authorization", "Bearer " + token);
+        if (duracion != null) {
+            req.param("duracionSegundos", duracion.toString());
+        }
+        return mockMvc.perform(req);
+    }
+
     @Test
     void tM308_evidencia_sinKillswitchRegistrado_404() throws Exception {
         Usuario pagador = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
@@ -633,16 +650,12 @@ class KillswitchIntegracionTest {
         Reserva reserva = reservaConfirmada(pagador, estudiante, tutor);
         SesionAprendizaje sesion = sesionDirecta(reserva, 3600);
 
-        mockMvc.perform(post("/api/sesiones/{id}/evidencia", sesion.getId())
-                        .header("Authorization", "Bearer " + tokenDe(estudiante))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("clipUrl", "https://cdn.tinku.test/clip.mp4"))))
+        postEvidencia(sesion.getId(), tokenDe(estudiante), CLIP_WEBM, null)
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void tM308_evidencia_trasKillswitch_grabaclipEnLaAlerta() throws Exception {
+    void tM308_evidencia_trasKillswitch_guardaElClipComoArchivo() throws Exception {
         Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
         Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
         Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
@@ -651,29 +664,23 @@ class KillswitchIntegracionTest {
         postKillswitch(sesion.getId(), tokenDe(ar),
                 Map.of("detectadoId", tutor.getId().toString()));
 
-        mockMvc.perform(post("/api/sesiones/{id}/evidencia", sesion.getId())
-                        .header("Authorization", "Bearer " + tokenDe(ar))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "clipUrl", "https://cdn.tinku.test/clip-x.mp4",
-                                "duracionSegundos", 30))))
-                .andExpect(status().isOk());
+        postEvidencia(sesion.getId(), tokenDe(ar), CLIP_WEBM, 30)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tieneClip").value(true));
 
+        // Referencia interna del almacenamiento de Tinku (AUD-021), nunca una URL del cliente.
         AlertaSeguridad alerta = alertaRepository.findBySesionId(sesion.getId()).orElseThrow();
-        assertThat(alerta.getClipUrl()).isEqualTo("https://cdn.tinku.test/clip-x.mp4");
+        assertThat(alerta.getClipUrl()).startsWith("file:");
 
         // El buffer es rotativo de 30s: un clip más largo se rechaza (422).
-        mockMvc.perform(post("/api/sesiones/{id}/evidencia", sesion.getId())
-                        .header("Authorization", "Bearer " + tokenDe(ar))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "clipUrl", "https://cdn.tinku.test/clip-largo.mp4",
-                                "duracionSegundos", 45))))
+        postEvidencia(sesion.getId(), tokenDe(ar), CLIP_WEBM, 45)
                 .andExpect(status().isUnprocessableEntity());
     }
 
+    /** AUD-021: la evidencia ya no puede ser un enlace declarado por el cliente (phishing
+     *  al Admin): ni el JSON con URL de antes ni un archivo que no es video pasan. */
     @Test
-    void tM308_evidencia_urlNoHttp_422() throws Exception {
+    void aud021_evidencia_urlDelClienteONoVideo_rechazada() throws Exception {
         Usuario ar = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
         Usuario tutor = guardarUsuario(TipoUsuario.TUTOR, dniUnico());
         Usuario menor = guardarUsuario(TipoUsuario.MENOR, dniUnico(), ar);
@@ -685,8 +692,13 @@ class KillswitchIntegracionTest {
         mockMvc.perform(post("/api/sesiones/{id}/evidencia", sesion.getId())
                         .header("Authorization", "Bearer " + tokenDe(ar))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("clipUrl", "no-es-url"))))
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("clipUrl", "https://atacante.example/clip.mp4"))))
+                .andExpect(status().is4xxClientError());
+        postEvidencia(sesion.getId(), tokenDe(ar), "<html>phishing</html>".getBytes(), null)
                 .andExpect(status().isUnprocessableEntity());
+
+        assertThat(alertaRepository.findBySesionId(sesion.getId()).orElseThrow().getClipUrl()).isNull();
     }
 
     @Test
@@ -700,11 +712,7 @@ class KillswitchIntegracionTest {
                 Map.of("detectadoId", tutor.getId().toString()));
         Usuario tercero = guardarUsuario(TipoUsuario.ADULTO, dniUnico());
 
-        mockMvc.perform(post("/api/sesiones/{id}/evidencia", sesion.getId())
-                        .header("Authorization", "Bearer " + tokenDe(tercero))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("clipUrl", "https://cdn.tinku.test/clip.mp4"))))
+        postEvidencia(sesion.getId(), tokenDe(tercero), CLIP_WEBM, null)
                 .andExpect(status().isForbidden());
     }
 

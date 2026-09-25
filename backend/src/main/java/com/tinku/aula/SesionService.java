@@ -638,35 +638,6 @@ public class SesionService {
     }
 
     /**
-     * Subida de la evidencia del kill-switch (T-M3-08): solo la REFERENCIA al
-     * clip de 30s (Artículo V, BR-KS-01). Solo alcanzable tras un kill-switch
-     * ya registrado (existe la Alerta) — si no → 404 {@link
-     * AlertaNoEncontradaException}.
-     */
-    @Transactional
-    public AlertaSeguridad subirEvidencia(Usuario usuario, UUID sesionId, String clipUrl,
-                                          Integer duracionSegundos) {
-        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
-                .orElseThrow(SesionNoEncontradaException::new);
-        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
-                .orElseThrow(ReservaNoEncontradaException::new);
-        if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
-        }
-        if (!(clipUrl.startsWith("https://") || clipUrl.startsWith("http://"))) {
-            throw new EvidenciaInvalidaException("la URL del clip debe ser http(s).");
-        }
-        if (duracionSegundos != null && (duracionSegundos <= 0 || duracionSegundos > 30)) {
-            throw new EvidenciaInvalidaException(
-                    "el clip del buffer tiene un máximo de 30 segundos (BR-KS-01).");
-        }
-        AlertaSeguridad alerta = alertaRepo.findBySesionId(sesionId)
-                .orElseThrow(AlertaNoEncontradaException::new);
-        alerta.setClipUrl(clipUrl);
-        return alertaRepo.save(alerta);
-    }
-
-    /**
      * Cierre de la sesión SIN emitir evento (lo emite cada rama del kill-switch
      * con su nombre exacto). Idempotente por los guards de estado: si ya está
      * finalizada/interrumpida, no re-marca ni permite doble evento.

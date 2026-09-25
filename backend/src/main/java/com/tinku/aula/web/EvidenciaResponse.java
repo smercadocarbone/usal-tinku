@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record EvidenciaResponse(UUID id, UUID sesionId, String rama, UUID detectadoId,
-                                String clipUrl, String estado) {
+                                boolean tieneClip, String estado) {
 
     public static EvidenciaResponse from(AlertaSeguridad a) {
         return new EvidenciaResponse(a.getId(), a.getSesionId(), a.getRama(),
-                a.getDetectadoId(), a.getClipUrl(), a.getEstado());
+                a.getDetectadoId(), a.getClipUrl() != null, a.getEstado());
     }
 }

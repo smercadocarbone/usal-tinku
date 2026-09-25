@@ -59,6 +59,30 @@ public class AlmacenamientoLocal implements Almacenamiento {
      */
     @Override
     public byte[] leer(String referencia) {
+        Path archivo = resolverDentro(referencia);
+        try {
+            return Files.readAllBytes(archivo);
+        } catch (IOException e) {
+            throw new ArchivoNoDisponibleException();
+        }
+    }
+
+    @Override
+    public void borrar(String referencia) {
+        Path archivo;
+        try {
+            archivo = resolverDentro(referencia);
+        } catch (ArchivoNoDisponibleException e) {
+            return; // ya no está (o nunca fue nuestro): nada que borrar
+        }
+        try {
+            Files.deleteIfExists(archivo);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo borrar " + archivo.getFileName(), e);
+        }
+    }
+
+    private Path resolverDentro(String referencia) {
         Path archivo;
         try {
             URI uri = new URI(referencia);
@@ -73,11 +97,7 @@ public class AlmacenamientoLocal implements Almacenamiento {
         if (!archivo.startsWith(directorioReal) || !Files.isRegularFile(archivo)) {
             throw new ArchivoNoDisponibleException();
         }
-        try {
-            return Files.readAllBytes(archivo);
-        } catch (IOException e) {
-            throw new ArchivoNoDisponibleException();
-        }
+        return archivo;
     }
 
     /** Quita separadores de path: el nombre original nunca arma subdirectorios. */

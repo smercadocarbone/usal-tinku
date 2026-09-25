@@ -153,6 +153,31 @@ public class ColasModeracionController {
                 .body(contenido);
     }
 
+    /** AUD-021: el clip de evidencia del kill-switch lo sirve Tinku (se subió como
+     *  archivo), nunca un enlace externo. Mismos headers que el visor de credenciales. */
+    @GetMapping("/alertas/{alertaId}/clip")
+    public ResponseEntity<byte[]> clipAlerta(@PathVariable UUID alertaId, Authentication authentication) {
+        gate.requiereModeracion(authentication);
+        AlertaSeguridad alerta = alertaRepo.findById(alertaId).orElse(null);
+        if (alerta == null || alerta.getClipUrl() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] contenido;
+        try {
+            contenido = almacenamiento.leer(alerta.getClipUrl());
+        } catch (ArchivoNoDisponibleException e) {
+            return ResponseEntity.notFound().build();
+        }
+        boolean webm = contenido.length >= 4 && (contenido[0] & 0xFF) == 0x1A;
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(webm ? "video/webm" : "video/mp4"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "sandbox")
+                .cacheControl(CacheControl.noStore())
+                .body(contenido);
+    }
+
     @PostMapping("/credenciales/{credencialId}/resolver")
     public ResponseEntity<?> resolverCredencial(@PathVariable UUID credencialId,
                                                  @Valid @RequestBody RevisarCredencialRequest request,

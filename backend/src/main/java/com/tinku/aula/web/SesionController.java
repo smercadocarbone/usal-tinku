@@ -1,5 +1,6 @@
 package com.tinku.aula.web;
 
+import com.tinku.aula.EvidenciaService;
 import com.tinku.aula.LiveKitService;
 import com.tinku.aula.model.AlertaSeguridad;
 import com.tinku.aula.SesionService;
@@ -8,6 +9,7 @@ import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +17,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -34,13 +41,16 @@ public class SesionController {
     private final SesionService sesionService;
     private final LiveKitService liveKitService;
     private final UsuarioActual usuarioActual;
+    private final EvidenciaService evidenciaService;
 
     public SesionController(SesionService sesionService,
                             LiveKitService liveKitService,
-                            UsuarioActual usuarioActual) {
+                            UsuarioActual usuarioActual,
+                            EvidenciaService evidenciaService) {
         this.sesionService = sesionService;
         this.liveKitService = liveKitService;
         this.usuarioActual = usuarioActual;
+        this.evidenciaService = evidenciaService;
     }
 
     /**
@@ -103,16 +113,16 @@ public class SesionController {
         return ResponseEntity.ok(SesionResponse.from(sesion));
     }
 
-    /** US-6/US-7 — subida de la evidencia del kill-switch (T-M3-08): solo la
-     *  referencia al clip de 30s (Artículo V). 404 si no hay kill-switch
-     *  registrado para la sesión. */
-    @PostMapping("/{id}/evidencia")
+    /** US-6/US-7 — evidencia del kill-switch (T-M3-08): el clip de 30 s se sube como
+     *  archivo (AUD-021), nunca como URL. 404 si no hay kill-switch registrado. */
+    @PostMapping(value = "/{id}/evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EvidenciaResponse> evidencia(@PathVariable UUID id,
-                                                       @Valid @RequestBody EvidenciaRequest request,
-                                                       Authentication authentication) {
+                                                       @RequestPart("clip") MultipartFile clip,
+                                                       @RequestParam(value = "duracionSegundos", required = false)
+                                                       Integer duracionSegundos,
+                                                       Authentication authentication) throws IOException {
         Usuario usuario = usuarioActual.obtener(authentication);
-        AlertaSeguridad alerta = sesionService.subirEvidencia(
-                usuario, id, request.clipUrl(), request.duracionSegundos());
+        AlertaSeguridad alerta = evidenciaService.subir(usuario, id, clip.getBytes(), duracionSegundos);
         return ResponseEntity.ok(EvidenciaResponse.from(alerta));
     }
 }
