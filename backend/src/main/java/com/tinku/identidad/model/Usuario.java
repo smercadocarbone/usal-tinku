@@ -113,6 +113,7 @@ public class Usuario {
     /** Edad calculada al momento de la consulta — no persistida (evita
      * inconsistencias si la fila se lee mucho tiempo después de creada). */
     @Transient
+    @com.fasterxml.jackson.annotation.JsonIgnore // AUD-036.6: dato derivado, no parte de ninguna respuesta
     public int getEdad() {
         return java.time.Period.between(fechaNacimiento, LocalDate.now()).getYears();
     }

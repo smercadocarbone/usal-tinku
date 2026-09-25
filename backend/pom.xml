@@ -27,6 +27,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- AUD-036 / 4.6: /actuator/health (healthcheck del contenedor) e /info. Nada más expuesto. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
 
         <!-- Persistencia (PostgreSQL, un solo motor, schemas por modulo - Articulo VIII) -->
         <dependency>
