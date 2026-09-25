@@ -22,6 +22,8 @@ export interface TutorPerfil {
   verificado: boolean;
   /** Tarifa POR HORA que configuró el tutor (D6); `null` = todavía no la definió. */
   precioHora: number | null;
+  /** FR-ID-026: CAP aprobado y vigente. Nada más del CAP se muestra a terceros. */
+  habilitadoParaMenores: boolean;
 }
 
 export function getTutor(id: string): Promise<TutorPerfil> {
@@ -41,6 +43,7 @@ export function normalizarTutor(t: Partial<TutorPerfil> & { id: string }): Tutor
     bio: t.bio ?? null,
     tieneFoto: t.tieneFoto ?? false,
     verificado: t.verificado ?? false,
+    habilitadoParaMenores: t.habilitadoParaMenores ?? false,
     precioHora: t.precioHora ?? null,
   };
 }

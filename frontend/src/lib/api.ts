@@ -743,6 +743,61 @@ export function subirCredencial(tipo: TipoCredencial, archivo: File): Promise<Cr
   form.append("archivo", archivo);
   return api.post("/api/tutores/credenciales", form);
 }
+/* ---- T02/T03 — CAP (certificado de antecedentes), solo para dar clases a menores ---- */
+
+export type EstadoCap = "PENDIENTE" | "APROBADO" | "RECHAZADO" | "EN_REVISION_LEGAL" | "VENCIDO";
+
+export interface CapPropio {
+  id: string;
+  estado: EstadoCap;
+  tieneAntecedentes: boolean;
+  venceAt: string;
+  numeroIntento: number;
+}
+
+export function subirCap(archivo: File, fechaEmision: string): Promise<CapPropio> {
+  const form = new FormData();
+  form.append("datos", new Blob([JSON.stringify({ fechaEmision })], { type: "application/json" }));
+  form.append("archivo", archivo);
+  return api.post("/api/tutores/antecedentes-penales", form);
+}
+
+export interface CapCola {
+  id: string;
+  tutorId: string;
+  tutorNombre: string;
+  tutorApellido: string;
+  estado: EstadoCap;
+  fechaEmision: string;
+  venceAt: string;
+  categoriaAntecedente: string | null;
+  numeroIntento: number;
+  createdAt: string;
+}
+
+/** BR-CAP-01 (los tres primeros: rechazo automático) y BR-CAP-02 (OTRO: revisión legal). */
+export type CategoriaAntecedenteCap = "INTEGRIDAD_SEXUAL" | "VINCULADO_A_MENORES" | "HOMICIDIO" | "OTRO";
+export type AccionRevisionCap = "APROBAR" | "RECHAZAR" | "EN_REVISION_LEGAL";
+
+export function getColaCap(): Promise<CapCola[]> {
+  return api.get("/api/admin/moderacion/antecedentes-penales");
+}
+
+export function revisarCap(id: string, accion: AccionRevisionCap, categoria: CategoriaAntecedenteCap | null): Promise<CapPropio> {
+  return api.patch(`/api/admin/moderacion/antecedentes-penales/${id}`, { accion, categoria });
+}
+
+export async function getArchivoCap(id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/moderacion/antecedentes-penales/${id}/archivo`, {
+    headers: headersConToken(),
+  });
+  if (!res.ok) {
+    const [mensaje, detalles] = await leerError(res);
+    throw new ApiError(res.status, mensaje, detalles);
+  }
+  return res.blob();
+}
+
 /* ---- UX-06 / U1 — perfil público y estado del Tutor ---- */
 
 export interface EstadoPerfilTutor {
@@ -754,6 +809,9 @@ export interface EstadoPerfilTutor {
   tienePrecio: boolean;
   tieneBio: boolean;
   tieneFoto: boolean;
+  /** Último CAP cargado (T03); `null` si nunca cargó. Solo hace falta para dar clases a menores. */
+  cap: CapPropio | null;
+  habilitadoParaMenores: boolean;
 }
 
 export function getEstadoPerfilTutor(): Promise<EstadoPerfilTutor> {

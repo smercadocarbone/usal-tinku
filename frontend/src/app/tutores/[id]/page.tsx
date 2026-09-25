@@ -156,6 +156,11 @@ export default function TutorPerfilPage({ params }: { params: { id: string } }) 
                     <BadgeCheck className="size-4" aria-hidden /> Título en revisión
                   </li>
                 )}
+                {perfil.habilitadoParaMenores && (
+                  <li className="flex items-center gap-1.5 text-exito">
+                    <ShieldCheck className="size-4" aria-hidden /> Habilitado para clases con menores
+                  </li>
+                )}
               </ul>
             </div>
           </header>

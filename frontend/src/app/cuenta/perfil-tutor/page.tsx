@@ -8,6 +8,7 @@ import { usePerfilPropio } from "@/lib/usePerfil";
 import { getTutor, invalidarFoto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
 import BannerCredencial from "@/components/BannerCredencial";
 import ChecklistTutor from "@/components/tutor/ChecklistTutor";
+import SeccionCap from "@/components/tutor/SeccionCap";
 import { AreaTexto, Avatar, Boton, Skeleton, Tarjeta, clasesBoton, useToast } from "@/components/ui";
 
 const MAX_BIO = 500;
@@ -165,6 +166,13 @@ export default function PerfilTutorPage() {
         <Tarjeta>
           <h2 className="mb-4 text-lg font-bold">Credencial académica</h2>
           <BannerCredencial />
+        </Tarjeta>
+      </section>
+
+      <section id="menores" className="scroll-mt-24">
+        <Tarjeta>
+          <h2 className="mb-4 text-lg font-bold">Clases con menores</h2>
+          <SeccionCap />
         </Tarjeta>
       </section>
 
