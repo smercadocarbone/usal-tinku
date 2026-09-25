@@ -59,6 +59,11 @@ export class RegistroPage extends BasePage {
   /** Paso "Condiciones": los puntos clave de los Términos, con aceptación explícita. */
   async aceptarCondiciones(): Promise<void> {
     await this.page.getByRole("heading", { name: "Cómo funciona Tinku" }).waitFor();
+    // Términos del alumno: no ve los del tutor.
+    await this.page.getByRole("heading", { name: "Pagás al reservar, el tutor cobra después" }).waitFor();
+    if (await this.page.getByRole("heading", { name: "Sos un tutor independiente" }).count()) {
+      throw new Error("El alumno no debería ver los términos del tutor");
+    }
     await this.page.getByLabel("Acepto los Términos y Condiciones").check();
     await this.botonContinuar.click();
   }

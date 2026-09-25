@@ -41,8 +41,10 @@ test.describe("Registro de Tutor", () => {
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByLabel("Foto de tu DNI (frente o dorso)").setInputFiles(FOTO_FAKE);
       await page.getByRole("button", { name: "Verificar", exact: true }).click();
-      // Puntos clave de los Términos, con los del tutor (foto obligatoria).
-      await expect(page.getByRole("heading", { name: "Verificamos tu formación y tu cara" })).toBeVisible();
+      // Términos propios del tutor, distintos de los del alumno.
+      await expect(page.getByRole("heading", { name: "Sos un tutor independiente" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Tu foto es obligatoria" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Pagás al reservar, el tutor cobra después" })).toHaveCount(0);
       await page.getByLabel("Acepto los Términos y Condiciones").check();
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByLabel("Contraseña", { exact: true }).fill("unaClaveSegura1");
