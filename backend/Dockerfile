@@ -1,11 +1,11 @@
-FROM maven:3-eclipse-temurin-26 AS build
+FROM maven:3-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests dependency:go-offline || true
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests package
 
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:21-jre
 # OCR real (ADR-M1-01): Tess4J necesita la librería nativa de Tesseract 5 y el idioma
 # español. Sin esto, en `prod` el registro con DNI falla (el stub está prohibido, AUD-034).
 RUN apt-get update \

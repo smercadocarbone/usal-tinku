@@ -8,6 +8,12 @@ updates:
     open-pull-requests-limit: 5
     groups:
       spring: { patterns: ["org.springframework*"] }
+      # api, impl y jackson de jjwt van juntos: mezclar versiones rompe el JWT en runtime.
+      jjwt: { patterns: ["io.jsonwebtoken*"] }
+    ignore:
+      # Saltos mayores (Spring Boot 4) cambian demasiado para un PR automático: a mano.
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
@@ -22,3 +28,9 @@ updates:
   - package-ecosystem: docker
     directory: /backend
     schedule: { interval: monthly }
+    ignore:
+      # La suite y el enforcer exigen JDK 21 (AGENTS §5): la imagen no cambia de Java sola.
+      - dependency-name: "maven"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
