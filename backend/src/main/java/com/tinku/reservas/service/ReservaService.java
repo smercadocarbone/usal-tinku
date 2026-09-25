@@ -17,6 +17,7 @@ import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.port.TarifaProveedor;
+import com.tinku.reservas.port.VerificadorCobroTutor;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.repository.SolicitudSesionRepository;
 import com.tinku.reservas.web.NuevaReservaDirectaRequest;
@@ -84,6 +85,7 @@ public class ReservaService {
     private final PoliticaSesionesMenores politicaMenores;
     private final Notificador notificador;
     private final AdicionalResumen adicionalResumen;
+    private final VerificadorCobroTutor verificadorCobro;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
@@ -96,7 +98,8 @@ public class ReservaService {
                           Scheduler scheduler,
                           PoliticaSesionesMenores politicaMenores,
                           Notificador notificador,
-                          AdicionalResumen adicionalResumen) {
+                          AdicionalResumen adicionalResumen,
+                          VerificadorCobroTutor verificadorCobro) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -109,6 +112,7 @@ public class ReservaService {
         this.politicaMenores = politicaMenores;
         this.notificador = notificador;
         this.adicionalResumen = adicionalResumen;
+        this.verificadorCobro = verificadorCobro;
     }
 
     /**
@@ -427,6 +431,10 @@ public class ReservaService {
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
                                  Instant horario, Integer duracionMinutos, boolean conResumen) {
         exigirTutorReservable(tutor, pagador, beneficiario);
+        // ADR-M5-02: con OAuth activo, un Tutor sin MercadoPago conectado no puede cobrar.
+        if (!verificadorCobro.puedeCobrar(tutor.getId())) {
+            throw new TutorSinCobroException();
+        }
         // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {

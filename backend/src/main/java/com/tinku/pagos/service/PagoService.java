@@ -105,9 +105,11 @@ public class PagoService {
         // calcula sobre el adicional.
         // R2: la preferencia vence junto con la Reserva sin pagar (Tabla de Tiempos) y queda
         // registrada para conciliar el pago aunque no vuelva el navegador ni llegue el webhook.
+        // ADR-M5-02: con el token del Tutor (vendedor) para que MP reparta con marketplace_fee.
+        String tokenVendedor = conciliacion.tokenVendedor(reserva.getTutor().getId());
         PreferenciaPago preferencia = mercadopago.crearPreferencia(new PreferenciaRequest(
                 reserva.getId(), reserva.montoTotal(), comision.add(adicional(reserva)), DESCRIPCION_ITEM,
-                reserva.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO)));
+                reserva.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO)), tokenVendedor);
         conciliacion.registrarPreferencia(reserva.getId(), preferencia.preferenceId());
         return preferencia;
     }

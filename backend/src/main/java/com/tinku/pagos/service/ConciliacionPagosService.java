@@ -44,19 +44,22 @@ public class ConciliacionPagosService implements ConciliacionPagoProveedor {
     private final EscrowService escrow;
     private final PasarelaService pasarela;
     private final AlertaSoporteProveedor alertaSoporte;
+    private final CuentasMpService cuentasMp;
 
     public ConciliacionPagosService(PreferenciaMpRepository preferenciaRepo,
                                     TransaccionRepository transaccionRepo,
                                     MercadoPagoClient mercadopago,
                                     EscrowService escrow,
                                     PasarelaService pasarela,
-                                    AlertaSoporteProveedor alertaSoporte) {
+                                    AlertaSoporteProveedor alertaSoporte,
+                                    CuentasMpService cuentasMp) {
         this.preferenciaRepo = preferenciaRepo;
         this.transaccionRepo = transaccionRepo;
         this.mercadopago = mercadopago;
         this.escrow = escrow;
         this.pasarela = pasarela;
         this.alertaSoporte = alertaSoporte;
+        this.cuentasMp = cuentasMp;
     }
 
     /** La registra {@code PagoService.generarPreferencia}; una sola por Reserva (la última gana). */
@@ -68,6 +71,11 @@ public class ConciliacionPagosService implements ConciliacionPagoProveedor {
         });
         preferencia.setPreferenceId(preferenceId);
         preferenciaRepo.save(preferencia);
+    }
+
+    /** Token del vendedor para una preferencia nueva (lo pide {@code PagoService}). */
+    public String tokenVendedor(UUID tutorId) {
+        return cuentasMp.tokenParaTutor(tutorId);
     }
 
     @Override
@@ -101,8 +109,10 @@ public class ConciliacionPagosService implements ConciliacionPagoProveedor {
      */
     public boolean conciliar(UUID reservaId) {
         List<PagoMercadoPago> pagos;
+        String token;
         try {
-            pagos = mercadopago.buscarPagosPorReferencia(reservaId.toString());
+            token = cuentasMp.tokenParaReserva(reservaId);
+            pagos = mercadopago.buscarPagosPorReferencia(reservaId.toString(), token);
         } catch (RuntimeException e) {
             LOG.warn("Conciliación: MercadoPago no respondió para la reserva {} — se reintenta en el "
                     + "próximo barrido", reservaId, e);
@@ -115,7 +125,7 @@ public class ConciliacionPagosService implements ConciliacionPagoProveedor {
                 continue;
             }
             try {
-                escrow.procesarPagoAprobado(pago.mpPaymentId());
+                escrow.procesarPagoAprobado(pago.mpPaymentId(), token);
             } catch (PagoInconsistenteException e) {
                 alertarUnaVez(reservaId, pago.mpPaymentId(), "el monto pagado no coincide con el de la reserva");
             } catch (RuntimeException e) {

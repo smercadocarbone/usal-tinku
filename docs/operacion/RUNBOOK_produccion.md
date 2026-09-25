@@ -97,6 +97,7 @@ El admin tiene que volver a iniciar sesión.
 | `RESEND_API_KEY`, `EMAIL_REMITENTE` | para email | Resend. Vacías = avisos solo en la app; el reset de contraseña no llega |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | para el aula | LiveKit Cloud |
 | `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` | para cobrar | MercadoPago. Sin el secret el webhook rechaza todo |
+| `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_OAUTH_REDIRECT_URI`, `TINKU_CLAVE_CIFRADO` | para el reparto con los Tutores (ADR-M5-02) | App de marketplace de MP. Redirect: `https://api.tinku.site/api/pagos/mp/callback`. Clave: `openssl rand -base64 32` (si se pierde, cada Tutor tiene que reconectar). Sin `MP_CLIENT_ID` se cobra todo en la cuenta de Tinku, sin reparto |
 | `LLM_PROVEEDOR`, `LLM_API_KEY` | para resúmenes | `LLM_PROVEEDOR=gpt-4o` + API key de OpenAI (ADR-M6-03). Vacías = fail-closed |
 | `TINKU_RESUMEN_ADICIONAL_HABILITADO` | no (`false`) | Adicional pago de resumen (T09). **Dejarlo en `false` hasta tener el texto legal de la cláusula de grabación** (ADR-M3-04). Con `true` exige `LLM_PROVEEDOR=gpt-4o` y `LLM_API_KEY` o el backend no arranca |
 | `TINKU_RESUMEN_ADICIONAL_PRECIO_ARS` | no (770) | Precio del adicional (PT5) |

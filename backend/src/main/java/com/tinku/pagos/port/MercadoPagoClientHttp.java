@@ -19,9 +19,10 @@ import java.util.UUID;
 
 /**
  * Cliente HTTP de MercadoPago (T-M5-02) via Checkout Pro en modalidad
- * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%)
- * para que el split quede definido al crear el pago (Plan M5 §3.1/§3.2) — al
- * liberar el escrow NO es una segunda transaccion.
+ * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%).
+ * <b>El reparto solo ocurre si la preferencia se crea con el token OAuth del
+ * Tutor (vendedor)</b> — ADR-M5-02. Con el token de la plataforma, Tinku es el
+ * vendedor y cobra el 100 %: el marketplace_fee no tiene efecto.
  *
  * El match entre la preferencia y la Reserva va por {@code external_reference}
  * = id de la Reserva: es la clave que usara el webhook de M5-B para reconciliar
@@ -70,13 +71,13 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public PreferenciaPago crearPreferencia(PreferenciaRequest request) {
-        exigirTokenConfigurado();
+    public PreferenciaPago crearPreferencia(PreferenciaRequest request, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         MpPreferenciaRespuesta respuesta;
         try {
             respuesta = restClient.post()
                     .uri(PATH_PREFERENCIAS)
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(cuerpo(request))
                     .retrieve()
@@ -95,13 +96,13 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public PagoMercadoPago getPago(String mpPaymentId) {
-        exigirTokenConfigurado();
+    public PagoMercadoPago getPago(String mpPaymentId, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         MpPagoRespuesta respuesta;
         try {
             respuesta = restClient.get()
                     .uri(PATH_PAGOS + mpPaymentId)
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .retrieve()
                     .onStatus(status -> status.isError(), (req, res) -> {
                         throw new MercadoPagoNoDisponibleException();
@@ -118,8 +119,8 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public List<PagoMercadoPago> buscarPagosPorReferencia(String externalReference) {
-        exigirTokenConfigurado();
+    public List<PagoMercadoPago> buscarPagosPorReferencia(String externalReference, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         MpBusquedaRespuesta respuesta;
         try {
             respuesta = restClient.get()
@@ -128,7 +129,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                             .queryParam("sort", "date_created")
                             .queryParam("criteria", "desc")
                             .build())
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .retrieve()
                     .onStatus(status -> status.isError(), (req, res) -> {
                         throw new MercadoPagoNoDisponibleException();
@@ -147,12 +148,12 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public void reembolsarPago(String mpPaymentId) {
-        exigirTokenConfigurado();
+    public void reembolsarPago(String mpPaymentId, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
                     .uri(PATH_PAGOS + mpPaymentId + "/refunds")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new MpReembolsoRequest(null))
                     .retrieve()
@@ -168,12 +169,12 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     /** Reembolso PARCIAL por disputa (FR-PAG-010, T-M5-08): el cuerpo lleva el
      * {@code amount} a devolver. Solo el flujo manual de M8 lo invoca. */
     @Override
-    public void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto) {
-        exigirTokenConfigurado();
+    public void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
                     .uri(PATH_PAGOS + mpPaymentId + "/refunds")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new MpReembolsoRequest(monto))
                     .retrieve()
@@ -186,10 +187,15 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         }
     }
 
-    private void exigirTokenConfigurado() {
-        if (accessToken == null || accessToken.isBlank()) {
+    private void exigirTokenConfigurado(String tokenVendedor) {
+        if (token(tokenVendedor) == null || token(tokenVendedor).isBlank()) {
             throw new MercadoPagoNoConfiguradoException();
         }
+    }
+
+    /** El token del vendedor (Tutor, OAuth) o, sin él, el de la plataforma. */
+    private String token(String tokenVendedor) {
+        return tokenVendedor != null && !tokenVendedor.isBlank() ? tokenVendedor : accessToken;
     }
 
     /** Traduccion de la preferencia de dominio al JSON de /checkout/preferences

@@ -36,13 +36,16 @@ public class MercadoPagoWebhookController {
     private final MercadoPagoWebhookVerificador verificador;
     private final EscrowService escrowService;
     private final ObjectMapper objectMapper;
+    private final com.tinku.pagos.service.CuentasMpService cuentasMp;
 
     public MercadoPagoWebhookController(MercadoPagoWebhookVerificador verificador,
                                         EscrowService escrowService,
-                                        ObjectMapper objectMapper) {
+                                        ObjectMapper objectMapper,
+                                        com.tinku.pagos.service.CuentasMpService cuentasMp) {
         this.verificador = verificador;
         this.escrowService = escrowService;
         this.objectMapper = objectMapper;
+        this.cuentasMp = cuentasMp;
     }
 
     @PostMapping
@@ -69,7 +72,10 @@ public class MercadoPagoWebhookController {
             return ResponseEntity.ok().build();
         }
 
-        escrowService.procesarPagoAprobado(mpPaymentId);
+        // ADR-M5-02: el aviso trae el user_id del vendedor (el Tutor); su token consulta el pago.
+        // Desconocido → token de la plataforma; si MP lo rechaza, la conciliación lo resuelve.
+        String tokenVendedor = cuentasMp.tokenParaMpUserId(notificacion.path("user_id").asText(null));
+        escrowService.procesarPagoAprobado(mpPaymentId, tokenVendedor);
         return ResponseEntity.ok().build();
     }
 

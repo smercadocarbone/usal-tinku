@@ -56,6 +56,16 @@ public class PlantillasEmail {
                     Podés buscar otro tutor en:
                     %s/buscar
                     """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica));
+            case MP_CUENTA_DESCONECTADA -> new MensajeEmail(email,
+                    "Tinku: volvé a conectar tu MercadoPago", """
+                    Hola %s:
+
+                    No pudimos renovar la conexión con tu cuenta de MercadoPago. Hasta que la vuelvas a \
+                    conectar, los alumnos no pueden reservarte clases nuevas. Las que ya tenés siguen igual.
+
+                    Conectala de nuevo en:
+                    %s/cuenta/cobros
+                    """.formatted(nombre, urlPublica));
         };
     }
 

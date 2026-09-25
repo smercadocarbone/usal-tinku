@@ -129,7 +129,7 @@ class PagosFlujosIntegracionTest {
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
         when(reputacionBloqueo.tutoresConCalificacionPendiente()).thenReturn(Set.of());
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
     }
 
@@ -288,7 +288,7 @@ class PagosFlujosIntegracionTest {
         // BR-PAG-01: la comisión de la plataforma llega como marketplace_fee sobre
         // el precio congelado de la Reserva (FR-PAG-013): 15000 → 4050.00 (27%).
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         PreferenciaRequest pedido = captor.getValue();
         assertThat(pedido.reservaId()).isEqualTo(reservaId);
         assertThat(pedido.montoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
@@ -362,7 +362,7 @@ class PagosFlujosIntegracionTest {
     void us1_sinCredencialesMercadoPago_503() throws Exception {
         EscenarioPago e = escenarioPago();
         UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenThrow(new MercadoPagoNoConfiguradoException());
 
         mockMvc.perform(post("/api/pagos/preferencia")
@@ -426,7 +426,7 @@ class PagosFlujosIntegracionTest {
         // y la preferencia de pago se arma sobre ese precio congelado.
         pedirPreferencia(tokenEst, reservaId);
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("23000"));
     }
 
@@ -650,7 +650,7 @@ class PagosFlujosIntegracionTest {
 
         // BR-PAG-01 intacta: 27 % solo sobre la sesión (4050); el adicional va entero a la plataforma.
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
         assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4820.00"));
     }
@@ -726,8 +726,8 @@ class PagosFlujosIntegracionTest {
     private void mpDevuelvePagoAprobado(UUID reservaId, String mpPaymentId, String monto) {
         var pago = new MercadoPagoClient.PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(),
                 new BigDecimal(monto));
-        when(mercadopago.buscarPagosPorReferencia(reservaId.toString())).thenReturn(java.util.List.of(pago));
-        when(mercadopago.getPago(mpPaymentId)).thenReturn(pago);
+        when(mercadopago.buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(reservaId.toString()), any())).thenReturn(java.util.List.of(pago));
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(pago);
     }
 
     private void correrTimeout(UUID reservaId) {
@@ -760,7 +760,7 @@ class PagosFlujosIntegracionTest {
     void r2_preferenciaVenceConLaReservaYQuedaRegistrada() throws Exception {
         UUID reservaId = reservaConPreferencia(0);
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago, org.mockito.Mockito.atLeastOnce()).crearPreferencia(captor.capture());
+        verify(mercadopago, org.mockito.Mockito.atLeastOnce()).crearPreferencia(captor.capture(), any());
         PreferenciaRequest pedido = captor.getAllValues().stream()
                 .filter(r -> r.reservaId().equals(reservaId)).findFirst().orElseThrow();
         Reserva reserva = reservaRepository.findById(reservaId).orElseThrow();
@@ -781,7 +781,7 @@ class PagosFlujosIntegracionTest {
     @Test
     void r2_mpCaido_elTimeoutCancelaIgual() throws Exception {
         UUID reservaId = reservaConPreferencia(16);
-        when(mercadopago.buscarPagosPorReferencia(reservaId.toString()))
+        when(mercadopago.buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(reservaId.toString()), any()))
                 .thenThrow(new com.tinku.pagos.service.MercadoPagoNoDisponibleException());
 
         correrTimeout(reservaId);
@@ -799,7 +799,7 @@ class PagosFlujosIntegracionTest {
         mpDevuelvePagoAprobado(reservaId, "mp-conc-3", "15000");
         conciliacion.barrer();
 
-        verify(mercadopago).reembolsarPago("mp-conc-3");
+        verify(mercadopago).reembolsarPago(org.mockito.ArgumentMatchers.eq("mp-conc-3"), any());
         assertThat(transaccionRepository.findByMpPaymentId("mp-conc-3")).get()
                 .extracting(t -> t.getEstado()).isEqualTo(com.tinku.pagos.model.EstadoTransaccion.REEMBOLSADO);
         assertThat(preferenciaRepository.findById(reservaId).orElseThrow().getConciliadoAt()).isNotNull();
@@ -815,7 +815,7 @@ class PagosFlujosIntegracionTest {
         conciliacion.barrer();
         conciliacion.barrer();
 
-        verify(mercadopago, org.mockito.Mockito.never()).buscarPagosPorReferencia(vieja.toString());
+        verify(mercadopago, org.mockito.Mockito.never()).buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(vieja.toString()), any());
         assertThat(estadoDe(rara)).isEqualTo(com.tinku.reservas.model.EstadoReserva.PENDIENTE_PAGO);
         var preferencia = preferenciaRepository.findById(rara).orElseThrow();
         assertThat(preferencia.getAlertadoAt()).isNotNull();
