@@ -3,7 +3,7 @@
 # y pydantic-core falla al compilarse desde fuente). T-000-08.
 fastapi>=0.141.0
 uvicorn[standard]>=0.52.0
-pydantic>=2.13.0
+pydantic>=2.13.5
 
 # ADR-M2-01 resuelto (pgvector): sentence-transformers para compute los
 # embeddings (384 dims, modelo multilingual) + psycopg3 para consultar la
