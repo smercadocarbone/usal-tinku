@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { CalendarClock, ChevronLeft, CircleSlash, Flag, Sparkles, Video, WalletCards } from "lucide-react";
 import {
   api,
@@ -55,7 +55,8 @@ function pasosLinea(r: Reserva, sesion: SesionInfo | null) {
   ];
 }
 
-export default function ReservaDetallePage({ params }: { params: { id: string } }) {
+export default function ReservaDetallePage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
   const sesionUsuario = useSesion();

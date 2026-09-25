@@ -4,7 +4,7 @@
  * El token vive en DOS lugares, por dos motivos distintos:
  *  - `localStorage`: fuente de verdad para el cliente HTTP (`src/lib/api.ts`),
  *    que lo manda como header `Authorization: Bearer`.
- *  - Cookie (no httpOnly, misma clave): para que `middleware.ts` pueda
+ *  - Cookie (no httpOnly, misma clave): para que `proxy.ts` pueda
  *    proteger rutas desde el server y redirigir a /login sin JS.
  * Ambas se limpian juntas en logout/expiración (ver `clearSession`).
  */

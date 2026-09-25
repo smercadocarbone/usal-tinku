@@ -9,7 +9,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   ConnectionQuality,
   createLocalAudioTrack,
@@ -216,7 +216,8 @@ function MenuOpcionesLlamada({ opciones }: { opciones: OpcionMenuLlamada[] }) {
   );
 }
 
-export default function AulaPage({ params }: { params: { id: string } }) {
+export default function AulaPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const sesionId = params.id;
 
@@ -807,7 +808,7 @@ export default function AulaPage({ params }: { params: { id: string } }) {
   interface Tile {
     id: TileId;
     etiqueta: string;
-    videoRef: RefObject<HTMLVideoElement>;
+    videoRef: RefObject<HTMLVideoElement | null>;
     espejo?: boolean;
     contenidoVacio?: ReactNode;
   }

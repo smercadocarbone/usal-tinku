@@ -5,7 +5,7 @@ import { URL_SITIO } from "@/lib/sitio";
  * Solo las rutas realmente públicas.
  *
  * Los perfiles de Tutor NO están acá a propósito: hoy `/tutores/[id]` está
- * detrás del middleware de sesión y es un componente de cliente, así que un
+ * detrás del proxy de sesión y es un componente de cliente, así que un
  * crawler nunca ve su contenido. Listarlos sería declararle a Google algo que
  * no puede leer. Esa es exactamente la decisión pendiente: si el SEO de los
  * perfiles importa (es lo que justifica Next.js en la Constitución), hay que

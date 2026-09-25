@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { URL_SITIO } from "@/lib/sitio";
 
 /**
- * Todo lo que está detrás de `middleware.ts` se bloquea explícitamente: un
+ * Todo lo que está detrás de `proxy.ts` se bloquea explícitamente: un
  * crawler ahí solo recibe un 307 a /login, y dejarlo indexable solo genera
  * ruido y filtra la existencia de rutas privadas.
  */
