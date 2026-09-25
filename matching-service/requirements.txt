@@ -8,7 +8,7 @@ pydantic>=2.13.0
 # ADR-M2-01 resuelto (pgvector): sentence-transformers para compute los
 # embeddings (384 dims, modelo multilingual) + psycopg3 para consultar la
 # columna `embedding` de matching.perfiles_tutor_matching (T-M2-04).
-sentence-transformers>=4.0.0
+sentence-transformers>=6.1.0
 psycopg[binary]>=3.2.0
 pgvector>=0.4.0
 
