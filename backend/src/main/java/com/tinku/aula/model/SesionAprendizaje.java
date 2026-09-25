@@ -91,4 +91,15 @@ public class SesionAprendizaje {
      */
     @Column(name = "duracion_agendada_segundos")
     private Integer duracionAgendadaSegundos;
+
+    /** ADR-M3-04: referencia interna del audio del resumen (solo audio, solo con el adicional). */
+    @Column(name = "audio_referencia")
+    private String audioReferencia;
+
+    @Column(name = "audio_recibido_at")
+    private Instant audioRecibidoAt;
+
+    /** PT6: cuándo se borró el audio (al transcribir o a las 24 hs como máximo). */
+    @Column(name = "audio_borrado_at")
+    private Instant audioBorradoAt;
 }

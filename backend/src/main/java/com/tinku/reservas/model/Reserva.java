@@ -71,6 +71,14 @@ public class Reserva {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal precio;
 
+    /** T09 (DT3): adicional pago de resumen. Nunca con un beneficiario Menor (ADR-M3-04). */
+    @Column(name = "resumen_contratado", nullable = false)
+    private boolean resumenContratado = false;
+
+    /** T09: precio del adicional congelado al reservar (null si no se contrató). */
+    @Column(name = "precio_adicional_resumen", precision = 10, scale = 2)
+    private BigDecimal precioAdicionalResumen;
+
     @Convert(converter = EstadoReservaConverter.class)
     @Column(nullable = false, length = 20)
     private EstadoReserva estado = EstadoReserva.PENDIENTE_PAGO;
@@ -95,5 +103,10 @@ public class Reserva {
         this.horario = horario;
         this.duracionMinutos = duracionMinutos;
         sincronizarHorarioFin();
+    }
+
+    /** Lo que paga el pagador: la sesión más el adicional de resumen si lo contrató (T09). */
+    public BigDecimal montoTotal() {
+        return precioAdicionalResumen == null ? precio : precio.add(precioAdicionalResumen);
     }
 }

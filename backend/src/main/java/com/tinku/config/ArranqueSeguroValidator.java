@@ -32,10 +32,19 @@ public class ArranqueSeguroValidator implements InitializingBean {
     private final OcrService ocrService;
     private final String jwtSecret;
     private final String matchingServiceToken;
+    private final boolean adicionalResumen;
+    private final String llmProveedor;
+    private final String llmApiKey;
 
     public ArranqueSeguroValidator(Environment environment, OcrService ocrService,
                                    @Value("${tinku.jwt.secret:}") String jwtSecret,
-                                   @Value("${tinku.matching-service.token:}") String matchingServiceToken) {
+                                   @Value("${tinku.matching-service.token:}") String matchingServiceToken,
+                                   @Value("${tinku.resumen.adicional.habilitado:false}") boolean adicionalResumen,
+                                   @Value("${tinku.resumen.llm.proveedor:}") String llmProveedor,
+                                   @Value("${tinku.resumen.llm.api-key:}") String llmApiKey) {
+        this.adicionalResumen = adicionalResumen;
+        this.llmProveedor = llmProveedor;
+        this.llmApiKey = llmApiKey;
         this.environment = environment;
         this.ocrService = ocrService;
         this.jwtSecret = jwtSecret;
@@ -61,6 +70,11 @@ public class ArranqueSeguroValidator implements InitializingBean {
             throw new IllegalStateException("tinku.matching-service.token vacío fuera de dev/test: "
                     + "el Motor de Matching responde fail-closed (503). Definí "
                     + "MATCHING_SERVICE_TOKEN con el mismo valor que TINKU_MATCHING_TOKEN (AUD-015).");
+        }
+        // T09: vender el adicional sin poder generarlo cobraría y reembolsaría siempre.
+        if (adicionalResumen && (!"gpt-4o".equals(llmProveedor) || llmApiKey == null || llmApiKey.isBlank())) {
+            throw new IllegalStateException("TINKU_RESUMEN_ADICIONAL_HABILITADO=true sin LLM_PROVEEDOR=gpt-4o "
+                    + "y LLM_API_KEY: el resumen contratado no se podría generar (ADR-M3-04).");
         }
     }
 }

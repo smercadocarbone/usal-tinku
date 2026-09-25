@@ -113,6 +113,10 @@ services:
       # Resumen (M6). Vacío = fail-closed.
       LLM_PROVEEDOR: ${LLM_PROVEEDOR:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
+      # T09: adicional pago de resumen. false hasta tener el texto legal de la cláusula (ADR-M3-04).
+      TINKU_RESUMEN_ADICIONAL_HABILITADO: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:-false}
+      TINKU_RESUMEN_ADICIONAL_PRECIO_ARS: ${TINKU_RESUMEN_ADICIONAL_PRECIO_ARS:-770}
+      TINKU_CLAUSULA_GRABACION_VERSION: ${TINKU_CLAUSULA_GRABACION_VERSION:-borrador-1}
       TARIFA_PISO_HORA_ARS: ${TARIFA_PISO_HORA_ARS:-6140}
       # Detrás del túnel todo llega desde cloudflared: la IP real del cliente viaja en este
       # header. Seguro solo porque el backend no es alcanzable por otro camino.

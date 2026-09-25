@@ -12,7 +12,10 @@ import com.tinku.aula.evento.SesionInterrumpidaEvent;
 import com.tinku.resumen.model.ResumenSesion;
 import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.ResumenProveedorNoConfiguradoException;
+import com.tinku.resumen.port.ReembolsoAdicionalResumen;
 import com.tinku.resumen.port.TranscriptSesionProveedor;
+import com.tinku.aula.evento.AudioResumenRecibidoEvent;
+import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.resumen.repository.ResumenSesionRepository;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.Reserva;
@@ -91,8 +94,11 @@ class ResumenIntegracionTest {
     @Autowired ApplicationEventPublisher events;
     @Autowired Scheduler scheduler;
 
+    @Autowired Almacenamiento almacenamiento;
+
     @MockitoBean TranscriptSesionProveedor transcript;
     @MockitoBean ResumenProveedor proveedor;
+    @MockitoBean ReembolsoAdicionalResumen reembolsoAdicional;
 
     @Value("${tinku.resumen.llm.proveedor:}") String llmProveedor;
     @Value("${tinku.resumen.llm.api-key:}") String llmApiKey;
@@ -105,6 +111,9 @@ class ResumenIntegracionTest {
                     + "2850590940090418135201.";
 
     private static final AtomicInteger CONTADOR = new AtomicInteger();
+
+    /** Cabecera EBML de un WebM: el contenido no importa, el transcript va mockeado. */
+    private static final byte[] AUDIO_WEBM = {0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 1, 2, 3};
 
     private record Escena(UUID reservaId, UUID sesionId) {
     }
@@ -350,7 +359,80 @@ class ResumenIntegracionTest {
 
     // ---------------------------------------------------------------- helpers
 
+
+    // ------------------------------------ T08/T09: adicional pago + audio (ADR-M3-04)
+
+    @Test
+    void sesionSinAdicionalNoGeneraResumen() {
+        Escena e = escena(1200, false, false);
+
+        events.publishEvent(new SesionFinalizadaEvent("M3", e.reservaId(), Instant.now()));
+
+        assertThat(resumenRepo.findBySesionId(e.sesionId())).isNotPresent();
+        verify(reembolsoAdicional, never()).reembolsarAdicional(any());
+    }
+
+    @Test
+    void conAdicionalElResumenEsperaAlAudioYArrancaCuandoLlega() throws Exception {
+        Escena e = escena(1200, true, false);
+
+        events.publishEvent(new SesionFinalizadaEvent("M3", e.reservaId(), Instant.now()));
+
+        // TG2: sin audio no se agenda la generación (si no, quedaría fallida siempre).
+        assertThat(resumenRepo.findBySesionId(e.sesionId()).orElseThrow().getEstado())
+                .isEqualTo(ResumenSesion.ESTADO_PENDIENTE);
+        assertThat(triggerReintentoExiste(e.sesionId())).isFalse();
+        assertThat(scheduler.checkExists(ResumenService.triggerPurgaAudio(e.sesionId()))).isTrue();
+
+        events.publishEvent(new AudioResumenRecibidoEvent(e.sesionId()));
+
+        assertThat(triggerReintentoExiste(e.sesionId())).isTrue();
+    }
+
+    @Test
+    void transcriptObtenidoBorraElAudio() {
+        Escena e = escena(1200);
+        filaPendiente(e.sesionId());
+
+        resumenService.ejecutarGenerar(e.sesionId());
+
+        SesionAprendizaje sesion = sesionRepo.findById(e.sesionId()).orElseThrow();
+        assertThat(sesion.getAudioBorradoAt()).isNotNull();
+        verify(reembolsoAdicional, never()).reembolsarAdicional(any());
+    }
+
+    @Test
+    void purga24hsSinResumenLoDejaFallidoBorraElAudioYReembolsaElAdicional() {
+        Escena e = escena(1200);
+        filaPendiente(e.sesionId());
+
+        resumenService.purgarAudio(e.sesionId());
+        resumenService.purgarAudio(e.sesionId()); // idempotente
+
+        assertThat(resumenRepo.findBySesionId(e.sesionId()).orElseThrow().getEstado())
+                .isEqualTo(ResumenSesion.ESTADO_FALLIDO);
+        assertThat(sesionRepo.findById(e.sesionId()).orElseThrow().getAudioBorradoAt()).isNotNull();
+        verify(reembolsoAdicional, times(1)).reembolsarAdicional(e.reservaId());
+    }
+
+    @Test
+    void transcriptInutilReembolsaElAdicional() {
+        Escena e = escena(1200);
+        filaPendiente(e.sesionId());
+        when(transcript.transcript(any(UUID.class))).thenReturn(null);
+
+        resumenService.ejecutarGenerar(e.sesionId());
+
+        verify(reembolsoAdicional).reembolsarAdicional(e.reservaId());
+    }
+
+
+    /** Clase con el adicional contratado (FR-SUM-001, T09) y el audio ya recibido (T08). */
     private Escena escena(int duracionSegundos) {
+        return escena(duracionSegundos, true, true);
+    }
+
+    private Escena escena(int duracionSegundos, boolean conAdicional, boolean conAudio) {
         Usuario adulto = guardarUsuario(TipoUsuario.ADULTO, "Ana");
         Reserva reserva = new Reserva();
         reserva.setPagador(adulto);
@@ -358,6 +440,10 @@ class ResumenIntegracionTest {
         reserva.setTutor(guardarUsuario(TipoUsuario.TUTOR, "Sergio"));
         reserva.setHorario(Instant.now().plusSeconds(3600));
         reserva.setPrecio(BigDecimal.valueOf(15000));
+        if (conAdicional) {
+            reserva.setResumenContratado(true);
+            reserva.setPrecioAdicionalResumen(BigDecimal.valueOf(770));
+        }
         reserva.setEstado(EstadoReserva.CONFIRMADA);
         reservaRepository.save(reserva);
 
@@ -368,6 +454,10 @@ class ResumenIntegracionTest {
         sesion.setInicioReal(Instant.now().minusSeconds(duracionSegundos));
         sesion.setFinReal(Instant.now());
         sesion.setDuracionEfectivaSegundos(duracionSegundos);
+        if (conAudio) {
+            sesion.setAudioReferencia(almacenamiento.guardar(AUDIO_WEBM, "audio-prueba"));
+            sesion.setAudioRecibidoAt(Instant.now());
+        }
         sesionRepo.save(sesion);
 
         return new Escena(reserva.getId(), sesion.getId());

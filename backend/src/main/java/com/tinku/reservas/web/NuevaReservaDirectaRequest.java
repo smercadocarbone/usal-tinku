@@ -18,5 +18,15 @@ public record NuevaReservaDirectaRequest(
         UUID beneficiarioId,
         @NotNull Instant horario,
         /** D6: 30 a 180 minutos, en bloques de 30 (lo valida el servicio → 422). */
-        @NotNull Integer duracionMinutos) {
+        @NotNull Integer duracionMinutos,
+        /** T09: adicional pago de resumen (opcional; null = no). Nunca con un menor → 422. */
+        Boolean resumenContratado) {
+
+    public NuevaReservaDirectaRequest(UUID tutorId, UUID beneficiarioId, Instant horario, Integer duracionMinutos) {
+        this(tutorId, beneficiarioId, horario, duracionMinutos, null);
+    }
+
+    public boolean conResumen() {
+        return Boolean.TRUE.equals(resumenContratado);
+    }
 }

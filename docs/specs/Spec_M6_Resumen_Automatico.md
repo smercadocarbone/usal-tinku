@@ -60,7 +60,7 @@ Este módulo genera, de forma automática y para toda sesión que lo amerite, un
 
 | ID | Requisito |
 |---|---|
-| FR-SUM-001 | Generación automática de resumen para toda sesión con ≥10 min de duración efectiva, disparada por `sesion.finalizada`. Sin acción del usuario. |
+| FR-SUM-001 | _(enmendado 2026-09-25, T09/DT3)_ El resumen es un **adicional pago**: se genera solo si la Reserva lo contrató, la sesión tuvo ≥10 min de duración efectiva y llegó el audio (ADR-M3-04). Lo dispara `sesion.finalizada` **y** la llegada del audio, lo que ocurra último. Si falla (sin audio a las 24 hs, transcript inútil, reintentos agotados o sin proveedor), se reembolsa el adicional (BR-PAG-11 de M5). Con un Menor nunca se contrata ni se graba. |
 | FR-SUM-002 | Fuentes válidas: transcripción de audio/video y transcripción de los tramos degradados a texto — incluida una sesión degradada a texto **desde el inicio y sin ningún tramo de audio** (degradación total, no solo parcial); el umbral de 10 minutos de FR-SUM-001 se mide igual sobre duración efectiva, sea cual sea el medio. |
 | FR-SUM-003 | Estructura fija: temas tratados, conceptos clave, ejercicios trabajados, dudas abiertas, sugerencia para la próxima sesión. |
 | FR-SUM-004 | Visibilidad: Estudiante y Tutor ven el mismo resumen; si el Estudiante es menor, también su Adulto Responsable. |

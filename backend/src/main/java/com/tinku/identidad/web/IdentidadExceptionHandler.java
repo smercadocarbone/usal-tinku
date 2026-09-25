@@ -109,6 +109,11 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(ClausulaDesconocidaException.class)
+    public ResponseEntity<Map<String, String>> handleClausulaDesconocida(ClausulaDesconocidaException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(SoloTutorException.class)
     public ResponseEntity<Map<String, String>> handleSoloTutor(SoloTutorException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));

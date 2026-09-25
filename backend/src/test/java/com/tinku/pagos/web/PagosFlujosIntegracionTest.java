@@ -591,4 +591,113 @@ class PagosFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of())))
                 .andExpect(status().isBadRequest());
     }
+
+    // ------------------------------------ T08/T09: adicional de resumen (ADR-M3-04)
+
+    @Autowired com.tinku.aula.repository.SesionAprendizajeRepository sesionRepo;
+
+    private static final byte[] AUDIO_WEBM = {0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 1, 2, 3};
+
+    private void aceptarClausulaGrabacion(String token) throws Exception {
+        mockMvc.perform(post("/api/usuarios/me/clausulas/GRABACION_AUDIO_RESUMEN")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.aceptada").value(true));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions reservarConResumen(
+            String token, UUID tutorId, Instant horario) throws Exception {
+        return mockMvc.perform(post("/api/reservas")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "tutorId", tutorId.toString(),
+                        "horario", horario.toString(),
+                        "duracionMinutos", 60,
+                        "resumenContratado", true))));
+    }
+
+    private record EscenarioAdicional(String tokenEst, String tokenTutor, UUID tutorId, Instant horario) {
+    }
+
+    private EscenarioAdicional escenarioAdicional(boolean tutorAcepta, boolean alumnoAcepta) throws Exception {
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        String tokenEst = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        if (tutorAcepta) aceptarClausulaGrabacion(tokenTutor);
+        if (alumnoAcepta) aceptarClausulaGrabacion(tokenEst);
+        return new EscenarioAdicional(tokenEst, tokenTutor, usuarioPorDni(dniTutor).getId(), dentroDeFranja(fecha));
+    }
+
+    @Test
+    void reservaConAdicional_adulto_montoIncluyeAdicional_yComisionSoloSobreSesion() throws Exception {
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        mockMvc.perform(get("/api/reservas/adicional-resumen").param("tutorId", e.tutorId().toString())
+                        .header("Authorization", "Bearer " + e.tokenEst()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.disponible").value(true));
+
+        MvcResult res = reservarConResumen(e.tokenEst(), e.tutorId(), e.horario())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resumenContratado").value(true))
+                .andExpect(jsonPath("$.precioAdicionalResumen").value(770))
+                .andExpect(jsonPath("$.montoTotal").value(15770))
+                .andReturn();
+        UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        pedirPreferencia(e.tokenEst(), reservaId);
+
+        // BR-PAG-01 intacta: 27 % solo sobre la sesión (4050); el adicional va entero a la plataforma.
+        ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
+        verify(mercadopago).crearPreferencia(captor.capture());
+        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
+        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4820.00"));
+    }
+
+    @Test
+    void reservaConAdicional_alumnoSinAceptarClausula_422_yTutorSinClausula_422() throws Exception {
+        EscenarioAdicional sinAlumno = escenarioAdicional(true, false);
+        reservarConResumen(sinAlumno.tokenEst(), sinAlumno.tutorId(), sinAlumno.horario())
+                .andExpect(status().isUnprocessableEntity());
+
+        EscenarioAdicional sinTutor = escenarioAdicional(false, true);
+        reservarConResumen(sinTutor.tokenEst(), sinTutor.tutorId(), sinTutor.horario())
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("Este tutor todavía no habilitó el resumen."));
+    }
+
+    @Test
+    void audioDelResumen_soloElTutor_unaVez_yNuncaSinAdicional() throws Exception {
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        MvcResult res = reservarConResumen(e.tokenEst(), e.tutorId(), e.horario())
+                .andExpect(status().isCreated()).andReturn();
+        UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        reservaService.confirmarPagoSimulado(reservaId); // M4→M3 agenda la Sesión
+        UUID sesionId = sesionRepo.findByReservaId(reservaId).orElseThrow().getId();
+
+        // El alumno no sube audio: graba solo el navegador del Tutor.
+        mockMvc.perform(post("/api/sesiones/" + sesionId + "/audio")
+                        .header("Authorization", "Bearer " + e.tokenEst())
+                        .contentType("audio/webm").content(AUDIO_WEBM))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/sesiones/" + sesionId + "/audio")
+                        .header("Authorization", "Bearer " + e.tokenTutor())
+                        .contentType("audio/webm").content(AUDIO_WEBM))
+                .andExpect(status().isNoContent());
+        assertThat(sesionRepo.findById(sesionId).orElseThrow().getAudioReferencia()).isNotNull();
+        mockMvc.perform(post("/api/sesiones/" + sesionId + "/audio")
+                        .header("Authorization", "Bearer " + e.tokenTutor())
+                        .contentType("audio/webm").content(AUDIO_WEBM))
+                .andExpect(status().isUnprocessableEntity());
+
+        // Sin adicional contratado no se acepta ningún audio (Art. V).
+        UUID sinAdicional = reservar30min(e.tokenTutor(), e.tutorId(), 3);
+        reservaService.confirmarPagoSimulado(sinAdicional);
+        UUID otraSesion = sesionRepo.findByReservaId(sinAdicional).orElseThrow().getId();
+        mockMvc.perform(post("/api/sesiones/" + otraSesion + "/audio")
+                        .header("Authorization", "Bearer " + e.tokenTutor())
+                        .contentType("audio/webm").content(AUDIO_WEBM))
+                .andExpect(status().isUnprocessableEntity());
+    }
 }

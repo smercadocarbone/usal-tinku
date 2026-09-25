@@ -1,5 +1,6 @@
 package com.tinku.aula.web;
 
+import com.tinku.aula.AudioResumenService;
 import com.tinku.aula.EvidenciaService;
 import com.tinku.aula.LiveKitService;
 import com.tinku.seguridad.model.AlertaSeguridad;
@@ -8,6 +9,7 @@ import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.shared.UsuarioActual;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,15 +44,18 @@ public class SesionController {
     private final LiveKitService liveKitService;
     private final UsuarioActual usuarioActual;
     private final EvidenciaService evidenciaService;
+    private final AudioResumenService audioResumenService;
 
     public SesionController(SesionService sesionService,
                             LiveKitService liveKitService,
                             UsuarioActual usuarioActual,
-                            EvidenciaService evidenciaService) {
+                            EvidenciaService evidenciaService,
+                            AudioResumenService audioResumenService) {
         this.sesionService = sesionService;
         this.liveKitService = liveKitService;
         this.usuarioActual = usuarioActual;
         this.evidenciaService = evidenciaService;
+        this.audioResumenService = audioResumenService;
     }
 
     /**
@@ -76,7 +81,8 @@ public class SesionController {
         Usuario usuario = usuarioActual.obtener(authentication);
         String[] resultado = sesionService.obtenerToken(usuario, id);
         return ResponseEntity.ok(new TokenSesionResponse(
-                resultado[0], liveKitService.getBaseUrl(), resultado[1]));
+                resultado[0], liveKitService.getBaseUrl(), resultado[1],
+                audioResumenService.debeGrabar(usuario, id)));
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */
@@ -124,5 +130,19 @@ public class SesionController {
         Usuario usuario = usuarioActual.obtener(authentication);
         AlertaSeguridad alerta = evidenciaService.subir(usuario, id, clip.getBytes(), duracionSegundos);
         return ResponseEntity.ok(EvidenciaResponse.from(alerta));
+    }
+
+    /**
+     * ADR-M3-04 (T08): el navegador del Tutor sube el audio de la clase al terminar. El cuerpo es
+     * el archivo crudo ({@code audio/webm} u {@code audio/ogg}), no multipart: así el límite de
+     * 25 MB es solo de este endpoint y no afloja el de las demás subidas.
+     */
+    @PostMapping(value = "/{id}/audio", consumes = {"audio/webm", "audio/ogg", "application/octet-stream"})
+    public ResponseEntity<Void> audio(@PathVariable UUID id, HttpServletRequest request,
+                                      Authentication authentication) throws IOException {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        byte[] audio = request.getInputStream().readNBytes(AudioResumenService.MAX_BYTES + 1);
+        audioResumenService.recibir(usuario, id, audio);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,6 +4,7 @@ import com.tinku.aula.AlertaNoEncontradaException;
 import com.tinku.aula.ConfirmacionNoPendienteException;
 import com.tinku.aula.DetectadoInvalidoException;
 import com.tinku.aula.EvidenciaInvalidaException;
+import com.tinku.aula.AudioResumenInvalidoException;
 import com.tinku.aula.SesionCerradaException;
 import com.tinku.aula.SesionNoEncontradaException;
 import com.tinku.aula.SesionSinSalaException;
@@ -53,7 +54,8 @@ public class AulaExceptionHandler {
     @ExceptionHandler({SesionSinSalaException.class, SesionCerradaException.class,
             DetectadoInvalidoException.class,
             ConfirmacionNoPendienteException.class,
-            EvidenciaInvalidaException.class})
+            EvidenciaInvalidaException.class,
+            AudioResumenInvalidoException.class})
     public ResponseEntity<Map<String, String>> handleInvalido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));

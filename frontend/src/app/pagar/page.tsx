@@ -215,9 +215,23 @@ function PagarFlujo() {
             </div>
           </div>
           {reserva.precio !== null && (
-            <div className="flex items-baseline justify-between border-t border-borde pt-4">
-              <span className="text-[15px] text-tinta-suave">Total</span>
-              <span className="tabular text-3xl font-extrabold">{formatearPesos(reserva.precio)}</span>
+            <div className="flex flex-col gap-2 border-t border-borde pt-4">
+              {reserva.resumenContratado && reserva.precioAdicionalResumen != null && (
+                <>
+                  <div className="flex justify-between text-[15px] text-tinta-suave">
+                    <span>Clase</span>
+                    <span className="tabular">{formatearPesos(reserva.precio)}</span>
+                  </div>
+                  <div className="flex justify-between text-[15px] text-tinta-suave">
+                    <span>Resumen automático</span>
+                    <span className="tabular">{formatearPesos(reserva.precioAdicionalResumen)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-baseline justify-between">
+                <span className="text-[15px] text-tinta-suave">Total</span>
+                <span className="tabular text-3xl font-extrabold">{formatearPesos(reserva.montoTotal ?? reserva.precio)}</span>
+              </div>
             </div>
           )}
           {reserva.pagoVenceAt && <Cuenta vence={reserva.pagoVenceAt} />}

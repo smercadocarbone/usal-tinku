@@ -4,7 +4,7 @@
 >
 > **Distinción importante:** los Artículos son principios durables — cambiarlos requiere una enmienda formal. La sección final ("Registro de Decisiones Técnicas Actuales") son elecciones de proveedor/tecnología concretas — pueden cambiar vía un ADR normal, sin tocar este documento.
 
-**Versión:** 2.3
+**Versión:** 2.4
 **Contexto del equipo (informativo, no es una regla en sí misma):** actualmente 1 desarrollador, presupuesto de infraestructura USD 0-100/mes durante desarrollo. Los principios de abajo están pensados para este contexto, pero siguen siendo buena práctica aunque el equipo crezca.
 
 ---
@@ -27,9 +27,11 @@ El precio que ve el Estudiante/Adulto Responsable es siempre el precio final. La
 
 Ante una decisión que mejora el margen de Tinku pero encarece o complica el acceso de familias de bajo poder adquisitivo, se prioriza el acceso. La comisión de plataforma y el precio de referencia regional deben revisarse con esta prioridad, no solo con criterio financiero.
 
-### Artículo V — Minimización de datos
+### Artículo V — Minimización de datos _(enmendado v2.4)_
 
 No se persiste ningún dato — en particular video — más allá de lo estrictamente necesario para cumplir una regla de negocio ya aprobada. Toda nueva necesidad de retención de datos debe justificarse explícitamente contra la Ley 25.326 antes de implementarse, nunca incorporarse "por las dudas".
+
+**Única excepción a la prohibición de grabar (ADR-M3-04):** el audio de una sesión puede grabarse solo si se cumplen las cuatro condiciones a la vez: (1) **solo audio**, nunca video; (2) la Reserva contrató el adicional de resumen; (3) **ningún participante es Menor**; (4) los dos participantes aceptaron expresamente la cláusula de grabación en su versión vigente. El audio se borra apenas se obtiene el transcript y, aunque algo falle, a las 24 hs como máximo (Tabla de Tiempos). Fuera de esas condiciones la prohibición sigue sin excepciones.
 
 ### Artículo VI — Control de alcance del MVP
 
@@ -142,4 +144,22 @@ Tabla_Tiempos_Tinku.md (fila "Vigencia del CAP"), Specs M2 y M4 (referencias a F
 
 ---
 
-_Fin de la Constitución v2.3._
+### Enmienda v2.3 → v2.4 — Artículo V (grabación de solo audio para el resumen)
+
+**Motivo:** la tesis (DT3/DT5) convierte el resumen automático en un adicional pago, y el resumen
+necesita el contenido de la clase. Sin grabación no hay transcript (AUD-024) y M6 no puede funcionar.
+La excepción se acota a lo mínimo que el resumen necesita: solo audio, solo entre adultos, solo con
+el adicional contratado y con consentimiento expreso de los dos, borrado al transcribir y a las 24 hs
+como máximo. Justificación completa, mecanismo (grabación en el navegador del Tutor, sin costo de
+infraestructura) y alternativas en **ADR-M3-04**.
+**Cambia:** Artículo V (se agrega la excepción acotada).
+**No cambia:** el resto de los Artículos. El **Artículo II** sigue sin excepción: una sesión con un
+Menor nunca se graba, aunque el adicional figure contratado (el backend lo rechaza al reservar y
+vuelve a controlarlo al recibir el audio). El buffer rotativo del kill-switch no cambia.
+**Bajado a Spec/Plan en:** Spec_M3 (grabación y subida del audio), Spec_M4 (adicional al reservar),
+Spec_M5 (BR-PAG-11, reembolso parcial del adicional), Spec_M6 (FR-SUM-001), Tabla_Tiempos_Tinku.md
+(fila "Retención máxima del audio del resumen").
+
+---
+
+_Fin de la Constitución v2.4._

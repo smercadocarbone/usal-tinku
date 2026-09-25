@@ -21,7 +21,8 @@ import {
   Track,
 } from "livekit-client";
 import { Mic, MicOff, MoreVertical, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, subirAudioResumen } from "@/lib/api";
+import { GrabadorAudioResumen } from "@/lib/grabadorAudioResumen";
 import Logo from "@/components/Logo";
 import { ModalConfirmacion } from "@/components/ui";
 
@@ -29,6 +30,8 @@ interface TokenResponse {
   token: string;
   livekitUrl: string;
   livekitRoomId: string;
+  /** ADR-M3-04: solo true para el Tutor de una clase con el adicional de resumen. */
+  grabarAudioResumen?: boolean;
 }
 
 type Estado =
@@ -230,6 +233,9 @@ export default function AulaPage() {
   const remoteScreenVideoRef = useRef<HTMLVideoElement>(null);
   const previaVideoTrackRef = useRef<LocalVideoTrack | null>(null);
   const previaAudioTrackRef = useRef<LocalAudioTrack | null>(null);
+  // ADR-M3-04: grabación de solo audio para el resumen (solo el Tutor, solo si el backend lo indica).
+  const grabadorRef = useRef<GrabadorAudioResumen | null>(null);
+  const [grabandoResumen, setGrabandoResumen] = useState(false);
 
   const [estado, setEstado] = useState<Estado>("previa");
   const [confirmarFin, setConfirmarFin] = useState(false);
@@ -260,6 +266,21 @@ export default function AulaPage() {
   const [errorCam, setErrorCam] = useState<string | null>(null);
   const [errorMic, setErrorMic] = useState<string | null>(null);
   const [previaLista, setPreviaLista] = useState(false);
+
+  /** ADR-M3-04: corta la grabación y sube el audio. Un fallo no frena el cierre de la clase:
+   *  sin audio no hay resumen y el adicional se reembolsa solo. */
+  const cerrarGrabacion = useCallback(async () => {
+    const grabador = grabadorRef.current;
+    if (!grabador) return;
+    grabadorRef.current = null;
+    setGrabandoResumen(false);
+    try {
+      const audio = await grabador.detener();
+      if (audio) await subirAudioResumen(sesionId, audio);
+    } catch {
+      // Sin audio → el resumen queda fallido y se reembolsa el adicional (BR-PAG-11).
+    }
+  }, [sesionId]);
 
   const estadoRef = useRef<Estado>(estado);
   const camActivaRef = useRef(camActiva);
@@ -488,6 +509,9 @@ export default function AulaPage() {
       });
 
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
+        if (pub.source === Track.Source.Microphone && pub.track) {
+          grabadorRef.current?.agregarPista("local", pub.track.mediaStreamTrack);
+        }
         if (
           pub.source === Track.Source.Camera &&
           pub.track?.kind === Track.Kind.Video &&
@@ -526,10 +550,14 @@ export default function AulaPage() {
         } else if (track.kind === Track.Kind.Audio && remoteAudioRef.current) {
           track.attach(remoteAudioRef.current);
         }
+        if (track.kind === Track.Kind.Audio) {
+          grabadorRef.current?.agregarPista(pub.trackSid, track.mediaStreamTrack);
+        }
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track, pub) => {
         track.detach();
+        grabadorRef.current?.quitarPista(pub.trackSid);
         if (track.kind === Track.Kind.Video) {
           if (pub.source === Track.Source.ScreenShare) {
             setRemoteCompartiendoPantalla(false);
@@ -574,6 +602,8 @@ export default function AulaPage() {
 
       room.on(RoomEvent.Disconnected, () => {
         roomConectadoRef.current = false;
+        // Corte automático de la clase (T-fin+5): se sube lo grabado igual.
+        if (estadoRef.current !== "finalizada") void cerrarGrabacion();
         setRemoteActivo(false);
         if (estadoRef.current !== "finalizada") {
           setEstado("esperando");
@@ -581,7 +611,13 @@ export default function AulaPage() {
       });
 
       roomRef.current = room;
+      if (tokenResp.grabarAudioResumen && !grabadorRef.current) {
+        grabadorRef.current = GrabadorAudioResumen.crear();
+        setGrabandoResumen(grabadorRef.current !== null);
+      }
       await room.connect(tokenResp.livekitUrl, tokenResp.token);
+      const micPub = room.localParticipant?.getTrackPublication(Track.Source.Microphone);
+      if (micPub?.track) grabadorRef.current?.agregarPista("local", micPub.track.mediaStreamTrack);
 
       if (room.localParticipant) {
         const camPub = room.localParticipant.getTrackPublication(
@@ -612,7 +648,7 @@ export default function AulaPage() {
       }
       if (estadoRef.current !== "sala_no_disponible") setEstado("error");
     }
-  }, [sesionId, camaraId, microfonoId, evaluarDegradacion]);
+  }, [sesionId, camaraId, microfonoId, evaluarDegradacion, cerrarGrabacion]);
 
   useEffect(() => {
     return () => {
@@ -626,6 +662,7 @@ export default function AulaPage() {
     setFinalizando(true);
     setError(null);
     try {
+      await cerrarGrabacion();
       await api.post(`/api/sesiones/${sesionId}/finalizar`);
       roomRef.current?.disconnect();
       roomRef.current = null;
@@ -862,6 +899,12 @@ export default function AulaPage() {
           <div className="flex items-center gap-3">
             {camApagadaPorDegradacion && (
               <span className="text-xs text-amber-400">Priorizando el audio por tu conexión</span>
+            )}
+            {grabandoResumen && (
+              <span className="flex items-center gap-1.5 text-xs text-red-300" title="Se graba solo el audio para el resumen automático (ADR-M3-04)">
+                <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                Grabando solo audio para el resumen
+              </span>
             )}
             {(estado === "conectado" || estado === "reconectando") && (
               <span
