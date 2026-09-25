@@ -10,6 +10,7 @@ import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
 import com.tinku.resumen.jobs.ReintentoResumenJob;
 import com.tinku.resumen.model.ResumenSesion;
+import com.tinku.resumen.port.PromptResumen;
 import com.tinku.resumen.port.ResumenProveedor;
 import com.tinku.resumen.port.ResumenProveedorNoConfiguradoException;
 import com.tinku.resumen.port.TranscriptSesionProveedor;
@@ -59,7 +60,7 @@ import java.util.UUID;
  * reembolso no anula un resumen ya generado): lo minimo es pausar y no filtrar.</p>
  *
  * <p><b>T-M6-05:</b> la generacion va por {@link ResumenProveedor} (puerto,
- * ADR del proveedor PENDIENTE — el bean default es fail-closed). El transcript
+ * GPT-4o por ADR-M6-03; sin LLM_PROVEEDOR=gpt-4o el bean es fail-closed). El transcript
  * pasa SIEMPRE por {@link AnonimizadorTranscript} antes de armar el prompt y
  * antes de cualquier llamada saliente (FR-SUM-005); el texto anonimizado queda
  * persistido aunque el LLM no exista (T-M6-04).</p>
@@ -272,8 +273,8 @@ public class ResumenService {
             fila.setProximoReintentoAt(null);
             resumenRepo.save(fila);
             cancelarReintento(sesionId);
-            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — ADR del proveedor pendiente "
-                    + "(T-FIN-03); el transcript anonimizado queda persistido.", sesionId);
+            log.warn("RESUMEN_SIN_PROVEEDOR sesionId={} — falta LLM_PROVEEDOR=gpt-4o o LLM_API_KEY "
+                    + "(ADR-M6-03); el transcript anonimizado queda persistido.", sesionId);
         } catch (RuntimeException e) {
             reintentarOAgotar(fila);
         }
@@ -441,18 +442,7 @@ public class ResumenService {
 
     /** FR-SUM-003/008: estructura fija + prohibiciones de evaluacion. */
     private static String armarPrompt(String transcriptAnonimizado) {
-        return "Resumi la sesion de tutoria en espanol, con tono claro y adaptado al nivel "
-                + "escolar del estudiante. Estructura fija:\n"
-                + "1. Temas tratados\n"
-                + "2. Conceptos clave explicados\n"
-                + "3. Ejercicios o ejemplos trabajados\n"
-                + "4. Dudas que quedaron abiertas\n"
-                + "5. Sugerencia de que reforzar en la proxima sesion\n"
-                + "\n"
-                + "Reglas: NO evalues a ninguna persona, NO uses tono moralizante y NO hagas "
-                + "predicciones de desempeno. El texto esta anonimizado: no reconstruyas "
-                + "identidades ni datos personales; referite a los participantes como "
-                + "\"el tutor\" y \"el estudiante\".\n"
+        return PromptResumen.INSTRUCCIONES
                 + "\nTranscript:\n" + transcriptAnonimizado;
     }
 }

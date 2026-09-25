@@ -1,7 +1,7 @@
 /** Bandeja in-app (FASE2-03, `/api/notificaciones`). */
 import { api } from "./api";
 
-export type TipoNotificacion = "KILLSWITCH_MENOR" | "DENUNCIA_RECIBIDA";
+export type TipoNotificacion = "KILLSWITCH_MENOR" | "DENUNCIA_RECIBIDA" | "CLASE_CANCELADA_TUTOR_SIN_HABILITACION";
 
 export interface Notificacion {
   id: string;
@@ -50,6 +50,14 @@ export function textoDe(n: Notificacion, formatear: (iso: string) => string): Te
           : "Podés contar tu versión antes de que se decida.",
         href: "/cuenta/seguridad",
         accion: "Presentar mi descargo",
+        tono: "aviso",
+      };
+    case "CLASE_CANCELADA_TUTOR_SIN_HABILITACION":
+      return {
+        titulo: "Cancelamos una clase de tu hijo o hija",
+        detalle: `${n.datos.horario ? `La clase del ${formatear(n.datos.horario)} se canceló` : "Se canceló una clase"} porque el tutor ya no está habilitado para dar clases a menores. Te devolvemos el total de lo que pagaste.`,
+        href: "/buscar",
+        accion: "Buscar otro tutor",
         tono: "aviso",
       };
     default:

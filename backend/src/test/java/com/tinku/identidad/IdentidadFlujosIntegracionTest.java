@@ -84,6 +84,8 @@ class IdentidadFlujosIntegracionTest {
     }
 
     @Autowired MockMvc mockMvc;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate capJdbc; // T02: CAP vigente de los tutores de menores
     @Autowired ObjectMapper objectMapper;
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired CredencialAcademicaRepository credencialRepo;
@@ -559,6 +561,7 @@ class IdentidadFlujosIntegracionTest {
 
         UUID menorId = usuarioPorDni("77777777").getId();
         UUID tutorId = usuarioPorDni("88888888").getId();
+        com.tinku.testsupport.CapVigente.para(capJdbc, tutorId); // FR-ID-026
 
         mockMvc.perform(post("/api/autorizaciones")
                         .header("Authorization", "Bearer " + tokenAr)

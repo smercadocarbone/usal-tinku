@@ -1,7 +1,10 @@
 package com.tinku.reservas.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import com.tinku.reservas.port.VerificadorHabilitacionMenores;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * T-TES-10/DT7 — gate del piloto: único árbitro de si las sesiones con menores
@@ -14,10 +17,25 @@ import org.springframework.stereotype.Component;
 public class PoliticaSesionesMenores {
 
     private final boolean sesionesHabilitadas;
+    private final VerificadorHabilitacionMenores habilitacion;
 
     public PoliticaSesionesMenores(
-            @Value("${tinku.menores.sesiones-habilitadas:false}") boolean sesionesHabilitadas) {
+            @Value("${tinku.menores.sesiones-habilitadas:false}") boolean sesionesHabilitadas,
+            VerificadorHabilitacionMenores habilitacion) {
         this.sesionesHabilitadas = sesionesHabilitadas;
+        this.habilitacion = habilitacion;
+    }
+
+    /**
+     * FR-ID-026 (T02): el piloto habilitado Y el Tutor con CAP aprobado y vigente. Lo llama
+     * todo punto de M4 donde hay un menor de por medio (reserva directa, aprobación de
+     * solicitud, solicitud nueva). Fail-closed.
+     */
+    public void validarClaseConMenor(UUID tutorId) {
+        validarSesionesHabilitadas();
+        if (!habilitacion.habilitadoParaMenores(tutorId)) {
+            throw new TutorSinHabilitacionMenoresException();
+        }
     }
 
     /**

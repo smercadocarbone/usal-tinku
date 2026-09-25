@@ -35,7 +35,10 @@ class AutorizacionServiceTest {
     void setUp() {
         autorizacionRepo = mock(AutorizacionTutorRepository.class);
         usuarioRepo = mock(UsuarioRepository.class);
-        service = new AutorizacionService(autorizacionRepo, usuarioRepo);
+        HabilitacionMenoresCap habilitacion = mock(HabilitacionMenoresCap.class);
+        org.mockito.Mockito.when(habilitacion.habilitadoParaMenores(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(true); // el CAP se prueba en CapIntegracionTest
+        service = new AutorizacionService(autorizacionRepo, usuarioRepo, habilitacion);
     }
 
     private Usuario adultoResponsable() {

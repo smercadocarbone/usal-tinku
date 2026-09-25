@@ -1,5 +1,6 @@
 package com.tinku.matching;
 
+import com.tinku.reservas.port.VerificadorHabilitacionMenores;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.AutorizacionTutorRepository;
@@ -29,11 +30,14 @@ public class MatchingContextoService {
 
     private final UsuarioRepository usuarioRepo;
     private final AutorizacionTutorRepository autorizacionRepo;
+    private final VerificadorHabilitacionMenores habilitacionMenores;
 
     public MatchingContextoService(UsuarioRepository usuarioRepo,
-                                   AutorizacionTutorRepository autorizacionRepo) {
+                                   AutorizacionTutorRepository autorizacionRepo,
+                                   VerificadorHabilitacionMenores habilitacionMenores) {
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
+        this.habilitacionMenores = habilitacionMenores;
     }
 
     /**
@@ -79,10 +83,14 @@ public class MatchingContextoService {
      */
     @Transactional
     public List<UUID> tutoresCandidatos(ContextoAutorizacion contexto) {
-        if (contexto.esMenor() && contexto.conRestriccion()) {
-            return usuarioRepo.idsActivosParaMatching(contexto.tutoresAutorizados());
+        List<UUID> activos = contexto.esMenor() && contexto.conRestriccion()
+                ? usuarioRepo.idsActivosParaMatching(contexto.tutoresAutorizados())
+                : usuarioRepo.tutoresActivosParaMatching();
+        if (contexto.esMenor()) {
+            // FR-ID-026 (T02): a un menor solo le aparecen Tutores con CAP aprobado y vigente.
+            return activos.stream().filter(habilitacionMenores::habilitadoParaMenores).toList();
         }
-        return usuarioRepo.tutoresActivosParaMatching();
+        return activos;
     }
 
     /** Saber si la búsqueda la hace un menor (el orquestador de M2-D lo usa para marcar). */

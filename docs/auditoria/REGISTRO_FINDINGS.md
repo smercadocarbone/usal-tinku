@@ -44,5 +44,5 @@
 | AUD-032 | BAJA | Spring Boot 3.3.4 sin escaneo de dependencias | CERRADO | 3 | d2b92c4 — Spring Boot 3.5.16 + `.github/dependabot.yml` | suite completa sobre 3.5.16 |
 | AUD-033 | MEDIA | `marcarAprobada`/`marcarRechazada` no verifican estado PENDIENTE previo | CERRADO | 2 | 5ddaa1d | `IdentidadFlujosIntegracionTest.aud033_credencialYaRechazada_noSePuedeAprobarNiReRechazar` |
 | AUD-034 | BAJA | Sin configuración de producción; `JWT_SECRET` con default placeholder | CERRADO | 1 | e55d2d1 | `ArranqueSeguroValidatorTest` (prodConJwtPlaceholder, sinPerfilConJwtPlaceholder) |
-| AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | EN CURSO | 3 | — | — |
+| AUD-035 | BAJA | Tablas de V6 (CAP) huérfanas en la base tras ADR-M1-02 | CERRADO | 3 | T02 (2026-09-25): las tablas de V6 vuelven a usarse (ADR-M1-04) | `CapIntegracionTest` (5) |
 | AUD-036 | BAJA | Ítems menores de calidad de código y performance (7 sub-ítems) — sub-ítem 7 (N+1 de conexiones en `RecomputeRepo` + lock de carga lazy del embedder) resuelto en FASE2-04 (5d504f3) | EN CURSO | 4 | sub-ítem 7 en FASE2-04 (5d504f3); 5bd72ee: 3 (`@Transactional` de Spring), 6 (`@JsonIgnore` en `getEdad`) y Actuator (4.6). Quedan 1 (Usuario en el principal) y 2 (subpaquetes de `matching`) | `test_main.py::test_carga_lazy_concurrente_carga_el_modelo_una_sola_vez` |

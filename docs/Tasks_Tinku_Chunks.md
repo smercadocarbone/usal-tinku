@@ -104,7 +104,7 @@ _(requiere M3 cerrado)_
 - [x] **Chunk M6-A** — Migración + listener de `sesion.finalizada` con validación de duración (T-M6-01, T-M6-02)
 - [x] **Chunk M6-B** — Verificación de Denuncia/Alerta activa antes de generar (T-M6-03)
 - [x] **Chunk M6-C** — Módulo de anonimización, aislado y testeado antes de conectar al pipeline (T-M6-04)
-- [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **el ADR de proveedor (GPT-4o vs. Gemini 2.0 Flash) sigue pendiente**, así que hoy no genera un resumen real, solo falla cerrado de forma segura. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
+- [~] **Chunk M6-D** — Integración LLM + reintentos con backoff (reutilizar patrón de M5) (T-M6-05, T-M6-06) — _código completo detrás de un puerto `ResumenProveedor` fail-closed; **proveedor GPT-4o decidido 2026-09-25 (ADR-M6-03)**, activo con `LLM_PROVEEDOR=gpt-4o`; sin transcript todavía no genera un resumen real. No bloquea el resto del sistema (T-FIN-03 lo confirma explícitamente)._
   _Auditoría 2026-09-21: además del ADR del proveedor, **falta el transcript**: `TranscriptSesionProveedorNoDisponible` devuelve `null` siempre y M3 no genera transcript (sin LiveKit Egress). Elegir proveedor de LLM no desbloquea M6 por sí solo — AUD-024._
 - [x] **Chunk M6-E** — Recordatorio único a 24hs (T-M6-07)
 - [x] **Chunk M6-F** — Test de anonimización con datos reales de prueba (T-M6-08)
@@ -146,8 +146,8 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 > Piloto el 27/10/2026. Orden y dependencias en `docs/superpowers/specs/tesis/00-LEEME-tesis.md`.
 
 - [x] **Chunk TESIS-CAP-A** — ADR-M1-04 + enmienda Constitución v2.3 — el CAP vuelve acotado a Tutores de Menores (T-TES-01, spec `tesis/T01-cap-adr-enmienda.md`, DT6, _branch `tesis/cap-menores`_). Solo documentación; T-AUD-032 CANCELADA, AUD-035 `EN CURSO`.
-- [ ] **Chunk TESIS-CAP-B** — CAP backend (T-TES-02, spec `tesis/T02-cap-backend.md`) — _branch `tesis/cap-menores`. Riesgo alto (seguridad del menor). Depends on T-TES-01._
-- [ ] **Chunk TESIS-CAP-C** — CAP frontend + moderación (T-TES-03, spec `tesis/T03-cap-frontend-moderacion.md`) — _Depends on T-TES-02._
+- [x] **Chunk TESIS-CAP-B** — CAP backend (T-TES-02, spec `tesis/T02-cap-backend.md`) — _branch `claude/lucid-lovelace-htlv4z` (la sesión solo puede empujar a esa). Cerrado 2026-09-25: habilitación calculada y separada del matching, revisión con rol, BR-CAP-01/02, fail-closed en autorizar/reservar/solicitar/buscar/abrir sala, vencimiento con PT10 (V35). `CapIntegracionTest` (5); los escenarios con menores reciben CAP vigente con `testsupport.CapVigente`._
+- [x] **Chunk TESIS-CAP-C** — CAP frontend + moderación (T-TES-03, spec `tesis/T03-cap-frontend-moderacion.md`) — _Cerrado 2026-09-25: sección "Clases con menores" en Mi perfil (opcional, sin fricción en el registro), insignia en el perfil público, cola `/admin/antecedentes` con visor. Sin el aviso de 30 días previos: la Tabla de Tiempos no tiene esa fila (A3). Sin E2E nuevos (la suite de 79 sigue verde)._
 - [ ] T-TES-04 — firma digital del CAP (spec `tesis/T04-cap-firma-digital.md`): **OPCIONAL / no ejecutar** (PT2, manual en el MVP). Depends on T-TES-02.
 - [x] **Chunk TESIS-A** — Comisión de plataforma al 27 % (T-TES-05, spec `tesis/T05-comision-27.md`, DT1) — _branch `tesis/comision-27`. Riesgo medio (dinero). Sin dependencias. Cerrado 2026-09-23: 27 % en `application.yml` y default de `ComisionPlataforma`, javadocs y Spec_M5 alineados (historial 27 %, antes 15 %); `ComisionPlataformaTest` nuevo (RED 2250 → GREEN 4050) y 4 asserts de integración a 4050; suite 427 run/0 fail._
 - [x] **Chunk TESIS-PISO** — Piso de tarifa USD 4/h (T-TES-06, spec `tesis/T06-piso-tarifa.md`, DT2) — _branch `claude/lucid-lovelace-htlv4z`. Depends on FASE2-01. Cerrado 2026-09-24: `PisoTarifa` + 422 con el piso, GET con `pisoHora`, no retroactivo (PT4), frontend con mínimo y aviso; BR-PAG-04._
@@ -195,7 +195,7 @@ archivo antes de esta revisión era un falso negativo de tracking, no trabajo fa
 | M5-B (listeners de eventos de sesión) | M3-E, M9-D ✅                                      | Cerrado — M3-E/M9-D publican las clases definidas por M5 en `chunk/m5-b` (`sesion.*`, `denuncia.registrada`, `denuncia.resuelta` vía M5-C/D). |
 | M5-B (webhook MP real + confirmación) | M5-B ✅                                           | El webhook real con validación de firma reemplazó a `confirmar-pago-simulado` (stub M3-B dev/test) |
 | M3-C (endpoint backend del killswitch)| M3-C ✅ (T-M3-07)                                  | Rama decidida en backend, cerrado y testeado (`KillswitchIntegracionTest`). |
-| M6-D (proveedor LLM real)             | Pendiente — requiere ADR (GPT-4o vs. Gemini)       | Código detrás de puerto fail-closed; no bloqueante para el resto del sistema (T-FIN-03). |
+| M6-D (proveedor LLM real)             | GPT-4o decidido (ADR-M6-03); falta transcript (T08) | Proveedor real detrás del puerto; sin `LLM_PROVEEDOR=gpt-4o` sigue fail-closed. |
 
 **Único stub real que sigue sin reemplazar, y SÍ es bloqueante — distinto a los de arriba, no es
 un stub de integración entre módulos sino la mitad cliente de un control de seguridad:**

@@ -38,4 +38,7 @@ public interface SolicitudSesionRepository extends JpaRepository<SolicitudSesion
     /** Defensivo (US-2): el mismo menor no genera dos Solicitudes pendientes idénticas. */
     boolean existsByMenorIdAndTutorIdAndHorarioPropuestoAndEstado(
             UUID menorId, UUID tutorId, Instant horarioPropuesto, EstadoSolicitud estado);
+
+    /** PT10 (T02): solicitudes pendientes hacia un Tutor que perdió la habilitación. */
+    java.util.List<SolicitudSesion> findByTutorIdAndEstado(UUID tutorId, com.tinku.reservas.model.EstadoSolicitud estado);
 }

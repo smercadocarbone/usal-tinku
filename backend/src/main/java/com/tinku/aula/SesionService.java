@@ -20,7 +20,9 @@ import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
+import com.tinku.identidad.port.CancelacionReservasConMenores;
 import com.tinku.reservas.model.EstadoReserva;
+import com.tinku.reservas.port.VerificadorHabilitacionMenores;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
@@ -87,6 +89,8 @@ public class SesionService {
     private final Scheduler scheduler;
     private final ApplicationEventPublisher events;
     private final Notificador notificador;
+    private final VerificadorHabilitacionMenores habilitacionMenores;
+    private final CancelacionReservasConMenores cancelacionConMenores;
 
     private static final Logger log = LoggerFactory.getLogger(SesionService.class);
 
@@ -99,7 +103,9 @@ public class SesionService {
                          CierreSalaService cierreSalaService,
                          Scheduler scheduler,
                          ApplicationEventPublisher events,
-                         Notificador notificador) {
+                         Notificador notificador,
+                         VerificadorHabilitacionMenores habilitacionMenores,
+                         CancelacionReservasConMenores cancelacionConMenores) {
         this.sesionRepo = sesionRepo;
         this.reservaRepo = reservaRepo;
         this.usuarioRepo = usuarioRepo;
@@ -110,6 +116,8 @@ public class SesionService {
         this.scheduler = scheduler;
         this.events = events;
         this.notificador = notificador;
+        this.habilitacionMenores = habilitacionMenores;
+        this.cancelacionConMenores = cancelacionConMenores;
     }
 
     // ------------------------------------------------ creación y agenda (T-M3-03)
@@ -213,6 +221,15 @@ public class SesionService {
         }
         Reserva reserva = reservaRepo.findById(sesion.getReservaId()).orElse(null);
         if (reserva == null || reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            return;
+        }
+        // FR-ID-026, última barrera (T02): el CAP pudo vencer entre la reserva y la clase.
+        // Con un menor y un Tutor sin habilitación, NO se abre la sala: se cancela (PT10).
+        if (reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR
+                && !habilitacionMenores.habilitadoParaMenores(reserva.getTutor().getId())) {
+            log.error("Clase {} con un menor y el Tutor {} sin habilitación para menores: no se crea la "
+                    + "sala y se cancela (PT10).", reserva.getId(), reserva.getTutor().getId());
+            cancelacionConMenores.cancelarFuturasConMenores(reserva.getTutor().getId());
             return;
         }
         sesion.setLivekitRoomId(liveKitService.crearSala("sesion-" + sesion.getId()));

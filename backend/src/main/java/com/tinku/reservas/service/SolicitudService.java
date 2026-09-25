@@ -84,6 +84,8 @@ public class SolicitudService {
                 .contains(request.tutorId())) {
             throw new TutorNoAutorizadoParaMenorException();
         }
+        // FR-ID-026 (T02): después de la autorización (403), el CAP vigente del Tutor (409).
+        politicaMenores.validarClaseConMenor(tutor.getId());
 
         Instant horario = request.horarioPropuesto();
         if (!horario.isAfter(Instant.now())) {

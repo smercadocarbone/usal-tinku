@@ -15,7 +15,9 @@ public enum MotivoCancelacion {
     VOLUNTARIA("voluntaria"),
     TIMEOUT_PAGO("timeout_pago"),
     REVOCACION_AUTORIZACION("revocacion_autorizacion"),
-    SANCION("sancion");
+    SANCION("sancion"),
+    /** PT10 (T02): el Tutor perdió la habilitación para menores (CAP vencido). */
+    CAP_VENCIDO("cap_vencido");
 
     private final String valor;
 

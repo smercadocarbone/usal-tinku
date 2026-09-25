@@ -119,6 +119,23 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    /** Revisión y visor del CAP (AdminCapController): sin rol de Moderación → 403. */
+    @ExceptionHandler(com.tinku.shared.AccesoModeracionDenegadoException.class)
+    public ResponseEntity<Map<String, String>> handleSinRolModeracion(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CapNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> handleCapNoEncontrado(CapNoEncontradoException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    /** CAP ya revisado (409) o Tutor sin habilitación para menores (FR-ID-026, 409). */
+    @ExceptionHandler({CapNoRevisableException.class, TutorNoHabilitadoParaMenoresException.class})
+    public ResponseEntity<Map<String, String>> handleCapConflicto(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(CredencialNoPendienteException.class)
     public ResponseEntity<Map<String, String>> handleCredencialNoPendiente(CredencialNoPendienteException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));

@@ -149,15 +149,13 @@ tinku:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
     sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}
-  # M6 — resumen automatico. ADR del proveedor LLM PENDIENTE (Constitucion,
-  # "LLM (resumen y transcripcion): GPT-4o vs Gemini 2.0 Flash — Pendiente, ADR",
-  # flag T-FIN-03). Hasta no cerrarlo, el puerto ResumenProveedor es fail-closed:
-  # sin proveedor configurado NO sale nada hacia ningun modelo. Estos placeholders
-  # solo existen para que la decision final sea config y no codigo.
+  # M6 — resumen automatico con GPT-4o (ADR-M6-03). Solo LLM_PROVEEDOR=gpt-4o
+  # activa OpenAI; vacio u otro valor = fail-closed, NO sale nada hacia ningun
+  # modelo. Hoy no hay transcript (AUD-024/T08), asi que aun activo no se envia nada.
   resumen:
     llm:
-      proveedor: ${LLM_PROVEEDOR:}   # gpt-4o | gemini-2.0-flash — vacio = fail-closed
-      api-key: ${LLM_API_KEY:}       # clave del proveedor elegido por el ADR
+      proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
+      api-key: ${LLM_API_KEY:}       # API key de OpenAI
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
     # AUD-015: token compartido con el servicio Python. En dev/test puede quedar

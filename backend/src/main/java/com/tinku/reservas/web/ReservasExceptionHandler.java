@@ -4,6 +4,7 @@ import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
 import com.tinku.reservas.service.FranjaSuperpuestaException;
+import com.tinku.reservas.service.TutorSinHabilitacionMenoresException;
 import com.tinku.reservas.service.DuracionMinutosInvalidaException;
 import com.tinku.reservas.service.HorarioFueraDeFranjaException;
 import com.tinku.reservas.service.NoPuedeCancelarReservaException;
@@ -66,7 +67,8 @@ public class ReservasExceptionHandler {
     }
 
     /** 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate del piloto (T-TES-10). */
-    @ExceptionHandler({SolicitudDuplicadaException.class, SesionesConMenoresDeshabilitadasException.class})
+    @ExceptionHandler({SolicitudDuplicadaException.class, SesionesConMenoresDeshabilitadasException.class,
+            TutorSinHabilitacionMenoresException.class})
     public ResponseEntity<Map<String, String>> handleConflicto(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }

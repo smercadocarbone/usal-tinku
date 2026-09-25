@@ -97,7 +97,7 @@ El admin tiene que volver a iniciar sesión.
 | `RESEND_API_KEY`, `EMAIL_REMITENTE` | para email | Resend. Vacías = avisos solo en la app; el reset de contraseña no llega |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | para el aula | LiveKit Cloud |
 | `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` | para cobrar | MercadoPago. Sin el secret el webhook rechaza todo |
-| `LLM_PROVEEDOR`, `LLM_API_KEY` | para resúmenes | Vacías = fail-closed |
+| `LLM_PROVEEDOR`, `LLM_API_KEY` | para resúmenes | `LLM_PROVEEDOR=gpt-4o` + API key de OpenAI (ADR-M6-03). Vacías = fail-closed |
 | `TARIFA_PISO_HORA_ARS` | no (6140) | Piso por hora (T06); se revisa una vez por mes |
 | `TINKU_TAG` | no (`latest`) | Versión de las imágenes. Para volver atrás, ver §6 |
 
@@ -188,7 +188,7 @@ aprobada y un historial de clases ya dictadas con calificaciones, pagos liberado
   reserva queda en `pendiente_pago`. Se paga con un usuario comprador de prueba y tarjetas de prueba.
 - **Entrar al aula:** `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (LiveKit Cloud, plan gratis).
 - **Emails:** `RESEND_API_KEY` y `EMAIL_REMITENTE`. Opcional: sin eso los avisos quedan en la app.
-- **Resumen automático:** no se puede probar. `LLM_*` queda vacío hasta el ADR del proveedor de LLM.
+- **Resumen automático:** no se puede probar. GPT-4o ya está decidido (ADR-M6-03), pero no hay transcript hasta T08 (grabación de audio), así que aunque cargues `LLM_*` no se genera nada.
 
 ### 10.3 Antes de abrir a usuarios reales
 Pegar `deploy/demo/borrar-demo.sql` en el psql del contenedor **db**. Borra las cuentas demo y todo
