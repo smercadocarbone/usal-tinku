@@ -101,7 +101,9 @@ public class ReservasExceptionHandler {
     /** Nombre de la constraint de Postgres, buscando la causa de Hibernate en la cadena. */
     private static String constraintVioladaDe(DataIntegrityViolationException ex) {
         for (Throwable t = ex; t != null; t = t.getCause()) {
-            if (t instanceof org.hibernate.exception.ConstraintViolationException cve) {
+            // Hibernate no extrae el nombre de una EXCLUDE (SQLState 23P01): null → mensaje.
+            if (t instanceof org.hibernate.exception.ConstraintViolationException cve
+                    && cve.getConstraintName() != null) {
                 return cve.getConstraintName();
             }
         }
