@@ -1,7 +1,7 @@
 package com.tinku.matching;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.CargarCredencialRequest;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;
@@ -16,9 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
@@ -27,7 +27,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -73,8 +73,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CatalogoTemasIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(
                     DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
@@ -95,9 +95,9 @@ class CatalogoTemasIntegracionTest {
     @Autowired TemaRepository temaRepository;
     @Autowired JdbcTemplate jdbcTemplate;
 
-    @MockBean OcrService ocrService;
-    @MockBean MatchingServiceClient matchingClient;
-    @MockBean ReputacionSignalProvider reputacion;
+    @MockitoBean OcrService ocrService;
+    @MockitoBean MatchingServiceClient matchingClient;
+    @MockitoBean ReputacionSignalProvider reputacion;
 
     private UUID divisionId;
     private UUID cuentoId;

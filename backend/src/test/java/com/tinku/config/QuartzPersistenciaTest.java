@@ -16,7 +16,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -56,8 +56,8 @@ class QuartzPersistenciaTest {
     private static final AtomicInteger EJECUCIONES = new AtomicInteger(0);
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(
             DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 

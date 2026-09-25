@@ -1,6 +1,6 @@
 package com.tinku.cierre;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.dto.AutorizarTutorRequest;
@@ -36,9 +36,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -47,7 +47,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -103,8 +103,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class E2EFlujoFelizIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -128,14 +128,14 @@ class E2EFlujoFelizIntegracionTest {
 
     @Value("${tinku.mercadopago.webhook-secret}") String webhookSecret;
 
-    @MockBean OcrService ocrService;
-    @MockBean Almacenamiento almacenamiento;
-    @MockBean MercadoPagoClient mercadopago;
-    @MockBean LiberacionProveedor liberacion;
-    @MockBean ReembolsoProveedor reembolso;
-    @MockBean AlertaSoporteProveedor alertaSoporte;
-    @MockBean TranscriptSesionProveedor transcript;
-    @MockBean ResumenProveedor resumenProveedor;
+    @MockitoBean OcrService ocrService;
+    @MockitoBean Almacenamiento almacenamiento;
+    @MockitoBean MercadoPagoClient mercadopago;
+    @MockitoBean LiberacionProveedor liberacion;
+    @MockitoBean ReembolsoProveedor reembolso;
+    @MockitoBean AlertaSoporteProveedor alertaSoporte;
+    @MockitoBean TranscriptSesionProveedor transcript;
+    @MockitoBean ResumenProveedor resumenProveedor;
 
     private static final String PASSWORD = "password123";
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();

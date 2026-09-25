@@ -1,7 +1,7 @@
 package com.tinku.shared.email;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -80,7 +80,7 @@ public class ResendEnviadorEmail implements EnviadorEmail {
                     "to", List.of(m.para()),
                     "subject", m.asunto(),
                     "text", m.texto()));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException(e);
         }
     }

@@ -1,6 +1,6 @@
 package com.tinku.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.admin.model.LogAuditoriaAdmin;
 import com.tinku.admin.model.RolAdmin;
 import com.tinku.admin.model.TicketSoporte;
@@ -37,15 +37,15 @@ import com.tinku.seguridad.model.MotivoDenuncia;
 import com.tinku.seguridad.repository.DenunciaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -88,8 +88,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminPanelIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -116,10 +116,10 @@ class AdminPanelIntegracionTest {
     @Autowired LogAuditoriaAdminRepository auditoriaRepository;
     @Autowired com.tinku.identidad.port.Almacenamiento almacenamiento;
 
-    @MockBean LiberacionProveedor liberacion;
-    @MockBean ReembolsoProveedor reembolso;
-    @MockBean ReembolsoParcialProveedor reembolsoParcial;
-    @MockBean AlertaSoporteProveedor alertaSoporte;
+    @MockitoBean LiberacionProveedor liberacion;
+    @MockitoBean ReembolsoProveedor reembolso;
+    @MockitoBean ReembolsoParcialProveedor reembolsoParcial;
+    @MockitoBean AlertaSoporteProveedor alertaSoporte;
 
     private static final AtomicInteger CONTADOR = new AtomicInteger();
 
@@ -715,9 +715,9 @@ class AdminPanelIntegracionTest {
         String json = mvc.perform(get("/api/admin/financiero/precios-regionales")
                         .header("Authorization", "Bearer " + token(soporte)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        List<com.fasterxml.jackson.databind.JsonNode> filas = new java.util.ArrayList<>();
+        List<tools.jackson.databind.JsonNode> filas = new java.util.ArrayList<>();
         objectMapper.readTree(json).forEach(filas::add);
-        List<com.fasterxml.jackson.databind.JsonNode> cordoba = filas.stream()
+        List<tools.jackson.databind.JsonNode> cordoba = filas.stream()
                 .filter(f -> f.get("provincia").asText().equals("Cordoba")).toList();
         // Solo la fila VIGENTE (version 2), nunca la version 1 ya superada.
         assertThat(cordoba).hasSize(1);

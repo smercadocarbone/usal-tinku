@@ -1,7 +1,7 @@
 package com.tinku.aula.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.aula.LiveKitWebhookService;
 import com.tinku.aula.LiveKitWebhookVerificador;
 import jakarta.servlet.http.HttpServletRequest;

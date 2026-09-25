@@ -9,13 +9,13 @@ import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.repository.ReservaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -45,8 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ReservaVistaIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource

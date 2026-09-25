@@ -1,6 +1,6 @@
 package com.tinku.pagos.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.admin.model.RolAdmin;
 import com.tinku.admin.repository.AdminRepository;
 import com.tinku.admin.repository.LogAuditoriaAdminRepository;
@@ -28,16 +28,16 @@ import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.repository.ReservaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -81,8 +81,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PasarelaBypassIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -106,15 +106,15 @@ class PasarelaBypassIntegracionTest {
     @Autowired PasarelaEstadoRepository pasarelaEstadoRepository;
     @Autowired LogAuditoriaAdminRepository auditoriaRepository;
 
-    @MockBean OcrService ocrService;
-    @MockBean MatchingServiceClient matchingClient;
-    @MockBean ReputacionSignalProvider reputacion;
-    @MockBean ReputacionBloqueoProveedor reputacionBloqueo;
-    @MockBean MercadoPagoClient mercadopago;
-    @MockBean LiberacionProveedor liberacion;
-    @MockBean ReembolsoProveedor reembolso;
-    @MockBean ReembolsoParcialProveedor reembolsoParcial;
-    @MockBean AlertaSoporteProveedor alertaSoporte;
+    @MockitoBean OcrService ocrService;
+    @MockitoBean MatchingServiceClient matchingClient;
+    @MockitoBean ReputacionSignalProvider reputacion;
+    @MockitoBean ReputacionBloqueoProveedor reputacionBloqueo;
+    @MockitoBean MercadoPagoClient mercadopago;
+    @MockitoBean LiberacionProveedor liberacion;
+    @MockitoBean ReembolsoProveedor reembolso;
+    @MockitoBean ReembolsoParcialProveedor reembolsoParcial;
+    @MockitoBean AlertaSoporteProveedor alertaSoporte;
 
     private static final AtomicInteger CONTADOR = new AtomicInteger();
 

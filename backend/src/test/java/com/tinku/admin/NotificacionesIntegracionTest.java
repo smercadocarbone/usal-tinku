@@ -1,6 +1,6 @@
 package com.tinku.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.tinku.admin.notificacion.Notificacion;
 import com.tinku.admin.notificacion.NotificacionRepository;
 import com.tinku.admin.notificacion.NotificadorOutbox;
@@ -12,15 +12,15 @@ import com.tinku.seguridad.repository.DenunciaRepository;
 import com.tinku.shared.notificacion.TipoNotificacion;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -50,8 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NotificacionesIntegracionTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:pg16"))
+    static PostgreSQLContainer postgres =
+            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16"))
                     .withDatabaseName("tinku_test");
 
     @DynamicPropertySource
@@ -67,7 +67,7 @@ class NotificacionesIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired NotificacionRepository notificacionRepository;
     @Autowired DenunciaRepository denunciaRepository;
-    @SpyBean NotificadorOutbox notificador;
+    @MockitoSpyBean NotificadorOutbox notificador;
 
     private static final AtomicInteger CONTADOR = new AtomicInteger();
 
