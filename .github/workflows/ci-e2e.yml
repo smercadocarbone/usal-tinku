@@ -16,7 +16,7 @@ jobs:
       TINKU_MATCHING_TOKEN: smoke-token
       MATCHING_SERVICE_TOKEN: smoke-token
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Levantar base, matching y backend
         run: docker compose up -d --build db matching backend
       - name: Smoke
