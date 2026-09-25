@@ -5,7 +5,7 @@ import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.Usuario;
-import com.tinku.pagos.evento.SesionFinalizadaEvent;
+import com.tinku.aula.evento.SesionFinalizadaEvent;
 import com.tinku.resumen.anonimizacion.AnonimizadorTranscript;
 import com.tinku.resumen.jobs.RecordatorioResumenJob;
 import com.tinku.resumen.jobs.ReintentoResumenJob;

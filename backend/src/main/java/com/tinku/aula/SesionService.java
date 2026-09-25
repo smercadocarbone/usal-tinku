@@ -1,13 +1,13 @@
 package com.tinku.aula;
 
-import com.tinku.pagos.evento.SesionEvento;
-import com.tinku.pagos.evento.SesionFinalizadaEvent;
-import com.tinku.pagos.evento.SesionInterrumpidaEvent;
-import com.tinku.pagos.evento.SesionKillswitchAdultosEvent;
-import com.tinku.pagos.evento.SesionKillswitchMenorEvent;
-import com.tinku.pagos.evento.SesionNoShowDobleEvent;
-import com.tinku.pagos.evento.SesionNoShowEstudianteEvent;
-import com.tinku.pagos.evento.SesionNoShowTutorEvent;
+import com.tinku.aula.evento.SesionEvento;
+import com.tinku.aula.evento.SesionFinalizadaEvent;
+import com.tinku.aula.evento.SesionInterrumpidaEvent;
+import com.tinku.aula.evento.SesionKillswitchAdultosEvent;
+import com.tinku.aula.evento.SesionKillswitchMenorEvent;
+import com.tinku.aula.evento.SesionNoShowDobleEvent;
+import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
+import com.tinku.aula.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.jobs.CrearSalaJob;
 import com.tinku.aula.jobs.NoShowJob;

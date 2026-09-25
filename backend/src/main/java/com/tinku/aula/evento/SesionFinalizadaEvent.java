@@ -1,4 +1,4 @@
-package com.tinku.pagos.evento;
+package com.tinku.aula.evento;
 
 import java.time.Instant;
 import java.util.UUID;

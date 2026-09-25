@@ -6,7 +6,7 @@ import com.tinku.aula.repository.SesionAprendizajeRepository;
 import com.tinku.identidad.model.EstadoCuenta;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.pagos.evento.AlertaResueltaEvent;
+import com.tinku.seguridad.evento.AlertaResueltaEvent;
 import com.tinku.seguridad.AlertaSeguridadNoEncontradaException;
 import com.tinku.seguridad.AlertaYaResueltaException;
 import com.tinku.seguridad.DescargoInvalidoException;

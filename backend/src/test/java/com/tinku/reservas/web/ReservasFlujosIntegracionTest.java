@@ -14,7 +14,7 @@ import com.tinku.matching.ReputacionSignalProvider;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
-import com.tinku.reservas.evento.DenunciaResueltaEvent;
+import com.tinku.seguridad.evento.DenunciaResueltaEvent;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.MotivoCancelacion;
