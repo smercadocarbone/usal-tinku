@@ -143,3 +143,55 @@ Los hashes están en el resumen de cada run de `Deploy - produccion` en GitHub A
 ## 9. Accesos
 Credenciales en el gestor de contraseñas del equipo (nunca en el repo): Coolify, proveedor del VPS,
 Cloudflare (DNS y R2), Resend, LiveKit, MercadoPago, token de GHCR del VPS, `BACKUP_PASSPHRASE`.
+
+## 10. Datos demo (probar antes de tener usuarios reales)
+Registrarse en producción exige la foto de un DNI real (OCR), así que para probar se cargan cuentas
+demo directo en la base: `deploy/demo/cargar-demo.sql`. Todas usan DNIs `99900xxx` y la misma
+contraseña, que elegís vos al cargarlas (no está en el repo).
+
+| DNI | Quién | Para probar |
+|---|---|---|
+| 99900101 – 99900104 | Lucía, Martín, Valentina, Nicolás (estudiantes adultos) | Buscar, reservar, pagar, entrar al aula, calificar, ver resúmenes. Lucía ya tiene historial |
+| 99900001 – 99900008 | María (Matemática), Juan (Inglés), Ana (Física/Química), Carlos (Programación), Laura (Historia), Diego (Anatomía), Sofía (primaria), Paula (Análisis, nueva: sin calificaciones) | Panel del tutor, franjas, tarifa, aula |
+| 99900201 | Roberto (Adulto Responsable) | Menores a cargo, autorizaciones (ya autorizó a María para Tomás) |
+| 99900202 | Tomás, 14 años (menor) | Que las clases con menores sigan cerradas (T-TES-10) |
+| 99900301 | Carla (admin Moderación y Seguridad) | Panel de moderación |
+| 99900302 | Federico (admin Soporte Financiero) | Panel financiero |
+
+Los tutores tienen temas, tarifa, franjas (lunes a viernes 17–21, sábados 10–13), credencial
+aprobada y un historial de clases ya dictadas con calificaciones, pagos liberados (marcados
+`en_bypass`: sin dinero real) y resúmenes. No hay clases futuras: se reservan desde la app.
+
+### 10.1 Cargar
+1. Coolify → recurso → contenedor **db** → Terminal:
+   ```
+   psql -U "$POSTGRES_USER" -d tinku
+   \set clave_demo 'una-contraseña-de-10-o-más'
+   \set email_demo 'tu.casilla@gmail.com'
+   ```
+   y pegar el contenido entero de `deploy/demo/cargar-demo.sql`. `email_demo` tiene que ser una
+   casilla real: cada cuenta queda como `tu.casilla+tinku-<nombre>@gmail.com`, así los emails de
+   prueba te llegan a vos.
+2. Embeddings del buscador (sin esto los tutores no aparecen en la búsqueda): contenedor
+   **matching** → Terminal:
+   ```
+   python -c "import os,urllib.request as u; r=u.Request('http://localhost:8000/recompute-embeddings', method='POST', headers={'X-Matching-Token': os.environ['TINKU_MATCHING_TOKEN']}); print(u.urlopen(r, timeout=600).read().decode())"
+   ```
+   Tiene que responder `{"actualizados": N}`. Repetirlo si un tutor cambia sus temas: el recompute
+   no es automático.
+
+### 10.2 Qué hace falta para el recorrido completo
+- **Pagar una reserva:** credenciales de **prueba** de MercadoPago (`MP_ACCESS_TOKEN` que empieza
+  con `TEST-`, y `MP_WEBHOOK_SECRET` del webhook `https://api.tinku.site/api/webhooks/mercadopago`
+  configurado en la app de MercadoPago). En `prod` no hay Modo Bypass (FASE2-07): sin MercadoPago la
+  reserva queda en `pendiente_pago`. Se paga con un usuario comprador de prueba y tarjetas de prueba.
+- **Entrar al aula:** `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` (LiveKit Cloud, plan gratis).
+- **Emails:** `RESEND_API_KEY` y `EMAIL_REMITENTE`. Opcional: sin eso los avisos quedan en la app.
+- **Resumen automático:** no se puede probar. `LLM_*` queda vacío hasta el ADR del proveedor de LLM.
+
+### 10.3 Antes de abrir a usuarios reales
+Pegar `deploy/demo/borrar-demo.sql` en el psql del contenedor **db**. Borra las cuentas demo y todo
+lo que se creó con ellas probando (reservas, pagos, denuncias, notificaciones, jobs de Quartz
+pendientes). Los dos admins demo no se pueden borrar: el log de auditoría es append-only (V16).
+Se desactivan y se anonimizan como una baja. Después, crear el admin real (§2.5) y cambiar las
+credenciales de MercadoPago de prueba por las de producción.
