@@ -19,7 +19,7 @@ interface Preferencia {
   bypass: boolean;
 }
 
-type Estado = "cargando" | "listo" | "error" | "simulado" | "redirigiendo";
+type Estado = "cargando" | "listo" | "error" | "simulado" | "redirigiendo" | "esperandoAviso";
 
 function Cuenta({ vence }: { vence: string }) {
   const ahora = useAhora(1000);
@@ -82,6 +82,12 @@ function PagarFlujo() {
       setEstado("listo");
       return;
     }
+    // Vuelve de MercadoPago con el pago aprobado o en proceso: el aviso (webhook) puede
+    // tardar unos segundos. No se ofrece pagar de nuevo mientras tanto (cobro doble).
+    if (vueltaMp === "approved" || vueltaMp === "pending" || vueltaMp === "in_process") {
+      setEstado("esperandoAviso");
+      return;
+    }
     try {
       setPreferencia(await api.post<Preferencia>("/api/pagos/preferencia", { reservaId }));
       setEstado("listo");
@@ -89,11 +95,26 @@ function PagarFlujo() {
       setEstado("error");
       setError(err instanceof ApiError && err.message ? err.message : "No pudimos generar el pago. Probá de nuevo.");
     }
-  }, [reservaId]);
+  }, [reservaId, vueltaMp]);
 
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  // Mientras se espera el aviso de MercadoPago, se consulta la reserva cada 3 s.
+  useEffect(() => {
+    if (estado !== "esperandoAviso" || !reservaId) return;
+    const id = window.setInterval(async () => {
+      try {
+        const r = await api.get<Reserva>(`/api/reservas/${reservaId}`);
+        setReserva(r);
+        if (r.estado !== "pendiente_pago") setEstado("listo");
+      } catch {
+        /* se reintenta en la próxima vuelta */
+      }
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [estado, reservaId]);
 
   if (!reservaId) return null;
   if (estado === "cargando") return <SkeletonPerfil etiqueta="Preparando el pago…" />;
@@ -132,6 +153,20 @@ function PagarFlujo() {
         {vencida || reserva.motivoCancelacion === "timeout_pago"
           ? `Pasaron más de ${TIEMPOS.pagoMinutos} minutos sin pago y el horario se liberó. No se te cobró nada.`
           : "No hay nada para pagar."}
+      </Pantalla>
+    );
+  }
+
+  if (estado === "esperandoAviso") {
+    return (
+      <Pantalla
+        icono={<Clock />}
+        titulo={vueltaMp === "approved" ? "¡Pago recibido! Confirmando tu clase…" : "MercadoPago está procesando el pago"}
+        acciones={<Link href="/cuenta/reservas" className={clasesBoton("secundario", "lg", "w-full")}>Ir a Mis clases</Link>}
+      >
+        {vueltaMp === "approved"
+          ? "Esto tarda unos segundos. No hace falta que pagues de nuevo: esta pantalla se actualiza sola."
+          : "Apenas se acredite, tu clase queda confirmada. No hace falta que pagues de nuevo."}
       </Pantalla>
     );
   }

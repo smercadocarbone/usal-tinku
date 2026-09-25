@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
 import com.tinku.pagos.service.MercadoPagoNoDisponibleException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -44,11 +45,18 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     private final RestClient restClient;
     private final String accessToken;
     private final String notificationUrl;
+    private final String urlPublica;
 
+    public MercadoPagoClientHttp(String baseUrl, String accessToken, String notificationUrl) {
+        this(baseUrl, accessToken, notificationUrl, null);
+    }
+
+    @Autowired
     public MercadoPagoClientHttp(
             @Value("${tinku.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
             @Value("${tinku.mercadopago.access-token:}") String accessToken,
-            @Value("${tinku.mercadopago.notification-url:}") String notificationUrl) {
+            @Value("${tinku.mercadopago.notification-url:}") String notificationUrl,
+            @Value("${tinku.app.url-publica:}") String urlPublica) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
@@ -58,6 +66,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                 .build();
         this.accessToken = accessToken;
         this.notificationUrl = notificationUrl;
+        this.urlPublica = urlPublica;
     }
 
     @Override
@@ -164,7 +173,25 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                 List.of(new MpItem(request.descripcion(), 1, request.montoBruto())),
                 request.comisionPlataforma(),
                 request.reservaId().toString(),
-                notificacion);
+                notificacion,
+                backUrls(request.reservaId()),
+                autoReturn());
+    }
+
+    /** Sin back_urls el comprador se quedaba en MercadoPago después de pagar
+     *  (producción, 2026-09-25). Vuelve a /pagar, que lee el estado que agrega MP. */
+    private MpBackUrls backUrls(java.util.UUID reservaId) {
+        if (urlPublica == null || urlPublica.isBlank()) {
+            return null;
+        }
+        String vuelta = urlPublica.replaceAll("/+$", "") + "/pagar?reserva=" + reservaId;
+        return new MpBackUrls(vuelta, vuelta, vuelta);
+    }
+
+    /** Volver solo apenas se aprueba. MP rechaza auto_return con back_urls que no son
+     *  https (dev en localhost): ahí el comprador vuelve con el botón de MP. */
+    private String autoReturn() {
+        return urlPublica != null && urlPublica.startsWith("https://") ? "approved" : null;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -172,7 +199,12 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
             List<MpItem> items,
             @JsonProperty("marketplace_fee") BigDecimal marketplaceFee,
             @JsonProperty("external_reference") String externalReference,
-            @JsonProperty("notification_url") String notificationUrl) {
+            @JsonProperty("notification_url") String notificationUrl,
+            @JsonProperty("back_urls") MpBackUrls backUrls,
+            @JsonProperty("auto_return") String autoReturn) {
+    }
+
+    private record MpBackUrls(String success, String failure, String pending) {
     }
 
     private record MpItem(
