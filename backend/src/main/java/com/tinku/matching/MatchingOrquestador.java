@@ -20,15 +20,21 @@ public class MatchingOrquestador {
     private final MatchingServiceClient matchingClient;
     private final AjusteRankingService ajusteRanking;
     private final PerfilTutorTemasRepository perfilMatchingRepo;
+    private final RecomendacionPorAreaService recomendacionPorArea;
+    private final TemasSugeridosService temasSugeridos;
 
     public MatchingOrquestador(MatchingContextoService contextoService,
                                MatchingServiceClient matchingClient,
                                AjusteRankingService ajusteRanking,
-                               PerfilTutorTemasRepository perfilMatchingRepo) {
+                               PerfilTutorTemasRepository perfilMatchingRepo,
+                               RecomendacionPorAreaService recomendacionPorArea,
+                               TemasSugeridosService temasSugeridos) {
         this.contextoService = contextoService;
         this.matchingClient = matchingClient;
         this.ajusteRanking = ajusteRanking;
         this.perfilMatchingRepo = perfilMatchingRepo;
+        this.recomendacionPorArea = recomendacionPorArea;
+        this.temasSugeridos = temasSugeridos;
     }
 
     public List<BusquedaResponse> buscar(Usuario buscador, String textoBusqueda) {
@@ -71,9 +77,34 @@ public class MatchingOrquestador {
 
         // US-1: el puntaje mínimo de relevancia aplica cuando hay texto libre (o una búsqueda
         // guardada, que es texto); con solo filtros de catálogo los candidatos ya los cumplen.
-        return ajusteRanking.ajustar(semantico, texto != null)
-                .stream()
-                .map(ranking -> new BusquedaResponse(ranking.tutorId(), ranking.score(), ranking.noAutorizado()))
+        List<ResultadoRanking> directos = ajusteRanking.ajustar(semantico, texto != null);
+        if (texto == null || !directos.isEmpty()) {
+            return respuesta(directos, null);
+        }
+
+        // Nadie da exactamente lo que se escribió. FR-MATCH-011: se reconoce el área del catálogo
+        // (materia y nivel del tema más parecido) y se recomiendan tutores de esa área, aclarado
+        // como tal. FR-MATCH-012: el tema queda como sugerencia para actualizar el catálogo.
+        java.util.Optional<AreaTema> area = recomendacionPorArea.inferir(texto);
+        temasSugeridos.registrar(buscador, texto, area);
+        if (area.isEmpty() || semantico.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> delArea = perfilMatchingRepo.acotarCandidatos(candidatos, null,
+                area.get().materia(), area.get().nivel());
+        if (delArea.isEmpty()) {
+            // Nadie de ese nivel: la misma materia en otro nivel sigue siendo la mejor ayuda.
+            delArea = perfilMatchingRepo.acotarCandidatos(candidatos, null, area.get().materia(), null);
+        }
+        java.util.Set<UUID> enArea = new java.util.HashSet<>(delArea);
+        List<ResultadoRanking> recomendados = ajusteRanking.ajustar(
+                semantico.stream().filter(r -> enArea.contains(r.tutorId())).toList(), false);
+        return respuesta(recomendados, area.get().rotulo());
+    }
+
+    private static List<BusquedaResponse> respuesta(List<ResultadoRanking> ranking, String area) {
+        return ranking.stream()
+                .map(r -> new BusquedaResponse(r.tutorId(), r.score(), r.noAutorizado(), area != null, area))
                 .toList();
     }
 

@@ -410,3 +410,47 @@ def test_sugerir_temas_modelo_caido_503(monkeypatch):
     monkeypatch.setattr(srv, "_embed", roto)
     r = post_autenticado("/sugerir-temas", json={"texto": "fracciones", "temas": [{"id": "a", "texto": "b"}]})
     assert r.status_code == 503
+
+
+# ------------------------------------------------ /temas-cercanos
+
+
+class FakeRepoTemas:
+    def __init__(self, resultado):
+        self.resultado = resultado
+        self.llamadas = []
+
+    def cercanos(self, consulta_embedding, limite):
+        self.llamadas.append((consulta_embedding, limite))
+        return self.resultado[:limite]
+
+
+def test_temas_cercanos_devuelve_los_temas_del_repo_con_su_score(monkeypatch):
+    repo = FakeRepoTemas([("tema-1", 0.8), ("tema-2", 0.6), ("tema-3", 0.4)])
+    monkeypatch.setattr(srv, "_embed", fake_embedder)
+    monkeypatch.setattr(srv, "_repo_temas", repo)
+
+    resp = post_autenticado("/temas-cercanos", json={"texto": "algebra", "limite": 2})
+
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": "tema-1", "score": 0.8}, {"id": "tema-2", "score": 0.6}]
+    assert repo.llamadas == [([1.0] * 384, 2)]
+
+
+def test_temas_cercanos_texto_vacio_no_consulta_y_sin_token_401(monkeypatch):
+    repo = FakeRepoTemas([("tema-1", 0.8)])
+    monkeypatch.setattr(srv, "_embed", fake_embedder)
+    monkeypatch.setattr(srv, "_repo_temas", repo)
+
+    assert post_autenticado("/temas-cercanos", json={"texto": "  "}).json() == []
+    assert repo.llamadas == []
+    assert client.post("/temas-cercanos", json={"texto": "algebra"}).status_code == 401
+
+
+def test_temas_cercanos_modelo_caido_503(monkeypatch):
+    def embed_roto(texto: str) -> list[float]:
+        raise srv.MatchError("modelo de embeddings no disponible: sin red")
+
+    monkeypatch.setattr(srv, "_embed", embed_roto)
+    resp = post_autenticado("/temas-cercanos", json={"texto": "algebra"})
+    assert resp.status_code == 503

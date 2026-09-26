@@ -190,6 +190,12 @@ tinku:
     # ADR-M2-02 / US-1: con texto libre, debajo de esta similitud el Tutor no se muestra.
     # Punto de partida; se calibra con las búsquedas reales del piloto.
     score-minimo: ${MATCHING_SCORE_MINIMO:0.3}
+    # FR-MATCH-011: similitud mínima con un tema del catálogo para reconocer el área (materia
+    # y nivel) de una búsqueda sin tutor directo y recomendar tutores de esa área.
+    score-minimo-area: ${MATCHING_SCORE_MINIMO_AREA:0.25}
+    temas-sugeridos:
+      # FR-ADM-009: el Admin ve un tema cuando se pidió al menos esta cantidad de veces.
+      minimo-veces: ${MATCHING_TEMAS_SUGERIDOS_MINIMO:3}
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
     # AUD-015: token compartido con el servicio Python. En dev/test puede quedar

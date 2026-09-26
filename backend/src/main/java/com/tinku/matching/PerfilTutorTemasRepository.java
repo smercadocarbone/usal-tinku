@@ -106,6 +106,18 @@ public class PerfilTutorTemasRepository {
         }, (rs, rowNum) -> rs.getObject("tutor_id", UUID.class));
     }
 
+    /** Nivel y materia del trayecto de un tema del catálogo (FR-MATCH-011). */
+    public java.util.Optional<AreaTema> areaDeTema(UUID temaId) {
+        return jdbc.query("""
+                SELECT tr.nivel, tr.materia
+                  FROM matching.temas t
+                  JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+                 WHERE t.id = ?
+                """,
+                (rs, rowNum) -> new AreaTema(rs.getString("nivel"), rs.getString("materia")),
+                temaId).stream().findFirst();
+    }
+
     /** (nivel, materia) de los temas elegidos, en el orden en que el Tutor los eligió
      *  (primera aparición de cada trayecto en {@code tema_ids}). Sin fila o sin temas → []. */
     public List<String[]> nivelYMateriaDeTemas(UUID tutorId) {

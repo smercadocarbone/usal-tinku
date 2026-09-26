@@ -58,6 +58,8 @@ export default function BuscarPage() {
   const [hojaFiltros, setHojaFiltros] = useState(false);
 
   const [resultados, setResultados] = useState<Resultado[] | null>(null);
+  // FR-MATCH-011: la lista es una recomendación del área reconocida, no un match exacto.
+  const [areaRecomendada, setAreaRecomendada] = useState<string | null>(null);
   const [consulta, setConsulta] = useState<{ texto: string; materia: string } | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +92,7 @@ export default function BuscarPage() {
   );
 
   const hidratar = useCallback(async (lista: ResultadoBusqueda[]) => {
+    setAreaRecomendada(lista[0]?.porArea ? (lista[0].area ?? null) : null);
     const perfiles = await Promise.allSettled(lista.map((r) => getTutor(r.tutorId)));
     setResultados(
       lista.map((r, i) => {
@@ -362,7 +365,11 @@ export default function BuscarPage() {
                   <>
                     <strong className="text-tinta">{ordenados?.length ?? 0}</strong>{" "}
                     {(ordenados?.length ?? 0) === 1 ? "tutor" : "tutores"}
-                    {consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>}
+                    {areaRecomendada ? (
+                      <> de {areaRecomendada}</>
+                    ) : (
+                      consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>
+                    )}
                   </>
                 )}
               </p>
@@ -409,6 +416,12 @@ export default function BuscarPage() {
             </div>
 
             {buscando && <SkeletonTarjetas cantidad={6} etiqueta="Buscando tutores…" />}
+
+            {!buscando && areaRecomendada && (ordenados?.length ?? 0) > 0 && (
+              <Alerta tono="info" className="mb-5" titulo={`Nadie da exactamente “${consulta?.texto ?? ""}” todavía`}>
+                Te recomendamos tutores de {areaRecomendada}, que seguramente te pueden ayudar.
+              </Alerta>
+            )}
 
             {!buscando && ordenados && ordenados.length === 0 && !error && (
               <EstadoVacio

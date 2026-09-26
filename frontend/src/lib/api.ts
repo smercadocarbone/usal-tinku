@@ -164,6 +164,10 @@ export interface ResultadoBusqueda {
   tutorId: string;
   score: number;
   noAutorizado: boolean;
+  /** FR-MATCH-011: nadie da exactamente lo buscado y es una recomendación del área. */
+  porArea?: boolean;
+  /** "Matemática · Secundario" cuando {@link porArea}. */
+  area?: string | null;
 }
 
 export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[]> {
@@ -952,4 +956,24 @@ export interface TemaSugerido {
 
 export function sugerirTemas(texto: string, nivel?: string | null): Promise<TemaSugerido[]> {
   return api.post<TemaSugerido[]>("/api/tutores/me/temas/sugerencias", { texto, ...(nivel ? { nivel } : {}) });
+}
+
+/* ---- M2/M8 — Temas sugeridos (FR-MATCH-012, FR-ADM-009, ADR-M2-04) ----
+ * Lo que la gente busca y el catálogo no cubre, agregado: solo los temas pedidos varias
+ * veces, sin datos de quién los buscó. */
+export interface TemaPedido {
+  id: string;
+  texto: string;
+  veces: number;
+  nivel: string | null;
+  materia: string | null;
+  ultimaVez: string;
+}
+
+export function getTemasSugeridos(): Promise<TemaPedido[]> {
+  return api.get("/api/admin/temas-sugeridos");
+}
+
+export function resolverTemaPedido(id: string): Promise<void> {
+  return api.delete(`/api/admin/temas-sugeridos/${id}`);
 }

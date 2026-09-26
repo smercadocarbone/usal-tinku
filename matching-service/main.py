@@ -22,6 +22,8 @@ Endpoints:
   los perfiles desde sus `tema_ids` (idempotente, sin reglas de negocio).
 - POST /sugerir-temas        (asistente de "Mis materias"): ordena temas del catalogo
   por similitud con el texto libre del Tutor.
+- POST /temas-cercanos       temas del catalogo mas parecidos a una busqueda (para
+  recomendar por area cuando no hay tutor directo; la regla vive en Java).
 """
 
 import hmac
@@ -142,6 +144,33 @@ class RepoScores:
 _repo: RepoScores = RepoScores()
 
 
+class RepoTemasCercanos:
+    """Los temas del catalogo mas parecidos a un texto (pgvector). Sin reglas de negocio:
+    que hacer con ellos (inferir materia y nivel, buscar tutores del area) lo decide Java."""
+
+    def cercanos(self, consulta_embedding: list[float], limite: int) -> list[tuple[str, float]]:
+        conn = _conectar()
+        try:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id::text, 1 - (embedding <=> %(q)s::vector) AS score
+                      FROM matching.temas
+                     WHERE embedding IS NOT NULL
+                     ORDER BY embedding <=> %(q)s::vector
+                     LIMIT %(n)s
+                    """,
+                    {"q": Vector(consulta_embedding), "n": limite},
+                )
+                return [(str(tid), float(score)) for tid, score in cur.fetchall()]
+        finally:
+            conn.close()
+
+
+_repo_temas: RepoTemasCercanos = RepoTemasCercanos()
+
+
 class RecomputeRepo:
     """Lee perfiles con sus temas y persiste el embedding (contrato 2c, M2-F).
 
@@ -183,9 +212,10 @@ class RecomputeRepo:
             conn.close()
 
     def temas_pendientes(self) -> list[tuple[str, str]]:
-        """Temas que algun Tutor eligio y cuyo embedding falta o se hizo con otro texto:
-        [(tema_id, texto_fuente)]. El catalogo tiene ~1.400 temas; solo se embeben los
-        usados, y una sola vez (cambian solo si una migracion cambia su texto)."""
+        """Temas del catalogo cuyo embedding falta o se hizo con otro texto:
+        [(tema_id, texto_fuente)]. Se embebe TODO el catalogo (~1.400 temas, ~2 MB): lo usa
+        /match (mejor tema del Tutor) y /temas-cercanos (area de una busqueda sin tutor
+        directo). Es una sola vez: cambian solo si una migracion cambia su texto."""
         conn = _conectar()
         try:
             with conn.cursor() as cur:
@@ -193,8 +223,6 @@ class RecomputeRepo:
                     """
                     SELECT t.id::text, t.nombre, t.descripcion, t.embedding_fuente
                       FROM matching.temas t
-                     WHERE EXISTS (SELECT 1 FROM matching.perfiles_tutor_matching ptm
-                                    WHERE t.id = ANY(ptm.tema_ids))
                     """
                 )
                 filas = cur.fetchall()
@@ -400,6 +428,33 @@ def sugerir_temas(request: SugerirTemasRequest) -> list[SugerenciaTema]:
     puntuados.sort(key=lambda par: par[1], reverse=True)
     limite = max(1, min(request.limite, 20))
     return [SugerenciaTema(id=tid, score=score) for tid, score in puntuados[:limite]]
+
+
+class TemasCercanosRequest(BaseModel):
+    texto: str
+    limite: int = 5
+
+
+@app.post(
+    "/temas-cercanos",
+    response_model=list[SugerenciaTema],
+    dependencies=[Depends(_requiere_token)],
+)
+def temas_cercanos(request: TemasCercanosRequest) -> list[SugerenciaTema]:
+    """Temas del catalogo mas parecidos al texto de una busqueda. Lo usa Java cuando no hay
+    un tutor directo para el tema: con el mas cercano infiere materia y nivel y recomienda
+    tutores del area. Solo similitud, sin reglas de negocio."""
+    if not request.texto.strip():
+        return []
+    limite = max(1, min(request.limite, 20))
+    try:
+        consulta = _embed(request.texto)
+        cercanos = _repo_temas.cercanos(consulta, limite)
+    except MatchError as exc:
+        raise Unavailable(str(exc)) from exc
+    except Exception as exc:
+        raise Unavailable(f"base de pgvector no disponible: {exc}") from exc
+    return [SugerenciaTema(id=tid, score=score) for tid, score in cercanos]
 
 
 class Unavailable(Exception):
