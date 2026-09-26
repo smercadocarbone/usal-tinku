@@ -77,6 +77,7 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 | FR-ADM-006 | Canal de soporte: tickets vinculados a cuenta y contexto de origen. |
 | FR-ADM-007 | Mantenimiento de la tabla de precios regional, con aplicación solo hacia adelante, nunca retroactiva. |
 | FR-ADM-009 _(agregado 2026-09-26)_ | Temas sugeridos: Moderación y Seguridad ve los temas buscados sin Tutor directo que se pidieron al menos N veces (configurable, 3), agrupados por área, sin datos de quién los buscó, y los marca como resueltos al actualizar el catálogo (FR-MATCH-012, ADR-M2-04). |
+| FR-ADM-010 _(agregado 2026-09-26)_ | Avisos del ciclo de la clase (bandeja + email): al Tutor cuando le reservan, le cambian el horario, le cancelan o se le libera el pago, y cuando Moderación revisa su credencial o su CAP; a la otra parte cuando se cancela; a los participantes 24 hs antes, al abrir la sala (T-5) y, a quien no entró, al horario de inicio (Tabla de Tiempos). Nunca un dato del menor ni la categoría de un antecedente. |
 | FR-ADM-008 | Dos roles de Admin con colas y permisos separados: Moderación y Seguridad, y Soporte Financiero. Los tickets de soporte se enrutan automáticamente según su origen. |
 
 ## 4. Casos Borde y Preguntas Abiertas

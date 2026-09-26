@@ -8,12 +8,18 @@ export interface PasosProps {
   className?: string;
 }
 
-/** Stepper. En mobile: "Paso 2 de 4 · Tus datos" + barra; en desktop, los pasos con nombre. */
+/**
+ * Stepper. Se adapta al ancho de SU contenedor (container queries), no al de la pantalla: en el
+ * registro vive en una columna angosta y con 5 pasos el último quedaba cortado.
+ * - Angosto: "Paso 2 de 4 · Tus datos" + barra.
+ * - Medio: todos los círculos y solo el nombre del paso actual.
+ * - Ancho: todos los pasos con nombre.
+ */
 export default function Pasos({ pasos, actual, className }: PasosProps) {
   const total = pasos.length;
   return (
-    <nav aria-label="Progreso" className={className}>
-      <div className="sm:hidden">
+    <nav aria-label="Progreso" className={cn("@container", className)}>
+      <div className="@md:hidden">
         <p className="text-[13px] font-semibold text-tinta-tenue">
           Paso {actual + 1} de {total} · <span className="text-tinta">{pasos[actual]}</span>
         </p>
@@ -29,7 +35,7 @@ export default function Pasos({ pasos, actual, className }: PasosProps) {
           ))}
         </div>
       </div>
-      <ol className="hidden list-none items-center gap-2 p-0 sm:flex">
+      <ol className="hidden list-none items-center gap-2 p-0 @md:flex">
         {pasos.map((p, i) => {
           const completo = i < actual;
           const esActual = i === actual;
@@ -46,7 +52,12 @@ export default function Pasos({ pasos, actual, className }: PasosProps) {
                 {completo ? <Check className="size-4" aria-hidden /> : i + 1}
                 {completo && <span className="sr-only">(completo)</span>}
               </span>
-              <span className={cn("whitespace-nowrap text-sm", esActual ? "font-bold text-tinta" : "font-medium text-tinta-tenue")}>
+              <span
+                className={cn(
+                  "whitespace-nowrap text-sm",
+                  esActual ? "font-bold text-tinta" : "hidden font-medium text-tinta-tenue @3xl:inline"
+                )}
+              >
                 {p}
               </span>
               {i < total - 1 && (

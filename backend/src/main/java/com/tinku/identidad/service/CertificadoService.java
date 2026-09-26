@@ -43,12 +43,15 @@ public class CertificadoService {
     private final CredencialBackoffService backoffService;
     private final CancelacionReservasConMenores cancelacion;
     private final com.tinku.identidad.repository.UsuarioRepository usuarioRepo;
+    private final com.tinku.shared.notificacion.Notificador notificador;
 
     public CertificadoService(CertificadoAntecedentesPenalesRepository capRepo,
                               CredencialBackoffService backoffService,
                               CancelacionReservasConMenores cancelacion,
-                              com.tinku.identidad.repository.UsuarioRepository usuarioRepo) {
+                              com.tinku.identidad.repository.UsuarioRepository usuarioRepo,
+                              com.tinku.shared.notificacion.Notificador notificador) {
         this.usuarioRepo = usuarioRepo;
+        this.notificador = notificador;
         this.capRepo = capRepo;
         this.backoffService = backoffService;
         this.cancelacion = cancelacion;
@@ -153,6 +156,13 @@ public class CertificadoService {
         if (resultado == EstadoCap.RECHAZADO && cap.getNumeroIntento() >= MAX_INTENTOS_CICLO) {
             backoffService.registrarCicloAgotado(cap.getTutor().getId()); // FR-ID-021/012
         }
+        // Al Tutor, solo el resultado: nunca la categoría del antecedente (T03 §2.3).
+        notificador.notificar(cap.getTutor().getId(), com.tinku.shared.notificacion.TipoNotificacion.CAP_REVISADO,
+                java.util.Map.of("resultado", switch (resultado) {
+                    case APROBADO -> "aprobado";
+                    case RECHAZADO -> "rechazado";
+                    default -> "en_revision";
+                }));
         return capRepo.save(cap);
     }
 

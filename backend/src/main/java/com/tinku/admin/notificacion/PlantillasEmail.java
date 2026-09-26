@@ -66,6 +66,90 @@ public class PlantillasEmail {
                     Conectala de nuevo en:
                     %s/cuenta/cobros
                     """.formatted(nombre, urlPublica));
+            case CLASE_RESERVADA -> new MensajeEmail(email, "Tinku: te reservaron una clase", """
+                    Hola %s:
+
+                    Te reservaron una clase de %s minutos para el %s (hora de Argentina). Ya está paga.
+
+                    Mirá el detalle en:
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, n.getDatos().getOrDefault("duracion", "—"),
+                    fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
+            case CLASE_CANCELADA -> new MensajeEmail(email, "Tinku: se canceló una clase", """
+                    Hola %s:
+
+                    %s canceló la clase del %s (hora de Argentina). La devolución o el pago siguen la                     política de cancelación de Tinku.
+
+                    Mirá el detalle en:
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, "tutor".equals(n.getDatos().get("canceladaPor")) ? "El tutor" : "El alumno",
+                    fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
+            case CLASE_REPROGRAMADA -> new MensajeEmail(email, "Tinku: cambiaron el horario de una clase", """
+                    Hola %s:
+
+                    La clase del %s pasó al %s (hora de Argentina), dentro de tus horarios disponibles.
+
+                    Mirá el detalle en:
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, fecha(n.getDatos().get("horarioAnterior")),
+                    fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
+            case RECORDATORIO_CLASE -> new MensajeEmail(email, "Tinku: mañana tenés una clase", """
+                    Hola %s:
+
+                    Te recordamos que tenés una clase el %s (hora de Argentina). La sala se abre 5                     minutos antes.
+
+                    Mirá el detalle en:
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica,
+                    n.getDatos().get("reservaId")));
+            case CLASE_POR_EMPEZAR -> new MensajeEmail(email, "Tinku: tu clase empieza en 5 minutos", """
+                    Hola %s:
+
+                    Tu clase de las %s está por empezar y la sala ya está abierta.
+
+                    Entrá desde:
+                    %s/aula/%s
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica,
+                    n.getDatos().get("sesionId")));
+            case CLASE_EMPEZO -> new MensajeEmail(email, "Tinku: tu clase ya empezó", """
+                    Hola %s:
+
+                    Tu clase de las %s ya empezó y todavía no entraste. Te están esperando.
+
+                    Entrá ahora desde:
+                    %s/aula/%s
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica,
+                    n.getDatos().get("sesionId")));
+            case PAGO_LIBERADO -> new MensajeEmail(email, "Tinku: te liberamos el pago de una clase", """
+                    Hola %s:
+
+                    Liberamos el pago de una clase que diste. Lo ves en tu cuenta de MercadoPago y en:
+                    %s/cuenta/cobros
+                    """.formatted(nombre, urlPublica));
+            case CREDENCIAL_REVISADA -> new MensajeEmail(email, "aprobada".equals(n.getDatos().get("resultado"))
+                    ? "Tinku: aprobamos tu título" : "Tinku: no pudimos aprobar tu título", """
+                    Hola %s:
+
+                    %s
+
+                    Mirá el estado de tu perfil en:
+                    %s/cuenta
+                    """.formatted(nombre, "aprobada".equals(n.getDatos().get("resultado"))
+                    ? "Revisamos tu título y lo aprobamos. Ya podés aparecer en las búsquedas."
+                    : "Revisamos tu título y no pudimos aprobarlo. Podés cargarlo de nuevo desde tu cuenta.",
+                    urlPublica));
+            case CAP_REVISADO -> new MensajeEmail(email, "Tinku: revisamos tu certificado de antecedentes", """
+                    Hola %s:
+
+                    %s
+
+                    Mirá el estado en:
+                    %s/cuenta
+                    """.formatted(nombre, switch (n.getDatos().getOrDefault("resultado", "")) {
+                        case "aprobado" -> "Lo aprobamos: ya podés dar clases a menores.";
+                        case "rechazado" -> "No pudimos aprobarlo. Podés ver el detalle y volver a cargarlo desde tu cuenta.";
+                        default -> "Necesita una revisión adicional del equipo. Te avisamos cuando esté.";
+                    }, urlPublica));
         };
     }
 

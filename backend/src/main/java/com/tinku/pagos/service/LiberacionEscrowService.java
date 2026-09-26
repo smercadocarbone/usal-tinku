@@ -62,15 +62,21 @@ public class LiberacionEscrowService {
     private final LiberacionProveedor liberacion;
     private final AlertaSoporteProveedor alerta;
     private final Scheduler scheduler;
+    private final com.tinku.reservas.repository.ReservaRepository reservaRepo;
+    private final com.tinku.shared.notificacion.Notificador notificador;
 
     public LiberacionEscrowService(TransaccionRepository transaccionRepo,
                                    LiberacionProveedor liberacion,
                                    AlertaSoporteProveedor alerta,
-                                   Scheduler scheduler) {
+                                   Scheduler scheduler,
+                                   com.tinku.reservas.repository.ReservaRepository reservaRepo,
+                                   com.tinku.shared.notificacion.Notificador notificador) {
         this.transaccionRepo = transaccionRepo;
         this.liberacion = liberacion;
         this.alerta = alerta;
         this.scheduler = scheduler;
+        this.reservaRepo = reservaRepo;
+        this.notificador = notificador;
     }
 
     // -------------------------------------------------- programación (T-M5-05)
@@ -151,6 +157,9 @@ public class LiberacionEscrowService {
         transaccion.setLiberarAt(null);
         transaccionRepo.save(transaccion);
         cancelarLiberacion(transaccionId);
+        reservaRepo.findById(transaccion.getReservaId()).ifPresent(r ->
+                notificador.notificar(r.getTutor().getId(), com.tinku.shared.notificacion.TipoNotificacion.PAGO_LIBERADO,
+                        java.util.Map.of("reservaId", r.getId().toString())));
     }
 
     /**

@@ -16,7 +16,9 @@
 | Retención máxima del audio del resumen _(ADR-M3-04)_ | Hasta obtener el transcript; 24 hs como máximo desde el fin de la sesión | Job de Quartz persistido por Sesión borra el audio aunque el resumen falle | M3, M6 |
 | Timeout de reserva sin pagar                      | 15 min                   | `pendiente_pago` vence y libera el slot                                                                               | M4     |
 | Cancelación sin penalidad                         | 24 hs antes              | —                                                                                                                     | M4     |
-| Recordatorio de sesión (T-24h)                    | 24 hs antes              | No se dispara si la reserva se hizo con menos margen                                                                  | M4     |
+| Recordatorio de sesión (T-24h)                    | 24 hs antes              | No se dispara si la reserva se hizo con menos margen. Al Tutor, al alumno y a quien pagó (implementado 2026-09-26) | M4     |
+| Aviso "tu clase empieza" _(2026-09-26)_           | T-5 min (al abrir la sala) | Al Tutor y al alumno, con el link a la sala                                                                        | M3     |
+| Aviso "tu clase ya empezó" _(2026-09-26)_         | T+0 (horario de inicio)  | Solo a quien todavía no entró                                                                                         | M3     |
 | Liberación de escrow                              | 24 hs post-sesión        | Desde `sesion.finalizada`                                                                                             | M5     |
 | Sombra de matching post mala calificación         | 24 hs                    | BR-MATCH-01, calificación de 1-2 estrellas                                                                            | M2     |
 | Recordatorio único de calificación pendiente      | 24 hs                    | Solo una vez, sin insistir                                                                                            | M7     |

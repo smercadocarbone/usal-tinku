@@ -22,7 +22,39 @@ public enum TipoNotificacion {
 
     /** ADR-M5-02: no se pudo renovar la conexión de MercadoPago del Tutor; deja de ser
      *  reservable hasta reconectar. Al Tutor. Sin datos. */
-    MP_CUENTA_DESCONECTADA(true);
+    MP_CUENTA_DESCONECTADA(true),
+
+    // ---- Ciclo de la clase (2026-09-26). Artículo II: nunca un dato del menor en los datos.
+
+    /** Al Tutor, cuando se confirma (se paga) una clase suya. Datos: reservaId, horario, duracion. */
+    CLASE_RESERVADA(true),
+
+    /** A la otra parte cuando se cancela una clase confirmada. Datos: reservaId, horario, canceladaPor
+     *  ("tutor" | "alumno"). */
+    CLASE_CANCELADA(true),
+
+    /** Al Tutor, cuando quien pagó le cambia el horario. Datos: reservaId, horarioAnterior, horario. */
+    CLASE_REPROGRAMADA(true),
+
+    /** 24 hs antes (Tabla_Tiempos), a los participantes. No se manda si se reservó con menos margen.
+     *  Datos: reservaId, horario. */
+    RECORDATORIO_CLASE(true),
+
+    /** Al abrir la sala (T-5, Tabla_Tiempos), a quienes dan y toman la clase. Datos: sesionId, horario. */
+    CLASE_POR_EMPEZAR(true),
+
+    /** Al horario de inicio, a quien todavía no entró. Datos: sesionId, horario. */
+    CLASE_EMPEZO(true),
+
+    /** Al Tutor, cuando se le libera el pago de una clase (FR-PAG-002). Datos: reservaId. */
+    PAGO_LIBERADO(true),
+
+    /** Al Tutor, cuando Moderación revisa su credencial académica. Datos: resultado ("aprobada" | "rechazada"). */
+    CREDENCIAL_REVISADA(true),
+
+    /** Al Tutor, cuando Moderación revisa su CAP. Datos: resultado ("aprobado" | "rechazado" | "en_revision").
+     *  Nunca la categoría del antecedente. */
+    CAP_REVISADO(true);
 
     private final boolean porEmail;
 

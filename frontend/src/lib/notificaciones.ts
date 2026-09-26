@@ -5,7 +5,16 @@ export type TipoNotificacion =
   | "KILLSWITCH_MENOR"
   | "DENUNCIA_RECIBIDA"
   | "CLASE_CANCELADA_TUTOR_SIN_HABILITACION"
-  | "MP_CUENTA_DESCONECTADA";
+  | "MP_CUENTA_DESCONECTADA"
+  | "CLASE_RESERVADA"
+  | "CLASE_CANCELADA"
+  | "CLASE_REPROGRAMADA"
+  | "RECORDATORIO_CLASE"
+  | "CLASE_POR_EMPEZAR"
+  | "CLASE_EMPEZO"
+  | "PAGO_LIBERADO"
+  | "CREDENCIAL_REVISADA"
+  | "CAP_REVISADO";
 
 export interface Notificacion {
   id: string;
@@ -73,6 +82,75 @@ export function textoDe(n: Notificacion, formatear: (iso: string) => string): Te
         accion: "Conectar MercadoPago",
         tono: "aviso",
       };
+    case "CLASE_RESERVADA":
+      return {
+        titulo: "Te reservaron una clase",
+        detalle: `${n.datos.horario ? `Para el ${formatear(n.datos.horario)}` : "Ya está paga"}${n.datos.duracion ? `, ${n.datos.duracion} minutos` : ""}.`,
+        href: n.datos.reservaId ? `/cuenta/reservas/${n.datos.reservaId}` : undefined,
+        accion: "Ver la clase",
+        tono: "info",
+      };
+    case "CLASE_CANCELADA":
+      return {
+        titulo: n.datos.canceladaPor === "tutor" ? "El tutor canceló una clase" : "Te cancelaron una clase",
+        detalle: `${n.datos.horario ? `La clase del ${formatear(n.datos.horario)} se canceló.` : "Se canceló una clase."} La devolución o el pago siguen la política de cancelación.`,
+        href: n.datos.reservaId ? `/cuenta/reservas/${n.datos.reservaId}` : undefined,
+        accion: "Ver el detalle",
+        tono: "aviso",
+      };
+    case "CLASE_REPROGRAMADA":
+      return {
+        titulo: "Cambiaron el horario de una clase",
+        detalle:
+          n.datos.horarioAnterior && n.datos.horario
+            ? `Pasó del ${formatear(n.datos.horarioAnterior)} al ${formatear(n.datos.horario)}.`
+            : "La clase tiene un horario nuevo.",
+        href: n.datos.reservaId ? `/cuenta/reservas/${n.datos.reservaId}` : undefined,
+        accion: "Ver la clase",
+        tono: "info",
+      };
+    case "RECORDATORIO_CLASE":
+      return {
+        titulo: "Mañana tenés una clase",
+        detalle: `${n.datos.horario ? `Es el ${formatear(n.datos.horario)}.` : ""} La sala se abre 5 minutos antes.`.trim(),
+        href: n.datos.reservaId ? `/cuenta/reservas/${n.datos.reservaId}` : undefined,
+        accion: "Ver la clase",
+        tono: "info",
+      };
+    case "CLASE_POR_EMPEZAR":
+      return {
+        titulo: "Tu clase empieza en 5 minutos",
+        detalle: "La sala ya está abierta.",
+        href: n.datos.sesionId ? `/aula/${n.datos.sesionId}` : undefined,
+        accion: "Entrar a la clase",
+        tono: "aviso",
+      };
+    case "CLASE_EMPEZO":
+      return {
+        titulo: "Tu clase ya empezó",
+        detalle: "Todavía no entraste y te están esperando.",
+        href: n.datos.sesionId ? `/aula/${n.datos.sesionId}` : undefined,
+        accion: "Entrar ahora",
+        tono: "peligro",
+      };
+    case "PAGO_LIBERADO":
+      return {
+        titulo: "Te liberamos el pago de una clase",
+        detalle: "Ya lo tenés en tu cuenta de MercadoPago.",
+        href: "/cuenta/cobros",
+        accion: "Ver mis cobros",
+        tono: "info",
+      };
+    case "CREDENCIAL_REVISADA":
+      return n.datos.resultado === "aprobada"
+        ? { titulo: "Aprobamos tu título", detalle: "Ya podés aparecer en las búsquedas.", href: "/cuenta", accion: "Ver mi cuenta", tono: "info" }
+        : { titulo: "No pudimos aprobar tu título", detalle: "Podés cargarlo de nuevo desde tu cuenta.", href: "/cuenta", accion: "Volver a cargarlo", tono: "aviso" };
+    case "CAP_REVISADO":
+      return n.datos.resultado === "aprobado"
+        ? { titulo: "Aprobamos tu certificado de antecedentes", detalle: "Ya podés dar clases a menores.", href: "/cuenta", accion: "Ver mi cuenta", tono: "info" }
+        : n.datos.resultado === "rechazado"
+          ? { titulo: "No pudimos aprobar tu certificado", detalle: "Podés ver el detalle y volver a cargarlo.", href: "/cuenta", accion: "Ver mi cuenta", tono: "aviso" }
+          : { titulo: "Tu certificado necesita una revisión más", detalle: "Te avisamos cuando esté.", tono: "info" };
     default:
       return { titulo: "Aviso de Tinku", detalle: "", tono: "info" };
   }

@@ -72,7 +72,9 @@ function CabeceraUsuario() {
   const rol = useRolAdmin();
   const pathname = usePathname();
   const router = useRouter();
-  const items = navegacionPorRol(sesion?.payload, rol !== null);
+  // "Mi cuenta" ya está en el menú del avatar (al lado): en la barra de arriba estaba repetido.
+  // En mobile sí queda en la barra de abajo, que es la navegación principal ahí.
+  const items = navegacionPorRol(sesion?.payload, rol !== null).filter((it) => it.href !== "/cuenta");
 
   function salir() {
     clearSession();
