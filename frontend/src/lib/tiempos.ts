@@ -12,8 +12,10 @@ export const TIEMPOS = {
   cancelacionSinPenalidadHoras: 24,
   /** Creación de sala + botón de unirse. */
   salaAbreMinutosAntes: 5,
-  /** Ventana mínima para reservar. */
-  ventanaMinimaReservaMinutos: 15,
+  /** Ventana mínima para reservar (eran 15 hasta 2026-09-26). */
+  ventanaMinimaReservaMinutos: 30,
+  /** Hasta cuánto antes de la clase se puede cambiar el horario sin perder el pago (FR-RES-016). */
+  limiteReprogramacionMinutos: 60,
   /** Plazo de descargo de una Denuncia estándar. */
   descargoHoras: 48,
   /** Ventana de edición de calificación pública. */

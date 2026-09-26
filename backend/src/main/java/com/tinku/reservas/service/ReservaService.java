@@ -61,14 +61,25 @@ import java.util.UUID;
 @Service
 public class ReservaService {
 
-    /** FR-RES-013 — no se reserva a menos de 15 min del inicio (Tabla_Tiempos_Tinku.md). */
-    private static final Duration VENTANA_MINIMA = Duration.ofMinutes(15);
+    /**
+     * FR-RES-013 — no se reserva a menos de 30 min del inicio (Tabla_Tiempos_Tinku.md; eran 15
+     * hasta 2026-09-26): el pago tiene hasta 15 min para confirmarse (FR-RES-020) y el Tutor
+     * tiene que enterarse con margen para prepararse.
+     */
+    public static final Duration VENTANA_MINIMA = Duration.ofMinutes(30);
+
+    /**
+     * FR-RES-016 (enmendado 2026-09-26): con menos de 24 hs se puede cambiar de horario, sin
+     * perder el pago, hasta el doble de la ventana mínima antes de la clase (1 h). El horario
+     * que se libera queda abierto a que otra persona lo reserve durante al menos una ventana
+     * mínima más. Sin límite de cambios.
+     */
+    public static final Duration LIMITE_REPROGRAMACION = VENTANA_MINIMA.multipliedBy(2);
 
     /** FR-RES-020 — timeout de pendiente_pago a 15 min (Tabla_Tiempos_Tinku.md). */
     public static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
 
     /** FR-RES-004/015/016 — reprogramación y cancelación sin penalidad hasta 24hs antes. */
-    private static final Duration VENTANA_CANCELACION = Duration.ofHours(24);
 
     /** Mismo grupo que el job de expiración de Solicitudes (todos los jobs de M4). */
     public static final String GRUPO_JOB = "m4-reservas";
@@ -204,8 +215,9 @@ public class ReservaService {
      * Con ≥24hs al horario actual: se actualiza {@code horario} en la MISMA fila,
      * sin tocar el precio original (FR-PAG-013) y sin transacción nueva; emite
      * {@code reserva.reprogramada} para que M3 re-agende la Sesión derivada.
-     * Con <24hs se trata como cancelación tardía por quien pagó (FR-RES-016):
-     * la Reserva queda cancelada y se emite {@code reserva.cancelada}.
+     * Con menos de 24hs también se puede (FR-RES-016, enmendado 2026-09-26) hasta
+     * {@link #LIMITE_REPROGRAMACION} antes de la clase; después se rechaza con un mensaje claro.
+     * Nunca cancela: antes, pedir un cambio con menos de 24hs cancelaba la clase sin avisar.
      */
     @Transactional
     public Reserva reprogramar(Usuario usuario, UUID reservaId, Instant nuevoHorario) {
@@ -217,9 +229,9 @@ public class ReservaService {
         if (!esPagador(reserva, usuario)) {
             throw new SoloPagadorReservaException();
         }
-        if (Instant.now().plus(VENTANA_CANCELACION).isAfter(reserva.getHorario())) {
-            // FR-RES-016: menos de 24hs → cancelación tardía (asimetría de US-7).
-            return cancelarInterna(reserva, usuario);
+        if (Instant.now().plus(LIMITE_REPROGRAMACION).isAfter(reserva.getHorario())) {
+            throw new VentanaMinimaException("Falta menos de 1 hora para la clase: ya no se puede "
+                    + "cambiar el horario. Si no vas a poder, podés cancelarla.");
         }
         validarNuevoHorario(reserva, nuevoHorario);
         // D6 regla 6: la reprogramación conserva la duración (y el precio) originales.
@@ -446,7 +458,7 @@ public class ReservaService {
         }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 15 minutos para el horario — no se puede reservar (FR-RES-013).");
+                    "Faltan menos de 30 minutos para el horario — no se puede reservar (FR-RES-013).");
         }
         if (!FranjaService.duracionValida(duracionMinutos)) {
             throw new DuracionMinutosInvalidaException(
@@ -557,7 +569,7 @@ public class ReservaService {
         exigirTutorReservable(reserva.getTutor(), reserva.getPagador(), reserva.getBeneficiario());
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 15 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
+                    "Faltan menos de 30 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
         }
         if (franjaService.franjaQueContiene(reserva.getTutor().getId(), nuevoHorario,
                 reserva.getDuracionMinutos()).isEmpty()) {

@@ -372,7 +372,9 @@ function CambiarHorario({
     );
   }, [franjas, ahora, reserva.horario]);
 
-  const menosDe24 = ahora > 0 && new Date(reserva.horario).getTime() - ahora < TIEMPOS.cancelacionSinPenalidadHoras * 3600000;
+  // FR-RES-016: se puede cambiar sin perder el pago hasta 1 hora antes de la clase.
+  const fueraDePlazo =
+    ahora > 0 && new Date(reserva.horario).getTime() - ahora < TIEMPOS.limiteReprogramacionMinutos * 60000;
 
   async function guardar() {
     const o = opciones.find((x) => x.id === elegido);
@@ -400,17 +402,22 @@ function CambiarHorario({
           <Boton variante="secundario" onClick={onCerrar}>
             Volver
           </Boton>
-          <Boton disabled={!elegido} cargando={guardando} textoCargando="Guardando…" onClick={guardar}>
+          <Boton disabled={!elegido || fueraDePlazo} cargando={guardando} textoCargando="Guardando…" onClick={guardar}>
             Confirmar nuevo horario
           </Boton>
         </>
       }
     >
       <div className="flex flex-col gap-3 pb-2">
-        {menosDe24 && (
+        {fueraDePlazo ? (
           <Alerta tono="aviso">
-            Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} horas para esta clase: el cambio se trata como cancelación tardía.
+            Falta menos de una hora para la clase, así que ya no se puede cambiar el horario. Si no vas a poder, podés
+            cancelarla.
           </Alerta>
+        ) : (
+          <p className="text-sm text-tinta-suave">
+            Podés cambiar el horario sin volver a pagar hasta una hora antes de la clase.
+          </p>
         )}
         {franjas === null ? (
           <p role="status" className="text-sm text-tinta-tenue">
