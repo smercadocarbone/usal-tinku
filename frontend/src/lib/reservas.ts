@@ -1,3 +1,4 @@
+import { api } from "./api";
 import { ETIQUETA_ESTADO_RESERVA } from "./etiquetas";
 
 /** Etiqueta humana del estado (B6: los enums no se renderizan crudos). */
@@ -34,6 +35,8 @@ export interface Reserva {
   precioAdicionalResumen?: number | null;
   /** Lo que se paga: clase + adicional. */
   montoTotal?: number | null;
+  /** v2.5: el beneficiario es un Menor (habilita la nota del Tutor al AR, FR-RES-026). */
+  beneficiarioMenor?: boolean;
 }
 
 /** Solicitud de clase de un menor (`/api/solicitudes`). */
@@ -59,3 +62,53 @@ export function finDe(r: Reserva): string | null {
 }
 
 export const ESTADOS_PROXIMOS = new Set(["pendiente_pago", "confirmada", "en_curso"]);
+
+/* ---- Enmienda v2.5: pedido previo (FR-RES-027/028) y nota del Tutor (FR-RES-026) ---- */
+
+export interface PedidoPrevio {
+  reservaId: string;
+  texto: string | null;
+  archivoNombre: string | null;
+  archivoTipo: string | null;
+  updatedAt: string;
+  /** Todavía se puede cambiar (reserva activa y la clase no empezó). */
+  editable: boolean;
+}
+
+export interface NotaClase {
+  reservaId: string;
+  texto: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Solo el Tutor, dentro de las 48 hs. */
+  editable: boolean;
+}
+
+/** `undefined` (204): todavía no hay pedido. */
+export function getPedido(reservaId: string): Promise<PedidoPrevio | undefined> {
+  return api.get<PedidoPrevio | undefined>(`/api/reservas/${reservaId}/pedido`);
+}
+
+/** El texto va como parte `text/plain;charset=utf-8` para que no se rompan los acentos. */
+export function guardarPedido(reservaId: string, texto: string, archivo: File | null): Promise<PedidoPrevio> {
+  const datos = new FormData();
+  if (texto.trim()) datos.append("texto", new Blob([texto], { type: "text/plain;charset=utf-8" }));
+  if (archivo) datos.append("archivo", archivo);
+  return api.put<PedidoPrevio>(`/api/reservas/${reservaId}/pedido`, datos);
+}
+
+export function quitarArchivoPedido(reservaId: string): Promise<void> {
+  return api.delete<void>(`/api/reservas/${reservaId}/pedido/archivo`);
+}
+
+export function getArchivoPedido(reservaId: string): Promise<Blob> {
+  return api.blob(`/api/reservas/${reservaId}/pedido/archivo`);
+}
+
+export function getNota(reservaId: string): Promise<NotaClase | undefined> {
+  return api.get<NotaClase | undefined>(`/api/reservas/${reservaId}/nota`);
+}
+
+export function escribirNota(reservaId: string, texto: string): Promise<NotaClase> {
+  return api.put<NotaClase>(`/api/reservas/${reservaId}/nota`, { texto });
+}

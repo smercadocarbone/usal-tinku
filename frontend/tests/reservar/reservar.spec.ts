@@ -164,4 +164,39 @@ test.describe("Reserva de una clase", () => {
       await expect(page.getByRole("button", { name: /^10:30 a 11:30/, disabled: false })).toHaveCount(0);
     }
   );
+
+  test(
+    "FR-RES-027: el pedido opcional se manda apenas se crea la reserva, antes de pagar",
+    { tag: ["@e2e", "@reserva", "@RESERVAR-PEDIDO-E2E-001"] },
+    async ({ page }) => {
+      let pedidoPedido = false;
+      await mockApi(page, {
+        [`GET /api/tutores/${TUTOR_ID}`]: jsonRoute(200, {
+          id: TUTOR_ID, nombre: "Martín", apellido: "Gómez", tipo: "TUTOR", materias: [], precioHora: 5000,
+        }),
+        [`GET /api/tutores/${TUTOR_ID}/franjas`]: jsonRoute(200, [
+          {
+            id: "f-1", tutorId: TUTOR_ID, diaSemana: null,
+            fechaEspecifica: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+            horaInicio: "10:00", horaFin: "12:00", activa: true,
+          },
+        ]),
+        "POST /api/reservas": jsonRoute(201, { id: "r-9" }),
+        "PUT /api/reservas/r-9/pedido": async (route) => {
+          pedidoPedido = true;
+          await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+        },
+      });
+
+      const reservar = new ReservarPage(page);
+      await reservar.goto(TUTOR_ID);
+      await reservar.elegirHorario("10:00 a 11:00");
+      await page.getByText("¿Qué querés ver en la clase? (opcional)").click();
+      await page.getByLabel("Contale al tutor qué necesitás").fill("Ecuaciones para el parcial del jueves");
+      await reservar.confirmar();
+
+      await expect(page).toHaveURL(/\/pagar\?reserva=r-9/);
+      expect(pedidoPedido).toBe(true);
+    }
+  );
 });

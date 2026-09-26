@@ -24,6 +24,8 @@ import { nombreCorto } from "@/lib/tutores";
 import { cn } from "@/lib/cn";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
+import NotaClaseTarjeta from "@/components/reservas/NotaClaseTarjeta";
+import PedidoPrevioTarjeta from "@/components/reservas/PedidoPrevioTarjeta";
 import {
   Alerta,
   Avatar,
@@ -271,6 +273,22 @@ export default function ReservaDetallePage() {
             ))}
           </ol>
         </section>
+      )}
+
+      <PedidoPrevioTarjeta
+        reservaId={r.id}
+        soyPagador={payload?.sub === r.pagadorId}
+        soyTutor={payload?.sub === r.tutorId}
+        reservaEditable={(r.estado === "pendiente_pago" || r.estado === "confirmada") && (ahora === 0 || new Date(r.horario).getTime() > ahora)}
+      />
+
+      {r.beneficiarioMenor && !esMenor && (
+        <NotaClaseTarjeta
+          reservaId={r.id}
+          soyTutor={payload?.sub === r.tutorId}
+          finalizada={r.estado === "finalizada"}
+          nombreAlumno={r.beneficiarioNombre}
+        />
       )}
 
       {resumen?.disponible && (

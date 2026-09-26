@@ -54,7 +54,27 @@ public enum TipoNotificacion {
 
     /** Al Tutor, cuando Moderación revisa su CAP. Datos: resultado ("aprobado" | "rechazado" | "en_revision").
      *  Nunca la categoría del antecedente. */
-    CAP_REVISADO(true);
+    CAP_REVISADO(true),
+
+    // ---- Enmienda v2.5 (2026-09-26)
+
+    /** FR-RES-026: al Adulto Responsable, cuando el Tutor le deja la nota de una clase de su hijo.
+     *  Datos: reservaId. El texto no va en el aviso: se lee en la app. */
+    NOTA_CLASE(true),
+
+    /** FR-RES-029: a quien pagó, cuando el Tutor pide cambiar el horario. Datos: reservaId, horario,
+     *  horarioPropuesto. El motivo no va en el aviso. */
+    REPROGRAMACION_PEDIDA(true),
+
+    /** FR-RES-030: al Tutor. Datos: reservaId, horario (el nuevo). */
+    REPROGRAMACION_ACEPTADA(true),
+
+    /** FR-RES-030/031: al Tutor, cuando el alumno eligió cancelar o el pedido venció. Datos: reservaId,
+     *  horario, motivo ("rechazado" | "vencido"). */
+    REPROGRAMACION_RECHAZADA(true),
+
+    /** FR-ADM-011: al Tutor. Datos: resultado ("aprobado" | "rechazado"), motivo (si se rechazó). */
+    VIDEO_REVISADO(true);
 
     private final boolean porEmail;
 

@@ -150,6 +150,48 @@ public class PlantillasEmail {
                         case "rechazado" -> "No pudimos aprobarlo. Podés ver el detalle y volver a cargarlo desde tu cuenta.";
                         default -> "Necesita una revisión adicional del equipo. Te avisamos cuando esté.";
                     }, urlPublica));
+            case NOTA_CLASE -> new MensajeEmail(email, "Tinku: el tutor te dejó una nota de la clase", """
+                    Hola %s:
+
+                    El tutor te dejó una nota sobre la clase de tu hijo o hija. La podés leer en:
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, urlPublica, n.getDatos().get("reservaId")));
+            case REPROGRAMACION_PEDIDA -> new MensajeEmail(email, "Tinku: el tutor te propone otro horario", """
+                    Hola %s:
+
+                    El tutor no puede dar la clase del %s y te propone pasarla al %s.
+                    Podés aceptar el horario nuevo o cancelar y recibir la devolución completa:
+                    %s/cuenta/reservas/%s
+
+                    Si no respondés hasta una hora antes de la clase, se cancela y te devolvemos el pago.
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), fecha(n.getDatos().get("horarioPropuesto")),
+                    urlPublica, n.getDatos().get("reservaId")));
+            case REPROGRAMACION_ACEPTADA -> new MensajeEmail(email, "Tinku: aceptaron el horario nuevo", """
+                    Hola %s:
+
+                    Aceptaron tu propuesta: la clase pasa al %s.
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
+            case REPROGRAMACION_RECHAZADA -> new MensajeEmail(email, "Tinku: la clase se canceló", """
+                    Hola %s:
+
+                    %s La clase del %s quedó cancelada y le devolvemos el pago a quien la pagó.
+                    %s/cuenta/reservas/%s
+                    """.formatted(nombre, "vencido".equals(n.getDatos().get("motivo"))
+                            ? "Nadie respondió tu pedido de cambio de horario a tiempo."
+                            : "El alumno prefirió cancelar en vez de pasar la clase al horario que propusiste.",
+                    fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
+            case VIDEO_REVISADO -> new MensajeEmail(email, "aprobado".equals(n.getDatos().get("resultado"))
+                    ? "Tinku: tu video ya está en tu perfil" : "Tinku: no pudimos publicar tu video", """
+                    Hola %s:
+
+                    %s
+                    %s/cuenta/perfil-tutor
+                    """.formatted(nombre, "aprobado".equals(n.getDatos().get("resultado"))
+                            ? "Revisamos tu video de presentación y ya se ve en tu perfil."
+                            : "Revisamos tu video de presentación y no lo pudimos publicar. Motivo: "
+                                    + n.getDatos().getOrDefault("motivo", "-") + ". Podés subir otro.",
+                    urlPublica));
         };
     }
 

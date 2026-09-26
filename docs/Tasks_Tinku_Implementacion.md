@@ -286,11 +286,11 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-M3-PANTALLA: Compartir pantalla y modales (prueba en producción, 2026-09-26) — _el `<video>` de la pantalla compartida recién existe cuando llega la pista y se vuelve a crear al cambiar la vista destacada: ahora cada pista se conecta cuando su elemento aparece (antes el otro veía negro, y la pantalla propia nunca aparecía); pantalla publicada a 1080p/15 con `contentHint: detail` y suscripta en calidad alta. `Modal`: el pie perdía el margen inferior (`safe-bottom` lo pisaba en 0) y los botones se veían cortados en todos los modales. La sala sin abrir (422) ya no termina en "Error de conexión"._
 - [x] T-UX-AVISOS: Avisos al Tutor y formularios (2026-09-26) — _9 avisos nuevos (FR-ADM-010): CLASE_RESERVADA, CLASE_CANCELADA, CLASE_REPROGRAMADA, RECORDATORIO_CLASE (T-24h, antes no estaba implementado), CLASE_POR_EMPEZAR (T-5), CLASE_EMPEZO (T+0, solo a quien no entró), PAGO_LIBERADO, CREDENCIAL_REVISADA, CAP_REVISADO; bandeja y email. "Mi cuenta" sale de la barra de arriba en desktop (queda en el menú del avatar). Email con formato completo (algo@dominio.ext) en backend (`FormatoEmail`) y frontend. Repetir la contraseña al cambiarla y al crear la cuenta de un menor. Fecha de nacimiento con barras automáticas. Indicador de pasos que se adapta a su contenedor (en el registro se cortaba el último paso)._
 - [x] T-TA-00: Plan, enmienda v2.5 de la Constitución, specs (M1 US-8, M2 US-9, M3 US-9, M4 US-11..14, M5 US-10..12 + FR-PAG-009, M8 US-9), ADR-M1-09, ADR-M3-06, ADR-M4-01, ADR-M5-03 y 7 filas de la Tabla de Tiempos (`docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`).
-- [ ] T-TA-01: Precio neto visible al Tutor (FR-PAG-019).
-- [ ] T-TA-02: Export mensual de cobros en CSV para ARCA (FR-PAG-020).
-- [ ] T-TA-03: Búsqueda con precio, próximo horario libre y filtro de precio máximo (FR-MATCH-013/014).
-- [ ] T-TA-04: Nota del Tutor al Adulto Responsable en clases con Menores (FR-RES-026).
-- [ ] T-TA-05: Pedido previo con un adjunto que se borra a las 24 hs (FR-RES-027/028, ADR-M4-01).
+- [x] T-TA-01: Precio neto visible al Tutor (FR-PAG-019).
+- [x] T-TA-02: Export mensual de cobros en CSV para ARCA (FR-PAG-020).
+- [x] T-TA-03: Búsqueda con precio, próximo horario libre y filtro de precio máximo (FR-MATCH-013/014).
+- [x] T-TA-04: Nota del Tutor al Adulto Responsable en clases con Menores (FR-RES-026).
+- [x] T-TA-05: Pedido previo con un adjunto que se borra a las 24 hs (FR-RES-027/028, ADR-M4-01).
 - [ ] T-TA-06: Pedido de reprogramación del Tutor con vencimiento a T-60 (FR-RES-029..031).
 - [ ] T-TA-07: Video de presentación del Tutor + cola de moderación (FR-ID-034..036, FR-ADM-011, ADR-M1-09).
 - [ ] T-TA-08: Pizarra compartida solo entre adultos (FR-AULA-011..013, ADR-M3-06).

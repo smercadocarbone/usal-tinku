@@ -27,6 +27,7 @@ import java.util.UUID;
  *       ({@link PoliticaCancelacion}); {@code null} si no puede cancelar.</li>
  * </ul>
  * Nombres: solo nombre y apellido de los participantes (nunca DNI ni email).
+ * {@code beneficiarioMenor} (v2.5): la pantalla ofrece la nota del Tutor al AR (FR-RES-026).
  */
 public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID tutorId,
                               Instant horario, BigDecimal precio, EstadoReserva estado,
@@ -41,7 +42,8 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                               Instant horarioFin,
                               boolean resumenContratado,
                               BigDecimal precioAdicionalResumen,
-                              BigDecimal montoTotal) {
+                              BigDecimal montoTotal,
+                              boolean beneficiarioMenor) {
 
     public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora) {
         boolean pendiente = r.getEstado() == EstadoReserva.PENDIENTE_PAGO;
@@ -64,6 +66,7 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                 beneficiario.getNombre(), beneficiario.getApellido(),
                 r.getDuracionMinutos(),
                 vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin(),
-                r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal());
+                r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal(),
+                beneficiario.getTipo() == com.tinku.identidad.model.TipoUsuario.MENOR);
     }
 }
