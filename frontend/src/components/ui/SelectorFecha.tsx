@@ -69,6 +69,46 @@ export function deIso(iso: string | undefined | null): Fecha | null {
 }
 
 /** Interpreta lo escrito: ISO (`1995-04-10`), `10/04/1995`, `10-4-1995` o `10041995`. */
+/**
+ * Completa las barras mientras se escribe DD/MM/AAAA: "8" → "08/", "08" → "08/", después
+ * "7" → "08/07/" o "11" → "08/11/", y el año. Un día que empieza con 4-9 o un mes que empieza
+ * con 2-9 ya están completos con un dígito. Al borrar no agrega nada, y un texto que no es solo
+ * números y barras (una fecha ISO pegada) queda como está.
+ */
+export function autocompletarBarras(texto: string, anterior: string): string {
+  if (texto.length < anterior.length || !/^[\d/]*$/.test(texto)) return texto;
+  let salida = "";
+  let parte = "";
+  let etapa = 0; // 0 día, 1 mes, 2 año
+  let digitosAnio = 0;
+  for (const c of texto) {
+    if (etapa === 2) {
+      if (c !== "/" && digitosAnio < 4) {
+        salida += c;
+        digitosAnio++;
+      }
+      continue;
+    }
+    if (c === "/") {
+      if (parte.length === 1) {
+        salida += `0${parte}/`;
+        parte = "";
+        etapa++;
+      }
+      continue;
+    }
+    parte += c;
+    const completo = etapa === 0 ? c > "3" : c > "1";
+    if (parte.length === 1 && completo) parte = `0${c}`;
+    if (parte.length === 2) {
+      salida += `${parte}/`;
+      parte = "";
+      etapa++;
+    }
+  }
+  return salida + parte;
+}
+
 export function interpretarFecha(texto: string): Fecha | null {
   const t = texto.trim();
   const iso = deIso(t);
@@ -169,7 +209,8 @@ export default function SelectorFecha({
     grilla.current?.querySelector<HTMLButtonElement>(`[data-fecha="${aIso(foco)}"]`)?.focus();
   }, [abierto, foco]);
 
-  function escribir(t: string) {
+  function escribir(escrito: string) {
+    const t = autocompletarBarras(escrito, texto);
     setTexto(t);
     const f = interpretarFecha(t);
     if (!f) {

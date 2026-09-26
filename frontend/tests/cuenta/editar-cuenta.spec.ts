@@ -73,11 +73,40 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
 
       await cuenta.campoPasswordActual.fill("actual12345");
       await cuenta.campoPasswordNueva.fill("nueva123456");
+      await cuenta.campoPasswordRepetida.fill("nueva123456");
       await cuenta.botonCambiarPassword.click();
 
       await expect(page.getByText("Contraseña actualizada.")).toBeVisible();
       await expect(cuenta.campoPasswordActual).toHaveValue("");
       await expect(cuenta.campoPasswordNueva).toHaveValue("");
+      await expect(cuenta.campoPasswordRepetida).toHaveValue("");
+    }
+  );
+
+  test(
+    "si la contraseña repetida no coincide, no la manda al backend",
+    { tag: ["@e2e", "@EDITAR-CUENTA-E2E-005"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSessionConPayload(context, baseURL!, { tipo: "ADULTO" });
+      let llamadas = 0;
+      await mockApi(page, {
+        "GET /api/usuarios/me": jsonRoute(200, perfil("ana@tinku.test")),
+        "PATCH /api/usuarios/me/password": async (route) => {
+          llamadas++;
+          await route.fulfill({ status: 204 });
+        },
+      });
+
+      const cuenta = new CuentaPage(page);
+      await cuenta.gotoAcceso();
+
+      await cuenta.campoPasswordActual.fill("actual12345");
+      await cuenta.campoPasswordNueva.fill("nueva123456");
+      await cuenta.campoPasswordRepetida.fill("otra1234567");
+      await cuenta.botonCambiarPassword.click();
+
+      await expect(page.getByText("Las contraseñas nuevas no coinciden.")).toBeVisible();
+      expect(llamadas).toBe(0);
     }
   );
 
@@ -99,6 +128,7 @@ test.describe("Cuenta — editar cuenta (email y contraseña)", () => {
 
       await cuenta.campoPasswordActual.fill("mala12345");
       await cuenta.campoPasswordNueva.fill("nueva123456");
+      await cuenta.campoPasswordRepetida.fill("nueva123456");
       await cuenta.botonCambiarPassword.click();
 
       await expect(page.getByText("La contraseña actual no es correcta.")).toBeVisible();

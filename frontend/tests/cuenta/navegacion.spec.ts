@@ -4,7 +4,8 @@ import { setFakeSessionConPayload } from "../helpers";
 /**
  * B10 / UX-01 §4: una sola sección queda activa (`aria-current="page"`), tanto en la
  * navegación principal por rol como en el menú de ajustes de /cuenta. El ítem raíz
- * ("Mi cuenta" / "Perfil") no se acopla a las subrutas.
+ * ("Perfil") no se acopla a las subrutas. "Mi cuenta" no está en la barra de arriba de
+ * escritorio (estaba repetido): se entra desde el menú del avatar.
  */
 test.describe("Cuenta — navegación", () => {
   test(
@@ -16,15 +17,14 @@ test.describe("Cuenta — navegación", () => {
 
       const nav = page.getByRole("navigation", { name: "Principal" });
       const linkAgenda = nav.getByRole("link", { name: "Mi agenda" });
-      const linkCuenta = nav.getByRole("link", { name: "Mi cuenta" });
 
       await expect(linkAgenda).toHaveAttribute("aria-current", "page");
-      await expect(linkCuenta).not.toHaveAttribute("aria-current", "page");
+      await expect(nav.getByRole("link", { name: "Mi cuenta" })).toHaveCount(0);
 
-      await linkCuenta.click();
+      await page.getByRole("button", { name: "Menú de tu cuenta" }).click();
+      await page.getByRole("menuitem", { name: "Mi cuenta" }).click();
 
       await expect(page).toHaveURL(/\/cuenta$/);
-      await expect(linkCuenta).toHaveAttribute("aria-current", "page");
       await expect(linkAgenda).not.toHaveAttribute("aria-current", "page");
       await expect(
         page.getByRole("navigation", { name: "Secciones" }).getByRole("link", { name: "Perfil" })

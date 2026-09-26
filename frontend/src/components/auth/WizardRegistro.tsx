@@ -24,6 +24,7 @@ import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { cn } from "@/lib/cn";
 import { Alerta, Boton, Campo, CampoCheckbox, Pasos, RequisitosPassword, Selector, SubidaArchivo, clasesBoton, SelectorFecha } from "@/components/ui";
 import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
+import { esEmailValido, MENSAJE_EMAIL_INVALIDO } from "@/lib/email";
 import TerminosClave from "@/components/auth/TerminosClave";
 
 type Uso = "clases" | "hijos" | "ambos";
@@ -106,6 +107,7 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
   const [dni, setDni] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [email, setEmail] = useState("");
+  const [emailTocado, setEmailTocado] = useState(false);
   const [fotoDni, setFotoDni] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
@@ -295,6 +297,7 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!esEmailValido(email)) return setEmailTocado(true);
             if (!errorEdad) ir(iIdentidad);
           }}
         >
@@ -312,7 +315,8 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
               value={fechaNacimiento} onChange={setFechaNacimiento} max={hoyIso()} mesInicial="1995-01-01"
               error={errorEdad ?? erroresCampos.fechaNacimientoDeclarada} />
             <Campo id="email" etiqueta="Email" type="email" autoComplete="email" required value={email}
-              onChange={(e) => setEmail(e.target.value)} error={erroresCampos.email}
+              onChange={(e) => setEmail(e.target.value)} onBlur={() => setEmailTocado(true)}
+              error={(emailTocado && email && !esEmailValido(email) ? MENSAJE_EMAIL_INVALIDO : undefined) ?? erroresCampos.email}
               ayuda="Lo usamos solo para cosas de tu cuenta." />
           </div>
           <Navegacion onVolver={tipo === "adulto" ? () => ir(0) : undefined}>

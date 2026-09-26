@@ -10,7 +10,9 @@ import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
 import com.tinku.aula.evento.SesionNoShowTutorEvent;
 import com.tinku.aula.jobs.CorteAutomaticoJob;
 import com.tinku.aula.jobs.CrearSalaJob;
+import com.tinku.aula.jobs.InicioClaseJob;
 import com.tinku.aula.jobs.NoShowJob;
+import com.tinku.aula.jobs.RecordatorioClaseJob;
 import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.aula.model.ConfirmacionKillswitch;
 import com.tinku.aula.model.SesionAprendizaje;
@@ -74,6 +76,8 @@ public class SesionService {
 
     /** T-5: la sala se crea 5 minutos antes del arranque (Plan M3 §3.1, Tabla_Tiempos). */
     private static final Duration ANTICIPACION_CREACION_SALA = Duration.ofMinutes(5);
+    /** Recordatorio de sesión (T-24h, Tabla_Tiempos_Tinku.md). */
+    private static final Duration RECORDATORIO_CLASE = Duration.ofHours(24);
     /** T+10: el no-show se decide a los 10 minutos de arranque (Plan M3 §3.2, Tabla_Tiempos). */
     private static final Duration TIMEOUT_NO_SHOW = Duration.ofMinutes(10);
     /** +5 min tras el fin agendado para el corte automático (Plan M3 §3.5, Tabla_Tiempos). */
@@ -139,6 +143,11 @@ public class SesionService {
             SesionAprendizaje s = new SesionAprendizaje();
             s.setReservaId(reservaId);
             s.setEstado(SesionAprendizaje.ESTADO_NO_INICIADA);
+            // Aviso al Tutor: una sola vez, cuando nace la Sesión (la confirmación es idempotente).
+            notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_RESERVADA, Map.of(
+                    "reservaId", reservaId.toString(),
+                    "horario", reserva.getHorario().toString(),
+                    "duracion", String.valueOf(reserva.getDuracionMinutos())));
             return sesionRepo.save(s);
         });
 
@@ -151,6 +160,7 @@ public class SesionService {
                 reserva.getHorario().plus(TIMEOUT_NO_SHOW));
         programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
                 reserva.getHorario().plus(duracion).plus(TOLERANCIA_FIN_AUTOMATICO));
+        programarAvisos(sesion.getId(), reserva.getHorario());
         sesion.setDuracionAgendadaSegundos((int) duracion.getSeconds());
         return sesion;
     }
@@ -178,6 +188,7 @@ public class SesionService {
                     reserva.getHorario().plus(TIMEOUT_NO_SHOW));
             programarSiFalta(sesion.getId(), CorteAutomaticoJob.class,
                     reserva.getHorario().plus(duracion).plus(TOLERANCIA_FIN_AUTOMATICO));
+            programarAvisos(sesion.getId(), reserva.getHorario());
             sesion.setDuracionAgendadaSegundos((int) duracion.getSeconds());
             sesionRepo.save(sesion);
         });
@@ -198,11 +209,15 @@ public class SesionService {
             scheduler.unscheduleJob(triggerSala(sesionId));
             scheduler.unscheduleJob(triggerNoShow(sesionId));
             scheduler.unscheduleJob(triggerCorte(sesionId));
+            scheduler.unscheduleJob(triggerKey("recordatorio", sesionId));
+            scheduler.unscheduleJob(triggerKey("inicio", sesionId));
             // Los jobs son storeDurably (programarSiFalta): hay que borrarlos
             // explícitamente o el re-agendar chocaría con el mismo identity.
             scheduler.deleteJob(new JobKey(prefijoDe(CrearSalaJob.class) + "-job-" + sesionId, GRUPO_JOB));
             scheduler.deleteJob(new JobKey(prefijoDe(NoShowJob.class) + "-job-" + sesionId, GRUPO_JOB));
             scheduler.deleteJob(new JobKey(prefijoDe(CorteAutomaticoJob.class) + "-job-" + sesionId, GRUPO_JOB));
+            scheduler.deleteJob(new JobKey(prefijoDe(RecordatorioClaseJob.class) + "-job-" + sesionId, GRUPO_JOB));
+            scheduler.deleteJob(new JobKey(prefijoDe(InicioClaseJob.class) + "-job-" + sesionId, GRUPO_JOB));
         } catch (SchedulerException e) {
             // Fail-closed: la cancelación/reprogramación no puede colarse si no
             // logramos limpiar los jobs viejos.
@@ -234,6 +249,62 @@ public class SesionService {
         }
         sesion.setLivekitRoomId(liveKitService.crearSala("sesion-" + sesion.getId()));
         sesionRepo.save(sesion);
+        // La sala abre a T-5 (Tabla_Tiempos): aviso a quienes dan y toman la clase.
+        Map<String, String> datos = Map.of("sesionId", sesion.getId().toString(),
+                "horario", reserva.getHorario().toString());
+        notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_POR_EMPEZAR, datos);
+        notificador.notificar(reserva.getBeneficiario().getId(), TipoNotificacion.CLASE_POR_EMPEZAR, datos);
+    }
+
+    /**
+     * Recordatorio a T-24h (Tabla_Tiempos) y aviso al horario de inicio. El recordatorio no se
+     * agenda si la clase se reservó (o reprogramó) con menos de 24 hs de margen.
+     */
+    private void programarAvisos(UUID sesionId, Instant horario) {
+        Instant recordatorio = horario.minus(RECORDATORIO_CLASE);
+        if (recordatorio.isAfter(Instant.now())) {
+            programarSiFalta(sesionId, RecordatorioClaseJob.class, recordatorio);
+        }
+        programarSiFalta(sesionId, InicioClaseJob.class, horario);
+    }
+
+    /** T-24h: recordatorio a quien da la clase, a quien la toma y a quien la pagó (si es otro). */
+    @Transactional
+    public void enviarRecordatorio(UUID sesionId) {
+        conReservaConfirmada(sesionId, (sesion, reserva) -> {
+            Map<String, String> datos = Map.of("reservaId", reserva.getId().toString(),
+                    "horario", reserva.getHorario().toString());
+            participantesDe(reserva).forEach(id ->
+                    notificador.notificar(id, TipoNotificacion.RECORDATORIO_CLASE, datos));
+        });
+    }
+
+    /** Horario de inicio: aviso a quien todavía no entró ("la clase ya empezó, entrá"). */
+    @Transactional
+    public void avisarInicio(UUID sesionId) {
+        conReservaConfirmada(sesionId, (sesion, reserva) -> {
+            Map<String, String> datos = Map.of("sesionId", sesion.getId().toString(),
+                    "horario", reserva.getHorario().toString());
+            if (sesion.getTutorJoinedAt() == null) {
+                notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_EMPEZO, datos);
+            }
+            if (sesion.getEstudianteJoinedAt() == null) {
+                notificador.notificar(reserva.getBeneficiario().getId(), TipoNotificacion.CLASE_EMPEZO, datos);
+            }
+        });
+    }
+
+    private void conReservaConfirmada(UUID sesionId,
+                                      java.util.function.BiConsumer<SesionAprendizaje, Reserva> accion) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId).orElse(null);
+        if (sesion == null) {
+            return;
+        }
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId()).orElse(null);
+        if (reserva == null || reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            return;
+        }
+        accion.accept(sesion, reserva);
     }
 
     // ------------------------------------------------ no-show (T-M3-04)
@@ -753,6 +824,8 @@ public class SesionService {
         if (jobClass == CrearSalaJob.class) return "sala";
         if (jobClass == NoShowJob.class) return "no-show";
         if (jobClass == CorteAutomaticoJob.class) return "corte";
+        if (jobClass == RecordatorioClaseJob.class) return "recordatorio";
+        if (jobClass == InicioClaseJob.class) return "inicio";
         throw new IllegalArgumentException("Job de sesión desconocido: " + jobClass);
     }
 
@@ -766,6 +839,16 @@ public class SesionService {
     /** Clave del trigger de creación de sala (T-M3-03) — tests. */
     public static TriggerKey triggerSala(UUID sesionId) {
         return triggerKey("sala", sesionId);
+    }
+
+    /** Clave del trigger del recordatorio T-24h — tests. */
+    public static TriggerKey triggerRecordatorio(UUID sesionId) {
+        return triggerKey("recordatorio", sesionId);
+    }
+
+    /** Clave del trigger del aviso al horario de inicio — tests. */
+    public static TriggerKey triggerInicio(UUID sesionId) {
+        return triggerKey("inicio", sesionId);
     }
 
     /** Clave del trigger de corte automático (T-M3-05) — tests. */

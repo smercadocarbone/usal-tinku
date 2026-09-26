@@ -40,7 +40,7 @@ class CredencialServiceTest {
         backoffService = mock(CredencialBackoffService.class);
         usuarioRepo = mock(UsuarioRepository.class);
         service = new CredencialService(credencialRepo, backoffService, usuarioRepo,
-                usuarioId -> false);
+                usuarioId -> false, (destinatario, tipo, datos) -> { });
     }
 
     private Usuario tutor() {

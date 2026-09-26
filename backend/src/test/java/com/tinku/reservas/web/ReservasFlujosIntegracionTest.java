@@ -121,6 +121,13 @@ class ReservasFlujosIntegracionTest {
     @Autowired SesionAprendizajeRepository sesionRepo;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @Autowired ApplicationEventPublisher eventos;
+    @Autowired com.tinku.admin.notificacion.NotificacionRepository notificaciones;
+    @Autowired SesionService sesionService;
+
+    private java.util.List<com.tinku.shared.notificacion.TipoNotificacion> avisosDe(UUID usuarioId) {
+        return notificaciones.findByDestinatarioId(usuarioId).stream()
+                .map(com.tinku.admin.notificacion.Notificacion::getTipo).toList();
+    }
 
     @MockitoBean OcrService ocrService;
     @MockitoBean MatchingServiceClient matchingClient;
@@ -1054,6 +1061,54 @@ class ReservasFlujosIntegracionTest {
                                 "horaInicio", inicio.toString(),
                                 "horaFin", fin.toString()))))
                 .andExpect(status().isCreated());
+    }
+
+    /** Avisos al Tutor (2026-09-26): le reservan, le cambian el horario y le cancelan una clase. */
+    @Test
+    void avisosAlTutor_reservada_reprogramada_cancelada() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), reservaId);
+        assertThat(avisosDe(e.tutorId())).contains(com.tinku.shared.notificacion.TipoNotificacion.CLASE_RESERVADA);
+
+        // Recordatorio T-24h y aviso al inicio quedan agendados con la Sesión.
+        SesionAprendizaje sesion = sesionRepo.findByReservaId(reservaId).orElseThrow();
+        assertThat(scheduler.checkExists(SesionService.triggerRecordatorio(sesion.getId()))).isTrue();
+        assertThat(scheduler.getTrigger(SesionService.triggerInicio(sesion.getId())).getStartTime().toInstant())
+                .isEqualTo(e.horario());
+
+        LocalDate nuevaFecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(4);
+        publicarFranjaPuntual(e.tokenTutor(), nuevaFecha);
+        reprogramar(e.tokenEstudiante(), reservaId, dentroDeFranja(nuevaFecha));
+        assertThat(avisosDe(e.tutorId())).contains(com.tinku.shared.notificacion.TipoNotificacion.CLASE_REPROGRAMADA);
+
+        mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
+                        .header("Authorization", "Bearer " + e.tokenEstudiante()))
+                .andExpect(status().isOk());
+        assertThat(notificaciones.findByDestinatarioId(e.tutorId()).stream()
+                .filter(n -> n.getTipo() == com.tinku.shared.notificacion.TipoNotificacion.CLASE_CANCELADA)
+                .map(n -> n.getDatos().get("canceladaPor")).toList()).containsExactly("alumno");
+        // Quien canceló no recibe su propio aviso.
+        assertThat(avisosDe(e.estudianteId())).doesNotContain(com.tinku.shared.notificacion.TipoNotificacion.CLASE_CANCELADA);
+    }
+
+    /** T-24h a los dos; al horario de inicio, solo a quien todavía no entró. */
+    @Test
+    void recordatorioYAvisoDeInicio_aQuienCorresponde() throws Exception {
+        EscenarioAdulto e = escenarioAdulto();
+        UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
+        confirmarPago(e.tokenEstudiante(), reservaId);
+        SesionAprendizaje sesion = sesionRepo.findByReservaId(reservaId).orElseThrow();
+
+        sesionService.enviarRecordatorio(sesion.getId());
+        assertThat(avisosDe(e.tutorId())).contains(com.tinku.shared.notificacion.TipoNotificacion.RECORDATORIO_CLASE);
+        assertThat(avisosDe(e.estudianteId())).contains(com.tinku.shared.notificacion.TipoNotificacion.RECORDATORIO_CLASE);
+
+        sesion.setTutorJoinedAt(Instant.now()); // el Tutor ya entró
+        sesionRepo.save(sesion);
+        sesionService.avisarInicio(sesion.getId());
+        assertThat(avisosDe(e.tutorId())).doesNotContain(com.tinku.shared.notificacion.TipoNotificacion.CLASE_EMPEZO);
+        assertThat(avisosDe(e.estudianteId())).contains(com.tinku.shared.notificacion.TipoNotificacion.CLASE_EMPEZO);
     }
 
     @Test

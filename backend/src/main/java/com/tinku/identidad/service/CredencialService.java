@@ -40,15 +40,23 @@ public class CredencialService {
     private final CredencialBackoffService backoffService;
     private final UsuarioRepository usuarioRepo;
     private final VerificadorSancionVigente verificadorSancion;
+    private final com.tinku.shared.notificacion.Notificador notificador;
 
     public CredencialService(CredencialAcademicaRepository credencialRepo,
                              CredencialBackoffService backoffService,
                              UsuarioRepository usuarioRepo,
-                             VerificadorSancionVigente verificadorSancion) {
+                             VerificadorSancionVigente verificadorSancion,
+                             com.tinku.shared.notificacion.Notificador notificador) {
         this.credencialRepo = credencialRepo;
         this.backoffService = backoffService;
         this.usuarioRepo = usuarioRepo;
         this.verificadorSancion = verificadorSancion;
+        this.notificador = notificador;
+    }
+
+    private void avisarRevision(UUID tutorId, String resultado) {
+        notificador.notificar(tutorId, com.tinku.shared.notificacion.TipoNotificacion.CREDENCIAL_REVISADA,
+                java.util.Map.of("resultado", resultado));
     }
 
     /**
@@ -115,6 +123,7 @@ public class CredencialService {
             tutor.setActivoParaMatching(true);
             usuarioRepo.save(tutor);
         }
+        avisarRevision(tutor.getId(), "aprobada");
         return guardada;
     }
 
@@ -134,6 +143,7 @@ public class CredencialService {
         if (guardada.getNumeroIntento() >= MAX_INTENTOS_CICLO) {
             backoffService.registrarCicloAgotado(guardada.getTutor().getId()); // FR-ID-012
         }
+        avisarRevision(guardada.getTutor().getId(), "rechazada");
         return guardada;
     }
 

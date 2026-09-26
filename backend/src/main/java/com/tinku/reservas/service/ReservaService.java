@@ -234,9 +234,14 @@ public class ReservaService {
                     + "cambiar el horario. Si no vas a poder, podés cancelarla.");
         }
         validarNuevoHorario(reserva, nuevoHorario);
+        Instant horarioAnterior = reserva.getHorario();
         // D6 regla 6: la reprogramación conserva la duración (y el precio) originales.
         reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
         reservaRepo.save(reserva);
+        notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_REPROGRAMADA, Map.of(
+                "reservaId", reserva.getId().toString(),
+                "horarioAnterior", horarioAnterior.toString(),
+                "horario", nuevoHorario.toString()));
         events.publishEvent(new ReservaReprogramadaEvent(this, reserva.getId()));
         return reserva;
     }
@@ -273,6 +278,19 @@ public class ReservaService {
             // Manual con escrow: M5 decide reembolso/liberación; M3 limpia su Sesión.
             events.publishEvent(new ReservaCanceladaEvent(
                     this, reserva.getId(), cancelante.getId()));
+            // Aviso a la otra parte: si canceló el Tutor, a quien pagó (y al alumno si es otro).
+            boolean canceloTutor = esTutor(reserva, cancelante);
+            Map<String, String> datos = Map.of("reservaId", reserva.getId().toString(),
+                    "horario", reserva.getHorario().toString(),
+                    "canceladaPor", canceloTutor ? "tutor" : "alumno");
+            if (canceloTutor) {
+                java.util.Set<UUID> avisar = new java.util.LinkedHashSet<>();
+                if (reserva.getPagador() != null) avisar.add(reserva.getPagador().getId());
+                avisar.add(reserva.getBeneficiario().getId());
+                avisar.forEach(id -> notificador.notificar(id, TipoNotificacion.CLASE_CANCELADA, datos));
+            } else {
+                notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_CANCELADA, datos);
+            }
         }
         return reserva;
     }

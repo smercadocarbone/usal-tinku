@@ -17,7 +17,7 @@ public record RegistroAdultoRequest(
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
-        @NotBlank @Email String email,
+        @NotBlank @Email(regexp = com.tinku.identidad.dto.FormatoEmail.REGEX, message = "debe ser un email válido, por ejemplo nombre@gmail.com") String email,
         @NotBlank @PasswordSegura String password,
         boolean capacidadEstudiante,
         boolean capacidadAdultoResponsable,

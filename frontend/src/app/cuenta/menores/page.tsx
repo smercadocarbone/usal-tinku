@@ -229,6 +229,7 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
   const [fechaNac, setFechaNac] = useState("");
   const [fotoDni, setFotoDni] = useState<File | null>(null);
   const [password, setPassword] = useState("");
+  const [passwordRepetida, setPasswordRepetida] = useState("");
   const [consentimiento, setConsentimiento] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -276,7 +277,7 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
   const puedeSeguir = [
     !!(nombre.trim() && apellido.trim() && dni.length >= 7 && fechaNac),
     !!fotoDni,
-    passwordValida(password, dni),
+    passwordValida(password, dni) && password === passwordRepetida,
     consentimiento,
   ][paso];
 
@@ -354,6 +355,15 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
               required
             />
             <RequisitosPassword password={password} dni={dni} />
+            <Campo
+              id="passMenorRepetida"
+              etiqueta="Repetí la contraseña"
+              variante="password"
+              value={passwordRepetida}
+              onChange={(e) => setPasswordRepetida(e.target.value)}
+              error={passwordRepetida && password !== passwordRepetida ? "No coincide con la contraseña de arriba." : undefined}
+              required
+            />
           </>
         )}
         {paso === 3 && (

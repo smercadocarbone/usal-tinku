@@ -1,6 +1,7 @@
 "use client";
 
 import { LARGO_MINIMO_PASSWORD } from "@/lib/password";
+import { esEmailValido, MENSAJE_EMAIL_INVALIDO } from "@/lib/email";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   actualizarEmail,
@@ -22,6 +23,7 @@ export default function CuentaAccesoPage() {
 
   const [passwordActual, setPasswordActual] = useState("");
   const [passwordNueva, setPasswordNueva] = useState("");
+  const [passwordRepetida, setPasswordRepetida] = useState("");
   const [guardandoPassword, setGuardandoPassword] = useState(false);
   const [errorPassword, setErrorPassword] = useState<string | null>(null);
   const [exitoPassword, setExitoPassword] = useState(false);
@@ -40,6 +42,7 @@ export default function CuentaAccesoPage() {
     e.preventDefault();
     setErrorEmail(null);
     setExitoEmail(false);
+    if (!esEmailValido(nuevoEmail)) return setErrorEmail(MENSAJE_EMAIL_INVALIDO);
     setGuardandoEmail(true);
     try {
       const p = await actualizarEmail(nuevoEmail);
@@ -56,12 +59,14 @@ export default function CuentaAccesoPage() {
     e.preventDefault();
     setErrorPassword(null);
     setExitoPassword(false);
+    if (passwordNueva !== passwordRepetida) return setErrorPassword("Las contraseñas nuevas no coinciden.");
     setGuardandoPassword(true);
     try {
       await cambiarPassword(passwordActual, passwordNueva);
       setExitoPassword(true);
       setPasswordActual("");
       setPasswordNueva("");
+      setPasswordRepetida("");
     } catch (err) {
       setErrorPassword(mensajeDeError(err, "No se pudo cambiar la contraseña."));
     } finally {
@@ -88,7 +93,8 @@ export default function CuentaAccesoPage() {
                 autoComplete="email"
                 required
                 value={nuevoEmail}
-                onChange={(e) => setNuevoEmail(e.target.value)}
+                onChange={(e) => setNuevoEmail(e.target.value.trim())}
+                error={nuevoEmail && !esEmailValido(nuevoEmail) ? MENSAJE_EMAIL_INVALIDO : undefined}
               />
               {errorEmail && <Alerta tono="peligro">{errorEmail}</Alerta>}
               {exitoEmail && <Alerta tono="exito">Email actualizado.</Alerta>}
@@ -97,7 +103,7 @@ export default function CuentaAccesoPage() {
                 className="w-fit"
                 cargando={guardandoEmail}
                 textoCargando="Guardando…"
-                disabled={!nuevoEmail || nuevoEmail === perfil?.email}
+                disabled={!esEmailValido(nuevoEmail) || nuevoEmail === perfil?.email}
               >
                 Guardar email
               </Boton>
@@ -128,6 +134,16 @@ export default function CuentaAccesoPage() {
               onChange={(e) => setPasswordNueva(e.target.value)}
             />
             {passwordNueva && <RequisitosPassword password={passwordNueva} />}
+            <Campo
+              id="passwordRepetida"
+              etiqueta="Repetí la contraseña nueva"
+              variante="password"
+              autoComplete="new-password"
+              required
+              value={passwordRepetida}
+              onChange={(e) => setPasswordRepetida(e.target.value)}
+              error={passwordRepetida && passwordNueva !== passwordRepetida ? "No coincide con la contraseña nueva." : undefined}
+            />
             {errorPassword && <Alerta tono="peligro">{errorPassword}</Alerta>}
             {exitoPassword && <Alerta tono="exito">Contraseña actualizada.</Alerta>}
             <Boton
