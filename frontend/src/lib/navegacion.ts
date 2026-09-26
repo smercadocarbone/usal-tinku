@@ -28,14 +28,20 @@ export function navegacionPorRol(payload: PayloadSesion | null | undefined, esAd
     return [
       { href: "/cuenta/horarios", label: "Mi agenda", icono: "agenda" },
       { href: "/cuenta/reservas", label: "Mis clases", icono: "clases", tambien: ["/cuenta/reservas/"] },
-      {
-        href: "/cuenta/perfil-tutor",
-        label: "Mi perfil",
-        icono: "perfil",
-        tambien: ["/cuenta/materias", "/cuenta/precio"],
-      },
       { href: "/cuenta/cobros", label: "Cobros", icono: "cobros" },
-      cuenta,
+      // Mi cuenta incluye su perfil de tutor (presentación, materias, precio, credenciales, menores).
+      {
+        ...cuenta,
+        tambien: [
+          ...(cuenta.tambien ?? []),
+          "/cuenta/perfil",
+          "/cuenta/presentacion",
+          "/cuenta/materias",
+          "/cuenta/precio",
+          "/cuenta/credenciales",
+          "/cuenta/clases-con-menores",
+        ],
+      },
     ];
   }
 

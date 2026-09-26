@@ -13,6 +13,8 @@ export interface ItemNavAjustes {
   contador?: number;
   /** El contador es urgente (plazo por vencer). */
   urgente?: boolean;
+  /** Otras rutas exactas en las que el ítem se ve activo (p. ej. "Perfil" también en la raíz). */
+  activoEn?: string[];
 }
 
 export interface GrupoNavAjustes {
@@ -57,6 +59,7 @@ export default function SettingsShell({ base, grupos, children }: SettingsShellP
                   // marcado en todas las sub-rutas (B10).
                   const activo =
                     pathname === item.href ||
+                    (item.activoEn ?? []).includes(pathname) ||
                     (item.href !== base && pathname.startsWith(`${item.href}/`));
                   return (
                     <li key={item.href}>

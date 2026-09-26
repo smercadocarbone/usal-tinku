@@ -6,7 +6,7 @@ import { CalendarDays, Plus, UserMinus, UsersRound } from "lucide-react";
 import { api, ApiError, getMenores, mensajeDeError, type Menor } from "@/lib/api";
 import type { Reserva, Solicitud } from "@/lib/reservas";
 import { ESTADOS_PROXIMOS } from "@/lib/reservas";
-import { fechaHoraCorta } from "@/lib/formatos";
+import { fechaHoraCorta, hoyIso } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { nombreCorto } from "@/lib/tutores";
 import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
@@ -27,6 +27,7 @@ import {
   SubidaArchivo,
   Tarjeta,
   useToast,
+  SelectorFecha,
 } from "@/components/ui";
 
 /** Texto del consentimiento que se registra con `versionTextoConsentimiento` (BR-CONSENT-01). */
@@ -313,12 +314,13 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
               <Campo id="apellidoMenor" etiqueta="Apellido" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
             </div>
             <Campo id="dniMenor" etiqueta="DNI del menor" variante="dni" value={dni} onValor={setDni} required />
-            <Campo
+            <SelectorFecha
               id="fechaNacMenor"
               etiqueta="Fecha de nacimiento"
-              type="date"
               value={fechaNac}
-              onChange={(e) => setFechaNac(e.target.value)}
+              onChange={setFechaNac}
+              max={hoyIso()}
+              mesInicial={`${new Date().getFullYear() - 10}-01-01`}
               ayuda={`Tiene que tener al menos ${TIEMPOS.edadMinimaMenor} años.`}
               required
             />

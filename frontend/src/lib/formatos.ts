@@ -125,3 +125,9 @@ export function tiempoRelativo(iso: string | Date, ahora: Date = new Date()): st
   if (abs < 86400000 * 2) return rtf.format(h, "hour");
   return rtf.format(Math.round(ms / 86400000), "day");
 }
+
+/** Hoy en hora local como `YYYY-MM-DD` (`toISOString` da la fecha UTC: de noche en Argentina ya es mañana). */
+export function hoyIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}

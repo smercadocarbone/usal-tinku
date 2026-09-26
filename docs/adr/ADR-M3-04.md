@@ -1,6 +1,6 @@
 # ADR-M3-04 — Grabación de solo audio para el resumen, en el navegador del Tutor
 
-**Estado:** Aceptado — 2026-09-25. Acompaña la enmienda v2.4 del Artículo V de la Constitución.
+**Estado:** Aceptado — 2026-09-25. _El punto 6 (dónde se da el consentimiento) lo reemplaza ADR-M3-05 (2026-09-26): una vez, al aceptar los Términos en el registro._ Acompaña la enmienda v2.4 del Artículo V de la Constitución.
 Implementa T08 (DT5) y habilita T09 (DT3). Cierra AUD-024 (M6 sin fuente de transcript).
 
 ## Contexto

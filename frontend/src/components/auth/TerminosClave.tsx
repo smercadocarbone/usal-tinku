@@ -80,7 +80,7 @@ const ADULTO: Punto[] = [
   {
     titulo: "Las clases no se graban",
     texto:
-      "Nunca guardamos video. La única excepción es el resumen automático, que contratás aparte: graba solo el audio, nunca en clases con menores, y lo borramos apenas se transcribe (24 hs como máximo).",
+      "Nunca guardamos video. La única excepción es el resumen automático, que se contrata aparte: graba solo el audio, nunca en clases con menores, y lo borramos apenas se transcribe (24 hs como máximo). Al aceptar estos términos das tu consentimiento para eso, una sola vez.",
     icono: MicOff,
     acentos: [VideoOff, Lock],
     tono: "ambar",
@@ -147,7 +147,7 @@ const TUTOR: Punto[] = [
   {
     titulo: "Tus clases no se graban",
     texto:
-      "Nunca guardamos video. Si habilitás el resumen automático y el alumno lo contrata, tu navegador graba solo el audio de esa clase (nunca con menores) y lo borramos apenas se transcribe.",
+      "Nunca guardamos video. Si un alumno adulto contrata el resumen automático, tu navegador graba solo el audio de esa clase (nunca con menores) y lo borramos apenas se transcribe. Al aceptar estos términos das tu consentimiento para eso, una sola vez.",
     icono: MicOff,
     acentos: [VideoOff, Lock],
     tono: "ambar",

@@ -92,6 +92,10 @@ public class Usuario {
     @Column(name = "activo_para_matching", nullable = false)
     private boolean activoParaMatching = false;
 
+    /** V41: preferencia del Tutor de dar clases a menores (además, siempre, del CAP vigente). */
+    @Column(name = "acepta_menores", nullable = false)
+    private boolean aceptaMenores = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

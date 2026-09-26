@@ -1,5 +1,6 @@
 "use client";
 
+import { hoyIso } from "@/lib/formatos";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,7 +22,7 @@ import {
 import { api, ApiError, subirCredencial, type TipoCredencial } from "@/lib/api";
 import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { cn } from "@/lib/cn";
-import { Alerta, Boton, Campo, CampoCheckbox, Pasos, RequisitosPassword, Selector, SubidaArchivo, clasesBoton } from "@/components/ui";
+import { Alerta, Boton, Campo, CampoCheckbox, Pasos, RequisitosPassword, Selector, SubidaArchivo, clasesBoton, SelectorFecha } from "@/components/ui";
 import { LARGO_MINIMO_PASSWORD, passwordValida } from "@/lib/password";
 import TerminosClave from "@/components/auth/TerminosClave";
 
@@ -191,6 +192,8 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
       ...datosDeclarados(),
       email: email.trim(),
       password,
+      // ADR-M3-05: sin esto el backend no crea la cuenta; incluye el consentimiento del resumen.
+      aceptaTerminos: terminos,
       ...(tipo === "adulto"
         ? { capacidadEstudiante: uso !== "hijos", capacidadAdultoResponsable: uso !== "clases" }
         : {}),
@@ -305,8 +308,8 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
             </div>
             <Campo id="dni" etiqueta="DNI" variante="dni" required value={dni} onValor={setDni}
               placeholder="12.345.678" error={erroresCampos.dniDeclarado} />
-            <Campo id="fechaNacimiento" etiqueta="Fecha de nacimiento" type="date" autoComplete="bday" required
-              value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)}
+            <SelectorFecha id="fechaNacimiento" etiqueta="Fecha de nacimiento" autoComplete="bday" required
+              value={fechaNacimiento} onChange={setFechaNacimiento} max={hoyIso()} mesInicial="1995-01-01"
               error={errorEdad ?? erroresCampos.fechaNacimientoDeclarada} />
             <Campo id="email" etiqueta="Email" type="email" autoComplete="email" required value={email}
               onChange={(e) => setEmail(e.target.value)} error={erroresCampos.email}
@@ -372,7 +375,10 @@ export default function WizardRegistro({ tipo }: { tipo: Tipo }) {
             <CampoCheckbox id="terminos" etiqueta="Acepto los Términos y Condiciones" checked={terminos} required
               onChange={(e) => setTerminos(e.target.checked)} />
             <p className="text-[13px] leading-relaxed text-tinta-tenue">
-              Versión provisoria: al aceptar confirmás que sos mayor de 18 y que tus datos son verdaderos. El texto legal completo se publica antes del lanzamiento.
+              Al aceptar confirmás que sos mayor de 18 y que tus datos son verdaderos, y das tu consentimiento, una sola
+              vez, para que en las clases entre adultos en las que se contrate el resumen automático se grabe solo el
+              audio (nunca video, nunca con menores; se borra apenas se transcribe). Versión provisoria: el texto legal
+              completo se publica antes del lanzamiento.
             </p>
           </div>
           <Navegacion onVolver={() => ir(iIdentidad)}>

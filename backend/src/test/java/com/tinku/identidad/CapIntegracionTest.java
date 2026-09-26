@@ -41,6 +41,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -256,5 +257,42 @@ class CapIntegracionTest {
         r.setPrecio(BigDecimal.valueOf(15000));
         r.setEstado(EstadoReserva.CONFIRMADA);
         return reservaRepository.save(r);
+    }
+
+    /**
+     * Mi cuenta → Menores (V41): con la preferencia apagada no se lo autoriza aunque tenga el CAP
+     * vigente, y apagarla cancela sus clases futuras con menores (no las de adultos).
+     */
+    @Test
+    void aceptaMenores_apagadoNoSeAutoriza_yCancelaSusClasesConMenores() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        revisar(admin(RolAdmin.MODERACION_SEGURIDAD), capSubido(tutor), "APROBAR", null).andExpect(status().isOk());
+        Usuario ar = usuario(TipoUsuario.ADULTO);
+        Usuario menor = usuario(TipoUsuario.MENOR, ar);
+        Reserva conMenor = reserva(ar, menor, tutor, 3);
+        Usuario adulto = usuario(TipoUsuario.ADULTO);
+        Reserva conAdulto = reserva(adulto, adulto, tutor, 4);
+
+        mvc.perform(put("/api/tutores/me/menores").header("Authorization", "Bearer " + token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"aceptaMenores\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clasesCanceladas").value(1));
+
+        assertThat(reservaRepository.findById(conMenor.getId()).orElseThrow().getEstado()).isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(reservaRepository.findById(conAdulto.getId()).orElseThrow().getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(certificadoService.habilitadoParaMenores(tutor.getId())).isFalse();
+        autorizar(ar, menor, tutor).andExpect(status().isConflict());
+        mvc.perform(get("/api/tutores/me/estado-perfil").header("Authorization", "Bearer " + token(tutor)))
+                .andExpect(jsonPath("$.aceptaMenores").value(false))
+                .andExpect(jsonPath("$.habilitadoParaMenores").value(false));
+
+        mvc.perform(put("/api/tutores/me/menores").header("Authorization", "Bearer " + token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"aceptaMenores\":true}"))
+                .andExpect(status().isOk());
+        autorizar(ar, menor, tutor).andExpect(status().is2xxSuccessful());
+
+        mvc.perform(put("/api/tutores/me/menores").header("Authorization", "Bearer " + token(ar))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"aceptaMenores\":false}"))
+                .andExpect(status().isForbidden());
     }
 }

@@ -19,22 +19,22 @@ interface Item {
 function items(e: EstadoPerfilTutor, tieneHorarios: boolean): Item[] {
   const credencial: Item =
     e.tieneCredencialAprobada && e.ultimaCredencial === "PENDIENTE"
-      ? { titulo: "Credencial académica", detalle: "Tu perfil está verificado. Tu nueva credencial está en revisión.", hecho: true, href: "/cuenta/perfil-tutor#credencial" }
+      ? { titulo: "Credencial académica", detalle: "Tu perfil está verificado. Tu nueva credencial está en revisión.", hecho: true, href: "/cuenta/credenciales" }
       : e.tieneCredencialAprobada
-        ? { titulo: "Credencial académica aprobada", hecho: true, href: "/cuenta/perfil-tutor#credencial" }
+        ? { titulo: "Credencial académica aprobada", hecho: true, href: "/cuenta/credenciales" }
         : e.ultimaCredencial === "PENDIENTE"
-          ? { titulo: "Credencial académica", detalle: "En revisión por el equipo de Tinku.", hecho: false, href: "/cuenta/perfil-tutor#credencial" }
+          ? { titulo: "Credencial académica", detalle: "En revisión por el equipo de Tinku.", hecho: false, href: "/cuenta/credenciales" }
           : e.ultimaCredencial === "RECHAZADO"
-            ? { titulo: "Credencial académica", detalle: "Fue rechazada: podés volver a cargarla.", hecho: false, href: "/cuenta/perfil-tutor#credencial" }
-            : { titulo: "Subí tu título o certificado", hecho: false, href: "/cuenta/perfil-tutor#credencial" };
+            ? { titulo: "Credencial académica", detalle: "Fue rechazada: podés volver a cargarla.", hecho: false, href: "/cuenta/credenciales" }
+            : { titulo: "Subí tu título o certificado", hecho: false, href: "/cuenta/credenciales" };
   return [
     { titulo: "Identidad verificada", hecho: true, href: "/cuenta" },
     credencial,
     { titulo: "Elegí qué materias enseñás", hecho: e.tieneMaterias, href: "/cuenta/materias" },
     { titulo: "Publicá tus horarios", hecho: tieneHorarios, href: "/cuenta/horarios" },
     { titulo: "Poné tu precio", hecho: e.tienePrecio, href: "/cuenta/precio" },
-    { titulo: "Subí tu foto de perfil", detalle: "Es obligatoria: sin foto no aparecés en las búsquedas.", hecho: e.tieneFoto, href: "/cuenta/perfil-tutor" },
-    { titulo: "Escribí tu presentación", hecho: e.tieneBio, href: "/cuenta/perfil-tutor", opcional: true },
+    { titulo: "Subí tu foto de perfil", detalle: "Es obligatoria: sin foto no aparecés en las búsquedas.", hecho: e.tieneFoto, href: "/cuenta/presentacion" },
+    { titulo: "Escribí tu presentación", hecho: e.tieneBio, href: "/cuenta/presentacion", opcional: true },
   ];
 }
 

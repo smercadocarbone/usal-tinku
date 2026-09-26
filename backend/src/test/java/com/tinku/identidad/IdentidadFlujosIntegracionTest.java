@@ -793,4 +793,39 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(jsonPath("$.estado").value("PENDIENTE"))
                 .andExpect(jsonPath("$.tieneAprobada").value(true));
     }
+
+    // ------------------------------------------------ ADR-M3-05: Términos en el registro
+
+    /** Sin aceptar los Términos no se crea la cuenta; al crearla quedan aceptados los Términos y la grabación. */
+    @Test
+    void registro_exigeTerminos_yRegistraTerminosYGrabacionUnaSolaVez() throws Exception {
+        String dni = "31555001";
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new com.tinku.identidad.ocr.ResultadoOcr(true, dni, "Ana", "Lopez", LocalDate.of(1990, 5, 15)));
+        RegistroAdultoRequest sinTerminos = new RegistroAdultoRequest(dni, "Ana", "Lopez", LocalDate.of(1990, 5, 15),
+                dni + "@tinku.test", "clave-segura-123", true, false, false);
+        mockMvc.perform(multipart("/api/usuarios/registro")
+                        .file(new org.springframework.mock.web.MockMultipartFile("datos", "datos", "application/json",
+                                objectMapper.writeValueAsBytes(sinTerminos)))
+                        .file(new org.springframework.mock.web.MockMultipartFile("fotoDni", "dni.png", "application/octet-stream", new byte[]{1})))
+                .andExpect(status().isBadRequest());
+        assertThat(usuarioRepository.findByDni(dni)).isEmpty();
+
+        RegistroAdultoRequest conTerminos = new RegistroAdultoRequest(dni, "Ana", "Lopez", LocalDate.of(1990, 5, 15),
+                dni + "@tinku.test", "clave-segura-123", true, false, true);
+        mockMvc.perform(multipart("/api/usuarios/registro")
+                        .file(new org.springframework.mock.web.MockMultipartFile("datos", "datos", "application/json",
+                                objectMapper.writeValueAsBytes(conTerminos)))
+                        .file(new org.springframework.mock.web.MockMultipartFile("fotoDni", "dni.png", "application/octet-stream", new byte[]{1})))
+                .andExpect(status().isCreated());
+        java.util.UUID id = usuarioRepository.findByDni(dni).orElseThrow().getId();
+        assertThat(jdbcAceptaciones(id)).containsExactlyInAnyOrder("TERMINOS_Y_CONDICIONES", "GRABACION_AUDIO_RESUMEN");
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTerminos;
+
+    private java.util.List<String> jdbcAceptaciones(java.util.UUID usuarioId) {
+        return jdbcTerminos.queryForList("SELECT clausula FROM identidad.aceptaciones_clausula WHERE usuario_id = ?",
+                String.class, usuarioId);
+    }
 }

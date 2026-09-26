@@ -12,6 +12,8 @@ test.describe("Registro de Usuario adulto", () => {
         "POST /api/usuarios/registro": jsonRoute(201, { id: "u-1" }),
       });
 
+      // ADR-M3-05: el alta manda la aceptación de los Términos (el backend la exige).
+      const alta = page.waitForRequest((r) => r.url().endsWith("/api/usuarios/registro"));
       const registro = new RegistroPage(page);
       await registro.goto();
       await registro.registrarAdultoCompleto({
@@ -24,6 +26,7 @@ test.describe("Registro de Usuario adulto", () => {
       });
 
       await expect(page).toHaveURL(/\/login\?registrado=1/);
+      expect((await alta).postDataBuffer()?.toString()).toContain('"aceptaTerminos":true');
     }
   );
 

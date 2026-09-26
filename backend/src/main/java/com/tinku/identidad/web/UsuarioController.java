@@ -36,9 +36,12 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final UsuarioActual usuarioActual;
     private final PasswordResetService passwordResetService;
+    private final com.tinku.identidad.service.ConsentimientoService consentimiento;
 
     public UsuarioController(UsuarioService usuarioService, UsuarioActual usuarioActual,
-                             PasswordResetService passwordResetService) {
+                             PasswordResetService passwordResetService,
+                             com.tinku.identidad.service.ConsentimientoService consentimiento) {
+        this.consentimiento = consentimiento;
         this.usuarioService = usuarioService;
         this.usuarioActual = usuarioActual;
         this.passwordResetService = passwordResetService;
@@ -65,6 +68,7 @@ public class UsuarioController {
             @RequestPart("fotoDni") MultipartFile fotoDni
     ) throws IOException {
         Usuario usuario = usuarioService.registrarAdulto(request, fotoDni.getBytes());
+        consentimiento.aceptarTerminos(usuario.getId()); // ADR-M3-05: una sola vez, al crear la cuenta
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(usuario));
     }
 

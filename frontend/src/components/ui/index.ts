@@ -62,6 +62,9 @@ export { default as Estrellas, EntradaEstrellas } from "./Estrellas";
 export type { EstrellasProps, EntradaEstrellasProps } from "./Estrellas";
 
 export { default as FechaHora } from "./FechaHora";
+
+export { default as SelectorFecha, interpretarFecha } from "./SelectorFecha";
+export type { SelectorFechaProps } from "./SelectorFecha";
 export type { FechaHoraProps } from "./FechaHora";
 
 export { default as Interruptor } from "./Interruptor";

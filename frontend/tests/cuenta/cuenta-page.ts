@@ -43,9 +43,9 @@ export class CuentaPage extends BasePage {
   }
 
   /** Menores a cargo del Adulto Responsable: alta, solicitudes, baja. */
-  /** La credencial del tutor vive en "Mi perfil" (UX-06). */
+  /** La credencial del tutor vive en Mi cuenta → Credenciales. */
   async gotoPerfilTutor(): Promise<void> {
-    await super.goto("/cuenta/perfil-tutor");
+    await super.goto("/cuenta/credenciales");
   }
 
   async gotoMenores(): Promise<void> {

@@ -818,6 +818,12 @@ export interface EstadoPerfilTutor {
   /** Último CAP cargado (T03); `null` si nunca cargó. Solo hace falta para dar clases a menores. */
   cap: CapPropio | null;
   habilitadoParaMenores: boolean;
+  /** Preferencia del Tutor de dar clases a menores (habilitado = esto Y el CAP vigente). */
+  aceptaMenores?: boolean;
+}
+
+export function actualizarAceptaMenores(aceptaMenores: boolean): Promise<{ aceptaMenores: boolean; clasesCanceladas: number }> {
+  return api.put("/api/tutores/me/menores", { aceptaMenores });
 }
 
 export function getEstadoPerfilTutor(): Promise<EstadoPerfilTutor> {
@@ -856,6 +862,8 @@ export function getAdicionalResumen(tutorId: string): Promise<AdicionalResumen> 
 }
 
 export const CLAUSULA_GRABACION = "GRABACION_AUDIO_RESUMEN";
+/** ADR-M3-05: los Términos (incluyen el consentimiento de la grabación del resumen). */
+export const CLAUSULA_TERMINOS = "TERMINOS_Y_CONDICIONES";
 
 export interface EstadoClausula {
   clausula: string;
@@ -927,4 +935,18 @@ export function reintentarReembolsoAdicional(id: string): Promise<ReembolsoAdici
 
 export function resolverReembolsoAdicional(id: string, nota: string): Promise<ReembolsoAdicional> {
   return api.post(`/api/admin/financiero/reembolsos-adicional/${id}/resuelto-manual`, { nota });
+}
+
+/** Asistente de "Mis materias": temas del catálogo parecidos a lo que cuenta el Tutor. */
+export interface TemaSugerido {
+  id: string;
+  nombre: string;
+  materia: string;
+  curso: string;
+  nivel: string;
+  score: number;
+}
+
+export function sugerirTemas(texto: string, nivel?: string | null): Promise<TemaSugerido[]> {
+  return api.post<TemaSugerido[]>("/api/tutores/me/temas/sugerencias", { texto, ...(nivel ? { nivel } : {}) });
 }

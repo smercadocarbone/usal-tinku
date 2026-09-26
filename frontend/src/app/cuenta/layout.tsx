@@ -9,7 +9,18 @@ import SettingsShell, { type GrupoNavAjustes } from "@/components/settings/Setti
 
 /** Rutas de "ajustes" de la cuenta: van con el menú lateral. El resto son destinos
  *  principales (Mis clases, Mis chicos, Mi agenda…) y ocupan la pantalla entera. */
-const RUTAS_AJUSTES = ["/cuenta", "/cuenta/acceso", "/cuenta/seguridad"];
+const RUTAS_AJUSTES = [
+  "/cuenta",
+  "/cuenta/perfil",
+  "/cuenta/acceso",
+  "/cuenta/seguridad",
+  // Tutor: todo lo de su perfil vive en Mi cuenta (antes "Mi perfil", aparte).
+  "/cuenta/presentacion",
+  "/cuenta/materias",
+  "/cuenta/precio",
+  "/cuenta/credenciales",
+  "/cuenta/clases-con-menores",
+];
 
 export default function CuentaLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -39,11 +50,26 @@ export default function CuentaLayout({ children }: { children: ReactNode }) {
     {
       titulo: "Tu cuenta",
       items: [
-        { href: "/cuenta", label: "Perfil" },
+        // En el celular la raíz es esta lista: "Perfil" abre su propia ruta (antes volvía a la lista).
+        { href: "/cuenta/perfil", label: "Perfil", activoEn: ["/cuenta"] },
         { href: "/cuenta/acceso", label: "Seguridad y acceso" },
         ...(tieneCasos || pathname === "/cuenta/seguridad" ? [{ href: "/cuenta/seguridad", label: "Casos y reportes" }] : []),
       ],
     },
+    ...(payload?.tipo === "TUTOR"
+      ? [
+          {
+            titulo: "Como tutor",
+            items: [
+              { href: "/cuenta/presentacion", label: "Presentación" },
+              { href: "/cuenta/materias", label: "Materias" },
+              { href: "/cuenta/precio", label: "Precio" },
+              { href: "/cuenta/credenciales", label: "Credenciales" },
+              { href: "/cuenta/clases-con-menores", label: "Clases con menores" },
+            ],
+          },
+        ]
+      : []),
     // ADR-M1-07: un Tutor que también aprende o tiene chicos a cargo llega desde acá.
     ...(tutorQueAprende
       ? [
