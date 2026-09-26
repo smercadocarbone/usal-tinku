@@ -66,4 +66,44 @@ test.describe("Búsqueda de tutores", () => {
       await expect(page.getByRole("button", { name: "Solicitar autorización" })).toBeVisible();
     }
   );
+
+  test(
+    "FR-MATCH-013/014: cada tarjeta muestra el próximo horario y el precio máximo se manda como filtro",
+    { tag: ["@e2e", "@busqueda", "@BUSCAR-PRECIO-E2E-001"] },
+    async ({ page }) => {
+      const cuerpos: Record<string, unknown>[] = [];
+      const proximo = "2026-10-01T21:00:00Z";
+      await mockApi(page, {
+        "GET /api/catalogos": jsonRoute(200, []),
+        "POST /api/busquedas": async (route) => {
+          cuerpos.push(route.request().postDataJSON() as Record<string, unknown>);
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify([
+              { tutorId: "t-1", score: 0.9, noAutorizado: false, precioHora: 5000, proximoHorario: proximo },
+              { tutorId: "t-2", score: 0.8, noAutorizado: false, precioHora: 6000, proximoHorario: null },
+            ]),
+          });
+        },
+        "GET /api/tutores/t-1": jsonRoute(200, { id: "t-1", nombre: "Martín", apellido: "Gómez", materias: [], precioHora: 5000 }),
+        "GET /api/tutores/t-2": jsonRoute(200, { id: "t-2", nombre: "Laura", apellido: "Díaz", materias: [], precioHora: 6000 }),
+      });
+
+      const buscar = new BuscarPage(page);
+      await buscar.goto();
+      await buscar.buscar("fracciones");
+
+      const tarjeta = (nombre: string) => page.getByRole("article").filter({ has: buscar.tarjetaTutor(nombre) });
+      await expect(tarjeta("Martín Gómez")).toContainText("Próximo horario: jue 1 oct · 18:00");
+      await expect(tarjeta("Laura Díaz")).toContainText("Sin horarios en las próximas 2 semanas");
+
+      const campo = page.getByLabel("Precio máximo por hora");
+      await campo.fill("5500");
+      await campo.press("Enter");
+      await expect.poll(() => cuerpos.length).toBe(2);
+      expect(cuerpos[1].precio_max_hora).toBe(5500);
+      await expect(page.getByRole("button", { name: "Quitar filtro de precio máximo" })).toBeVisible();
+    }
+  );
 });

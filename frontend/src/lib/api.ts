@@ -188,6 +188,10 @@ export interface ResultadoBusqueda {
   porArea?: boolean;
   /** "Matemática · Secundario" cuando {@link porArea}. */
   area?: string | null;
+  /** FR-MATCH-013: tarifa vigente (null si no la configuró). */
+  precioHora?: number | null;
+  /** FR-MATCH-013: primer bloque libre de los próximos 14 días (null si no tiene). */
+  proximoHorario?: string | null;
 }
 
 export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[]> {
@@ -221,6 +225,8 @@ export interface CuerpoBusqueda {
   filtroMateria?: string;
   /** "primario" | "secundario" | "universitario": acota junto con la materia. */
   filtroNivel?: string;
+  /** FR-MATCH-014: precio máximo por hora. */
+  precioMaxHora?: number;
 }
 
 export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]> {
@@ -229,6 +235,7 @@ export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
     filtro_nivel: body.filtroNivel || undefined,
+    precio_max_hora: body.precioMaxHora || undefined,
   });
 }
 

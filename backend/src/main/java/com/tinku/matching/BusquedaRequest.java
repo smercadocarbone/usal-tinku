@@ -25,10 +25,18 @@ public record BusquedaRequest(
         @JsonProperty("filtro_nivel")
         @jakarta.validation.constraints.Pattern(regexp = "primario|secundario|universitario",
                 message = "El nivel tiene que ser primario, secundario o universitario.")
-        String filtroNivel
+        String filtroNivel,
+        /** FR-MATCH-014: precio máximo por hora (opcional); filtra después del ranking. */
+        @JsonProperty("precio_max_hora")
+        @jakarta.validation.constraints.Positive(message = "El precio máximo tiene que ser mayor a cero.")
+        java.math.BigDecimal precioMaxHora
 ) {
+    public BusquedaRequest(String textoBusqueda, String nombre, String filtroMateria, String filtroNivel) {
+        this(textoBusqueda, nombre, filtroMateria, filtroNivel, null);
+    }
+
     public BusquedaRequest(String textoBusqueda, String nombre, String filtroMateria) {
-        this(textoBusqueda, nombre, filtroMateria, null);
+        this(textoBusqueda, nombre, filtroMateria, null, null);
     }
 
     /**
@@ -36,6 +44,6 @@ public record BusquedaRequest(
      * usan solo texto libre siguen funcionando igual que antes de M2-F.
      */
     public BusquedaRequest(String textoBusqueda) {
-        this(textoBusqueda, null, null, null);
+        this(textoBusqueda, null, null, null, null);
     }
 }

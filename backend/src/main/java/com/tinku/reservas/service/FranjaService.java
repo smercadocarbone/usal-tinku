@@ -144,12 +144,17 @@ public class FranjaService {
     /** T-M4-12: franjas activas del Tutor que aplican a una fecha del calendario
      *  (semanal por {@code diaSemana}, o puntual por {@code fechaEspecifica}). */
     public List<FranjaDisponibilidad> franjasQueAplicanA(UUID tutorId, LocalDate fecha) {
-        short diaDomingoCero = toDomingoCero(fecha.getDayOfWeek().getValue());
         return franjaRepo.findByTutorIdAndActivaTrueOrderByHoraInicio(tutorId).stream()
-                .filter(f -> f.getFechaEspecifica() != null
-                        ? f.getFechaEspecifica().equals(fecha)
-                        : f.getDiaSemana() != null && f.getDiaSemana() == diaDomingoCero)
+                .filter(f -> aplicaA(f, fecha))
                 .toList();
+    }
+
+    /** ¿La franja (semanal o puntual) aplica a esa fecha del calendario? */
+    static boolean aplicaA(FranjaDisponibilidad f, LocalDate fecha) {
+        short diaDomingoCero = (short) (fecha.getDayOfWeek().getValue() % 7);
+        return f.getFechaEspecifica() != null
+                ? f.getFechaEspecifica().equals(fecha)
+                : f.getDiaSemana() != null && f.getDiaSemana() == diaDomingoCero;
     }
 
     private boolean cubre(FranjaDisponibilidad f, int diaSemana, LocalDateTime punto) {

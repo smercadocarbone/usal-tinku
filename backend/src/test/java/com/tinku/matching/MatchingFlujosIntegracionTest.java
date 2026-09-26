@@ -613,4 +613,69 @@ class MatchingFlujosIntegracionTest {
                                 Map.of("nivel", "secundario", "materias", List.of("Matemática")))))
                 .andExpect(status().isForbidden());
     }
+
+    // ------------------------------------------------ v2.5: precio y próximo horario (FR-MATCH-013/014)
+
+    @Test
+    void frMatch013_014_resultadosConPrecioYProximoHorario_yFiltroDePrecioMaximo() throws Exception {
+        String tokenEstudiante = registrarAdultoYToken("20411111", "Ana", "Lopez", true, false);
+        String tokenBarato = registrarTutorYToken("20422222", "Pablo", "Sosa");
+        aprobarCredencialDe(tokenBarato);
+        String tokenCaro = registrarTutorYToken("20433333", "Diego", "Mendez");
+        aprobarCredencialDe(tokenCaro);
+        UUID barato = usuarioPorDni("20422222").getId();
+        UUID caro = usuarioPorDni("20433333").getId();
+        fijarTarifa(tokenBarato, 12000);
+        fijarTarifa(tokenCaro, 30000);
+        java.time.LocalDate manana = java.time.LocalDate.now(com.tinku.reservas.service.ReservasZonaHoraria.ZONA).plusDays(1);
+        mockMvc.perform(post("/api/tutores/franjas")
+                        .header("Authorization", "Bearer " + tokenBarato)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fechaEspecifica", manana.toString(), "horaInicio", "15:00", "horaFin", "16:00"))))
+                .andExpect(status().isCreated());
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(caro, 0.9),
+                        new MatchingServiceClient.ResultadoMatch(barato, 0.7)));
+        String esperado = manana.atTime(15, 0).atZone(com.tinku.reservas.service.ReservasZonaHoraria.ZONA)
+                .toInstant().toString();
+
+        var todos = objectMapper.readTree(buscar("algebra", tokenEstudiante).getResponse().getContentAsString());
+        assertThat(todos).hasSize(2);
+        assertThat(todos.get(0).get("tutorId").asText()).isEqualTo(caro.toString());
+        assertThat(todos.get(0).get("precioHora").decimalValue()).isEqualByComparingTo("30000");
+        assertThat(todos.get(0).get("proximoHorario").isNull()).isTrue();
+        assertThat(todos.get(1).get("precioHora").decimalValue()).isEqualByComparingTo("12000");
+        assertThat(todos.get(1).get("proximoHorario").asText()).isEqualTo(esperado);
+
+        MvcResult filtrado = mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + tokenEstudiante)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("texto_busqueda", "algebra",
+                                "precio_max_hora", 20000))))
+                .andExpect(status().isOk())
+                .andReturn();
+        var baratos = objectMapper.readTree(filtrado.getResponse().getContentAsString());
+        assertThat(baratos).hasSize(1);
+        assertThat(baratos.get(0).get("tutorId").asText()).isEqualTo(barato.toString());
+    }
+
+    @Test
+    void frMatch014_precioMaximoNoPositivo_400() throws Exception {
+        String tokenEstudiante = registrarAdultoYToken("20444444", "Ana", "Lopez", true, false);
+        mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + tokenEstudiante)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("texto_busqueda", "algebra",
+                                "precio_max_hora", 0))))
+                .andExpect(status().isBadRequest());
+    }
+
+    private void fijarTarifa(String tokenTutor, int precioHora) throws Exception {
+        mockMvc.perform(put("/api/pagos/tarifa")
+                        .header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("precioHora", precioHora))))
+                .andExpect(status().isOk());
+    }
 }

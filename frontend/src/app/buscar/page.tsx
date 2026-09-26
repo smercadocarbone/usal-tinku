@@ -19,6 +19,7 @@ import { getTutor, normalizarTutor, type TutorPerfil } from "@/lib/tutores";
 import { useToast } from "@/components/ui";
 import { Alerta, Boton, Chip, EstadoVacio, Modal, SkeletonTarjetas } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { formatearPesos } from "@/lib/formatos";
 
 type Orden = "relevancia" | "precio" | "calificacion";
 
@@ -44,6 +45,8 @@ interface Resultado {
   tutor: TutorPerfil;
   noAutorizado: boolean;
   score: number;
+  /** FR-MATCH-013; `undefined` si el backend no lo mandó. */
+  proximoHorario?: string | null;
 }
 
 /** "Encontramos 3 tutores para ayudarte con divisiones en primario", sin contadores robóticos. */
@@ -73,6 +76,9 @@ export default function BuscarPage() {
   const [texto, setTexto] = useState("");
   const [nivel, setNivel] = useState("");
   const [materia, setMateria] = useState("");
+  // FR-MATCH-014: lo que se escribe y lo aplicado (se aplica con Enter o al salir del campo).
+  const [precioMaxTexto, setPrecioMaxTexto] = useState("");
+  const [precioMax, setPrecioMax] = useState<number | null>(null);
   const [orden, setOrden] = useState<Orden>("relevancia");
   const [hojaFiltros, setHojaFiltros] = useState(false);
 
@@ -120,12 +126,13 @@ export default function BuscarPage() {
           tutor: p?.status === "fulfilled" ? p.value : normalizarTutor({ id: r.tutorId, nombre: "Tutor" }),
           noAutorizado: r.noAutorizado,
           score: r.score,
+          proximoHorario: r.proximoHorario,
         };
       })
     );
   }, []);
 
-  const ejecutar = useCallback(async (q: string, m: string, n = "") => {
+  const ejecutar = useCallback(async (q: string, m: string, n = "", p: number | null = null) => {
     if (!q.trim() && !m) {
       setError("Escribí qué necesitás aprender o elegí una materia.");
       return;
@@ -140,6 +147,7 @@ export default function BuscarPage() {
         textoBusqueda: q.trim() || undefined,
         filtroMateria: m || undefined,
         filtroNivel: n || undefined,
+        precioMaxHora: p ?? undefined,
       });
       await hidratar(lista);
     } catch (err) {
@@ -200,7 +208,7 @@ export default function BuscarPage() {
   function elegirMateria(m: string) {
     const nueva = materia === m ? "" : m;
     setMateria(nueva);
-    if (nueva || texto.trim()) void ejecutar(texto, nueva, nivel);
+    if (nueva || texto.trim()) void ejecutar(texto, nueva, nivel, precioMax);
     else {
       setResultados(null);
       setConsulta(null);
@@ -218,7 +226,28 @@ export default function BuscarPage() {
     return copia;
   }, [resultados, orden]);
 
-  const filtrosActivos = (nivel ? 1 : 0) + (materia ? 1 : 0);
+  const filtrosActivos = (nivel ? 1 : 0) + (materia ? 1 : 0) + (precioMax !== null ? 1 : 0);
+
+  function limpiarFiltros() {
+    setNivel("");
+    setMateria("");
+    setPrecioMax(null);
+    setPrecioMaxTexto("");
+    if (texto.trim()) void ejecutar(texto, "", "", null);
+    else {
+      setResultados(null);
+      setConsulta(null);
+    }
+  }
+
+  function aplicarPrecioMax(textoPrecio: string) {
+    const valor = Number(textoPrecio.replace(/\D/g, ""));
+    const nuevo = textoPrecio.trim() && valor > 0 ? valor : null;
+    setPrecioMaxTexto(nuevo === null ? "" : String(nuevo));
+    if (nuevo === precioMax) return;
+    setPrecioMax(nuevo);
+    if (texto.trim() || materia) void ejecutar(texto, materia, nivel, nuevo);
+  }
   const hayBusqueda = buscando || consulta !== null;
 
   const panelFiltros = (
@@ -240,7 +269,7 @@ export default function BuscarPage() {
                   const nuevo = nivel === n.nivel ? "" : n.nivel;
                   setNivel(nuevo);
                   // El nivel acota la búsqueda en el backend; si ya hay una, se rehace.
-                  if (texto.trim() || materia) void ejecutar(texto, materia, nuevo);
+                  if (texto.trim() || materia) void ejecutar(texto, materia, nuevo, precioMax);
                 }}
               >
                 {rotuloNivel(n.nivel)}
@@ -249,6 +278,30 @@ export default function BuscarPage() {
           </div>
         </fieldset>
       )}
+      <div>
+        <label htmlFor="precio-max" className="mb-2 block text-sm font-bold">
+          Precio máximo por hora
+        </label>
+        <div className="flex max-w-56 items-center rounded-control border border-borde-control bg-superficie px-3 focus-within:border-marca-700 focus-within:ring-4 focus-within:ring-marca-100">
+          <span aria-hidden className="text-tinta-tenue">$</span>
+          <input
+            id="precio-max"
+            type="text"
+            inputMode="numeric"
+            placeholder="Sin límite"
+            value={precioMaxTexto}
+            onChange={(e) => setPrecioMaxTexto(e.target.value.replace(/\D/g, ""))}
+            onBlur={(e) => aplicarPrecioMax(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                aplicarPrecioMax(e.currentTarget.value);
+              }
+            }}
+            className="min-h-11 w-full bg-transparent px-2 text-[15px] text-tinta focus:outline-none"
+          />
+        </div>
+      </div>
       <fieldset>
         <legend className="mb-2 text-sm font-bold">Materia</legend>
         <div className="flex flex-wrap gap-2">
@@ -271,7 +324,7 @@ export default function BuscarPage() {
           className="mt-5 flex items-center gap-2 rounded-[18px] bg-superficie p-2 shadow-elevado ring-1 ring-borde focus-within:ring-2 focus-within:ring-marca-600"
           onSubmit={(e) => {
             e.preventDefault();
-            void ejecutar(texto, materia, nivel);
+            void ejecutar(texto, materia, nivel, precioMax);
           }}
         >
           <Search className="ml-3 size-5 shrink-0 text-tinta-tenue" aria-hidden />
@@ -313,8 +366,13 @@ export default function BuscarPage() {
             {materia}
           </Chip>
         )}
+        {precioMax !== null && (
+          <Chip removible onClick={() => aplicarPrecioMax("")} aria-label="Quitar filtro de precio máximo">
+            Hasta {formatearPesos(precioMax)}
+          </Chip>
+        )}
         {nivel && (
-          <Chip removible onClick={() => { setNivel(""); if (texto.trim() || materia) void ejecutar(texto, materia, ""); }} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
+          <Chip removible onClick={() => { setNivel(""); if (texto.trim() || materia) void ejecutar(texto, materia, "", precioMax); }} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
             {rotuloNivel(nivel)}
           </Chip>
         )}
@@ -330,10 +388,7 @@ export default function BuscarPage() {
           <>
             <Boton
               variante="fantasma"
-              onClick={() => {
-                setNivel("");
-                elegirMateria(materia);
-              }}
+              onClick={limpiarFiltros}
               disabled={filtrosActivos === 0}
             >
               Limpiar
@@ -347,7 +402,7 @@ export default function BuscarPage() {
 
       <section className="mt-8" aria-live="polite" aria-busy={buscando}>
         {error && (
-          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia, nivel)}>Probar de nuevo</Boton>}>
+          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia, nivel, precioMax)}>Probar de nuevo</Boton>}>
             {error}
           </Alerta>
         )}
@@ -442,10 +497,7 @@ export default function BuscarPage() {
                   filtrosActivos > 0 ? (
                     <Boton
                       variante="secundario"
-                      onClick={() => {
-                        setNivel("");
-                        elegirMateria(materia);
-                      }}
+                      onClick={limpiarFiltros}
                     >
                       Sacar los filtros
                     </Boton>
@@ -462,6 +514,7 @@ export default function BuscarPage() {
                   <li key={r.tutor.id} className={cn("motion-safe:animate-aparecer")} style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                     <TarjetaTutor
                       tutor={r.tutor}
+                      proximoHorario={r.proximoHorario}
                       noAutorizado={r.noAutorizado}
                       avisoAutorizacion={solicitadas.has(r.tutor.id)}
                       onSolicitarAutorizacion={() =>
