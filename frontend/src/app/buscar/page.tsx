@@ -46,6 +46,25 @@ interface Resultado {
   score: number;
 }
 
+/** "Encontramos 3 tutores para ayudarte con divisiones en primario", sin contadores robóticos. */
+function resumenResultados(
+  cantidad: number,
+  consulta: { texto: string; materia: string } | null,
+  area: string | null
+): React.ReactNode {
+  if (cantidad === 0) return null;
+  const tutores = cantidad === 1 ? "un tutor" : `${cantidad} tutores`;
+  if (area) return <>Te recomendamos {tutores} de {area}</>;
+  const tema = consulta?.texto || consulta?.materia;
+  return tema ? (
+    <>
+      Encontramos {tutores} para ayudarte con <strong className="text-tinta">{tema}</strong>
+    </>
+  ) : (
+    <>Encontramos {tutores}</>
+  );
+}
+
 export default function BuscarPage() {
   const toast = useToast();
   const [catalogos, setCatalogos] = useState<NivelCatalogo[] | null>(null);
@@ -359,19 +378,7 @@ export default function BuscarPage() {
           <>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-[15px] text-tinta-suave">
-                {buscando ? (
-                  "Buscando tutores…"
-                ) : (
-                  <>
-                    <strong className="text-tinta">{ordenados?.length ?? 0}</strong>{" "}
-                    {(ordenados?.length ?? 0) === 1 ? "tutor" : "tutores"}
-                    {areaRecomendada ? (
-                      <> de {areaRecomendada}</>
-                    ) : (
-                      consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>
-                    )}
-                  </>
-                )}
+                {buscando ? "Buscando tutores…" : resumenResultados(ordenados?.length ?? 0, consulta, areaRecomendada)}
               </p>
               {!buscando && (ordenados?.length ?? 0) > 0 && (
                 <div className="flex items-center gap-2">
@@ -418,15 +425,19 @@ export default function BuscarPage() {
             {buscando && <SkeletonTarjetas cantidad={6} etiqueta="Buscando tutores…" />}
 
             {!buscando && areaRecomendada && (ordenados?.length ?? 0) > 0 && (
-              <Alerta tono="info" className="mb-5" titulo={`Nadie da exactamente “${consulta?.texto ?? ""}” todavía`}>
-                Te recomendamos tutores de {areaRecomendada}, que seguramente te pueden ayudar.
+              <Alerta tono="info" className="mb-5" titulo={`Todavía nadie da clases de ${consulta?.texto ?? "ese tema"}`}>
+                Pero estos tutores de {areaRecomendada} seguro te pueden ayudar con eso.
               </Alerta>
             )}
 
             {!buscando && ordenados && ordenados.length === 0 && !error && (
               <EstadoVacio
                 icono={<SearchX />}
-                titulo={consulta?.texto ? `No encontramos tutores para “${consulta.texto}”` : "No encontramos tutores con esos filtros"}
+                titulo={
+                  consulta?.texto
+                    ? `Todavía no encontramos tutores para enseñarte ${consulta.texto}`
+                    : "Todavía no hay tutores con esos filtros"
+                }
                 accion={
                   filtrosActivos > 0 ? (
                     <Boton
@@ -441,7 +452,7 @@ export default function BuscarPage() {
                   ) : undefined
                 }
               >
-                Probá con otras palabras, más generales, o sacá algún filtro.
+                Probá contándolo con otras palabras o eligiendo la materia. Estamos sumando tutores todo el tiempo.
               </EstadoVacio>
             )}
 

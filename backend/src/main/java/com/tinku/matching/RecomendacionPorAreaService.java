@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,18 +34,33 @@ public class RecomendacionPorAreaService {
     }
 
     /**
-     * El área del tema del catálogo más parecido, si se parece lo suficiente. Si el servicio de
-     * matching no responde, no hay recomendación: la búsqueda principal ya se resolvió y no se
-     * la hace fallar por esto.
+     * El área de lo que se buscó: primero el tema del catálogo más parecido según el modelo; si
+     * no alcanza (o el catálogo todavía no está embebido), las palabras del texto contra los
+     * nombres de los temas y materias. El nivel que la persona escribió ("en primario") manda
+     * sobre el del tema encontrado.
      */
     public Optional<AreaTema> inferir(String texto) {
+        Optional<String> nivelDicho = InterpreteBusqueda.nivel(texto);
+        Optional<AreaTema> area = porSimilitud(texto);
+        if (area.isEmpty()) {
+            List<String> raices = InterpreteBusqueda.raices(texto);
+            area = temasRepo.areaPorPalabras(raices, nivelDicho.orElse(null));
+            if (area.isEmpty() && nivelDicho.isPresent()) {
+                area = temasRepo.areaPorPalabras(raices, null);
+            }
+        }
+        return nivelDicho.isPresent() ? area.map(a -> a.conNivel(nivelDicho.get())) : area;
+    }
+
+    /** Si el servicio de matching no responde, se sigue con las palabras: no se hace fallar la búsqueda. */
+    private Optional<AreaTema> porSimilitud(String texto) {
         try {
             return matchingClient.temasCercanos(texto, TEMAS_CONSULTADOS).stream()
                     .filter(t -> t.score() >= scoreMinimoArea)
                     .findFirst()
                     .flatMap(t -> temasRepo.areaDeTema(UUID.fromString(t.id())));
         } catch (MatchingNoDisponibleException | IllegalArgumentException e) {
-            LOG.info("Sin recomendación por área: {}", e.getClass().getSimpleName());
+            LOG.info("Área por similitud no disponible ({}); se usan las palabras", e.getClass().getSimpleName());
             return Optional.empty();
         }
     }
