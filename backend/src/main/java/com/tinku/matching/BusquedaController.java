@@ -53,7 +53,8 @@ public class BusquedaController {
         if (texto == null && nombre == null && materia == null) {
             throw new BusquedaInvalidaException();
         }
-        List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto, nombre, materia);
+        List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto, nombre, materia,
+                trimToNull(request.filtroNivel()));
         return ResponseEntity.ok(resultados);
     }
 

@@ -48,6 +48,19 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 
 - **Dado** que ejecute una búsqueda, **cuando** decida guardarla, **entonces** puede volver a ejecutarla más adelante con un clic, obteniendo resultados actualizados, no una lista congelada (FR-MATCH-008).
 
+### US-7 — Recomendación cuando nadie da exactamente el tema _(agregada 2026-09-26)_
+*Como* Estudiante, *quiero* que si nadie enseña exactamente lo que busco me recomienden tutores del área, *para* no quedarme sin ayuda por no usar las palabras del catálogo.
+
+- **Dado** que ningún Tutor alcance el mínimo de relevancia para lo que escribí, **cuando** el sistema reconozca el área del tema (materia y nivel del tema del catálogo más parecido), **entonces** me recomienda Tutores de esa área, aclarando que es una recomendación y no un match exacto (FR-MATCH-011).
+- **Dado** que no haya Tutores de ese nivel, **cuando** sí los haya de la misma materia en otro nivel, **entonces** me recomienda esos.
+- **Dado** que el sistema no reconozca ningún área parecida, **cuando** eso ocurra, **entonces** comunica que no hay resultados (US-1).
+
+### US-8 — El catálogo se actualiza con lo que se busca _(agregada 2026-09-26)_
+*Como* equipo de Tinku, *quiero* saber qué temas se buscan y el catálogo no cubre, *para* mantener el catálogo actualizado (el catálogo es vivo, ADR-M2-04).
+
+- **Dado** que una búsqueda con texto no tenga Tutor directo, **cuando** eso ocurra, **entonces** el tema suma uno a un contador agregado, sin datos de quién buscó (FR-MATCH-012). Las búsquedas de menores no se cuentan.
+- **Dado** que un tema se haya pedido varias veces, **cuando** Moderación abra el panel, **entonces** lo ve agrupado por área para sumarlo al catálogo (FR-ADM-009, Spec M8).
+
 ## 3. Requisitos Funcionales
 
 | ID | Requisito |
@@ -62,6 +75,9 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 | FR-MATCH-008 | Búsquedas guardadas, re-ejecutables con resultados actualizados. |
 | FR-MATCH-009 | El filtro de "no confiable" es específico de la capacidad Adulto Responsable de la cuenta, no afecta su capacidad Estudiante. |
 | FR-MATCH-010 _(agregado 2026-09-26)_ | Asistente de "Mis materias": el Tutor describe con sus palabras qué enseña y el sistema le sugiere hasta 8 temas del catálogo cerrado (FR-MATCH-006) ordenados por similitud, con el mismo modelo de embeddings (`POST /sugerir-temas` del servicio Python, sin reglas de negocio; el filtro por nivel se aplica en Java). Solo sugiere: el Tutor marca los que da y se guardan por el mismo `PUT /api/tutores/me/temas`. Sin LLM (costo cero). |
+
+| FR-MATCH-011 _(agregado 2026-09-26)_ | Sin Tutor directo para un texto libre, recomendación de Tutores del área reconocida (materia y nivel del tema del catálogo más parecido; si no hay de ese nivel, la misma materia), marcada como recomendación por área. Los filtros de autorización, suspensión y menores aplican igual (se recomienda solo entre los candidatos ya acotados). ADR-M2-04. |
+| FR-MATCH-012 _(agregado 2026-09-26)_ | Registro agregado de los temas buscados sin Tutor directo: un contador por texto normalizado (sin tildes, números largos enmascarados), con el área reconocida; sin usuario ni fila por búsqueda; sin búsquedas de menores; tope de 500 temas. ADR-M2-04. |
 
 ## 4. Reglas de Negocio Aplicables
 

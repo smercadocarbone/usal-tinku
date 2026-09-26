@@ -158,12 +158,20 @@ def test_match_503_cuando_modelo_o_base_no_disponibles(monkeypatch):
 class FakeRecomputeRepo:
     """Fake del repo de recompute (contrato 2c): registra las escrituras."""
 
-    def __init__(self, perfiles):
+    def __init__(self, perfiles, temas_pendientes=()):
         self.perfiles = perfiles
         self.escrituras = []  # [(tutor_id, vector | None)]
+        self.pendientes = list(temas_pendientes)
+        self.escrituras_temas = []  # [(tema_id, texto, vector)]
 
     def perfiles_con_temas(self):
         return self.perfiles
+
+    def temas_pendientes(self):
+        return self.pendientes
+
+    def persistir_embeddings_temas(self, actualizaciones):
+        self.escrituras_temas.extend(actualizaciones)
 
     def persistir_embeddings(self, actualizaciones):
         self.escrituras.extend(actualizaciones)
@@ -228,7 +236,7 @@ def test_recompute_embeddea_y_persiste_el_vector_de_cada_tutor_con_temas(monkeyp
     resp = post_autenticado("/recompute-embeddings")
 
     assert resp.status_code == 200
-    assert resp.json() == {"actualizados": 2}
+    assert resp.json() == {"actualizados": 2, "temas_embebidos": 0}
     assert dict(repo.escrituras) == {"t1": [0.0] * 384, "t2": [0.0] * 384}
 
 
@@ -245,7 +253,7 @@ def test_recompute_tutor_sin_temas_escribe_embedding_null(monkeypatch):
     resp = post_autenticado("/recompute-embeddings")
 
     assert resp.status_code == 200
-    assert resp.json() == {"actualizados": 2}
+    assert resp.json() == {"actualizados": 2, "temas_embebidos": 0}
     assert repo.escrituras == [
         ("t1", [0.0] * 384),
         ("t2", None),
@@ -260,8 +268,34 @@ def test_recompute_idempotente_mismas_escrituras_sin_error(monkeypatch):
     for _ in range(2):
         resp = post_autenticado("/recompute-embeddings")
         assert resp.status_code == 200
-        assert resp.json() == {"actualizados": 1}
+        assert resp.json() == {"actualizados": 1, "temas_embebidos": 0}
     assert repo.escrituras == [("t1", [0.0] * 384), ("t1", [0.0] * 384)]
+
+
+def test_recompute_embebe_cada_tema_pendiente_con_su_texto(monkeypatch):
+    # V42: /match puntua por el mejor tema del Tutor, asi que cada tema elegido
+    # necesita su propio embedding (con el texto con el que se hizo).
+    repo = FakeRecomputeRepo(
+        [("t1", [("Fracciones", "suma y resta")])],
+        temas_pendientes=[("tema-1", "Fracciones: suma y resta")],
+    )
+    monkeypatch.setattr(srv, "_embed", fake_embedder)
+    monkeypatch.setattr(srv, "_recompute_repo", repo)
+
+    resp = post_autenticado("/recompute-embeddings")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"actualizados": 1, "temas_embebidos": 1}
+    assert repo.escrituras_temas == [("tema-1", "Fracciones: suma y resta", [0.0] * 384)]
+
+
+def test_sql_de_scores_toma_el_mejor_tema_y_cae_al_perfil():
+    # El score es el MAXIMO por tema (no un embedding diluido de todos los temas);
+    # sin temas embebidos todavia, usa el embedding del perfil.
+    sql = " ".join(srv.SQL_SCORES.split())
+    assert "MAX(1 - (t.embedding <=> %(q)s::vector))" in sql
+    assert "COALESCE(" in sql and "ptm.embedding" in sql
+    assert "GROUP BY ptm.tutor_id" in sql
 
 
 def test_recompute_503_cuando_modelo_no_disponible(monkeypatch):
@@ -376,3 +410,47 @@ def test_sugerir_temas_modelo_caido_503(monkeypatch):
     monkeypatch.setattr(srv, "_embed", roto)
     r = post_autenticado("/sugerir-temas", json={"texto": "fracciones", "temas": [{"id": "a", "texto": "b"}]})
     assert r.status_code == 503
+
+
+# ------------------------------------------------ /temas-cercanos
+
+
+class FakeRepoTemas:
+    def __init__(self, resultado):
+        self.resultado = resultado
+        self.llamadas = []
+
+    def cercanos(self, consulta_embedding, limite):
+        self.llamadas.append((consulta_embedding, limite))
+        return self.resultado[:limite]
+
+
+def test_temas_cercanos_devuelve_los_temas_del_repo_con_su_score(monkeypatch):
+    repo = FakeRepoTemas([("tema-1", 0.8), ("tema-2", 0.6), ("tema-3", 0.4)])
+    monkeypatch.setattr(srv, "_embed", fake_embedder)
+    monkeypatch.setattr(srv, "_repo_temas", repo)
+
+    resp = post_autenticado("/temas-cercanos", json={"texto": "algebra", "limite": 2})
+
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": "tema-1", "score": 0.8}, {"id": "tema-2", "score": 0.6}]
+    assert repo.llamadas == [([1.0] * 384, 2)]
+
+
+def test_temas_cercanos_texto_vacio_no_consulta_y_sin_token_401(monkeypatch):
+    repo = FakeRepoTemas([("tema-1", 0.8)])
+    monkeypatch.setattr(srv, "_embed", fake_embedder)
+    monkeypatch.setattr(srv, "_repo_temas", repo)
+
+    assert post_autenticado("/temas-cercanos", json={"texto": "  "}).json() == []
+    assert repo.llamadas == []
+    assert client.post("/temas-cercanos", json={"texto": "algebra"}).status_code == 401
+
+
+def test_temas_cercanos_modelo_caido_503(monkeypatch):
+    def embed_roto(texto: str) -> list[float]:
+        raise srv.MatchError("modelo de embeddings no disponible: sin red")
+
+    monkeypatch.setattr(srv, "_embed", embed_roto)
+    resp = post_autenticado("/temas-cercanos", json={"texto": "algebra"})
+    assert resp.status_code == 503

@@ -58,6 +58,8 @@ export default function BuscarPage() {
   const [hojaFiltros, setHojaFiltros] = useState(false);
 
   const [resultados, setResultados] = useState<Resultado[] | null>(null);
+  // FR-MATCH-011: la lista es una recomendación del área reconocida, no un match exacto.
+  const [areaRecomendada, setAreaRecomendada] = useState<string | null>(null);
   const [consulta, setConsulta] = useState<{ texto: string; materia: string } | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +92,7 @@ export default function BuscarPage() {
   );
 
   const hidratar = useCallback(async (lista: ResultadoBusqueda[]) => {
+    setAreaRecomendada(lista[0]?.porArea ? (lista[0].area ?? null) : null);
     const perfiles = await Promise.allSettled(lista.map((r) => getTutor(r.tutorId)));
     setResultados(
       lista.map((r, i) => {
@@ -103,7 +106,7 @@ export default function BuscarPage() {
     );
   }, []);
 
-  const ejecutar = useCallback(async (q: string, m: string) => {
+  const ejecutar = useCallback(async (q: string, m: string, n = "") => {
     if (!q.trim() && !m) {
       setError("Escribí qué necesitás aprender o elegí una materia.");
       return;
@@ -114,7 +117,11 @@ export default function BuscarPage() {
     setYaGuardada(false);
     setConsulta({ texto: q.trim(), materia: m });
     try {
-      const lista = await buscarTutores({ textoBusqueda: q.trim() || undefined, filtroMateria: m || undefined });
+      const lista = await buscarTutores({
+        textoBusqueda: q.trim() || undefined,
+        filtroMateria: m || undefined,
+        filtroNivel: n || undefined,
+      });
       await hidratar(lista);
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos completar la búsqueda. Revisá tu conexión y probá de nuevo."));
@@ -174,7 +181,7 @@ export default function BuscarPage() {
   function elegirMateria(m: string) {
     const nueva = materia === m ? "" : m;
     setMateria(nueva);
-    if (nueva || texto.trim()) void ejecutar(texto, nueva);
+    if (nueva || texto.trim()) void ejecutar(texto, nueva, nivel);
     else {
       setResultados(null);
       setConsulta(null);
@@ -211,7 +218,10 @@ export default function BuscarPage() {
                 key={n.nivel}
                 activo={nivel === n.nivel}
                 onClick={() => {
-                  setNivel(nivel === n.nivel ? "" : n.nivel);
+                  const nuevo = nivel === n.nivel ? "" : n.nivel;
+                  setNivel(nuevo);
+                  // El nivel acota la búsqueda en el backend; si ya hay una, se rehace.
+                  if (texto.trim() || materia) void ejecutar(texto, materia, nuevo);
                 }}
               >
                 {rotuloNivel(n.nivel)}
@@ -242,7 +252,7 @@ export default function BuscarPage() {
           className="mt-5 flex items-center gap-2 rounded-[18px] bg-superficie p-2 shadow-elevado ring-1 ring-borde focus-within:ring-2 focus-within:ring-marca-600"
           onSubmit={(e) => {
             e.preventDefault();
-            void ejecutar(texto, materia);
+            void ejecutar(texto, materia, nivel);
           }}
         >
           <Search className="ml-3 size-5 shrink-0 text-tinta-tenue" aria-hidden />
@@ -285,7 +295,7 @@ export default function BuscarPage() {
           </Chip>
         )}
         {nivel && (
-          <Chip removible onClick={() => setNivel("")} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
+          <Chip removible onClick={() => { setNivel(""); if (texto.trim() || materia) void ejecutar(texto, materia, ""); }} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
             {rotuloNivel(nivel)}
           </Chip>
         )}
@@ -318,7 +328,7 @@ export default function BuscarPage() {
 
       <section className="mt-8" aria-live="polite" aria-busy={buscando}>
         {error && (
-          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia)}>Probar de nuevo</Boton>}>
+          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia, nivel)}>Probar de nuevo</Boton>}>
             {error}
           </Alerta>
         )}
@@ -355,7 +365,11 @@ export default function BuscarPage() {
                   <>
                     <strong className="text-tinta">{ordenados?.length ?? 0}</strong>{" "}
                     {(ordenados?.length ?? 0) === 1 ? "tutor" : "tutores"}
-                    {consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>}
+                    {areaRecomendada ? (
+                      <> de {areaRecomendada}</>
+                    ) : (
+                      consulta?.texto && <> para &ldquo;{consulta.texto}&rdquo;</>
+                    )}
                   </>
                 )}
               </p>
@@ -402,6 +416,12 @@ export default function BuscarPage() {
             </div>
 
             {buscando && <SkeletonTarjetas cantidad={6} etiqueta="Buscando tutores…" />}
+
+            {!buscando && areaRecomendada && (ordenados?.length ?? 0) > 0 && (
+              <Alerta tono="info" className="mb-5" titulo={`Nadie da exactamente “${consulta?.texto ?? ""}” todavía`}>
+                Te recomendamos tutores de {areaRecomendada}, que seguramente te pueden ayudar.
+              </Alerta>
+            )}
 
             {!buscando && ordenados && ordenados.length === 0 && !error && (
               <EstadoVacio

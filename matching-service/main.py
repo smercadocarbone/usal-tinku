@@ -16,11 +16,14 @@ secciones 1 y 3).
 Endpoints:
 - GET  /health               (T-000-08): comunicacion interna backend Java -> Python.
 - POST /match                (T-M2-04): ranking por similitud semantica sobre la
-  lista de candidatos que llega YA acotada por el backend Java.
+  lista de candidatos que llega YA acotada por el backend Java. El score de cada
+  Tutor es el de su tema mas parecido a la consulta (V42).
 - POST /recompute-embeddings (M2-F, contrato 2c): repopula `embedding` de TODOS
   los perfiles desde sus `tema_ids` (idempotente, sin reglas de negocio).
 - POST /sugerir-temas        (asistente de "Mis materias"): ordena temas del catalogo
   por similitud con el texto libre del Tutor.
+- POST /temas-cercanos       temas del catalogo mas parecidos a una busqueda (para
+  recomendar por area cuando no hay tutor directo; la regla vive en Java).
 """
 
 import hmac
@@ -96,6 +99,25 @@ def _conectar() -> psycopg.Connection:
     )
 
 
+# Score del Tutor = la MEJOR similitud entre la consulta y cada uno de SUS temas
+# (V42: embedding por tema del catalogo). Con un solo embedding por Tutor hecho con
+# todos sus temas juntos, quien daba muchos temas quedaba "diluido" y salia mas abajo
+# en cada uno (2026-09-26). Sin temas embebidos todavia, cae al embedding del perfil.
+SQL_SCORES = """
+    SELECT ptm.tutor_id::text,
+           COALESCE(MAX(1 - (t.embedding <=> %(q)s::vector)),
+                    MAX(1 - (ptm.embedding <=> %(q)s::vector))) AS score
+      FROM matching.perfiles_tutor_matching ptm
+      LEFT JOIN matching.temas t
+             ON t.id = ANY(ptm.tema_ids) AND t.embedding IS NOT NULL
+     WHERE ptm.tutor_id = ANY(%(ids)s::uuid[])
+     GROUP BY ptm.tutor_id
+    HAVING COALESCE(MAX(1 - (t.embedding <=> %(q)s::vector)),
+                    MAX(1 - (ptm.embedding <=> %(q)s::vector))) IS NOT NULL
+     ORDER BY score DESC
+"""
+
+
 class RepoScores:
     """Lee los embeddings de pgvector y calcula la similitud con la consulta.
 
@@ -113,23 +135,40 @@ class RepoScores:
             if not ids:
                 return []
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT tutor_id::text,
-                           1 - (embedding <=> %s::vector) AS score
-                      FROM matching.perfiles_tutor_matching
-                     WHERE tutor_id = ANY(%s::uuid[])
-                       AND embedding IS NOT NULL
-                     ORDER BY embedding <=> %s::vector
-                    """,
-                    (Vector(consulta_embedding), ids, Vector(consulta_embedding)),
-                )
+                cur.execute(SQL_SCORES, {"q": Vector(consulta_embedding), "ids": ids})
                 return [(str(tid), float(score)) for tid, score in cur.fetchall()]
         finally:
             conn.close()
 
 
 _repo: RepoScores = RepoScores()
+
+
+class RepoTemasCercanos:
+    """Los temas del catalogo mas parecidos a un texto (pgvector). Sin reglas de negocio:
+    que hacer con ellos (inferir materia y nivel, buscar tutores del area) lo decide Java."""
+
+    def cercanos(self, consulta_embedding: list[float], limite: int) -> list[tuple[str, float]]:
+        conn = _conectar()
+        try:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id::text, 1 - (embedding <=> %(q)s::vector) AS score
+                      FROM matching.temas
+                     WHERE embedding IS NOT NULL
+                     ORDER BY embedding <=> %(q)s::vector
+                     LIMIT %(n)s
+                    """,
+                    {"q": Vector(consulta_embedding), "n": limite},
+                )
+                return [(str(tid), float(score)) for tid, score in cur.fetchall()]
+        finally:
+            conn.close()
+
+
+_repo_temas: RepoTemasCercanos = RepoTemasCercanos()
 
 
 class RecomputeRepo:
@@ -169,6 +208,47 @@ class RecomputeRepo:
                 (tutor_id, [temas[tid] for tid in tema_ids if tid in temas])
                 for tutor_id, tema_ids in perfiles
             ]
+        finally:
+            conn.close()
+
+    def temas_pendientes(self) -> list[tuple[str, str]]:
+        """Temas del catalogo cuyo embedding falta o se hizo con otro texto:
+        [(tema_id, texto_fuente)]. Se embebe TODO el catalogo (~1.400 temas, ~2 MB): lo usa
+        /match (mejor tema del Tutor) y /temas-cercanos (area de una busqueda sin tutor
+        directo). Es una sola vez: cambian solo si una migracion cambia su texto."""
+        conn = _conectar()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT t.id::text, t.nombre, t.descripcion, t.embedding_fuente
+                      FROM matching.temas t
+                    """
+                )
+                filas = cur.fetchall()
+            pendientes = []
+            for tema_id, nombre, descripcion, fuente in filas:
+                texto = texto_fuente([(nombre, descripcion)])
+                if fuente != texto:
+                    pendientes.append((tema_id, texto))
+            return pendientes
+        finally:
+            conn.close()
+
+    def persistir_embeddings_temas(
+        self, actualizaciones: Iterable[tuple[str, str, list[float]]]
+    ) -> None:
+        """Guarda (tema_id, texto_fuente, vector) en UNA transaccion."""
+        conn = _conectar()
+        try:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                for tema_id, texto, vector in actualizaciones:
+                    cur.execute(
+                        "UPDATE matching.temas SET embedding = %s, embedding_fuente = %s WHERE id = %s::uuid",
+                        (Vector(vector), texto, tema_id),
+                    )
+            conn.commit()
         finally:
             conn.close()
 
@@ -350,6 +430,33 @@ def sugerir_temas(request: SugerirTemasRequest) -> list[SugerenciaTema]:
     return [SugerenciaTema(id=tid, score=score) for tid, score in puntuados[:limite]]
 
 
+class TemasCercanosRequest(BaseModel):
+    texto: str
+    limite: int = 5
+
+
+@app.post(
+    "/temas-cercanos",
+    response_model=list[SugerenciaTema],
+    dependencies=[Depends(_requiere_token)],
+)
+def temas_cercanos(request: TemasCercanosRequest) -> list[SugerenciaTema]:
+    """Temas del catalogo mas parecidos al texto de una busqueda. Lo usa Java cuando no hay
+    un tutor directo para el tema: con el mas cercano infiere materia y nivel y recomienda
+    tutores del area. Solo similitud, sin reglas de negocio."""
+    if not request.texto.strip():
+        return []
+    limite = max(1, min(request.limite, 20))
+    try:
+        consulta = _embed(request.texto)
+        cercanos = _repo_temas.cercanos(consulta, limite)
+    except MatchError as exc:
+        raise Unavailable(str(exc)) from exc
+    except Exception as exc:
+        raise Unavailable(f"base de pgvector no disponible: {exc}") from exc
+    return [SugerenciaTema(id=tid, score=score) for tid, score in cercanos]
+
+
 class Unavailable(Exception):
     """Respuesta 503: el ranking real no se puede computar en este momento."""
 
@@ -357,6 +464,9 @@ class Unavailable(Exception):
 @app.post("/recompute-embeddings", dependencies=[Depends(_requiere_token)])
 def recompute_embeddings() -> dict:
     """Repopula `embedding` de TODOS los perfiles desde sus `tema_ids` (2c).
+
+    Tambien embebe cada tema elegido por algun Tutor cuyo embedding falte o se haya
+    hecho con otro texto (V42), que es lo que usa /match.
 
     Idempotente (mismo estado -> mismo resultado) y SIN reglas de negocio:
     no lee autorizacion, reputacion ni activo_para_matching. Toma los
@@ -373,12 +483,18 @@ def recompute_embeddings() -> dict:
             (tutor_id, None if not temas else _embed(texto_fuente(temas)))
             for tutor_id, temas in perfiles
         ]
+        # V42: ademas, un embedding por tema elegido (el score de /match es el del mejor tema).
+        temas = [
+            (tema_id, texto, _embed(texto))
+            for tema_id, texto in _recompute_repo.temas_pendientes()
+        ]
         _recompute_repo.persistir_embeddings(actualizaciones)
+        _recompute_repo.persistir_embeddings_temas(temas)
     except MatchError as exc:
         raise Unavailable(str(exc)) from exc
     except Exception as exc:
         raise Unavailable(f"base de pgvector no disponible: {exc}") from exc
-    return {"actualizados": len(perfiles)}
+    return {"actualizados": len(perfiles), "temas_embebidos": len(temas)}
 
 
 @app.exception_handler(Unavailable)

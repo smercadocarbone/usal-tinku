@@ -94,6 +94,7 @@ class CatalogoTemasIntegracionTest {
     @Autowired TrayectoRepository trayectoRepository;
     @Autowired TemaRepository temaRepository;
     @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired com.tinku.admin.repository.AdminRepository adminRepository;
 
     @MockitoBean OcrService ocrService;
     @MockitoBean MatchingServiceClient matchingClient;
@@ -114,6 +115,7 @@ class CatalogoTemasIntegracionTest {
         // Aislar candidatos entre tests: solo los tutores que pongan temas en el
         // propio test tienen fila con tema_ids (los trayectos/temas sí persisten).
         jdbcTemplate.update("DELETE FROM matching.perfiles_tutor_matching");
+        jdbcTemplate.update("DELETE FROM matching.temas_sugeridos");
         seedCatalogo();
     }
 
@@ -511,6 +513,38 @@ class CatalogoTemasIntegracionTest {
                 .doesNotContain(tutorB);
     }
 
+    /** Revisión 2026-09-26: el nivel elegido en /buscar no llegaba al backend, y "Primario +
+     *  Matemática" traía tutores de Matemática de cualquier nivel. */
+    @Test
+    void busquedaMateriaYNivel_soloTutoresDeEseNivel() throws Exception {
+        String token = registrarAdultoYToken("30881111", true, false);
+        UUID primario = tutorConTemas("30882222", List.of(divisionId));
+        UUID secundario = tutorConTemas("30883333", List.of(factorizacionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(primario, 0.9)));
+
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("filtro_materia", "Matemática");
+        body.put("filtro_nivel", "primario");
+        mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk());
+
+        assertThat(candidatosRecibidos()).contains(primario).doesNotContain(secundario);
+    }
+
+    @Test
+    void busquedaConNivelInvalido_devuelve422() throws Exception {
+        String token = registrarAdultoYToken("30884444", true, false);
+        mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto_busqueda\":\"fracciones\",\"filtro_nivel\":\"jardin\"}"))
+                .andExpect(status().is4xxClientError());
+    }
+
     @Test
     void busquedaSinNingunCampo_devuelve422() throws Exception {
         String token = registrarAdultoYToken("30288888", true, false);
@@ -575,6 +609,126 @@ class CatalogoTemasIntegracionTest {
         assertThat(objectMapper.readTree(res.getResponse().getContentAsString()))
                 .hasSize(2)
                 .allSatisfy(item -> assertThat(item.get("noAutorizado").asBoolean()).isTrue());
+    }
+
+    // ------------------------------------------------ FR-MATCH-011: recomendación por área
+
+    /** Nadie da lo que se escribió: se reconoce el área (materia y nivel del tema del catálogo
+     *  más parecido) y se recomiendan tutores de esa área, marcados como tales. */
+    @Test
+    void sinTutorDirecto_recomiendaTutoresDelAreaReconocida() throws Exception {
+        String token = registrarAdultoYToken("30891111", true, false);
+        UUID primario = tutorConTemas("30892222", List.of(divisionId));
+        UUID secundario = tutorConTemas("30893333", List.of(factorizacionId));
+        UUID lengua = tutorConTemas("30894444", List.of(cuentoId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(secundario, 0.2),
+                        new MatchingServiceClient.ResultadoMatch(primario, 0.15),
+                        new MatchingServiceClient.ResultadoMatch(lengua, 0.05)));
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of(new MatchingServiceClient.SugerenciaTema(factorizacionId.toString(), 0.6)));
+
+        MvcResult res = buscar("ecuaciones cuadráticas con discriminante", null, null, token);
+
+        JsonNode lista = objectMapper.readTree(res.getResponse().getContentAsString());
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(secundario.toString());
+        assertThat(lista.get(0).get("porArea").asBoolean()).isTrue();
+        assertThat(lista.get(0).get("area").asText()).isEqualTo("Matemática · Secundario");
+    }
+
+    @Test
+    void recomendacionPorArea_sinTutoresDeEseNivel_usaLaMismaMateriaEnOtroNivel() throws Exception {
+        String token = registrarAdultoYToken("30895555", true, false);
+        UUID primario = tutorConTemas("30896666", List.of(divisionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(primario, 0.1)));
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of(new MatchingServiceClient.SugerenciaTema(factorizacionId.toString(), 0.6)));
+
+        JsonNode lista = objectMapper.readTree(buscar("polinomios de grado cinco", null, null, token)
+                .getResponse().getContentAsString());
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(primario.toString());
+        assertThat(lista.get(0).get("porArea").asBoolean()).isTrue();
+    }
+
+    @Test
+    void temaNoReconocido_noRecomiendaNada() throws Exception {
+        String token = registrarAdultoYToken("30897777", true, false);
+        UUID primario = tutorConTemas("30898888", List.of(divisionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(primario, 0.1)));
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of(new MatchingServiceClient.SugerenciaTema(divisionId.toString(), 0.1)));
+
+        assertThat(objectMapper.readTree(buscar("guitarra electrica", null, null, token)
+                .getResponse().getContentAsString())).isEmpty();
+    }
+
+    // ------------------------------------------------ FR-MATCH-012 / FR-ADM-009: temas sugeridos
+
+    @Test
+    void temasSugeridos_contadorSinUsuario_elAdminSoloVeLosRepetidos_yLosResuelve() throws Exception {
+        String token = registrarAdultoYToken("30901111", true, false);
+        UUID tutor = tutorConTemas("30902222", List.of(divisionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(tutor, 0.1)));
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of(new MatchingServiceClient.SugerenciaTema(factorizacionId.toString(), 0.6)));
+
+        buscar("Logaritmos", null, null, token);
+        buscar("logaritmos ", null, null, token);
+        buscar("LOGARITMOS", null, null, token);
+        buscar("guitarra", null, null, token);
+
+        // Una fila por tema, con su contador; ninguna columna del usuario.
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT veces FROM matching.temas_sugeridos WHERE texto = 'logaritmos'", Integer.class))
+                .isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM matching.temas_sugeridos", Integer.class))
+                .isEqualTo(2);
+
+        com.tinku.identidad.model.Usuario moderador = usuarioPorDni("30901111");
+        com.tinku.admin.model.Admin fila = new com.tinku.admin.model.Admin();
+        fila.setUsuario(moderador);
+        fila.setRol(com.tinku.admin.model.RolAdmin.MODERACION_SEGURIDAD);
+        adminRepository.save(fila);
+
+        JsonNode lista = objectMapper.readTree(mockMvc.perform(get("/api/admin/temas-sugeridos")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        // Solo lo pedido varias veces (minimo-veces = 3): "guitarra" (1 vez) no aparece.
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("texto").asText()).isEqualTo("logaritmos");
+        assertThat(lista.get(0).get("veces").asInt()).isEqualTo(3);
+        assertThat(lista.get(0).get("materia").asText()).isEqualTo("Matemática");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/admin/temas-sugeridos/{id}", lista.get(0).get("id").asText())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM matching.temas_sugeridos WHERE texto = 'logaritmos'", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void temasSugeridos_noAdmin_403_yLasBusquedasDeMenoresNoSeRegistran() throws Exception {
+        String tokenAr = registrarAdultoYToken("30903333", true, true);
+        UUID tutor = tutorConTemas("30904444", List.of(divisionId));
+        registrarMenor("30905555", tokenAr);
+        String tokenMenor = login("30905555");
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(tutor, 0.1)));
+
+        buscar("tema que no existe en el catalogo", null, null, tokenMenor);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM matching.temas_sugeridos", Integer.class))
+                .isZero();
+        mockMvc.perform(get("/api/admin/temas-sugeridos").header("Authorization", "Bearer " + tokenAr))
+                .andExpect(status().isForbidden());
     }
 
     // ------------------------------------------------ asistente de "Mis materias"

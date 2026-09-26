@@ -76,6 +76,7 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 | FR-ADM-005 | Registro de auditoría de toda acción del Admin — no editable ni eliminable desde el panel. |
 | FR-ADM-006 | Canal de soporte: tickets vinculados a cuenta y contexto de origen. |
 | FR-ADM-007 | Mantenimiento de la tabla de precios regional, con aplicación solo hacia adelante, nunca retroactiva. |
+| FR-ADM-009 _(agregado 2026-09-26)_ | Temas sugeridos: Moderación y Seguridad ve los temas buscados sin Tutor directo que se pidieron al menos N veces (configurable, 3), agrupados por área, sin datos de quién los buscó, y los marca como resueltos al actualizar el catálogo (FR-MATCH-012, ADR-M2-04). |
 | FR-ADM-008 | Dos roles de Admin con colas y permisos separados: Moderación y Seguridad, y Soporte Financiero. Los tickets de soporte se enrutan automáticamente según su origen. |
 
 ## 4. Casos Borde y Preguntas Abiertas

@@ -20,13 +20,22 @@ public record BusquedaRequest(
         String nombre,
         @JsonProperty("filtro_materia")
         @Size(max = 100, message = "La materia no puede superar los 100 caracteres.")
-        String filtroMateria
+        String filtroMateria,
+        /** Filtro de nivel del catálogo (V19): acota junto con la materia/tema. */
+        @JsonProperty("filtro_nivel")
+        @jakarta.validation.constraints.Pattern(regexp = "primario|secundario|universitario",
+                message = "El nivel tiene que ser primario, secundario o universitario.")
+        String filtroNivel
 ) {
+    public BusquedaRequest(String textoBusqueda, String nombre, String filtroMateria) {
+        this(textoBusqueda, nombre, filtroMateria, null);
+    }
+
     /**
      * Constructor de conveniencia de un solo campo: los tests/guardadas que
      * usan solo texto libre siguen funcionando igual que antes de M2-F.
      */
     public BusquedaRequest(String textoBusqueda) {
-        this(textoBusqueda, null, null);
+        this(textoBusqueda, null, null, null);
     }
 }

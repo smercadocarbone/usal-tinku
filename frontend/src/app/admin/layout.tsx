@@ -32,6 +32,7 @@ const GRUPOS: GrupoAdmin[] = [
       { href: "/admin/denuncias", label: "Denuncias", cola: "denuncias" },
       { href: "/admin/credenciales", label: "Credenciales", cola: "credenciales" },
       { href: "/admin/antecedentes", label: "Antecedentes (CAP)" },
+      { href: "/admin/temas-sugeridos", label: "Temas sugeridos" },
     ],
   },
   {

@@ -134,6 +134,30 @@ public class MatchingServiceClient {
         }
     }
 
+    /**
+     * Temas del catálogo más parecidos a un texto (POST /temas-cercanos). Lo usa la
+     * recomendación por área (FR-MATCH-011) para reconocer materia y nivel de una búsqueda
+     * sin tutor directo. Sin respuesta del servicio → no disponible.
+     */
+    public List<SugerenciaTema> temasCercanos(String texto, int limite) {
+        try {
+            return restClient.post()
+                    .uri("/temas-cercanos")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new TemasCercanosRequest(texto, limite))
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (request, response) -> {
+                        throw new MatchingNoDisponibleException();
+                    })
+                    .body(SUGERENCIAS_TYPE);
+        } catch (RestClientException ex) {
+            throw new MatchingNoDisponibleException();
+        }
+    }
+
+    public record TemasCercanosRequest(String texto, int limite) {
+    }
+
     public record TemaCandidato(String id, String texto) {
     }
 

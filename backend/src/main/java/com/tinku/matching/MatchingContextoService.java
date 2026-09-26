@@ -59,7 +59,8 @@ public class MatchingContextoService {
             List<UUID> autorizados = autorizacionRepo
                     .findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(
                             adulto.getId(), buscador.getId());
-            return new ContextoAutorizacion(true, autorizados);
+            return new ContextoAutorizacion(true, autorizados,
+                    java.util.Set.copyOf(autorizacionRepo.findTutorIdsNoConfiables(adulto.getId())));
         }
         return ContextoAutorizacion.universo(false);
     }
@@ -91,7 +92,9 @@ public class MatchingContextoService {
                 : usuarioRepo.tutoresActivosParaMatching();
         // ADR-M5-02: con OAuth activo, un Tutor que no puede cobrar no aparece (no se le puede reservar).
         java.util.Set<UUID> cobran = verificadorCobro.quienesPuedenCobrar(activos);
-        activos = activos.stream().filter(cobran::contains).toList();
+        activos = activos.stream().filter(cobran::contains)
+                .filter(id -> !contexto.excluidos().contains(id)) // FR-MATCH-007: "no confiable"
+                .toList();
         if (contexto.esMenor()) {
             // FR-ID-026 (T02): a un menor solo le aparecen Tutores con CAP aprobado y vigente.
             return activos.stream().filter(habilitacionMenores::habilitadoParaMenores).toList();

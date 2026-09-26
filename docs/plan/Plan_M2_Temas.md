@@ -126,6 +126,10 @@ Body: `{"texto_busqueda"?, "nombre"?, "filtro_materia"?}`
 
 ## 4. Contrato 2c — matching-service (Python)
 
+> **Enmendado por ADR-M2-03 (2026-09-26):** el recompute además embebe cada tema elegido
+> (`matching.temas.embedding`, V42) y `/match` puntúa a cada Tutor por su tema más parecido;
+> el embedding del perfil queda como respaldo. El contrato de `/match` no cambia.
+
 - **`/match` NO cambia** (contrato interno snake_case `MatchRequest`/`MatchResult` intacto).
 - **Nuevo endpoint `POST /recompute-embeddings`** → `{"actualizados": <n>}`:
   - Lee de Postgres (`matching.perfiles_tutor_matching` + `matching.temas` +
