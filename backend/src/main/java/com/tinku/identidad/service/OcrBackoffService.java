@@ -14,10 +14,11 @@ import java.time.Instant;
  * Backoff persistido de OCR (FR-ID-011, Tabla_Tiempos: 24hs) — T-M1-07.
  *
  * Contrato de negocio:
- *  - Hasta 3 intentos de foto ILEGIBLE por ciclo (el rechazo por edad o DNI
+ *  - Hasta {@code tinku.ocr.max-intentos} (6 por defecto) intentos de foto ILEGIBLE por
+ *    ciclo (el rechazo por edad o DNI
  *    duplicado NO consume intentos: no tiene sentido "reintentar" ser mayor,
  *    ver Plan_M1 sección 2.1 paso 7).
- *  - Al consumir el 3ro, la persona queda en espera 24hs antes de un nuevo
+ *  - Al consumir el último, la persona queda en espera 24hs antes de un nuevo
  *    ciclo (contador se resetea a 0 para el ciclo siguiente).
  *  - El cooldown es PASIVO (se compara {@code proximoIntentoPermitido} contra
  *    ahora al momento de leer) — por eso no se necesita un job de Quartz para
@@ -31,21 +32,32 @@ import java.time.Instant;
 @Service
 public class OcrBackoffService {
 
-    private static final int MAX_INTENTOS_CICLO = CicloIntentos.MAX;
+    /**
+     * Separado de {@link CicloIntentos#MAX} (credencial y CAP siguen en 3): una foto de celular
+     * ilegible no es un rechazo de fondo, así que se dan más oportunidades (2026-09-26).
+     */
+    static final int MAX_INTENTOS_POR_DEFECTO = 6;
 
     private final IntentoOcrRepository intentoRepo;
     private final Duration cooldown;
+    private final int maxIntentosCiclo;
 
     @Autowired
     public OcrBackoffService(IntentoOcrRepository intentoRepo,
-                             @Value("${tinku.ocr.backoff-horas:24}") long backoffHoras) {
-        this(intentoRepo, Duration.ofHours(backoffHoras));
+                             @Value("${tinku.ocr.backoff-horas:24}") long backoffHoras,
+                             @Value("${tinku.ocr.max-intentos:6}") int maxIntentos) {
+        this(intentoRepo, Duration.ofHours(backoffHoras), maxIntentos);
     }
 
     /** Constructor de test (inyección directa de Duration, sin Spring). */
     OcrBackoffService(IntentoOcrRepository intentoRepo, Duration cooldown) {
+        this(intentoRepo, cooldown, MAX_INTENTOS_POR_DEFECTO);
+    }
+
+    OcrBackoffService(IntentoOcrRepository intentoRepo, Duration cooldown, int maxIntentos) {
         this.intentoRepo = intentoRepo;
         this.cooldown = cooldown;
+        this.maxIntentosCiclo = Math.max(1, maxIntentos);
     }
 
     /**
@@ -74,7 +86,7 @@ public class OcrBackoffService {
         intento.setDni(dniDeclarado);
 
         int consumidos = intento.getIntentosConsumidos() + 1;
-        if (consumidos >= MAX_INTENTOS_CICLO) {
+        if (consumidos >= maxIntentosCiclo) {
             // Se agotó el ciclo → espera de 24hs y reset para el siguiente.
             intento.setProximoIntentoPermitido(Instant.now().plus(cooldown));
             intento.setIntentosConsumidos(0);
@@ -85,6 +97,6 @@ public class OcrBackoffService {
         intento.setUpdatedAt(Instant.now());
         intentoRepo.save(intento);
 
-        return Math.max(0, MAX_INTENTOS_CICLO - consumidos);
+        return Math.max(0, maxIntentosCiclo - consumidos);
     }
 }

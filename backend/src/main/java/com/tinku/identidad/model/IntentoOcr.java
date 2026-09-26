@@ -14,7 +14,7 @@ import java.time.Instant;
  * Persistencia del contador de backoff de OCR (FR-ID-011), ligada a la
  * tabla {@code intentos_ocr} — migración V4. Ver {@code OcrBackoffService}.
  *
- * Un ciclo = hasta 3 intentos de foto ilegible; al consumir el 3ro se
+ * Un ciclo = hasta {@code tinku.ocr.max-intentos} (6) fotos ilegibles; al consumir la última se
  * fija {@code proximoIntentoPermitido} = ahora + 24hs y se resetea el
  * contador a 0 para el ciclo siguiente. El cooldown es PASIVO (se compara
  * el timestamp contra ahora al leer), no hay job que lo "limpie".

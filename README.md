@@ -79,7 +79,7 @@ Reglas estructurales (detalle en `AGENTS.md` §1 y Constitución, Artículos VII
 
 | Pieza | Tecnología | Fuente |
 |-------|-----------|--------|
-| Backend | Java 21, Spring Boot 3.3.4 (web, data-jpa, security, validation, quartz), jjwt 0.12.6, Tess4J 5.16.0, Lombok | `backend/pom.xml` |
+| Backend | Java 21, Spring Boot 3.3.4 (web, data-jpa, security, validation, quartz), jjwt 0.12.6, Tesseract CLI (ADR-M1-08), Lombok | `backend/pom.xml` |
 | Base de datos | PostgreSQL 16 con pgvector (`pgvector/pgvector:pg16`), migraciones Flyway | `docker-compose.yml`, `backend/src/main/resources/db/migration/` |
 | Tests backend | JUnit (spring-boot-starter-test), spring-security-test, Testcontainers 1.21.4 (Postgres real) | `backend/pom.xml` |
 | Matching | Python, FastAPI, uvicorn, pydantic, sentence-transformers (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), psycopg 3, pgvector; pytest, ruff; imagen `uv` sobre Python 3.12 | `matching-service/requirements.txt`, `matching-service/Dockerfile` |
@@ -87,7 +87,7 @@ Reglas estructurales (detalle en `AGENTS.md` §1 y Constitución, Artículos VII
 | Tooling frontend | Bun (lockfile `bun.lock`), oxlint, Playwright ^1.63 + `@axe-core/playwright` | `frontend/package.json` |
 | Videollamada | LiveKit Cloud | `application.yml` (`tinku.livekit.*`) |
 | Pagos | MercadoPago | `application.yml` (`tinku.mercadopago.*`) |
-| OCR | Tesseract vía Tess4J, in-process (ADR-M1-01) | `backend/pom.xml`, `identidad/ocr/` |
+| OCR | Programa `tesseract` del sistema, local (ADR-M1-01, ADR-M1-08) | `backend/Dockerfile`, `identidad/ocr/` |
 
 ---
 

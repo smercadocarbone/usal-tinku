@@ -117,11 +117,13 @@ tinku:
       # URL pública del backend: https://<api>/api/pagos/mp/callback (igual a la de la app de MP).
       redirect-uri: ${MP_OAUTH_REDIRECT_URI:}
   ocr:
-    # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta
-    # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
+    # ADR-M1-01 + ADR-M1-08: Tesseract invocado como programa (paquete tesseract-ocr).
+    # tessdata apunta a la carpeta con spa.traineddata; si vacío, Tesseract usa TESSDATA_PREFIX.
+    comando: ${OCR_COMANDO:tesseract}
     tessdata: ${TESSDATA_PREFIX:}
     idioma: ${OCR_IDIOMA:spa}
-    backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar 3 intentos de foto (Tabla_Tiempos)
+    max-intentos: ${OCR_MAX_INTENTOS:6} # FR-ID-011: fotos ilegibles por ciclo antes de la espera
+    backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar los intentos de foto (Tabla_Tiempos)
   credencial:
     backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
   almacenamiento:

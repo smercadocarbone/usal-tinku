@@ -88,13 +88,8 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- OCR de documento (identidad) — ADR-M1-01: Tesseract via Tess4J, in-process.
-             Requiere el binario nativo de Tesseract en el entorno (ver backend/README.md). -->
-        <dependency>
-            <groupId>net.sourceforge.tess4j</groupId>
-            <artifactId>tess4j</artifactId>
-            <version>5.20.0</version>
-        </dependency>
+        <!-- OCR de documento: Tesseract se invoca como programa del sistema (ADR-M1-08),
+             sin Tess4J. Requiere el paquete tesseract-ocr + tesseract-ocr-spa (ver Dockerfile). -->
 
         <!-- Utilidad -->
         <dependency>

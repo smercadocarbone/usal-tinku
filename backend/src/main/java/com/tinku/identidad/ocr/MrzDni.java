@@ -56,7 +56,9 @@ final class MrzDni {
             return null;
         }
         String apellido = nombre(partes[0]);
-        String nombre = nombre(partes[1]);
+        // Los nombres terminan en el primer "<<": lo que sigue es relleno (el OCR a veces lo lee
+        // como letras y se pegaba al nombre).
+        String nombre = nombre(partes[1].split("<<", 2)[0]);
         if (apellido.isEmpty() || nombre.isEmpty()) {
             return null;
         }

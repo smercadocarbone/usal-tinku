@@ -19,7 +19,7 @@
 | Liberación de escrow                              | 24 hs post-sesión        | Desde `sesion.finalizada`                                                                                             | M5     |
 | Sombra de matching post mala calificación         | 24 hs                    | BR-MATCH-01, calificación de 1-2 estrellas                                                                            | M2     |
 | Recordatorio único de calificación pendiente      | 24 hs                    | Solo una vez, sin insistir                                                                                            | M7     |
-| Espera tras agotar intentos de OCR                | 24 hs                    | Antes de un nuevo ciclo de 3 fotos                                                                                    | M1     |
+| Espera tras agotar intentos de OCR                | 24 hs                    | Antes de un nuevo ciclo de 6 fotos (eran 3 hasta 2026-09-26)                                                          | M1     |
 | Espera tras agotar intentos de Credencial         | 24 hs, duplicándose      | 24 → 48 → 96...                                                                                                       | M1     |
 | Vigencia del CAP                                   | 12 meses desde la fecha de emisión | Un Tutor queda habilitado para Menores solo con CAP `aprobado` y vigente (FR-ID-026); vencido, se suspende la habilitación para Menores hasta recargar (FR-ID-025) | M1     |
 | Plazo de descargo (Denuncia estándar)             | 48 hs                    | No aplica al track de kill-switch (ver 12hs abajo)                                                                    | M9     |

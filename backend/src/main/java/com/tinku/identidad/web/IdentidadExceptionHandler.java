@@ -53,7 +53,7 @@ public class IdentidadExceptionHandler {
 
     @ExceptionHandler(DocumentoEnBackoffException.class)
     public ResponseEntity<Map<String, String>> handleBackoff(DocumentoEnBackoffException ex) {
-        // 429: el cliente agotó los 3 intentos del ciclo y está en espera (FR-ID-011).
+        // 429: el cliente agotó los intentos de foto del ciclo y está en espera (FR-ID-011).
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(Map.of("error", ex.getMessage(),
                         "espera_restante_hs", String.valueOf(ex.getEsperaRestante().toHours())));

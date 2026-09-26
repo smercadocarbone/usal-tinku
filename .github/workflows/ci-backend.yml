@@ -22,5 +22,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # Los mismos paquetes que el Dockerfile: TesseractOcrServiceRealTest lee fotos de DNI con el
+      # programa real (ADR-M1-08). Sin esto el test se saltea y un OCR roto no se ve (pasó).
+      - name: Tesseract (OCR real)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+
       - name: Build y tests (Testcontainers levanta Postgres solo)
         run: mvn -B verify

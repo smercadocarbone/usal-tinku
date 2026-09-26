@@ -47,6 +47,224 @@ public class PreprocesadorImagen {
         return aPng(enderezada);
     }
 
+    /** Lado largo con el que trabaja el OCR: ~300 dpi para una tarjeta de 86 mm, rápido en CPU. */
+    static final int LADO_TRABAJO = 2000;
+    /** Muestra chica para estimar la inclinación sin rotar la imagen entera 40 veces. */
+    private static final int LADO_ESTIMACION = 600;
+
+    /**
+     * Carga para el OCR real (ADR-M1-08): respeta la orientación EXIF de la foto del celular
+     * (sin esto una foto vertical llega acostada), la lleva al tamaño de trabajo, la pasa a
+     * grises con más contraste y corrige la inclinación leve. {@code null} si no se puede leer.
+     */
+    public BufferedImage cargar(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return null;
+        }
+        BufferedImage img = leer(bytes);
+        if (img == null) {
+            return null;
+        }
+        img = rotar90(img, gradosExif(orientacionExif(bytes)));
+        BufferedImage gris = convierteAGrises(escalar(img, LADO_TRABAJO));
+        // La tarjeta suele ser lo más claro de la foto: recortarla saca la mesa y el fondo, que
+        // confunden al OCR y a la estimación de la inclinación.
+        gris = recortarTarjeta(gris);
+        gris = ajustaContraste(escalar(gris, LADO_TRABAJO));
+        double angulo = estimarAngulo(binarizar(escalar(gris, LADO_ESTIMACION)));
+        return Math.abs(angulo) < 0.25 ? gris : rotar(gris, -angulo);
+    }
+
+    /**
+     * Recorta la región clara más grande (la tarjeta) con un margen. Si no hay una región clara
+     * que ocupe al menos un 15 % de la foto (p. ej. ya viene recortada), devuelve la imagen igual.
+     */
+    BufferedImage recortarTarjeta(BufferedImage gris) {
+        BufferedImage chica = binarizar(escalar(gris, 400));
+        int w = chica.getWidth(), h = chica.getHeight();
+        boolean[] claro = new boolean[w * h];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                claro[y * w + x] = (chica.getRGB(x, y) & 0xFF) > 128;
+            }
+        }
+        boolean[] visto = new boolean[w * h];
+        int[] cola = new int[w * h];
+        int mejorTam = 0, bx0 = 0, by0 = 0, bx1 = w - 1, by1 = h - 1;
+        for (int inicio = 0; inicio < w * h; inicio++) {
+            if (!claro[inicio] || visto[inicio]) continue;
+            int cab = 0, fin = 0, tam = 0, x0 = w, y0 = h, x1 = 0, y1 = 0;
+            cola[fin++] = inicio;
+            visto[inicio] = true;
+            while (cab < fin) {
+                int p = cola[cab++];
+                int px = p % w, py = p / w;
+                tam++;
+                x0 = Math.min(x0, px); x1 = Math.max(x1, px);
+                y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+                int[] vecinos = {p - 1, p + 1, p - w, p + w};
+                for (int v : vecinos) {
+                    if (v < 0 || v >= w * h || visto[v] || !claro[v]) continue;
+                    if ((v == p - 1 && px == 0) || (v == p + 1 && px == w - 1)) continue;
+                    visto[v] = true;
+                    cola[fin++] = v;
+                }
+            }
+            if (tam > mejorTam) {
+                mejorTam = tam; bx0 = x0; by0 = y0; bx1 = x1; by1 = y1;
+            }
+        }
+        int areaCaja = (bx1 - bx0 + 1) * (by1 - by0 + 1);
+        if (areaCaja < 0.15 * w * h || areaCaja > 0.97 * w * h) {
+            return gris; // no hay una tarjeta clara recortable (o ya ocupa toda la foto)
+        }
+        double f = (double) gris.getWidth() / w;
+        int margen = (int) Math.round(0.02 * Math.max(gris.getWidth(), gris.getHeight()));
+        int x = Math.max(0, (int) (bx0 * f) - margen), y = Math.max(0, (int) (by0 * f) - margen);
+        int x2 = Math.min(gris.getWidth(), (int) ((bx1 + 1) * f) + margen);
+        int y2 = Math.min(gris.getHeight(), (int) ((by1 + 1) * f) + margen);
+        return gris.getSubimage(x, y, x2 - x, y2 - y);
+    }
+
+    /** Escala para que el lado largo mida {@code lado} (agranda fotos chicas, achica las grandes). */
+    BufferedImage escalar(BufferedImage src, int lado) {
+        int largo = Math.max(src.getWidth(), src.getHeight());
+        if (largo == lado) {
+            return src;
+        }
+        double f = (double) lado / largo;
+        int w = Math.max(1, (int) Math.round(src.getWidth() * f));
+        int h = Math.max(1, (int) Math.round(src.getHeight() * f));
+        int tipo = src.getType() == BufferedImage.TYPE_BYTE_GRAY ? BufferedImage.TYPE_BYTE_GRAY : BufferedImage.TYPE_INT_RGB;
+        BufferedImage out = new BufferedImage(w, h, tipo);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.drawImage(src, 0, 0, w, h, null);
+        g.dispose();
+        return out;
+    }
+
+    /** Rota de a 90° en sentido horario (0, 90, 180, 270); cualquier otro valor no rota. */
+    public BufferedImage rotar90(BufferedImage src, int grados) {
+        int g = ((grados % 360) + 360) % 360;
+        if (g != 90 && g != 180 && g != 270) {
+            return src;
+        }
+        int w = src.getWidth(), h = src.getHeight();
+        boolean cruza = g != 180;
+        int tipo = src.getType() == BufferedImage.TYPE_BYTE_GRAY ? BufferedImage.TYPE_BYTE_GRAY : BufferedImage.TYPE_INT_RGB;
+        BufferedImage out = new BufferedImage(cruza ? h : w, cruza ? w : h, tipo);
+        Graphics2D gr = out.createGraphics();
+        AffineTransform at = new AffineTransform();
+        if (g == 90) {
+            at.translate(h, 0);
+        } else if (g == 180) {
+            at.translate(w, h);
+        } else {
+            at.translate(0, w);
+        }
+        at.rotate(Math.toRadians(g));
+        gr.drawImage(src, at, null);
+        gr.dispose();
+        return out;
+    }
+
+    /** Blanco y negro con el umbral de Otsu: ayuda cuando el fondo de seguridad ensucia el texto. */
+    public BufferedImage binarizar(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        int[] hist = new int[256];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                hist[src.getRGB(x, y) & 0xFF]++;
+            }
+        }
+        int total = w * h;
+        double suma = 0;
+        for (int i = 0; i < 256; i++) suma += i * (double) hist[i];
+        double sumaFondo = 0, mejorVar = -1;
+        int pesoFondo = 0, umbral = 128;
+        for (int t = 0; t < 256; t++) {
+            pesoFondo += hist[t];
+            if (pesoFondo == 0) continue;
+            int pesoFrente = total - pesoFondo;
+            if (pesoFrente == 0) break;
+            sumaFondo += t * (double) hist[t];
+            double mediaFondo = sumaFondo / pesoFondo;
+            double mediaFrente = (suma - sumaFondo) / pesoFrente;
+            double var = (double) pesoFondo * pesoFrente * (mediaFondo - mediaFrente) * (mediaFondo - mediaFrente);
+            if (var > mejorVar) {
+                mejorVar = var;
+                umbral = t;
+            }
+        }
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+        int blanco = Color.WHITE.getRGB(), negro = Color.BLACK.getRGB();
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                out.setRGB(x, y, (src.getRGB(x, y) & 0xFF) > umbral ? blanco : negro);
+            }
+        }
+        return out;
+    }
+
+    /** Grados a rotar (horario) según el tag Orientation de EXIF (1, 3, 6, 8; los espejados se tratan igual). */
+    static int gradosExif(int orientacion) {
+        return switch (orientacion) {
+            case 3, 4 -> 180;
+            case 5, 6 -> 90;
+            case 7, 8 -> 270;
+            default -> 0;
+        };
+    }
+
+    /**
+     * Tag Orientation (0x0112) del EXIF de un JPEG, o 1 si no hay. Lectura mínima del segmento
+     * APP1 sin dependencias: ImageIO ignora el EXIF y las fotos verticales llegaban acostadas.
+     */
+    static int orientacionExif(byte[] b) {
+        try {
+            if (b.length < 4 || (b[0] & 0xFF) != 0xFF || (b[1] & 0xFF) != 0xD8) {
+                return 1; // no es JPEG
+            }
+            int i = 2;
+            while (i + 4 <= b.length && (b[i] & 0xFF) == 0xFF) {
+                int marca = b[i + 1] & 0xFF;
+                int largo = ((b[i + 2] & 0xFF) << 8) | (b[i + 3] & 0xFF);
+                if (marca == 0xE1 && i + 10 <= b.length && new String(b, i + 4, 4, java.nio.charset.StandardCharsets.US_ASCII).equals("Exif")) {
+                    int tiff = i + 10;
+                    boolean le = b[tiff] == 'I';
+                    int ifd = tiff + leer32(b, tiff + 4, le);
+                    int entradas = leer16(b, ifd, le);
+                    for (int e = 0; e < entradas; e++) {
+                        int p = ifd + 2 + e * 12;
+                        if (leer16(b, p, le) == 0x0112) {
+                            return leer16(b, p + 8, le);
+                        }
+                    }
+                    return 1;
+                }
+                if (marca == 0xDA) {
+                    return 1; // empezó la imagen: no hay EXIF antes
+                }
+                i += 2 + largo;
+            }
+        } catch (RuntimeException e) {
+            // EXIF malformado: se sigue sin rotar
+        }
+        return 1;
+    }
+
+    private static int leer16(byte[] b, int p, boolean le) {
+        return le ? (b[p] & 0xFF) | ((b[p + 1] & 0xFF) << 8) : ((b[p] & 0xFF) << 8) | (b[p + 1] & 0xFF);
+    }
+
+    private static int leer32(byte[] b, int p, boolean le) {
+        return le
+                ? (b[p] & 0xFF) | ((b[p + 1] & 0xFF) << 8) | ((b[p + 2] & 0xFF) << 16) | ((b[p + 3] & 0xFF) << 24)
+                : ((b[p] & 0xFF) << 24) | ((b[p + 1] & 0xFF) << 16) | ((b[p + 2] & 0xFF) << 8) | (b[p + 3] & 0xFF);
+    }
+
     BufferedImage leer(byte[] bytes) {
         try {
             return ImageIO.read(new ByteArrayInputStream(bytes));
@@ -154,7 +372,7 @@ public class PreprocesadorImagen {
     public double estimarAngulo(BufferedImage src) {
         double mejor = 0;
         double mejorVar = -1;
-        for (double a = -10; a <= 10; a += 0.5) {
+        for (double a = -10; a <= 10; a += 0.25) {
             // Muestrear la imagen rotada o, más barato, el perfil con la rotación.
             double var = varianzaProyeccion(rotar(src, a));
             if (var > mejorVar) {

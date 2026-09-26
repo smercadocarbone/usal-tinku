@@ -85,7 +85,7 @@ Esta Constitución se modifica exclusivamente mediante una enmienda explícita, 
 | LLM (resumen)                     | GPT-4o (OpenAI), activo con `LLM_PROVEEDOR=gpt-4o`; sin eso, fail-closed | Decidido (ADR-M6-03, 2026-09-25) — Gemini 2.0 Flash descartado |
 | Frontend                          | Next.js + React (justificado por SEO en páginas públicas de Tutores)                                                                                                                        | Decidido, con alternativa más liviana (Vite + React) documentada si el SEO deja de importar |
 | Scheduler de jobs                 | Persistido en base de datos (ej. Quartz sobre Spring Boot)                                                                                                                                  | Decidido — instancia única, sin clustering (ADR-000-04, 2026-09-21)                         |
-| OCR de documento (registro/adulto/menor/tutor) | Tesseract vía Tess4J, in-process (parsing DNI propio + preprocesamiento deskew/contraste) | Decidido (ADR-M1-01, 2026-09-04) — requiere binario nativo tesseract en el entorno |
+| OCR de documento (registro/adulto/menor/tutor) | Tesseract local, invocado como programa del sistema (parsing DNI propio + preprocesamiento para fotos de celular) | Decidido (ADR-M1-01, 2026-09-04; integración por programa en vez de Tess4J: ADR-M1-08, 2026-09-26) — requiere el paquete tesseract-ocr + spa en el entorno |
 | Clasificador de contenido NSFW on-device (kill-switch) | NSFWJS (MobileNetV2 5-clases) sobre TensorFlow.js, modelo auto-hosted; NudeNet descartado | Decidido (ADR-M3-01, 2026-09-08) — latencia estimada ~42-60ms/inferencia en gama media, throttling configurable |
 
 ---
