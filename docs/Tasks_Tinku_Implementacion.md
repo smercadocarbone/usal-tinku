@@ -291,7 +291,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-TA-03: Búsqueda con precio, próximo horario libre y filtro de precio máximo (FR-MATCH-013/014).
 - [x] T-TA-04: Nota del Tutor al Adulto Responsable en clases con Menores (FR-RES-026).
 - [x] T-TA-05: Pedido previo con un adjunto que se borra a las 24 hs (FR-RES-027/028, ADR-M4-01).
-- [ ] T-TA-06: Pedido de reprogramación del Tutor con vencimiento a T-60 (FR-RES-029..031).
+- [x] T-TA-06: Pedido de reprogramación del Tutor con vencimiento a T-60 (FR-RES-029..031).
 - [ ] T-TA-07: Video de presentación del Tutor + cola de moderación (FR-ID-034..036, FR-ADM-011, ADR-M1-09).
 - [ ] T-TA-08: Pizarra compartida solo entre adultos (FR-AULA-011..013, ADR-M3-06).
 - [ ] T-TA-09: Paquete mensual: reserva, pago único, movimientos y devolución parcial por falta del Tutor (FR-RES-032..037, FR-PAG-021..023, ADR-M5-03).

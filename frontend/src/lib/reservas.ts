@@ -112,3 +112,40 @@ export function getNota(reservaId: string): Promise<NotaClase | undefined> {
 export function escribirNota(reservaId: string, texto: string): Promise<NotaClase> {
   return api.put<NotaClase>(`/api/reservas/${reservaId}/nota`, { texto });
 }
+
+/* ---- Enmienda v2.5: pedido de reprogramación del Tutor (FR-RES-029..031) ---- */
+
+export interface PedidoReprogramacion {
+  id: string;
+  reservaId: string;
+  horarioOriginal: string;
+  horarioPropuesto: string;
+  motivo: string | null;
+  estado: string;
+  createdAt: string;
+  /** Hasta cuándo se puede responder (T-60 de la clase original); después se cancela y se devuelve. */
+  venceAt: string;
+  /** Quien pagó (con un menor, su adulto responsable). */
+  puedoResponder: boolean;
+  /** El Tutor. */
+  puedoRetirar: boolean;
+}
+
+export function getPedidoReprogramacion(reservaId: string): Promise<PedidoReprogramacion | undefined> {
+  return api.get<PedidoReprogramacion | undefined>(`/api/reservas/${reservaId}/pedido-reprogramacion`);
+}
+
+export function pedirReprogramacion(reservaId: string, nuevoHorario: string, motivo: string): Promise<PedidoReprogramacion> {
+  return api.post<PedidoReprogramacion>(`/api/reservas/${reservaId}/pedido-reprogramacion`, {
+    nuevoHorario,
+    ...(motivo.trim() ? { motivo: motivo.trim() } : {}),
+  });
+}
+
+export function responderReprogramacion(reservaId: string, acepta: boolean): Promise<void> {
+  return api.post<void>(`/api/reservas/${reservaId}/pedido-reprogramacion/${acepta ? "aceptar" : "rechazar"}`);
+}
+
+export function retirarReprogramacion(reservaId: string): Promise<void> {
+  return api.delete<void>(`/api/reservas/${reservaId}/pedido-reprogramacion`);
+}

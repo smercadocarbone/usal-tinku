@@ -236,17 +236,45 @@ public class ReservaService {
             throw new VentanaMinimaException("Falta menos de 1 hora para la clase: ya no se puede "
                     + "cambiar el horario. Si no vas a poder, podés cancelarla.");
         }
-        validarNuevoHorario(reserva, nuevoHorario);
         Instant horarioAnterior = reserva.getHorario();
-        // D6 regla 6: la reprogramación conserva la duración (y el precio) originales.
-        reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
-        reservaRepo.save(reserva);
+        aplicarNuevoHorario(reserva, nuevoHorario);
         notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_REPROGRAMADA, Map.of(
                 "reservaId", reserva.getId().toString(),
                 "horarioAnterior", horarioAnterior.toString(),
                 "horario", nuevoHorario.toString()));
-        events.publishEvent(new ReservaReprogramadaEvent(this, reserva.getId()));
         return reserva;
+    }
+
+    /**
+     * Mueve la Reserva a {@code nuevoHorario} con las mismas reglas que un cambio de horario
+     * (franja, ventana mínima, Tutor reservable; D6: conserva duración y precio) y emite
+     * {@code reserva.reprogramada}. Sin chequear quién lo pide ni avisar: lo usan
+     * {@link #reprogramar} y la aceptación de un pedido del Tutor (FR-RES-030).
+     */
+    @Transactional
+    public void aplicarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
+        validarNuevoHorario(reserva, nuevoHorario);
+        reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
+        reservaRepo.saveAndFlush(reserva); // flush: la EXCLUDE (horario ocupado) salta acá, no en el commit
+        events.publishEvent(new ReservaReprogramadaEvent(this, reserva.getId()));
+    }
+
+    /** FR-RES-029: el horario propuesto por el Tutor cumple las mismas reglas que un cambio. */
+    public void validarHorarioPropuesto(Reserva reserva, Instant nuevoHorario) {
+        validarNuevoHorario(reserva, nuevoHorario);
+    }
+
+    /**
+     * FR-RES-030/031: cancelación de una Reserva confirmada con el Tutor como quien cancela
+     * (M5 devuelve el total, FR-RES-008), sin los avisos genéricos: el pedido de reprogramación
+     * manda los suyos.
+     */
+    @Transactional
+    public void cancelarPorElTutor(Reserva reserva) {
+        if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            throw new ReservaNoCancelableException();
+        }
+        cancelarPorSistema(reserva, MotivoCancelacion.VOLUNTARIA, reserva.getTutor().getId());
     }
 
     /**

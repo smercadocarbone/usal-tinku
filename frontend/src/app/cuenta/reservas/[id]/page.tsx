@@ -13,7 +13,7 @@ import {
   type ResumenSesionInfo,
   type SesionInfo,
 } from "@/lib/api";
-import { finDe, type Reserva } from "@/lib/reservas";
+import { finDe, getPedidoReprogramacion, type PedidoReprogramacion, type Reserva } from "@/lib/reservas";
 import { ETIQUETA_MOTIVO_CANCELACION, etiqueta } from "@/lib/etiquetas";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
@@ -26,6 +26,8 @@ import FormularioCalificacion from "@/components/FormularioCalificacion";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
 import NotaClaseTarjeta from "@/components/reservas/NotaClaseTarjeta";
 import PedidoPrevioTarjeta from "@/components/reservas/PedidoPrevioTarjeta";
+import PedidoReprogramacionTarjeta from "@/components/reservas/PedidoReprogramacionTarjeta";
+import ProponerHorario from "@/components/reservas/ProponerHorario";
 import {
   Alerta,
   Avatar,
@@ -76,6 +78,8 @@ export default function ReservaDetallePage() {
   const [cancelando, setCancelando] = useState(false);
   const [reprogramar, setReprogramar] = useState(false);
   const [reportar, setReportar] = useState(false);
+  const [pedidoReprog, setPedidoReprog] = useState<PedidoReprogramacion | null>(null);
+  const [proponer, setProponer] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -94,6 +98,14 @@ export default function ReservaDetallePage() {
       return;
     }
     setCargando(false);
+    // FR-RES-029: pedido de cambio de horario del Tutor esperando respuesta.
+    if (r.estado === "confirmada") {
+      getPedidoReprogramacion(params.id)
+        .then((p) => setPedidoReprog(p ?? null))
+        .catch(() => setPedidoReprog(null));
+    } else {
+      setPedidoReprog(null);
+    }
     // B11: sin Sesión por construcción (pendiente/cancelada) no se pide.
     if (r.estado === "pendiente_pago" || r.estado === "cancelada") return;
     try {
@@ -157,7 +169,11 @@ export default function ReservaDetallePage() {
   const puedeEntrar = sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
   // AUD-028: califica quien pagó; en la clase de un menor, su Adulto Responsable.
   const puedeCalificar = sesion !== null && sesion.estado === "finalizada" && !esMenor;
-  const puedeReprogramar = r.estado === "confirmada" && !esMenor;
+  // FR-RES-016: cambia el horario quien pagó. El Tutor no lo cambia: lo propone (FR-RES-029).
+  const faltaMasDeUnaHora =
+    ahora === 0 || new Date(r.horario).getTime() - ahora > TIEMPOS.limiteReprogramacionMinutos * 60000;
+  const puedeReprogramar = r.estado === "confirmada" && !esMenor && payload?.sub === r.pagadorId && !pedidoReprog;
+  const puedeProponer = r.estado === "confirmada" && esTutor && payload?.sub === r.tutorId && !pedidoReprog && faltaMasDeUnaHora;
   const cancelada = r.estado === "cancelada";
   const empiezaPronto = ahora > 0 && new Date(r.horario).getTime() - ahora < 60 * 60000;
 
@@ -211,6 +227,16 @@ export default function ReservaDetallePage() {
         </Alerta>
       )}
 
+      {pedidoReprog && !esMenor && (
+        <PedidoReprogramacionTarjeta
+          pedido={pedidoReprog}
+          onResuelto={(mensaje) => {
+            toast.mostrar(mensaje);
+            void cargar();
+          }}
+        />
+      )}
+
       {/* Acción principal según el estado */}
       <div className="mt-8 flex flex-col gap-3">
         {puedePagar && (
@@ -228,11 +254,16 @@ export default function ReservaDetallePage() {
             <CalendarClock className="size-4" aria-hidden /> El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes de la clase.
           </p>
         )}
-        {(puedeReprogramar || puedeCancelar) && (
+        {(puedeReprogramar || puedeProponer || puedeCancelar) && (
           <div className="flex flex-col gap-2 sm:flex-row">
             {puedeReprogramar && (
               <Boton variante="secundario" className="flex-1" onClick={() => setReprogramar(true)}>
                 Cambiar horario
+              </Boton>
+            )}
+            {puedeProponer && (
+              <Boton variante="secundario" className="flex-1" onClick={() => setProponer(true)}>
+                Proponer otro horario
               </Boton>
             )}
             {puedeCancelar && (
@@ -337,6 +368,19 @@ export default function ReservaDetallePage() {
             setReserva(nueva);
             setReprogramar(false);
             toast.mostrar("Cambiamos el horario");
+          }}
+        />
+      )}
+
+      {puedeProponer && (
+        <ProponerHorario
+          abierto={proponer}
+          onCerrar={() => setProponer(false)}
+          reserva={r}
+          onPedido={(p) => {
+            setPedidoReprog(p);
+            setProponer(false);
+            toast.mostrar("Le mandamos tu propuesta");
           }}
         />
       )}
