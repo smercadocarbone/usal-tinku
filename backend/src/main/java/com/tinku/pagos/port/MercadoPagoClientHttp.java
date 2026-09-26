@@ -40,6 +40,7 @@ import java.util.UUID;
 @Component
 public class MercadoPagoClientHttp implements MercadoPagoClient {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(MercadoPagoClientHttp.class);
     private static final String PATH_PREFERENCIAS = "/checkout/preferences";
     private static final String PATH_PAGOS = "/v1/payments/";
 
@@ -79,7 +80,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                     .uri(PATH_PREFERENCIAS)
                     .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(cuerpo(request))
+                    .body(cuerpo(request, conVendedor(tokenVendedor)))
                     .retrieve()
                     .onStatus(status -> status.isError(), (req, res) -> {
                         throw new MercadoPagoNoDisponibleException();
@@ -113,6 +114,11 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         }
         if (respuesta == null || respuesta.status() == null) {
             throw new MercadoPagoNoDisponibleException();
+        }
+        if (!"approved".equals(respuesta.status())) {
+            // Sin datos del comprador: solo el estado y el motivo que da MP (ej. cc_rejected_other_reason).
+            LOG.info("Pago {} de MercadoPago no aprobado: {} ({})", mpPaymentId, respuesta.status(),
+                    respuesta.statusDetail());
         }
         return new PagoMercadoPago(mpPaymentId, respuesta.status(),
                 respuesta.externalReference(), respuesta.transactionAmount());
@@ -199,6 +205,10 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         }
     }
 
+    private static boolean conVendedor(String tokenVendedor) {
+        return tokenVendedor != null && !tokenVendedor.isBlank();
+    }
+
     /** El token del vendedor (Tutor, OAuth) o, sin él, el de la plataforma. */
     private String token(String tokenVendedor) {
         return tokenVendedor != null && !tokenVendedor.isBlank() ? tokenVendedor : accessToken;
@@ -206,13 +216,16 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     /** Traduccion de la preferencia de dominio al JSON de /checkout/preferences
      * (snake_case: contrato del provider, no tocar). */
-    private MpPreferenciaRequest cuerpo(PreferenciaRequest request) {
+    private MpPreferenciaRequest cuerpo(PreferenciaRequest request, boolean conVendedor) {
         String notificacion = (notificationUrl == null || notificationUrl.isBlank())
                 ? null
                 : notificationUrl;
         return new MpPreferenciaRequest(
                 List.of(new MpItem(request.descripcion(), 1, request.montoBruto())),
-                request.comisionPlataforma(),
+                // marketplace_fee solo con el token OAuth del Tutor (ADR-M5-02). Con el token de
+                // la plataforma el cobro ya es entero de Tinku, y MP rechaza en el checkout un
+                // pago con comisión de marketplace sin vendedor (producción, 2026-09-26).
+                conVendedor ? request.comisionPlataforma() : null,
                 request.reservaId().toString(),
                 notificacion,
                 backUrls(request.reservaId()),
@@ -292,6 +305,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
 
     private record MpPagoRespuesta(
             String status,
+            @JsonProperty("status_detail") String statusDetail,
             @JsonProperty("external_reference") String externalReference,
             @JsonProperty("transaction_amount") BigDecimal transactionAmount) {
     }

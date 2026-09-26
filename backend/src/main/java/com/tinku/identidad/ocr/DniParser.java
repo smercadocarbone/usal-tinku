@@ -44,6 +44,12 @@ public class DniParser {
     // DNI: 6 a 8 dígitos. Puede venir con separadores de miles ("12.345.678").
     private static final Pattern DNI_CRUDO = Pattern.compile("\\d[\\d. ]*\\d");
     private static final Pattern DNI_SOLO_DIGITOS = Pattern.compile("(?<![\\d.])(\\d{6,8})(?![\\d.])");
+    // El número del DNI con puntos de miles ("34.567.890", "7.123.456"): ninguna fecha de la tarjeta
+    // tiene ese formato, así que es la señal más confiable aunque el rótulo se lea mal.
+    // El OCR a veces lee un punto como coma o le agrega un espacio ("17, 654.321", "41.987. 003").
+    private static final Pattern DNI_CON_PUNTOS = Pattern.compile("(?<![\\d.,])(\\d{1,2}[.,]\\s?\\d{3}[.,]\\s?\\d{3})(?![\\d.,])");
+    // Un número de DNI dentro de una línea, con o sin puntos (nunca dígitos sueltos de una fecha).
+    private static final Pattern DNI_EN_LINEA = Pattern.compile("(?<![\\d.])(\\d{1,2}\\.\\d{3}\\.\\d{3}|\\d{6,8})(?![\\d.])");
 
     // Fecha: dd/mm/aaaa o dd-mm-aaaa.
     private static final Pattern FECHA = Pattern.compile("(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})");
@@ -62,10 +68,29 @@ public class DniParser {
             java.util.Map.entry("DIC", 12), java.util.Map.entry("DEC", 12));
     private static final Pattern MARCA_DOCUMENTO = Pattern.compile("\\bDOCUMENT", Pattern.CASE_INSENSITIVE);
     private static final Pattern MARCA_NACIMIENTO =
-            Pattern.compile("nac(imiento|id[oa])|fecha\\s+de\\s+nac|nac\\.", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("nac(imiento|id[oa])|fecha\\s+de\\s+nac|nac\\.|date\\s+of\\s+birth|of\\s+birth", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern ROTULO_VALOR =
             Pattern.compile("^([A-ZÁÉÍÓÚÑ ]+?)\\s*[:\\-]\\s*(.*)$");
+
+    /**
+     * Qué se pudo extraer y qué no, SIN datos personales (para el log cuando una foto no se lee).
+     */
+    public String diagnostico(List<LineaTexto> lineas) {
+        if (lineas == null || lineas.isEmpty()) {
+            return "sin texto";
+        }
+        List<String> orden = lineas.stream().sorted(Comparator.comparingDouble(LineaTexto::y))
+                .map(LineaTexto::texto).map(String::trim).filter(x -> !x.isEmpty()).toList();
+        String texto = String.join("\n", orden);
+        String[] nombreYApellido = extraerNombreYApellido(orden, texto);
+        return "lineas=" + orden.size()
+                + " dni=" + (extraerDni(orden, texto) != null ? "si" : "no")
+                + " fecha=" + (extraerFechaNacimiento(orden, texto) != null ? "si" : "no")
+                + " apellido=" + (nombreYApellido[0] != null ? "si" : "no")
+                + " nombre=" + (nombreYApellido[1] != null ? "si" : "no")
+                + " mrz=" + orden.stream().filter(l -> l.chars().filter(c -> c == '<').count() >= 5).count();
+    }
 
     public ResultadoOcr parse(List<LineaTexto> lineas) {
         if (lineas == null || lineas.isEmpty()) {
@@ -99,7 +124,8 @@ public class DniParser {
 
         // OJO: ResultadoOcr es (dni, nombre, apellido, fecha). nombreYApellido
         // internamente es [apellido, nombre].
-        return new ResultadoOcr(true, dni, nombreYApellido[1], nombreYApellido[0], fechaNacimiento);
+        return new ResultadoOcr(true, dni, nombreYApellido[1].toUpperCase(Locale.ROOT),
+                nombreYApellido[0].toUpperCase(Locale.ROOT), fechaNacimiento);
     }
 
     // ------------------------------------------------------------------
@@ -107,6 +133,11 @@ public class DniParser {
     // ------------------------------------------------------------------
 
     private String extraerDni(List<String> orden, String texto) {
+        // 00) Número con puntos de miles: el formato propio del DNI (tarjeta y libreta).
+        Matcher conPuntos = DNI_CON_PUNTOS.matcher(texto);
+        if (conPuntos.find()) {
+            return normalizarDni(conPuntos.group(1));
+        }
         // 0) Tarjeta actual: "Documento / Document" y el número debajo. Va primero porque
         //    el "Trámite Nº" de más arriba también matchea la marca genérica "Nº".
         for (int i = 0; i < orden.size(); i++) {
@@ -151,9 +182,11 @@ public class DniParser {
     /** Devuelve el nº de 6-8 dígitos que aparece junto a una marca "Nº" (misma línea o la siguiente). */
     private String colorearDesdeMarca(List<String> orden, int indiceMarca) {
         for (int k = indiceMarca; k < Math.min(indiceMarca + 2, orden.size()); k++) {
-            Matcher m = DNI_SOLO_DIGITOS.matcher(normalizarDni(orden.get(k)));
+            // Sobre la línea tal cual: normalizarla entera juntaba los dígitos de una fecha
+            // ("10 ENE/ JAN 2018" → "102018") y los tomaba como DNI.
+            Matcher m = DNI_EN_LINEA.matcher(orden.get(k));
             if (m.find()) {
-                return m.group(1);
+                return normalizarDni(m.group(1));
             }
         }
         return null;
@@ -271,11 +304,26 @@ public class DniParser {
                 || esRotuloBilingue(may, rotulo);
     }
 
-    /** Tarjeta actual: "APELLIDO / SURNAME", "NOMBRE / NAME" solos en su línea (valor debajo). */
+    /**
+     * Tarjeta actual: "APELLIDO / SURNAME", "NOMBRE / NAME" solos en su línea (valor debajo).
+     * Tolera lo que el OCR suele leer mal en el rótulo en inglés ("Surmame", "Narne") y una
+     * letra de más o de menos en el español: la barra y la línea corta son lo que lo distingue
+     * de un valor.
+     */
     private boolean esRotuloBilingue(String may, String rotulo) {
+        String t = may.trim();
         String base = rotulo.equals("NOMBRES") ? "NOMBRES?" : "APELLIDOS?";
         String ingles = rotulo.equals("NOMBRES") ? "NAMES?" : "SURNAMES?";
-        return may.trim().matches(base + "\\s*(/\\s*" + ingles + ")?\\s*:?");
+        if (t.matches(base + "\\s*(/\\s*" + ingles + ")?\\s*:?")) {
+            return true;
+        }
+        // El OCR lee mal la barra ("f", "7", "U", "l") y el rótulo en inglés ("Surmame", "Sumarna",
+        // "Narne"): alcanza con el rótulo en español, un separador corto y una palabra en inglés
+        // que empiece como corresponde (S… para Surname, N… para Name).
+        String espanol = rotulo.equals("NOMBRES") ? "N[O0]M?B?R[E3]S?" : "AP[E3]L+[I1L]D[O0]S?";
+        String ingles2 = rotulo.equals("NOMBRES") ? "N[A-Z]{2,5}" : "S[A-Z]{3,8}";
+        return t.length() <= 30
+                && (t.matches(espanol + "\\s*/.{0,14}") || t.matches(espanol + "\\s*\\S{0,3}\\s*" + ingles2));
     }
 
     private String valorDeRotulo(List<String> orden, int i, String rotulo) {

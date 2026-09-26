@@ -6,8 +6,10 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
-# OCR real (ADR-M1-01): Tess4J necesita la librería nativa de Tesseract 5 y el idioma
-# español. Sin esto, en `prod` el registro con DNI falla (el stub está prohibido, AUD-034).
+# OCR real (ADR-M1-01, ADR-M1-08): el backend ejecuta el programa `tesseract` con los idiomas
+# español (datos), inglés (zona MRZ del dorso) y osd (orientación); -eng y -osd vienen como
+# dependencias de tesseract-ocr. Sin esto, en `prod` el registro con DNI responde "lector no
+# disponible" (el stub está prohibido, AUD-034).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa \
     && rm -rf /var/lib/apt/lists/* \

@@ -11,7 +11,6 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,81 +19,75 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Test E2E del OCR REAL (ADR-M1-01): instancia {@link TesseractOcrService} de
- * verdad (Tess4J sobre el binario nativo de Tesseract, idioma español) y
- * procesa una imagen sintética de DNI estilo libreta (formato pre-2009,
- * campos rotulados). Verifica que el pipeline completo — preprocesado →
- * Tesseract → agrupación en líneas → {@link DniParser} — extrae los campos.
+ * Test E2E del OCR REAL (ADR-M1-01, ADR-M1-08): instancia {@link TesseractOcrService} de verdad,
+ * que invoca el programa {@code tesseract} del sistema, y procesa imágenes sintéticas de DNI:
+ * libreta, y fotos de celular de la tarjeta actual (frente, frente con rotación EXIF y dorso con
+ * MRZ; ver {@code src/test/resources/ocr/generar_dnis.py}, datos inventados).
  *
- * El servicio real está gated a perfiles fuera de dev/test, así que este test
- * NO usa el contexto Spring: construye el bean a mano, igual que los tests
- * aislados de {@code DniParser}/{@code PreprocesadorImagen} (mismo patrón de
- * ADR-M1-01: componentes aislados y testeables).
- *
- * Es dependiente del entorno: si el binario nativo de Tesseract o el data
- * español no están disponibles, se SKIPEA (assumption), nunca finge que el
- * OCR funciona. En esta sesión se verificó con tesseract 5.5.3 + spa.traineddata.
+ * <p>Depende del entorno: sin el programa {@code tesseract} con el idioma español se SKIPEA
+ * (assumption), nunca finge que el OCR funciona. La imagen de producción lo trae (Dockerfile).</p>
  */
 class TesseractOcrServiceRealTest {
 
-    private static String tessdata;
-    private static boolean bibliotecaNativaDisponible;
+    private static boolean tesseractDisponible;
 
     @BeforeAll
     static void resolverEntorno() {
-        tessdata = detecarTessdata();
-        bibliotecaNativaDisponible = configurarRutaJnaDeLaBibliotecaNativa() != null;
-    }
-
-    private static String detecarTessdata() {
-        String prefijo = System.getenv("TESSDATA_PREFIX");
-        if (prefijo != null && new File(prefijo, "spa.traineddata").exists()) {
-            return prefijo;
+        try {
+            Process p = new ProcessBuilder("tesseract", "--list-langs").redirectErrorStream(true).start();
+            String salida = new String(p.getInputStream().readAllBytes());
+            tesseractDisponible = p.waitFor() == 0 && salida.contains("spa");
+        } catch (Exception e) {
+            tesseractDisponible = false;
         }
-        for (String dir : List.of(
-                "/opt/homebrew/share/tessdata",   // Homebrew (Apple Silicon)
-                "/usr/local/share/tessdata",      // Homebrew (Intel)
-                "/usr/share/tesseract-ocr/5/tessdata" // Linux
-        )) {
-            if (new File(dir, "spa.traineddata").exists()) {
-                return dir;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Tess4J carga el binario nativo vía JNA. devuelve el directorio que
-     * contiene libtesseract (dylib/so) o null si no se encontró (el test se
-     * skipea). Homebrew instala la lib en /opt/homebrew/lib — fuera de la ruta
-     * por defecto de JNA — así que hay que exponerla con jna.library.path.
-     */
-    private static String configurarRutaJnaDeLaBibliotecaNativa() {
-        String yaConfigurada = System.getProperty("jna.library.path");
-        if (yaConfigurada != null && !yaConfigurada.isBlank()) {
-            return yaConfigurada;
-        }
-        for (String dir : List.of(
-                "/opt/homebrew/lib",   // Homebrew (Apple Silicon)
-                "/usr/local/lib",      // Homebrew (Intel)
-                "/usr/lib/x86_64-linux-gnu",
-                "/usr/lib/aarch64-linux-gnu")) {
-            File lib = new File(dir, System.getProperty("os.name").toLowerCase().contains("mac")
-                    ? "libtesseract.dylib" : "libtesseract.so");
-            if (lib.exists()) {
-                System.setProperty("jna.library.path", dir);
-                return dir;
-            }
-        }
-        return null;
     }
 
     private static TesseractOcrService servicio() {
-        Assumptions.assumeTrue(tessdata != null,
-                "spa.traineddata no disponible — se SKIPEA el test real de OCR");
-        Assumptions.assumeTrue(bibliotecaNativaDisponible,
-                "Binario nativo de Tesseract (libtesseract) no disponible — se SKIPEA el test real de OCR");
-        return new TesseractOcrService(new DniParser(), new PreprocesadorImagen(), tessdata, "spa");
+        Assumptions.assumeTrue(tesseractDisponible,
+                "Programa tesseract con idioma español no disponible — se SKIPEA el test real de OCR");
+        return new TesseractOcrService(new DniParser(), new PreprocesadorImagen(), "tesseract", "", "spa");
+    }
+
+    private static byte[] recurso(String nombre) throws Exception {
+        try (var in = TesseractOcrServiceRealTest.class.getResourceAsStream("/ocr/" + nombre)) {
+            return in.readAllBytes();
+        }
+    }
+
+    /** Foto de celular del frente de la tarjeta actual (rótulos bilingües, mes en letras). */
+    @Test
+    void leeElFrenteDeLaTarjetaActualEnUnaFotoDeCelular() throws Exception {
+        ResultadoOcr r = servicio().procesarDocumento(recurso("frente_foto.jpg"), null);
+
+        assertTrue(r.documentoLegible(), "Debe leer el frente de la tarjeta actual");
+        assertEquals("34567890", r.dniExtraido());
+        assertEquals("GONZALEZ", r.apellidoExtraido());
+        assertEquals("MARIA SOL", r.nombreExtraido());
+        assertEquals(LocalDate.of(1990, 5, 15), r.fechaNacimientoExtraida());
+    }
+
+    /** Foto vertical: el sensor la guarda acostada y el EXIF dice cómo mostrarla. */
+    @Test
+    void respetaLaRotacionExifDeLaFoto() throws Exception {
+        ResultadoOcr r = servicio().procesarDocumento(recurso("frente_exif6.jpg"), null);
+
+        assertTrue(r.documentoLegible(), "Debe enderezar la foto según el EXIF");
+        assertEquals("40123456", r.dniExtraido());
+        assertEquals("PEREYRA", r.apellidoExtraido());
+        assertEquals("JUAN IGNACIO", r.nombreExtraido());
+        assertEquals(LocalDate.of(1997, 8, 3), r.fechaNacimientoExtraida());
+    }
+
+    /** Dorso: la zona de lectura mecánica (MRZ) con dígitos de control. */
+    @Test
+    void leeElDorsoPorLaZonaMrz() throws Exception {
+        ResultadoOcr r = servicio().procesarDocumento(recurso("dorso_foto.jpg"), null);
+
+        assertTrue(r.documentoLegible(), "Debe leer la MRZ del dorso");
+        assertEquals("34567890", r.dniExtraido());
+        assertEquals("GONZALEZ", r.apellidoExtraido());
+        assertEquals("MARIA SOL", r.nombreExtraido());
+        assertEquals(LocalDate.of(1990, 5, 15), r.fechaNacimientoExtraida());
     }
 
     /** DNI estilo libreta pre-2009 con campos rotulados, en alta resolución (validado con tesseract CLI). */

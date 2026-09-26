@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,15 +73,15 @@ class OcrBackoffServiceTest {
 
         int restantes = service.registrarIntentoFallido("12345678");
 
-        assertEquals(2, restantes);
+        assertEquals(5, restantes);
         verify(repo).save(any(IntentoOcr.class));
     }
 
     @Test
-    void alTercerIntentoFallidoActivaEspera24hsYReseteaContador() {
+    void alSextoIntentoFallidoActivaEspera24hsYReseteaContador() {
         IntentoOcr intento = new IntentoOcr();
         intento.setDni("12345678");
-        intento.setIntentosConsumidos(2);
+        intento.setIntentosConsumidos(5);
         intento.setProximoIntentoPermitido(null);
         when(repo.findByDni("12345678")).thenReturn(Optional.of(intento));
         when(repo.save(any(IntentoOcr.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -88,7 +90,7 @@ class OcrBackoffServiceTest {
 
         // El ciclo se agotó: 0 intentos quedan en el ciclo actual (hay que
         // esperar el cooldown). El contador se resetea a 0 para que el
-        // PRÓXIMO ciclo vuelva a permitir 3.
+        // PRÓXIMO ciclo vuelva a permitir 6.
         assertEquals(0, restantes);
         verify(repo).save(any(IntentoOcr.class));
         IntentoOcr saved = intento;
@@ -108,7 +110,36 @@ class OcrBackoffServiceTest {
 
         int restantes = service.registrarIntentoFallido("12345678");
 
-        assertEquals(1, restantes);
+        assertEquals(4, restantes);
         assertEquals(2, intento.getIntentosConsumidos());
+    }
+
+    /** Regresión 2026-09-26: con 3 intentos por ciclo, fotos de celular algo movidas dejaban a la persona 24hs afuera. */
+    @Test
+    void elTercerIntentoFallidoYaNoActivaEspera() {
+        IntentoOcr intento = new IntentoOcr();
+        intento.setDni("12345678");
+        intento.setIntentosConsumidos(2);
+        when(repo.findByDni("12345678")).thenReturn(Optional.of(intento));
+        when(repo.save(any(IntentoOcr.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        int restantes = service.registrarIntentoFallido("12345678");
+
+        assertEquals(3, restantes);
+        assertEquals(3, intento.getIntentosConsumidos());
+        assertNull(intento.getProximoIntentoPermitido());
+    }
+
+    @Test
+    void elMaximoDeIntentosEsConfigurable() {
+        OcrBackoffService conDos = new OcrBackoffService(repo, Duration.ofHours(24), 2);
+        IntentoOcr intento = new IntentoOcr();
+        intento.setDni("12345678");
+        intento.setIntentosConsumidos(1);
+        when(repo.findByDni("12345678")).thenReturn(Optional.of(intento));
+        when(repo.save(any(IntentoOcr.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals(0, conDos.registrarIntentoFallido("12345678"));
+        assertNotNull(intento.getProximoIntentoPermitido());
     }
 }

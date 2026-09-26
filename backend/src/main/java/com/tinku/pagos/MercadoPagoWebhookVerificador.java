@@ -70,12 +70,20 @@ public class MercadoPagoWebhookVerificador {
                 return rechazar("ts fuera de la tolerancia anti-replay (" + desfasajeMillis / 1000 + " s)", dataId);
             }
             String manifest = manifest(dataId, xRequestId, ts);
-            String esperado = hmacSha256Hex(webhookSecret, manifest);
-            if (!constantTimeEquals(esperado, v1)) {
-                // El manifest no tiene secretos (id, request-id, ts): se loguea para poder comparar.
-                return rechazar("la firma no coincide (manifest " + manifest + ")", dataId);
+            if (constantTimeEquals(hmacSha256Hex(webhookSecret, manifest), v1)) {
+                return true;
             }
-            return true;
+            // Aviso IPN (?id=&topic=, el formato viejo): MP arma el manifest con el data.id de
+            // la URL y omite los pares ausentes, así que firma sin id (producción, 2026-09-26:
+            // todos los IPN se rechazaban). No afloja nada: el id sigue sin ser de confianza y
+            // EscrowService consulta el pago real a MP antes de confirmar cualquier cosa.
+            String sinId = manifest(null, xRequestId, ts);
+            if (dataId != null && constantTimeEquals(hmacSha256Hex(webhookSecret, sinId), v1)) {
+                return true;
+            }
+            // El manifest no tiene secretos (id, request-id, ts): se loguea para poder comparar.
+            return rechazar("la firma no coincide (manifest " + manifest + ") — ¿MP_WEBHOOK_SECRET es "
+                    + "de la misma aplicación que MP_ACCESS_TOKEN?", dataId);
         } catch (IllegalArgumentException e) {
             return rechazar("x-signature ilegible", dataId);
         }

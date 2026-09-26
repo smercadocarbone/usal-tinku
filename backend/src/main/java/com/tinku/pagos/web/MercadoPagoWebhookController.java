@@ -74,6 +74,7 @@ public class MercadoPagoWebhookController {
 
         // ADR-M5-02: el aviso trae el user_id del vendedor (el Tutor); su token consulta el pago.
         // Desconocido → token de la plataforma; si MP lo rechaza, la conciliación lo resuelve.
+        LOG.info("Webhook de MP aceptado: se consulta el pago {}", mpPaymentId);
         String tokenVendedor = cuentasMp.tokenParaMpUserId(notificacion.path("user_id").asText(null));
         escrowService.procesarPagoAprobado(mpPaymentId, tokenVendedor);
         return ResponseEntity.ok().build();

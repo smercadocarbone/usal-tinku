@@ -58,7 +58,7 @@ _Como_ Usuario con capacidad Adulto Responsable, _quiero_ crear la cuenta de mi 
 _Como_ aspirante a Tutor, _quiero_ registrarme y demostrar quién soy, _para_ poder ofrecer clases.
 
 - **Dado** que suba una foto de su DNI, **cuando** el OCR la procese, **entonces** aplica las mismas tres validaciones que US-1 (edad, coincidencia nombre/apellido/DNI, unicidad de DNI en el sistema) — rechaza el registro si es menor de 18 (FR-ID-007), sin excepciones.
-- **Dado** que el OCR no pueda leer el documento, **cuando** eso ocurra, **entonces** permite hasta 3 intentos de foto por ciclo; si fallan los 3, exige 24hs de espera antes de un nuevo ciclo (FR-ID-011).
+- **Dado** que el OCR no pueda leer el documento, **cuando** eso ocurra, **entonces** permite hasta 6 intentos de foto por ciclo (configurable, `tinku.ocr.max-intentos`; eran 3 hasta 2026-09-26); si fallan todos, exige 24hs de espera antes de un nuevo ciclo (FR-ID-011).
 
 ### US-4 — Carga y aprobación de Credencial Académica
 
@@ -101,7 +101,7 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 | FR-ID-007 | Bloqueo del registro de Tutor si es menor de edad, sin excepciones.                                                                                                                                                                  |
 | FR-ID-008 | Hasta 3 intentos de recarga de Credencial ante rechazo, 48hs de revisión del Admin de Moderación y Seguridad por intento.                                                                                                            |
 | FR-ID-009 | Marcado de Tutor como "no confiable" — privado, acotado a la capacidad Adulto Responsable de esa cuenta.                                                                                                                             |
-| FR-ID-011 | Ante falla de OCR: 3 intentos por ciclo, 24hs de espera antes de un nuevo ciclo.                                                                                                                                                     |
+| FR-ID-011 | Ante falla de OCR: 6 intentos por ciclo (eran 3 hasta 2026-09-26), 24hs de espera antes de un nuevo ciclo.                                                                                                                                                    |
 | FR-ID-012 | Ante agotamiento de intentos de Credencial: espera de 24hs, duplicándose en cada ciclo posterior agotado.                                                                                                                            |
 | FR-ID-013 | Límite de 5 perfiles de menor por cuenta con capacidad Adulto Responsable.                                                                                                                                                           |
 | FR-ID-014 | Confirmación explícita antes de eliminar un perfil de menor con sesiones futuras agendadas. La baja es por **anonimización** (ADR-M1-05, AUD-017): la fila sobrevive —el `id` queda vinculado a sus Reservas/Transacciones y a su Adulto Responsable— y DNI, nombre, apellido, email, fecha de nacimiento y contraseña se reemplazan; `listarMenores` no devuelve menores en `BAJA`. Con la baja confirmada, las reservas futuras del menor se cancelan como cancelación `voluntaria` del Adulto Responsable (FR-RES-008 sin reglas nuevas) y sus Solicitudes pendientes pasan a `rechazada`. |

@@ -1,5 +1,7 @@
 # ADR-M1-01 — Proveedor de OCR: Tesseract vía Tess4J (in-process)
 
+> **Enmendado por ADR-M1-08 (2026-09-26):** Tesseract se invoca como programa del sistema, no vía Tess4J (que en producción nunca llegó a funcionar). El proveedor y el resto de la decisión siguen vigentes.
+
 ## Estado
 Aceptado (Chunk M1-B). Decisión tomada con investigación de costos y de arquitectura propia. El `StubOcrService` queda reservado a `dev`/`test`; la implementación real (Tess4J) se activa en el perfil de producción, sin requerir cuenta de facturación ni credenciales.
 

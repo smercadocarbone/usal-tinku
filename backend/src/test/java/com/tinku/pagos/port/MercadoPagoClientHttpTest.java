@@ -94,10 +94,29 @@ class MercadoPagoClientHttpTest {
             assertThat(root.get("items").get(0).get("quantity").asInt()).isEqualTo(1);
             assertThat(root.get("items").get(0).get("unit_price").decimalValue())
                     .isEqualByComparingTo(new BigDecimal("150.00"));
-            assertThat(root.get("marketplace_fee").decimalValue())
-                    .isEqualByComparingTo(new BigDecimal("22.50"));
+            // Con el token de la plataforma no hay vendedor: sin marketplace_fee (MP rechazaba el pago).
+            assertThat(root.has("marketplace_fee")).isFalse();
             assertThat(root.get("external_reference").asText()).isEqualTo(reservaId.toString());
             assertThat(root.has("notification_url")).isFalse();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** ADR-M5-02: con el token OAuth del Tutor, la comisión de Tinku viaja como marketplace_fee. */
+    @Test
+    void creaPreferencia_conTokenDelTutor_mandaMarketplaceFee() throws Exception {
+        AtomicReference<String> captor = new AtomicReference<>();
+        HttpServer server = serverQueDevuelve("201", RESPUESTA_PREFERENCIA, captor);
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            cliente.crearPreferencia(pedido(), "token-del-tutor");
+
+            JsonNode root = objectMapper.readTree(captor.get());
+            assertThat(root.get("marketplace_fee").decimalValue())
+                    .isEqualByComparingTo(new BigDecimal("22.50"));
         } finally {
             server.stop(0);
         }

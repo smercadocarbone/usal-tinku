@@ -85,9 +85,9 @@ falta cualquiera, el arranque falla al resolver el placeholder.
 
 ## OCR — Tesseract (ADR-M1-01)
 
-El OCR de identidad usa **Tesseract vía Tess4J**, in-process (la imagen del DNI
-nunca sale del servidor — Artículo V). Requiere el binario nativo de Tesseract
-instalado en el entorno y el data de idioma español:
+El OCR de identidad ejecuta el programa **`tesseract`** del sistema (ADR-M1-08; la
+imagen del DNI nunca sale del servidor — Artículo V). Requiere Tesseract 5 instalado
+con los idiomas español, inglés y osd:
 
 - **Mac:** `brew install tesseract tesseract-lang`
 - **Linux / Docker:** `apt-get install -y tesseract-ocr tesseract-ocr-spa`
@@ -95,8 +95,9 @@ instalado en el entorno y el data de idioma español:
 
 El data de idioma español debe estar accesible para Tesseract vía
 `TESSDATA_PREFIX` (carpeta que contiene `spa.traineddata`) o la property
-`tinku.ocr.tessdata`. Si no está, el `TesseractOcrService` devuelve
-"documento ilegible" (reintentos + backoff FR-ID-011), nunca rompe el request.
+`tinku.ocr.tessdata`. Si el programa no está, el registro responde 503 ("lector no
+disponible") y no consume intentos. Una foto ilegible sí consume: 6 por ciclo
+(`OCR_MAX_INTENTOS`) y 24 hs de espera (`OCR_BACKOFF_HORAS`, FR-ID-011).
 
 ```bash
 # Ejemplo (Mac) tras instalar el paquete:
