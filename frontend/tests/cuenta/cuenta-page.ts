@@ -9,6 +9,7 @@ export class CuentaPage extends BasePage {
   readonly botonGuardarEmail: Locator;
   readonly campoPasswordActual: Locator;
   readonly campoPasswordNueva: Locator;
+  readonly campoPasswordRepetida: Locator;
   readonly botonCambiarPassword: Locator;
 
   readonly selectTipoCredencial: Locator;
@@ -25,6 +26,7 @@ export class CuentaPage extends BasePage {
     this.botonGuardarEmail = page.getByRole("button", { name: "Guardar email" });
     this.campoPasswordActual = page.getByLabel("Contraseña actual", { exact: true });
     this.campoPasswordNueva = page.getByLabel("Contraseña nueva", { exact: true });
+    this.campoPasswordRepetida = page.getByLabel("Repetí la contraseña nueva", { exact: true });
     this.botonCambiarPassword = page.getByRole("button", { name: "Cambiar contraseña" });
 
     this.selectTipoCredencial = page.getByLabel("Tipo de documento", { exact: true });
