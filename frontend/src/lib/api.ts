@@ -123,7 +123,27 @@ export const api = {
     manageSesion(() => request<T>(path, { method: "PATCH", body })),
   delete: <T>(path: string) =>
     manageSesion(() => request<T>(path, { method: "DELETE" })),
+  /** Bytes (archivo), no JSON: CSV de cobros, adjuntos, videos. */
+  blob: (path: string) =>
+    manageSesion(async () => {
+      const res = await fetch(`${API_BASE_URL}${path}`, { headers: headersConToken() });
+      if (!res.ok) {
+        const [mensaje, detalles] = await leerError(res);
+        throw new ApiError(res.status, mensaje, detalles);
+      }
+      return res.blob();
+    }),
 };
+
+/** Descarga un Blob como archivo con ese nombre. */
+export function guardarArchivo(blob: Blob, nombre: string): void {
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ---- Contrato 2b (M2): catálogo de temas + búsqueda ---- */
 

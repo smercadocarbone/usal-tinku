@@ -78,4 +78,25 @@ test.describe("Configuración de Precio del tutor", () => {
       expect(puts).toBe(1);
     }
   );
+
+  test(
+    "FR-PAG-019: muestra cuánto le queda al tutor por hora y por media hora",
+    { tag: ["@e2e", "@CUENTA-PRECIO-NETO-E2E-001"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
+      await mockApi(page, {
+        "GET /api/pagos/tarifa": async (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: '{"tutorId":"t-1","precioHora":15000,"pisoHora":6140,"comisionPorcentaje":27}',
+          }),
+      });
+
+      await page.goto("/cuenta/precio");
+      await expect(page.getByText(/Te quedan/)).toContainText("10.950");
+      await expect(page.getByText(/Te quedan/)).toContainText("5.475");
+      await expect(page.getByText(/Tinku se queda con el 27 %/)).toBeVisible();
+    }
+  );
 });

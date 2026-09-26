@@ -834,4 +834,74 @@ class PagosFlujosIntegracionTest {
                 "SELECT count(*) FROM admin.tickets_soporte WHERE detalle LIKE ?", Integer.class,
                 "%" + rara + "%")).isEqualTo(1);
     }
+
+    // ------------------------------------------------ v2.5: precio neto y export (FR-PAG-019/020)
+
+    /** FR-PAG-019: el Tutor recibe el porcentaje de comisión para calcular cuánto le queda. */
+    @Test
+    void getTarifa_exponeElPorcentajeDeComision() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+
+        mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comisionPorcentaje").value(27));
+    }
+
+    private com.tinku.pagos.model.Transaccion transaccion(UUID reservaId, String mpId, boolean bypass, Instant cobro) {
+        var t = new com.tinku.pagos.model.Transaccion();
+        t.setReservaId(reservaId);
+        t.setMpPaymentId(mpId);
+        t.setMontoBruto(new BigDecimal("15000"));
+        t.setComisionPlataforma(new BigDecimal("4050.00"));
+        t.setEnBypass(bypass);
+        t.setCreatedAt(cobro);
+        return transaccionRepository.save(t);
+    }
+
+    /** FR-PAG-020: solo los cobros reales del mes pedido, con el DNI de quien pagó y montos con coma. */
+    @Test
+    void exportCobros_delMes_sinBypass_conDniDelPagador() throws Exception {
+        EscenarioPago e = escenarioPago();
+        String dniEst = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Luis", "Gomez", true, false);
+        publicarFranjaPuntual(e.tokenTutor(), e.fecha().plusDays(7));
+        publicarFranjaPuntual(e.tokenTutor(), e.fecha().plusDays(14));
+        UUID delMes = crearReservaDirecta(tokenEst, e.tutorId(), null, e.horario());
+        UUID otraDelMes = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), dentroDeFranja(e.fecha().plusDays(7)));
+        UUID anterior = crearReservaDirecta(tokenEst, e.tutorId(), null, dentroDeFranja(e.fecha().plusDays(14)));
+        Instant ahora = Instant.now();
+        java.time.YearMonth mes = java.time.YearMonth.from(ahora.atZone(ReservasZonaHoraria.ZONA));
+        transaccion(delMes, "mp-exp-1", false, ahora);
+        transaccion(otraDelMes, "bypass-" + otraDelMes, true, ahora);
+        transaccion(anterior, "mp-exp-viejo", false,
+                mes.minusMonths(1).atDay(10).atStartOfDay(ReservasZonaHoraria.ZONA).toInstant());
+
+        MvcResult res = mockMvc.perform(get("/api/pagos/cobros/export").param("mes", mes.toString())
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Disposition", org.hamcrest.Matchers.containsString("tinku-cobros-" + mes + ".csv")))
+                .andReturn();
+        String csv = res.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        String[] lineas = csv.replace("\uFEFF", "").split("\r\n");
+
+        assertThat(lineas).hasSize(2);
+        assertThat(lineas[0]).startsWith("Fecha de cobro;");
+        assertThat(lineas[1]).contains("Luis Gomez;" + dniEst + ";")
+                .contains(";15000,00;4050,00;10950,00;A liberar;mp-exp-1");
+        assertThat(csv).doesNotContain("mp-exp-viejo").doesNotContain("bypass-");
+    }
+
+    @Test
+    void exportCobros_mesInvalido_400_yNoTutor_403() throws Exception {
+        String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
+        mockMvc.perform(get("/api/pagos/cobros/export").param("mes", "2026-13")
+                        .header("Authorization", "Bearer " + tokenTutor))
+                .andExpect(status().isBadRequest());
+
+        String tokenEst = registrarAdultoYToken(dniUnico(), "Luis", "Gomez", true, false);
+        mockMvc.perform(get("/api/pagos/cobros/export").param("mes", "2026-09")
+                        .header("Authorization", "Bearer " + tokenEst))
+                .andExpect(status().isForbidden());
+    }
 }

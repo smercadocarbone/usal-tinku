@@ -61,4 +61,32 @@ test.describe("Mis cobros del tutor", () => {
       await expect(page.getByText("Todavía no tenés cobros")).toBeVisible();
     }
   );
+
+  test(
+    "FR-PAG-020: descarga la planilla del mes elegido para facturar",
+    { tag: ["@e2e", "@pagos", "@COBROS-EXPORT-E2E-001"] },
+    async ({ page }) => {
+      let mesPedido = "";
+      await mockApi(page, {
+        "GET /api/pagos/mp/estado": jsonRoute(200, { requerida: false, estado: null, conectadaAt: null }),
+        "GET /api/pagos/mis-cobros": jsonRoute(200, { retenido: 0, enRevision: 0, liberado: 0, reembolsado: 0, cobros: [] }),
+        "GET /api/pagos/cobros/export": async (route) => {
+          mesPedido = new URL(route.request().url()).searchParams.get("mes") ?? "";
+          await route.fulfill({ status: 200, contentType: "text/csv", body: "Fecha de cobro;Pagó\r\n" });
+        },
+      });
+
+      await page.goto("/cuenta/cobros");
+      const selector = page.getByLabel("Para facturar (ARCA)");
+      const segundoMes = await selector.locator("option").nth(1).getAttribute("value");
+      await selector.selectOption(segundoMes!);
+      const [descarga] = await Promise.all([
+        page.waitForEvent("download"),
+        page.getByRole("button", { name: "Descargar planilla" }).click(),
+      ]);
+
+      expect(mesPedido).toBe(segundoMes);
+      expect(descarga.suggestedFilename()).toBe(`tinku-cobros-${segundoMes}.csv`);
+    }
+  );
 });

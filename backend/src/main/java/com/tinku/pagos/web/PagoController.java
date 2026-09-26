@@ -5,9 +5,12 @@ import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.repository.TarifaTutorRepository;
 import com.tinku.pagos.service.PagoService;
+import com.tinku.pagos.service.ComisionPlataforma;
 import com.tinku.pagos.service.PisoTarifa;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +19,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 
 /**
@@ -35,6 +42,9 @@ import java.util.UUID;
  * perfil (US-6, FR-PAG-006, Chunk M5-H). {@code GET /api/pagos/tarifa}: la
  * lee (UX-06 §4) junto con el piso por hora (T06); si todavía no la definió,
  * {@code precioHora} viene null (antes 204: el Tutor nuevo no conocía el piso).
+ *
+ * {@code GET /api/pagos/cobros/export?mes=AAAA-MM} (FR-PAG-020): los cobros del Tutor de ese
+ * mes en CSV, para facturar y declarar en ARCA.
  */
 @RestController
 @RequestMapping("/api/pagos")
@@ -46,16 +56,19 @@ public class PagoController {
     private final PisoTarifa pisoTarifa;
     private final EscrowService escrowService;
     private final com.tinku.pagos.service.CobrosTutorService cobrosTutor;
+    private final ComisionPlataforma comision;
 
     public PagoController(PagoService pagoService, UsuarioActual usuarioActual, TarifaTutorRepository tarifaRepo,
                           PisoTarifa pisoTarifa, EscrowService escrowService,
-                          com.tinku.pagos.service.CobrosTutorService cobrosTutor) {
+                          com.tinku.pagos.service.CobrosTutorService cobrosTutor,
+                          ComisionPlataforma comision) {
         this.pagoService = pagoService;
         this.usuarioActual = usuarioActual;
         this.tarifaRepo = tarifaRepo;
         this.pisoTarifa = pisoTarifa;
         this.escrowService = escrowService;
         this.cobrosTutor = cobrosTutor;
+        this.comision = comision;
     }
 
     /** Al volver de MercadoPago con el pago aprobado: confirma consultando a MP (ver
@@ -90,13 +103,31 @@ public class PagoController {
         return cobrosTutor.de(usuarioActual.obtener(authentication));
     }
 
+    /** FR-PAG-020: CSV del mes (separador {@code ;} y BOM para que Excel en español lo abra bien). */
+    @GetMapping("/cobros/export")
+    public ResponseEntity<byte[]> exportarCobros(@RequestParam String mes, Authentication authentication) {
+        YearMonth periodo;
+        try {
+            periodo = YearMonth.parse(mes);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        String csv = cobrosTutor.exportarMes(usuarioActual.obtener(authentication), periodo);
+        byte[] cuerpo = ("\uFEFF" + csv).getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"tinku-cobros-" + periodo + ".csv\"")
+                .body(cuerpo);
+    }
+
     @GetMapping("/tarifa")
     public ResponseEntity<TarifaTutorResponse> miTarifa(Authentication authentication) {
         UUID yo = usuarioActual.obtener(authentication).getId();
         BigDecimal piso = pisoTarifa.pisoHora();
         return ResponseEntity.ok(tarifaRepo.findByTutorId(yo)
-                .map(t -> TarifaTutorResponse.from(t, piso))
-                .orElseGet(() -> TarifaTutorResponse.sinTarifa(yo, piso)));
+                .map(t -> TarifaTutorResponse.from(t, piso, comision.porcentaje()))
+                .orElseGet(() -> TarifaTutorResponse.sinTarifa(yo, piso, comision.porcentaje())));
     }
 
     @PutMapping("/tarifa")
@@ -106,6 +137,6 @@ public class PagoController {
         return ResponseEntity.ok(TarifaTutorResponse.from(
                 pagoService.actualizarTarifaTutor(
                         usuarioActual.obtener(authentication), request.precioHora()),
-                pisoTarifa.pisoHora()));
+                pisoTarifa.pisoHora(), comision.porcentaje()));
     }
 }

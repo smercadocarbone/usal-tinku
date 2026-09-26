@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, TrendingUp } from "lucide-react";
+import { Eye, TrendingUp, Wallet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatearPesos } from "@/lib/formatos";
 import { Alerta, Selector, useToast } from "@/components/ui";
@@ -33,6 +33,12 @@ const PROVINCIAS = [
   "Tucumán",
 ];
 
+/** Lo que le queda al Tutor: mismo redondeo a centavos que `ComisionPlataforma` del backend. */
+export function netoPorHora(precio: number, comisionPorcentaje: number): number {
+  const comision = Math.round(precio * comisionPorcentaje) / 100;
+  return Math.round((precio - comision) * 100) / 100;
+}
+
 interface ReferenciaRegional {
   provincia: string;
   valorSugerido: number;
@@ -42,6 +48,8 @@ interface Tarifa {
   precioHora: number | null;
   /** T06: piso por hora vigente (el backend rechaza con 422 por debajo). */
   pisoHora?: number | null;
+  /** FR-PAG-019: comisión de Tinku, para mostrar cuánto le queda al Tutor. */
+  comisionPorcentaje?: number;
 }
 
 /**
@@ -58,6 +66,7 @@ export default function TabPrecio() {
   const [provincia, setProvincia] = useState("");
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
   const [piso, setPiso] = useState<number | null>(null);
+  const [comision, setComision] = useState<number | null>(null);
   // Espejo del ref para poder mostrarlo en el render (lint react/refs).
   const [precioGuardado, setPrecioGuardado] = useState<number | null>(null);
   const guardado = useRef<number | null>(null);
@@ -67,6 +76,7 @@ export default function TabPrecio() {
       .get<Tarifa | undefined>("/api/pagos/tarifa")
       .then((t) => {
         if (t?.pisoHora) setPiso(Number(t.pisoHora));
+        if (t?.comisionPorcentaje != null) setComision(Number(t.comisionPorcentaje));
         if (t?.precioHora) {
           guardado.current = Number(t.precioHora);
           setPrecioGuardado(Number(t.precioHora));
@@ -173,6 +183,22 @@ export default function TabPrecio() {
           <p className="text-[15px]">
             Así lo ven las familias: <strong>{formatearPesos(numero)} por hora</strong>.
           </p>
+        </div>
+      )}
+
+      {numero !== null && numero > 0 && comision !== null && (
+        <div className="flex items-start gap-3 rounded-2xl bg-marca-50 p-4" aria-live="polite">
+          <Wallet className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
+          <div className="text-[15px]">
+            <p>
+              Te quedan <strong>{formatearPesos(netoPorHora(numero, comision))} por hora</strong>
+              {" "}({formatearPesos(netoPorHora(numero / 2, comision))} por una clase de 30 minutos).
+            </p>
+            <p className="mt-1 text-[13px] text-tinta-suave">
+              Tinku se queda con el {comision} %. MercadoPago te cobra aparte su propia comisión, según el plazo de
+              acreditación que tengas en tu cuenta.
+            </p>
+          </div>
         </div>
       )}
 

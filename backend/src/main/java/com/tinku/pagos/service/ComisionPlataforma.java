@@ -24,6 +24,11 @@ public class ComisionPlataforma {
         this.percent = percent;
     }
 
+    /** FR-PAG-019: el porcentaje que ve el Tutor al fijar su precio (nunca repetido en el frontend). */
+    public int porcentaje() {
+        return percent;
+    }
+
     public BigDecimal calcular(BigDecimal montoBruto) {
         return montoBruto.multiply(BigDecimal.valueOf(percent).movePointLeft(2))
                 .setScale(2, RoundingMode.HALF_UP);
