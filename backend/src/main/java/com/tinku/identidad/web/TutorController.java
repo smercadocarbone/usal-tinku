@@ -17,6 +17,8 @@ import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.TipoArchivoCredencial;
 import com.tinku.identidad.model.Usuario;
+import java.util.Map;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.tinku.identidad.port.Almacenamiento;
 import com.tinku.identidad.port.PerfilMatchingProvider;
 import com.tinku.identidad.port.ReputacionPerfilProvider;
@@ -67,6 +69,7 @@ public class TutorController {
     private final TarifaPerfilProvider tarifaPerfilProvider;
     private final PerfilPublicoTutorService perfilPublicoService;
     private final CertificadoService certificadoService;
+    private final com.tinku.identidad.service.ConsentimientoService consentimiento;
     /** Mismo valor que corta el contenedor; se re-chequea acá (ver cargarCredencial). */
     private final DataSize maxArchivoCredencial;
 
@@ -79,6 +82,7 @@ public class TutorController {
                            TarifaPerfilProvider tarifaPerfilProvider,
                            PerfilPublicoTutorService perfilPublicoService,
                            CertificadoService certificadoService,
+                           com.tinku.identidad.service.ConsentimientoService consentimiento,
                            @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial) {
         this.maxArchivoCredencial = maxArchivoCredencial;
         this.usuarioService = usuarioService;
@@ -90,6 +94,7 @@ public class TutorController {
         this.tarifaPerfilProvider = tarifaPerfilProvider;
         this.perfilPublicoService = perfilPublicoService;
         this.certificadoService = certificadoService;
+        this.consentimiento = consentimiento;
     }
 
     @PostMapping(value = "/registro", consumes = "multipart/form-data")
@@ -98,6 +103,7 @@ public class TutorController {
             @RequestPart("fotoDni") MultipartFile fotoDni
     ) throws IOException {
         Usuario tutor = usuarioService.registrarTutor(request, fotoDni.getBytes());
+        consentimiento.aceptarTerminos(tutor.getId()); // ADR-M3-05: una sola vez, al crear la cuenta
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.from(tutor));
     }
 
@@ -137,7 +143,24 @@ public class TutorController {
                 tutor.getBio() != null,
                 tutor.getFotoRef() != null,
                 certificadoService.ultimo(id).map(CapResponse::from).orElse(null),
-                certificadoService.habilitadoParaMenores(id)));
+                certificadoService.habilitadoParaMenores(id),
+                tutor.isAceptaMenores()));
+    }
+
+    /**
+     * Mi cuenta → Menores (V41): el Tutor elige si da clases a menores. Apagarlo cancela sus
+     * clases futuras con menores, con reembolso total y aviso al Adulto Responsable (mismo
+     * camino que un CAP vencido, PT10); la UI lo confirma antes.
+     */
+    @PutMapping("/me/menores")
+    public ResponseEntity<Map<String, Object>> actualizarAceptaMenores(
+            @RequestBody Map<String, Boolean> cuerpo, Authentication authentication) {
+        Boolean acepta = cuerpo == null ? null : cuerpo.get("aceptaMenores");
+        if (acepta == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Falta aceptaMenores."));
+        }
+        int canceladas = certificadoService.actualizarAceptaMenores(usuarioActual.obtener(authentication), acepta);
+        return ResponseEntity.ok(Map.of("aceptaMenores", acepta, "clasesCanceladas", canceladas));
     }
 
     /**

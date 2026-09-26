@@ -162,6 +162,10 @@ tinku:
   clausulas:
     grabacion-audio:
       version: ${TINKU_CLAUSULA_GRABACION_VERSION:borrador-1}
+    # ADR-M3-05: los Términos (incluyen el consentimiento de la grabación). Subir la versión
+    # hace que "Mi cuenta" los pida de nuevo una vez.
+    terminos:
+      version: ${TINKU_CLAUSULA_TERMINOS_VERSION:2026-09-26}
   menores:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.

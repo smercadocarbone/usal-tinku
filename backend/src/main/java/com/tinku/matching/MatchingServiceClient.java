@@ -114,6 +114,39 @@ public class MatchingServiceClient {
         }
     }
 
+    /**
+     * Asistente de "Mis materias" (POST /sugerir-temas): ordena los temas candidatos por
+     * similitud con lo que el Tutor cuenta. Sin respuesta del servicio → no disponible.
+     */
+    public List<SugerenciaTema> sugerirTemas(String texto, List<TemaCandidato> temas, int limite) {
+        try {
+            return restClient.post()
+                    .uri("/sugerir-temas")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new SugerirTemasRequest(texto, temas, limite))
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (request, response) -> {
+                        throw new MatchingNoDisponibleException();
+                    })
+                    .body(SUGERENCIAS_TYPE);
+        } catch (RestClientException ex) {
+            throw new MatchingNoDisponibleException();
+        }
+    }
+
+    public record TemaCandidato(String id, String texto) {
+    }
+
+    public record SugerirTemasRequest(String texto, List<TemaCandidato> temas, int limite) {
+    }
+
+    public record SugerenciaTema(String id, double score) {
+    }
+
+    private static final ParameterizedTypeReference<List<SugerenciaTema>> SUGERENCIAS_TYPE =
+            new ParameterizedTypeReference<>() {
+            };
+
     private static final ParameterizedTypeReference<List<ResultadoMatch>> MATCH_RESPONSE_TYPE =
             new ParameterizedTypeReference<>() {
             };

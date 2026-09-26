@@ -1,5 +1,6 @@
 package com.tinku.identidad.service;
 
+import com.tinku.identidad.repository.UsuarioRepository;
 import com.tinku.identidad.model.EstadoCap;
 import com.tinku.identidad.repository.CertificadoAntecedentesPenalesRepository;
 import com.tinku.reservas.port.VerificadorHabilitacionMenores;
@@ -22,19 +23,24 @@ public class HabilitacionMenoresCap implements VerificadorHabilitacionMenores {
     private static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
 
     private final CertificadoAntecedentesPenalesRepository capRepo;
+    private final UsuarioRepository usuarioRepo;
 
-    public HabilitacionMenoresCap(CertificadoAntecedentesPenalesRepository capRepo) {
+    public HabilitacionMenoresCap(CertificadoAntecedentesPenalesRepository capRepo, UsuarioRepository usuarioRepo) {
         this.capRepo = capRepo;
+        this.usuarioRepo = usuarioRepo;
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean habilitadoParaMenores(UUID tutorId) {
-        return habilitado(capRepo, tutorId);
+        return habilitado(capRepo, usuarioRepo, tutorId);
     }
 
-    static boolean habilitado(CertificadoAntecedentesPenalesRepository capRepo, UUID tutorId) {
-        return capRepo.existsByTutorIdAndEstadoAndVenceAtGreaterThanEqual(
-                tutorId, EstadoCap.APROBADO, LocalDate.now(ZONA));
+    /** CAP aprobado y vigente Y el Tutor acepta dar clases a menores (V41). */
+    static boolean habilitado(CertificadoAntecedentesPenalesRepository capRepo, UsuarioRepository usuarioRepo,
+                              UUID tutorId) {
+        return usuarioRepo.existsByIdAndAceptaMenoresTrue(tutorId)
+                && capRepo.existsByTutorIdAndEstadoAndVenceAtGreaterThanEqual(
+                        tutorId, EstadoCap.APROBADO, LocalDate.now(ZONA));
     }
 }

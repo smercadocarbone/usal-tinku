@@ -1,5 +1,6 @@
 package com.tinku.identidad.web;
 
+import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.identidad.service.ConsentimientoService;
 import com.tinku.shared.UsuarioActual;
@@ -37,7 +38,13 @@ public class ClausulaController {
     @PostMapping("/{clausula}")
     public ResponseEntity<ClausulaResponse> aceptar(@PathVariable String clausula, Authentication authentication) {
         Usuario usuario = usuarioActual.obtener(authentication);
-        consentimientoService.aceptar(usuario.getId(), clausula);
+        // ADR-M3-05: aceptar los Términos (p. ej. una versión nueva) incluye la grabación de solo
+        // audio; un Menor nunca la acepta (Art. II: nunca hay grabación con menores).
+        if (ConsentimientoService.TERMINOS.equals(clausula) && usuario.getTipo() != TipoUsuario.MENOR) {
+            consentimientoService.aceptarTerminos(usuario.getId());
+        } else {
+            consentimientoService.aceptar(usuario.getId(), clausula);
+        }
         return ResponseEntity.ok(new ClausulaResponse(clausula, consentimientoService.versionVigente(clausula), true));
     }
 }

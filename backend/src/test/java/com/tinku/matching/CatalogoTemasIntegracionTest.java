@@ -576,4 +576,39 @@ class CatalogoTemasIntegracionTest {
                 .hasSize(2)
                 .allSatisfy(item -> assertThat(item.get("noAutorizado").asBoolean()).isTrue());
     }
+
+    // ------------------------------------------------ asistente de "Mis materias"
+
+    /** Sugiere temas del catálogo (filtrados por nivel en Java) en el orden del modelo; solo Tutor. */
+    @Test
+    void sugerencias_ordenDelModelo_filtroDeNivel_soloTutor() throws Exception {
+        String tokenTutor = registrarTutorYToken("30900001");
+        when(matchingClient.sugerirTemas(any(), any(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenAnswer(inv -> {
+                    List<MatchingServiceClient.TemaCandidato> temas = inv.getArgument(1);
+                    // El "modelo" pone la división primero.
+                    return temas.stream()
+                            .sorted(java.util.Comparator.comparing(t -> t.id().equals(divisionId.toString()) ? 0 : 1))
+                            .map(t -> new MatchingServiceClient.SugerenciaTema(t.id(), 0.5))
+                            .toList();
+                });
+
+        mockMvc.perform(post("/api/tutores/me/temas/sugerencias").header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto\":\"Enseño a dividir a chicos de cuarto grado\",\"nivel\":\"primario\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(divisionId.toString()))
+                .andExpect(jsonPath("$[0].materia").value("Matemática"))
+                .andExpect(jsonPath("$[?(@.id == '" + factorizacionId + "')]").isEmpty());
+
+        mockMvc.perform(post("/api/tutores/me/temas/sugerencias").header("Authorization", "Bearer " + tokenTutor)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"corto\"}"))
+                .andExpect(status().isUnprocessableEntity());
+
+        String tokenAdulto = registrarAdultoYToken("30900002", true, false);
+        mockMvc.perform(post("/api/tutores/me/temas/sugerencias").header("Authorization", "Bearer " + tokenAdulto)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto\":\"Enseño a dividir a chicos de cuarto grado\"}"))
+                .andExpect(status().isForbidden());
+    }
 }

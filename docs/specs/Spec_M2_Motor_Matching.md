@@ -61,6 +61,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 | FR-MATCH-007 | Tutores suspendidos o marcados "no confiables" se filtran antes del cálculo semántico. |
 | FR-MATCH-008 | Búsquedas guardadas, re-ejecutables con resultados actualizados. |
 | FR-MATCH-009 | El filtro de "no confiable" es específico de la capacidad Adulto Responsable de la cuenta, no afecta su capacidad Estudiante. |
+| FR-MATCH-010 _(agregado 2026-09-26)_ | Asistente de "Mis materias": el Tutor describe con sus palabras qué enseña y el sistema le sugiere hasta 8 temas del catálogo cerrado (FR-MATCH-006) ordenados por similitud, con el mismo modelo de embeddings (`POST /sugerir-temas` del servicio Python, sin reglas de negocio; el filtro por nivel se aplica en Java). Solo sugiere: el Tutor marca los que da y se guardan por el mismo `PUT /api/tutores/me/temas`. Sin LLM (costo cero). |
 
 ## 4. Reglas de Negocio Aplicables
 

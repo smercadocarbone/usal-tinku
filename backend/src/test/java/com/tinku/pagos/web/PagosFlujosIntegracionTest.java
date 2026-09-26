@@ -598,6 +598,11 @@ class PagosFlujosIntegracionTest {
 
     private static final byte[] AUDIO_WEBM = {0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 1, 2, 3};
 
+    private void sinAceptacionDeGrabacion(String dni) {
+        capJdbc.update("DELETE FROM identidad.aceptaciones_clausula WHERE clausula = 'GRABACION_AUDIO_RESUMEN' "
+                + "AND usuario_id = ?", usuarioPorDni(dni).getId());
+    }
+
     private void aceptarClausulaGrabacion(String token) throws Exception {
         mockMvc.perform(post("/api/usuarios/me/clausulas/GRABACION_AUDIO_RESUMEN")
                         .header("Authorization", "Bearer " + token))
@@ -623,9 +628,14 @@ class PagosFlujosIntegracionTest {
     private EscenarioAdicional escenarioAdicional(boolean tutorAcepta, boolean alumnoAcepta) throws Exception {
         String dniTutor = dniUnico();
         String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
-        String tokenEst = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        String dniEst = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
         LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
         publicarFranjaPuntual(tokenTutor, fecha);
+        // ADR-M3-05: el alta ya acepta la grabación con los Términos. "No aceptó" = cuenta
+        // anterior o versión nueva de la cláusula: se simula borrando la aceptación.
+        if (!tutorAcepta) sinAceptacionDeGrabacion(dniTutor);
+        if (!alumnoAcepta) sinAceptacionDeGrabacion(dniEst);
         if (tutorAcepta) aceptarClausulaGrabacion(tokenTutor);
         if (alumnoAcepta) aceptarClausulaGrabacion(tokenEst);
         return new EscenarioAdicional(tokenEst, tokenTutor, usuarioPorDni(dniTutor).getId(), dentroDeFranja(fecha));

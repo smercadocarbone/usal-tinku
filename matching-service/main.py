@@ -19,6 +19,8 @@ Endpoints:
   lista de candidatos que llega YA acotada por el backend Java.
 - POST /recompute-embeddings (M2-F, contrato 2c): repopula `embedding` de TODOS
   los perfiles desde sus `tema_ids` (idempotente, sin reglas de negocio).
+- POST /sugerir-temas        (asistente de "Mis materias"): ordena temas del catalogo
+  por similitud con el texto libre del Tutor.
 """
 
 import hmac
@@ -291,6 +293,61 @@ def match(request: MatchRequest) -> list[MatchResult]:
     except MatchError as exc:
         raise Unavailable(str(exc)) from exc
     return [MatchResult(tutor_id=tid, score=score) for tid, score in ranked]
+
+
+class TemaCandidato(BaseModel):
+    id: str
+    texto: str  # '{nombre}: {descripcion}' — lo arma Java desde el catalogo
+
+
+class SugerirTemasRequest(BaseModel):
+    texto: str
+    temas: list[TemaCandidato]  # catalogo ya filtrado en Java (nivel, etc.)
+    limite: int = 8
+
+
+class SugerenciaTema(BaseModel):
+    id: str
+    score: float
+
+
+# Embeddings de los temas del catalogo por texto: el catalogo cambia poco y embeddear
+# cientos de temas en cada pedido costaria segundos. Acotado para no crecer sin limite.
+_cache_temas: dict[str, list[float]] = {}
+_MAX_CACHE_TEMAS = 5000
+
+
+def _embed_tema(texto: str) -> list[float]:
+    vector = _cache_temas.get(texto)
+    if vector is None:
+        vector = _embed(texto)
+        if len(_cache_temas) >= _MAX_CACHE_TEMAS:
+            _cache_temas.clear()
+        _cache_temas[texto] = vector
+    return vector
+
+
+def _coseno(a: list[float], b: list[float]) -> float:
+    num = sum(x * y for x, y in zip(a, b))
+    den = (sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5)
+    return 0.0 if den == 0 else num / den
+
+
+@app.post("/sugerir-temas", response_model=list[SugerenciaTema], dependencies=[Depends(_requiere_token)])
+def sugerir_temas(request: SugerirTemasRequest) -> list[SugerenciaTema]:
+    """Asistente de "Mis materias": ordena temas del catalogo por similitud con lo que el
+    Tutor cuenta que ensena. Sin reglas de negocio: el catalogo llega ya acotado desde Java,
+    y la decision de que temas guardar la toma el Tutor. Mismo modelo que /match."""
+    if not request.texto.strip() or not request.temas:
+        return []
+    try:
+        consulta = _embed(request.texto)
+        puntuados = [(t.id, _coseno(consulta, _embed_tema(t.texto))) for t in request.temas]
+    except MatchError as exc:
+        raise Unavailable(str(exc)) from exc
+    puntuados.sort(key=lambda par: par[1], reverse=True)
+    limite = max(1, min(request.limite, 20))
+    return [SugerenciaTema(id=tid, score=score) for tid, score in puntuados[:limite]]
 
 
 class Unavailable(Exception):

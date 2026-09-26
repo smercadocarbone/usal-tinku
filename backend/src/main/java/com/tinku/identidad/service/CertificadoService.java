@@ -42,10 +42,13 @@ public class CertificadoService {
     private final CertificadoAntecedentesPenalesRepository capRepo;
     private final CredencialBackoffService backoffService;
     private final CancelacionReservasConMenores cancelacion;
+    private final com.tinku.identidad.repository.UsuarioRepository usuarioRepo;
 
     public CertificadoService(CertificadoAntecedentesPenalesRepository capRepo,
                               CredencialBackoffService backoffService,
-                              CancelacionReservasConMenores cancelacion) {
+                              CancelacionReservasConMenores cancelacion,
+                              com.tinku.identidad.repository.UsuarioRepository usuarioRepo) {
+        this.usuarioRepo = usuarioRepo;
         this.capRepo = capRepo;
         this.backoffService = backoffService;
         this.cancelacion = cancelacion;
@@ -55,7 +58,22 @@ public class CertificadoService {
      *  Se calcula siempre; nunca se persiste un booleano que pueda desincronizarse. */
     @Transactional(readOnly = true)
     public boolean habilitadoParaMenores(UUID tutorId) {
-        return HabilitacionMenoresCap.habilitado(capRepo, tutorId);
+        return HabilitacionMenoresCap.habilitado(capRepo, usuarioRepo, tutorId);
+    }
+
+    /**
+     * V41: preferencia del Tutor de dar clases a menores. Apagarla cancela sus clases futuras
+     * con menores (reembolso total y aviso al AR, como un CAP vencido). Devuelve cuántas.
+     */
+    @Transactional
+    public int actualizarAceptaMenores(Usuario tutor, boolean acepta) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR) {
+            throw new SoloTutorException();
+        }
+        Usuario u = usuarioRepo.findById(tutor.getId()).orElseThrow(SoloTutorException::new);
+        u.setAceptaMenores(acepta);
+        usuarioRepo.save(u);
+        return acepta ? 0 : cancelacion.cancelarFuturasConMenores(u.getId());
     }
 
     /** El último CAP del Tutor (su panel muestra el estado), si cargó alguno. */

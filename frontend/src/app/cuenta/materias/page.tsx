@@ -6,7 +6,7 @@ import { Tarjeta } from "@/components/ui";
 
 export default function CuentaMateriasPage() {
   return (
-    <SubpaginaTutor titulo="Mis materias" descripcion="Elegí qué temas enseñás. Se guardan solos.">
+    <SubpaginaTutor titulo="Materias" descripcion="Qué temas enseñás. Contalo con tus palabras o elegilos del catálogo; se guardan solos.">
       <Tarjeta>
         <TabMaterias />
       </Tarjeta>

@@ -31,10 +31,13 @@ public class CatalogoTemasController {
     private final CatalogoService catalogoService;
     private final PerfilTutorTemasService temasService;
     private final UsuarioActual usuarioActual;
+    private final SugerenciaTemasService sugerencias;
 
     public CatalogoTemasController(CatalogoService catalogoService,
                                    PerfilTutorTemasService temasService,
-                                   UsuarioActual usuarioActual) {
+                                   UsuarioActual usuarioActual,
+                                   SugerenciaTemasService sugerencias) {
+        this.sugerencias = sugerencias;
         this.catalogoService = catalogoService;
         this.temasService = temasService;
         this.usuarioActual = usuarioActual;
@@ -63,6 +66,16 @@ public class CatalogoTemasController {
         Usuario usuario = usuarioActual.obtener(authentication);
         List<UUID> guardados = temasService.guardarTemas(usuario, request.temaIds());
         return ResponseEntity.ok(new TemaIdsResponse(guardados));
+    }
+
+    /** Asistente de "Mis materias": sugiere temas del catálogo a partir de lo que cuenta el Tutor. */
+    @org.springframework.web.bind.annotation.PostMapping("/tutores/me/temas/sugerencias")
+    public List<SugerenciaTemasService.TemaSugerido> sugerencias(@RequestBody SugerenciasRequest request,
+                                                                Authentication authentication) {
+        return sugerencias.sugerir(usuarioActual.obtener(authentication), request.texto(), trimToNull(request.nivel()));
+    }
+
+    public record SugerenciasRequest(String texto, String nivel) {
     }
 
     private static String trimToNull(String s) {

@@ -27,10 +27,14 @@ mal — esa pregunta se responde en el backend Java, antes de la llamada.
 - `POST /recompute-embeddings` — repuebla `embedding` de todos los perfiles
   (contrato 2c). Todos los vectores se embeddean primero y se persisten en una
   sola transacción (AUD-015): un fallo a mitad revierte todo.
+- `POST /sugerir-temas` — asistente de "Mis materias" (FR-MATCH-010). Body:
+  `{"texto": "...", "temas": [{"id": "...", "texto": "nombre: descripción"}], "limite": 8}`.
+  Devuelve `[{"id": ..., "score": ...}]` por similitud. El catálogo llega ya filtrado
+  desde Java; los embeddings de los temas se cachean en memoria por texto.
 
 ## Autenticación (AUD-015)
 
-`/match` y `/recompute-embeddings` exigen el header `X-Matching-Token` con un
+`/match`, `/recompute-embeddings` y `/sugerir-temas` exigen el header `X-Matching-Token` con un
 token compartido entre el backend y este servicio — **el mismo valor** en
 `TINKU_MATCHING_TOKEN` (servicio) y `MATCHING_SERVICE_TOKEN` (backend). Nada de
 usuarios ni JWT (Constitución, Artículo VII).

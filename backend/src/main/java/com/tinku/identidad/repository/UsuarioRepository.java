@@ -14,6 +14,9 @@ import java.util.UUID;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     boolean existsByDni(String dni);
+
+    /** V41: el Tutor acepta dar clases a menores. */
+    boolean existsByIdAndAceptaMenoresTrue(UUID id);
     Optional<Usuario> findByDni(String dni);
 
     /** "Editar cuenta" (auditoría 2026-09-19): unicidad de email excluyendo al

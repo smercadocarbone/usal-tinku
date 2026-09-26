@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import { formatearFechaCorta } from "@/lib/formatos";
-import { Alerta, Tabs } from "@/components/ui";
+import { formatearFechaCorta, hoyIso } from "@/lib/formatos";
+import { Alerta, Tabs, SelectorFecha } from "@/components/ui";
 import WeeklyAvailabilityGrid, {
   INICIO_DIA,
   ULTIMA_FILA,
@@ -194,23 +194,21 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
       />
 
       {modo === "puntual" && (
-        <label className="mt-4 flex flex-col gap-1 text-sm font-semibold text-slate-800">
-          Fecha específica
-          <input
-            type="date"
-            value={fechaPuntual}
-            min={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => {
-              setFechaPuntual(e.target.value);
-              setSeleccion((prev) => {
-                const next = { ...prev };
-                delete next[CLAVE_PUNTUAL];
-                return next;
-              });
-            }}
-            className="w-56 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 focus:border-transparent focus:outline-2 focus:outline-teal-600 focus:outline-offset-1"
-          />
-        </label>
+        <SelectorFecha
+          id="fechaPuntual"
+          etiqueta="Fecha específica"
+          className="mt-4 w-64"
+          value={fechaPuntual}
+          min={hoyIso()}
+          onChange={(iso) => {
+            setFechaPuntual(iso);
+            setSeleccion((prev) => {
+              const next = { ...prev };
+              delete next[CLAVE_PUNTUAL];
+              return next;
+            });
+          }}
+        />
       )}
 
       {/* Grilla */}

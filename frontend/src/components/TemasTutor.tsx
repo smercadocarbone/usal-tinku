@@ -8,7 +8,8 @@ import {
   mensajeDeError,
   type NivelCatalogo,
 } from "@/lib/api";
-import { Alerta, IndicadorGuardado } from "@/components/ui";
+import { Alerta, Chip, IndicadorGuardado } from "@/components/ui";
+import AsistenteMaterias from "@/components/tutor/AsistenteMaterias";
 
 const GUARDADO_OK = "Cambios guardados.";
 
@@ -115,17 +116,38 @@ export default function TemasTutor() {
     );
   }
 
-  return (
-    <section aria-label="Mis temas">
-      <h2 className="text-lg font-semibold text-slate-800">Mis temas</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Elegí los temas que cubrís en tus tutorías. Se guardan solos y se usan
-        para que tu perfil aparezca en las búsquedas.
-      </p>
+  // Nombre de cada tema elegido, para el resumen de arriba.
+  const nombres = new Map<string, string>();
+  for (const n of catalogos) for (const c of n.cursos) for (const m of c.materias) for (const t of m.temas)
+    nombres.set(t.id, `${t.nombre} (${m.nombre}, ${c.nombre})`);
 
+  return (
+    <section aria-label="Mis temas" className="flex flex-col gap-6">
       {errorPrecarga && <Alerta tono="error">{errorPrecarga}</Alerta>}
 
+      <AsistenteMaterias seleccion={seleccion} onAlternar={alternarTema} />
+
       <div>
+        <h3 className="text-lg font-bold">Tus temas ({seleccion.size})</h3>
+        {seleccion.size === 0 ? (
+          <p className="mt-1 text-sm text-tinta-suave">Todavía no elegiste ninguno. Sin temas no aparecés en las búsquedas.</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {Array.from(seleccion).map((id) => (
+              <Chip key={id} activo removible onClick={() => alternarTema(id)} aria-label={`Quitar ${nombres.get(id) ?? "tema"}`}>
+                {nombres.get(id) ?? "Tema"}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+      <h3 className="text-lg font-bold">Todo el catálogo</h3>
+      <p className="mt-1 text-sm text-tinta-suave">
+        Si preferís, buscalos a mano. Se guardan solos y se usan para que tu perfil aparezca en las búsquedas.
+      </p>
+      <div className="mt-2">
         {catalogos.map((nivel) => {
           const claveNivel = nivel.nivel;
           const abiertoNivel = abiertos.has(claveNivel);
@@ -214,6 +236,8 @@ export default function TemasTutor() {
             </div>
           );
         })}
+      </div>
+
       </div>
 
       {estado && (

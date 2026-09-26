@@ -21,6 +21,8 @@ public record EstadoPerfilTutorResponse(
         boolean tieneBio,
         boolean tieneFoto,
         CapResponse cap,
-        boolean habilitadoParaMenores
+        boolean habilitadoParaMenores,
+        /** V41: su preferencia de dar clases a menores (habilitado = esto Y el CAP vigente). */
+        boolean aceptaMenores
 ) {
 }

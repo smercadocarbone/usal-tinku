@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, GraduationCap, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import ChecklistTutor from "@/components/tutor/ChecklistTutor";
 import { useSesion } from "@/lib/useSesion";
-import { actualizarCapacidades, getPerfilPropio, mensajeDeError, type PerfilPropio } from "@/lib/api";
-import { Avatar, Interruptor, Skeleton, Tarjeta, useToast } from "@/components/ui";
+import { aceptarClausula, actualizarCapacidades, CLAUSULA_TERMINOS, getClausula, getPerfilPropio, mensajeDeError, type PerfilPropio } from "@/lib/api";
+import { Alerta, Avatar, Boton, Interruptor, Skeleton, Tarjeta, useToast } from "@/components/ui";
 
 export default function CuentaPerfilPage() {
   const sesion = useSesion();
@@ -15,6 +16,26 @@ export default function CuentaPerfilPage() {
   const [perfil, setPerfil] = useState<PerfilPropio | null>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+
+  // ADR-M3-05: los Términos se aceptan al crear la cuenta. Solo si cambió la versión (o la
+  // cuenta es anterior) se piden de nuevo acá, una vez.
+  const [terminosPendientes, setTerminosPendientes] = useState(false);
+  useEffect(() => {
+    if (!payload || payload.tipo === "MENOR") return;
+    getClausula(CLAUSULA_TERMINOS)
+      .then((c) => setTerminosPendientes(!c.aceptada))
+      .catch(() => setTerminosPendientes(false));
+  }, [payload]);
+
+  async function aceptarTerminos() {
+    try {
+      await aceptarClausula(CLAUSULA_TERMINOS);
+      setTerminosPendientes(false);
+      toast.mostrar("Gracias: aceptaste los Términos actualizados");
+    } catch (err) {
+      toast.mostrar(mensajeDeError(err, "No pudimos guardar tu aceptación."), { tono: "error" });
+    }
+  }
 
   useEffect(() => {
     getPerfilPropio()
@@ -49,6 +70,16 @@ export default function CuentaPerfilPage() {
 
   return (
     <section className="flex flex-col gap-6">
+      {terminosPendientes && (
+        <Alerta
+          tono="info"
+          titulo="Actualizamos los Términos y Condiciones"
+          accion={<Boton tamano="sm" onClick={() => void aceptarTerminos()}>Aceptar</Boton>}
+        >
+          Incluyen el resumen automático: en las clases entre adultos en las que se contrate, se graba solo el audio (nunca
+          con menores) y se borra apenas se transcribe.
+        </Alerta>
+      )}
       <Tarjeta className="flex flex-col gap-5 sm:flex-row sm:items-center">
         {cargando ? (
           <div role="status" className="flex items-center gap-4">
@@ -82,21 +113,7 @@ export default function CuentaPerfilPage() {
         </Tarjeta>
       )}
 
-      {esTutor && (
-        <Link
-          href="/cuenta/perfil-tutor"
-          className="flex min-h-16 items-center gap-4 rounded-tarjeta border border-borde bg-superficie p-5 text-tinta no-underline hover:border-borde-fuerte"
-        >
-          <span aria-hidden className="flex size-11 items-center justify-center rounded-2xl bg-marca-50 text-marca-700">
-            <GraduationCap className="size-6" />
-          </span>
-          <span className="flex-1">
-            <span className="block font-bold">Mi perfil de tutor</span>
-            <span className="block text-sm text-tinta-suave">Presentación, foto, materias, precio y credencial</span>
-          </span>
-          <ChevronRight className="size-5 text-tinta-tenue" aria-hidden />
-        </Link>
-      )}
+      {esTutor && <ChecklistTutor tutorId={perfil?.id ?? null} />}
 
       {(perfil?.tipo === "ADULTO" || perfil?.tipo === "TUTOR") && (
         <Tarjeta>

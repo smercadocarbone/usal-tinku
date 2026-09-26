@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarX2, Check, ChevronLeft, Clock, Copy, Send, ShieldCheck, UserRound, UsersRound } from "lucide-react";
-import { aceptarClausula, api, ApiError, CLAUSULA_GRABACION, getAdicionalResumen, getMenores, mensajeDeError, type AdicionalResumen, type Menor } from "@/lib/api";
+import { api, ApiError, getAdicionalResumen, getMenores, mensajeDeError, type AdicionalResumen, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { useAhora } from "@/lib/useAhora";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
@@ -58,7 +58,6 @@ function ReservarFlujo() {
   // T09: adicional de resumen automático (nunca para un menor, ADR-M3-04).
   const [adicional, setAdicional] = useState<AdicionalResumen | null>(null);
   const [conResumen, setConResumen] = useState(false);
-  const [aceptoGrabacion, setAceptoGrabacion] = useState(false);
 
   // B9: sin tutor no hay nada que reservar — a buscar.
   useEffect(() => {
@@ -170,7 +169,6 @@ function ReservarFlujo() {
         });
         setPedidoEnviado(true);
       } else {
-        if (resumenElegido) await aceptarClausula(CLAUSULA_GRABACION);
         const reserva = await api.post<{ id: string }>("/api/reservas", {
           tutorId,
           horario: elegido.inicio,
@@ -437,7 +435,6 @@ function ReservarFlujo() {
                       checked={conResumen}
                       onChange={(e) => {
                         setConResumen(e.target.checked);
-                        if (!e.target.checked) setAceptoGrabacion(false);
                       }}
                     />
                     <span className="text-[15px]">
@@ -448,18 +445,9 @@ function ReservarFlujo() {
                     </span>
                   </label>
                   {conResumen && (
-                    <label className="flex cursor-pointer items-start gap-3 border-t border-borde pt-3" aria-label="Acepto la grabación de solo audio de esta clase">
-                      <input
-                        type="checkbox"
-                        className="mt-1 size-4 accent-marca-600"
-                        checked={aceptoGrabacion}
-                        onChange={(e) => setAceptoGrabacion(e.target.checked)}
-                      />
-                      <span className="text-sm text-tinta-suave">
-                        Acepto que se grabe <strong>solo el audio</strong> de esta clase (nunca video) para hacer el resumen. El audio se borra apenas se transcribe, y a las 24 hs como máximo.
-                        <span className="mt-1 block text-xs text-tinta-tenue">Cláusula de los Términos: texto pendiente de revisión legal.</span>
-                      </span>
-                    </label>
+                    <p className="border-t border-borde pt-3 text-sm text-tinta-suave">
+                      Se graba <strong>solo el audio</strong> de esta clase (nunca video), como aceptaste en los Términos. Se borra apenas se transcribe, y a las 24 hs como máximo.
+                    </p>
                   )}
                 </div>
               )}
@@ -479,7 +467,6 @@ function ReservarFlujo() {
                 className="flex-1"
                 cargando={enviando}
                 textoCargando={esMenor ? "Enviando…" : "Reservando…"}
-                disabled={resumenElegido && !aceptoGrabacion}
                 onClick={confirmar}
               >
                 {esMenor ? "Enviarle el pedido a mi adulto responsable" : "Confirmar y pagar"}

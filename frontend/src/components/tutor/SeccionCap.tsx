@@ -1,9 +1,10 @@
 "use client";
 
+import { hoyIso } from "@/lib/formatos";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ShieldCheck } from "lucide-react";
 import { getEstadoPerfilTutor, mensajeDeError, subirCap, type CapPropio } from "@/lib/api";
-import { Alerta, Boton, Campo, Cargando, SubidaArchivo } from "@/components/ui";
+import { Alerta, Boton, Cargando, SubidaArchivo, SelectorFecha } from "@/components/ui";
 
 function fechaLarga(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
@@ -101,13 +102,12 @@ export default function SeccionCap() {
               onCambio={setArchivo}
               ayuda="Solo lo ve el equipo de moderación. Las familias ven únicamente si estás habilitado."
             />
-            <Campo
+            <SelectorFecha
               id="fechaEmisionCap"
               etiqueta="Fecha de emisión"
-              type="date"
               value={fechaEmision}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setFechaEmision(e.target.value)}
+              max={hoyIso()}
+              onChange={setFechaEmision}
             />
             {error && <Alerta tono="peligro">{error}</Alerta>}
             <Boton type="submit" className="w-fit" cargando={enviando} textoCargando="Cargando…">

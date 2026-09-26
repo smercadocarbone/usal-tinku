@@ -329,3 +329,50 @@ def test_carga_lazy_concurrente_carga_el_modelo_una_sola_vez(monkeypatch):
 
     assert len(cargas) == 1  # el modelo se carga una sola vez
     assert len(resultados) == 2
+
+
+# --------------------------------------------------------------- /sugerir-temas
+
+
+def _embedder_ejes(texto: str) -> list[float]:
+    """Vectores por palabra clave: lo que habla de fracciones apunta al mismo eje."""
+    t = texto.lower()
+    if "fraccion" in t:
+        return [1.0, 0.0, 0.0]
+    if "celula" in t:
+        return [0.0, 1.0, 0.0]
+    return [0.0, 0.0, 1.0]
+
+
+def test_sugerir_temas_ordena_por_similitud_y_respeta_el_limite(monkeypatch):
+    monkeypatch.setattr(srv, "_embed", _embedder_ejes)
+    srv._cache_temas.clear()
+    r = post_autenticado("/sugerir-temas", json={
+        "texto": "Doy clases de fracciones a chicos de primaria",
+        "temas": [
+            {"id": "t-cel", "texto": "La celula: partes"},
+            {"id": "t-fra", "texto": "Fracciones: suma y resta"},
+            {"id": "t-otro", "texto": "Revolucion de Mayo"},
+        ],
+        "limite": 2,
+    })
+    assert r.status_code == 200
+    ids = [s["id"] for s in r.json()]
+    assert ids[0] == "t-fra"
+    assert len(ids) == 2
+
+
+def test_sugerir_temas_sin_token_401_y_vacio_devuelve_lista_vacia(monkeypatch):
+    monkeypatch.setattr(srv, "_embed", _embedder_ejes)
+    assert client.post("/sugerir-temas", json={"texto": "x", "temas": []}).status_code == 401
+    r = post_autenticado("/sugerir-temas", json={"texto": "  ", "temas": [{"id": "a", "texto": "b"}]})
+    assert r.status_code == 200 and r.json() == []
+
+
+def test_sugerir_temas_modelo_caido_503(monkeypatch):
+    def roto(_texto):
+        raise srv.MatchError("sin modelo")
+
+    monkeypatch.setattr(srv, "_embed", roto)
+    r = post_autenticado("/sugerir-temas", json={"texto": "fracciones", "temas": [{"id": "a", "texto": "b"}]})
+    assert r.status_code == 503
