@@ -16,6 +16,13 @@
 | Retención máxima del audio del resumen _(ADR-M3-04)_ | Hasta obtener el transcript; 24 hs como máximo desde el fin de la sesión | Job de Quartz persistido por Sesión borra el audio aunque el resumen falle | M3, M6 |
 | Timeout de reserva sin pagar                      | 15 min                   | `pendiente_pago` vence y libera el slot                                                                               | M4     |
 | Cancelación sin penalidad                         | 24 hs antes              | —                                                                                                                     | M4     |
+| Vencimiento del pedido de reprogramación del Tutor _(v2.5, 2026-09-26)_ | T-60 min de la clase original | Si el alumno (o el AR) no respondió, la clase se cancela con devolución total y cuenta como cancelación del Tutor (D-4). Job de Quartz persistido | M4, M5 |
+| Vigencia del paquete mensual _(v2.5, ADR-M5-03)_  | 4 semanas desde la primera clase | Una clase movida tiene que quedar dentro de la vigencia | M4, M5 |
+| Arrepentimiento del paquete entero _(v2.5, ADR-M5-03)_ | Hasta 24 hs antes de la primera clase | Devolución total. Después, las clases solo se mueven (con 24 hs o más) o se dan por tomadas | M4, M5 |
+| Mover una clase del paquete _(v2.5, ADR-M5-03)_   | Hasta 24 hs antes        | Dentro de la vigencia. Con menos, la clase se da por tomada si el alumno no asiste | M4     |
+| Retención del adjunto del pedido previo _(v2.5, ADR-M4-01)_ | 24 hs desde el fin agendado de la clase | Job de Quartz persistido; si la reserva se cancela, se borra en el acto. El texto queda | M4     |
+| Horizonte del "próximo horario libre" en la búsqueda _(v2.5)_ | 14 días | Desde ahora + la ventana mínima para reservar | M2, M4 |
+| Corrección de la nota del Tutor al AR _(v2.5)_    | 48 hs desde que la escribe | Mismo criterio que la ventana de edición de la calificación | M4     |
 | Recordatorio de sesión (T-24h)                    | 24 hs antes              | No se dispara si la reserva se hizo con menos margen. Al Tutor, al alumno y a quien pagó (implementado 2026-09-26) | M4     |
 | Aviso "tu clase empieza" _(2026-09-26)_           | T-5 min (al abrir la sala) | Al Tutor y al alumno, con el link a la sala                                                                        | M3     |
 | Aviso "tu clase ya empezó" _(2026-09-26)_         | T+0 (horario de inicio)  | Solo a quien todavía no entró                                                                                         | M3     |

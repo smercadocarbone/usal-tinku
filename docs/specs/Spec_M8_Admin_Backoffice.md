@@ -103,3 +103,22 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 ---
 
 **Estado: APROBADO.**
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Cola de videos de presentación (ADR-M1-09)
+
+### US-9 — Revisar videos de presentación
+*Como* Admin de Moderación y Seguridad, *quiero* ver los videos de presentación pendientes y
+aprobarlos o rechazarlos con un motivo, *para* que en los perfiles públicos no aparezca nada sin
+revisar.
+
+- **Dado** que hay videos `pendiente`, **cuando** abro la cola, **entonces** los veo del más viejo
+  al más nuevo, con el nombre del Tutor y un reproductor (FR-ADM-011).
+- **Dado** que apruebo o rechazo, **cuando** confirmo, **entonces** el Tutor recibe el aviso
+  `VIDEO_REVISADO` con el resultado (y el motivo si se rechazó) y la acción queda en el log de
+  auditoría.
+
+| ID | Descripción |
+| --- | --- |
+| FR-ADM-011 | Cola de videos de presentación: listado de `pendiente`, reproducción autenticada, aprobar, rechazar con motivo obligatorio; aviso al Tutor y registro en auditoría. |

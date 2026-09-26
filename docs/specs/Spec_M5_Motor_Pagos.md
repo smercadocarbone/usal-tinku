@@ -113,7 +113,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | FR-PAG-006 | El precio de referencia es fijo; solo cambia con recálculo de toda la tabla regional. |
 | FR-PAG-007 | Ante falla de MercadoPago al liberar fondos: 3 reintentos con backoff (5min/15min/1h) + alerta inmediata al Admin de Soporte Financiero en paralelo; tras agotar reintentos, pasa a su cola de intervención manual (M8). |
 | FR-PAG-008 | Notificación individual por cada pago o reembolso. |
-| FR-PAG-009 | Todo reembolso a Estudiantes es total (body vacío en la API de MP); prohibido el reembolso parcial que traslade comisión al Estudiante. |
+| FR-PAG-009 _(enmendado v2.5, ADR-M5-03)_ | Todo reembolso a Estudiantes es total (body vacío en la API de MP); prohibido el reembolso parcial automático, salvo BR-PAG-11 (adicional de resumen) y la clase de un paquete que se devuelve por falta del Tutor (FR-PAG-022). |
 | FR-PAG-010 | Reembolsos parciales por disputa (M8/M9): la diferencia de comisión la absorbe Tinku. |
 | FR-PAG-011 | Sanción definitiva a un Tutor: se libera el pago de sesiones ya realizadas, se retiene y reembolsa lo de sesiones futuras. |
 | FR-PAG-012 | El reembolso por kill-switch es total incluso si el Estudiante fue el infractor detectado en la rama de ambos adultos. |
@@ -151,3 +151,43 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 ---
 
 **Estado: APROBADO** (con el ítem #4 explícitamente diferido, no bloqueante). Listo para pasar al Plan técnico de M5.
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Precio neto, export de cobros y paquete mensual
+
+### US-10 — Cuánto me queda por clase
+*Como* Tutor, *quiero* ver cuánto me queda de mi precio después de la comisión de Tinku, *para*
+fijar mi precio sabiendo lo que voy a cobrar.
+
+- **Dado** que fijo mi precio por hora, **cuando** lo veo, **entonces** veo al lado lo que me queda
+  por hora después del 27 %, y una aclaración de que MercadoPago cobra aparte su comisión según mi
+  cuenta (FR-PAG-019). El alumno sigue viendo solo el precio final (Art. III).
+
+### US-11 — Exportar mis cobros para facturar
+*Como* Tutor, *quiero* descargar mis cobros de un mes, *para* facturar y declarar en ARCA.
+
+- **Dado** que elijo un mes, **cuando** descargo, **entonces** recibo un CSV con cada cobro de ese
+  mes: fechas, quién pagó (nombre y DNI del adulto pagador), precio, comisión, neto, estado y número
+  de operación de MercadoPago; sin las transacciones de prueba (FR-PAG-020).
+
+### US-12 — Pagar el paquete del mes (ADR-M5-03)
+*Como* quien reserva un paquete, *quiero* pagarlo en un solo pago, *para* no pagar clase por clase.
+
+- **Dado** un paquete `pendiente_pago`, **cuando** pago, **entonces** una sola preferencia por el
+  total (con `marketplace_fee` = 27 % del total y el token del Tutor) confirma las 4 clases
+  (FR-PAG-021).
+- **Dado** que una clase del paquete se devuelve por falta del Tutor, **cuando** se ejecuta,
+  **entonces** es una devolución parcial por el precio de esa clase, con clave de idempotencia; si
+  MercadoPago la rechaza, entra a reintentos y después a la cola de Soporte Financiero, sin trabar la
+  cancelación (FR-PAG-022).
+- **Dado** que se cancela el paquete entero antes de la primera clase, **cuando** se ejecuta,
+  **entonces** es una devolución total del pago (FR-PAG-023).
+
+| ID | Descripción |
+| --- | --- |
+| FR-PAG-019 | `GET /api/pagos/tarifa` expone `comisionPorcentaje`; la pantalla de precio del Tutor muestra el neto por hora. Solo el Tutor lo ve. |
+| FR-PAG-020 | `GET /api/pagos/cobros/export?mes=AAAA-MM`: CSV (`;`, UTF-8 con BOM) de las transacciones del Tutor creadas en ese mes (hora de Argentina), sin bypass. Incluye nombre y DNI del pagador adulto (receptor de la factura); nunca datos de un Menor más allá del nombre del alumno. |
+| FR-PAG-021 | Preferencia de paquete con `external_reference = "paquete:{id}"`; el webhook, la vuelta del navegador y la conciliación la reconocen. Ancla de idempotencia `pagos.pagos_paquete` y una `Transaccion` por clase con `paquete_id`. |
+| FR-PAG-022 | Devolución parcial automática por el `monto_bruto` de la clase cuando M5 devolvería una clase suelta (cancela el Tutor, no-show del Tutor, interrupción, resolución a favor del alumno). La comisión de MP que no se recupere queda del lado del Tutor (ADR-M5-03). Reintentos 5/15/60 y cola de Soporte Financiero. |
+| FR-PAG-023 | Cancelación del paquete entero (FR-RES-034): devolución total del pago con body vacío. |
