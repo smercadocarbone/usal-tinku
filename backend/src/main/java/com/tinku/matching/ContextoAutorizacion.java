@@ -1,6 +1,7 @@
 package com.tinku.matching;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -15,8 +16,15 @@ import java.util.UUID;
  *    la búsqueda es sin restricción (adulto) o cuando el menor todavía no tiene
  *    ningún Tutor autorizado (FR-MATCH-005 — en ese caso busca el universo y
  *    el endpoint marca los resultados {@code no_autorizado: true}).
+ *  - {@code excluidos}: Tutores que el Adulto Responsable marcó "no confiable" (FR-ID-009).
+ *    Nunca son candidatos del menor, tampoco cuando la búsqueda cae en el universo porque
+ *    no queda ningún autorizado (FR-MATCH-007).
  */
-public record ContextoAutorizacion(boolean esMenor, List<UUID> tutoresAutorizados) {
+public record ContextoAutorizacion(boolean esMenor, List<UUID> tutoresAutorizados, Set<UUID> excluidos) {
+
+    public ContextoAutorizacion(boolean esMenor, List<UUID> tutoresAutorizados) {
+        this(esMenor, tutoresAutorizados, Set.of());
+    }
 
     /** Búsqueda sin restricción de lista: adulto, o menor sin autorizados (FR-MATCH-005). */
     public static ContextoAutorizacion universo(boolean esMenor) {

@@ -29,6 +29,18 @@ public interface AutorizacionTutorRepository extends JpaRepository<AutorizacionT
             @Param("adultoResponsableId") UUID adultoResponsableId,
             @Param("menorId") UUID menorId);
 
+    /**
+     * FR-MATCH-007 / FR-ID-009: Tutores que este Adulto Responsable marcó "no confiable" (el
+     * marcado es de la cuenta, vale para todos sus menores). Se excluyen de las búsquedas de
+     * sus menores aunque la lista de autorizados quede vacía.
+     */
+    @Query("""
+            select distinct a.tutor.id from AutorizacionTutor a
+             where a.adultoResponsable.id = :adultoResponsableId
+               and a.noConfiable = true
+            """)
+    List<UUID> findTutorIdsNoConfiables(@Param("adultoResponsableId") UUID adultoResponsableId);
+
     boolean existsByAdultoResponsableIdAndTutorId(UUID adultoResponsableId, UUID tutorId);
 
     java.util.List<AutorizacionTutor> findByAdultoResponsableIdAndMenorIdOrderByCreatedAtDesc(

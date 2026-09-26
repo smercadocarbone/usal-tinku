@@ -360,6 +360,31 @@ class MatchingFlujosIntegracionTest {
 
     // ------------------------------------------------ US-3 / US-4: reputación
 
+    /** FR-MATCH-007 + Artículo II: si el AR marca "no confiable" al único Tutor autorizado, la
+     *  lista queda vacía y el menor pasaba a buscar el universo, donde ese Tutor volvía a aparecer. */
+    @Test
+    void frMatch007_menor_tutorNoConfiableNuncaVuelveComoCandidato_aunqueNoQuedenAutorizados() throws Exception {
+        String tokenAr = registrarAdultoYToken("29771111", "Maria", "Perez", true, true);
+        String tokenTutor = registrarTutorYToken("29772222", "Pablo", "Sosa");
+        aprobarCredencialDe(tokenTutor);
+        UUID tutor = usuarioPorDni("29772222").getId();
+        UUID menorId = registrarMenor("29773333", tokenAr);
+        autorizar(tutor, menorId, tokenAr);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/autorizaciones/no-confiable")
+                        .header("Authorization", "Bearer " + tokenAr)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.MarcarNoConfiableRequest(tutor, true))))
+                .andExpect(status().isNoContent());
+        String tokenMenor = login("29773333");
+
+        when(matchingClient.match(any(), anyString())).thenReturn(List.of());
+        buscar("matematica", tokenMenor);
+
+        assertThat(candidatosRecibidos()).doesNotContain(tutor);
+    }
+
     @Test
     void us3_brMatch01_tutorConMalaCalificacionReciente_quedaEnSombra() throws Exception {
         String tokenEstudiante = registrarAdultoYToken("20255555", "Ana", "Lopez", true, false);
