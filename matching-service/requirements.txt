@@ -9,7 +9,7 @@ pydantic>=2.13.5
 # embeddings (384 dims, modelo multilingual) + psycopg3 para consultar la
 # columna `embedding` de matching.perfiles_tutor_matching (T-M2-04).
 sentence-transformers>=6.1.0
-psycopg[binary]>=3.2.0
+psycopg[binary]>=3.3.6
 pgvector>=0.5.0
 
 # Dev/test
