@@ -184,6 +184,12 @@ tinku:
     llm:
       proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
       api-key: ${LLM_API_KEY:}       # API key de OpenAI
+  matching:
+    # ADR-M2-02: la reputación (M7) solo desempata: suma como mucho este valor al score semántico.
+    peso-reputacion: ${MATCHING_PESO_REPUTACION:0.05}
+    # ADR-M2-02 / US-1: con texto libre, debajo de esta similitud el Tutor no se muestra.
+    # Punto de partida; se calibra con las búsquedas reales del piloto.
+    score-minimo: ${MATCHING_SCORE_MINIMO:0.3}
   matching-service:
     base-url: ${MATCHING_SERVICE_URL:http://localhost:8000}
     # AUD-015: token compartido con el servicio Python. En dev/test puede quedar

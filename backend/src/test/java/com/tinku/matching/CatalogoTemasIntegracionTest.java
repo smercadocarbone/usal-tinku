@@ -511,6 +511,38 @@ class CatalogoTemasIntegracionTest {
                 .doesNotContain(tutorB);
     }
 
+    /** Revisión 2026-09-26: el nivel elegido en /buscar no llegaba al backend, y "Primario +
+     *  Matemática" traía tutores de Matemática de cualquier nivel. */
+    @Test
+    void busquedaMateriaYNivel_soloTutoresDeEseNivel() throws Exception {
+        String token = registrarAdultoYToken("30881111", true, false);
+        UUID primario = tutorConTemas("30882222", List.of(divisionId));
+        UUID secundario = tutorConTemas("30883333", List.of(factorizacionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(primario, 0.9)));
+
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("filtro_materia", "Matemática");
+        body.put("filtro_nivel", "primario");
+        mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk());
+
+        assertThat(candidatosRecibidos()).contains(primario).doesNotContain(secundario);
+    }
+
+    @Test
+    void busquedaConNivelInvalido_devuelve422() throws Exception {
+        String token = registrarAdultoYToken("30884444", true, false);
+        mockMvc.perform(post("/api/busquedas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto_busqueda\":\"fracciones\",\"filtro_nivel\":\"jardin\"}"))
+                .andExpect(status().is4xxClientError());
+    }
+
     @Test
     void busquedaSinNingunCampo_devuelve422() throws Exception {
         String token = registrarAdultoYToken("30288888", true, false);

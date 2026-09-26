@@ -32,7 +32,11 @@ public class MatchingOrquestador {
     }
 
     public List<BusquedaResponse> buscar(Usuario buscador, String textoBusqueda) {
-        return buscar(buscador, textoBusqueda, null, null);
+        return buscar(buscador, textoBusqueda, null, null, null);
+    }
+
+    public List<BusquedaResponse> buscar(Usuario buscador, String texto, String nombre, String materia) {
+        return buscar(buscador, texto, nombre, materia, null);
     }
 
     /**
@@ -44,7 +48,8 @@ public class MatchingOrquestador {
      * materia) y los candidatos finales; (4) marcado no_autorizado + ajuste por
      * reputación (sin cambios). El proceso Python nunca ve reglas de negocio.
      */
-    public List<BusquedaResponse> buscar(Usuario buscador, String texto, String nombre, String materia) {
+    public List<BusquedaResponse> buscar(Usuario buscador, String texto, String nombre, String materia,
+                                         String nivel) {
         String textoEfectivo = texto != null ? texto : (nombre != null ? nombre : materia);
         if (textoEfectivo == null || textoEfectivo.isBlank()) {
             throw new BusquedaInvalidaException();
@@ -54,8 +59,8 @@ public class MatchingOrquestador {
         // ADR-M1-07: un Tutor que busca clases para sí nunca se encuentra a sí mismo.
         List<UUID> candidatos = contextoService.tutoresCandidatos(contexto).stream()
                 .filter(id -> !id.equals(buscador.getId())).toList();
-        if (nombre != null || materia != null) {
-            candidatos = perfilMatchingRepo.acotarCandidatos(candidatos, nombre, materia);
+        if (nombre != null || materia != null || nivel != null) {
+            candidatos = perfilMatchingRepo.acotarCandidatos(candidatos, nombre, materia, nivel);
         }
 
         List<ResultadoRanking> semantico = matchingClient.match(candidatos, textoEfectivo)
@@ -64,7 +69,9 @@ public class MatchingOrquestador {
                         esResultadoNoAutorizado(contexto, match.tutorId())))
                 .toList();
 
-        return ajusteRanking.ajustar(semantico)
+        // US-1: el puntaje mínimo de relevancia aplica cuando hay texto libre (o una búsqueda
+        // guardada, que es texto); con solo filtros de catálogo los candidatos ya los cumplen.
+        return ajusteRanking.ajustar(semantico, texto != null)
                 .stream()
                 .map(ranking -> new BusquedaResponse(ranking.tutorId(), ranking.score(), ranking.noAutorizado()))
                 .toList();

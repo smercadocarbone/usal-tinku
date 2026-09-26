@@ -66,7 +66,7 @@ El servicio Python **no tiene su propia base de datos de negocio** — es statel
 ## 5. ADRs de este Módulo
 
 - **ADR-M2-01:** ¿Dónde vive el índice de embeddings — en el propio proceso Python (en memoria + snapshot a disco) o en `pgvector` dentro de PostgreSQL, consultado por el servicio Python? La segunda opción simplifica la persistencia (no hay que reconstruir el índice al reiniciar el proceso) a costa de un poco más de latencia por ida y vuelta a la base. Dado el volumen esperado del piloto, `pgvector` es probablemente suficiente y más simple de operar (Artículo I) — pero queda como decisión a confirmar con el desarrollador antes de implementar.
-- **ADR-M2-02:** Fórmula exacta de ponderación entre similitud semántica y señales implícitas de reputación (qué peso relativo tiene cada una en el ranking final). El Spec deja esto fuera de alcance a propósito (es HOW, no WHAT) — se resuelve acá, empíricamente, ajustando con datos reales del piloto, no con un número fijo de entrada.
+- **ADR-M2-02:** _(resuelto 2026-09-26, `docs/adr/ADR-M2-02.md`: la reputación solo desempata, con peso acotado, y hay un mínimo de relevancia configurable)._ Fórmula exacta de ponderación entre similitud semántica y señales implícitas de reputación (qué peso relativo tiene cada una en el ranking final). El Spec deja esto fuera de alcance a propósito (es HOW, no WHAT) — se resuelve acá, empíricamente, ajustando con datos reales del piloto, no con un número fijo de entrada.
 
 ## 6. Trazabilidad con el Spec
 

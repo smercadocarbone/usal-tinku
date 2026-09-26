@@ -63,9 +63,15 @@ public class PerfilTutorTemasRepository {
      * y {@code trayectos}. {@code materia} → igualdad exacta del trayecto;
      * {@code nombre} → {@code public.unaccent} + ILIKE (parcial, tolerante a
      * tildes y case-insensitive). {@code public.} calificado porque unaccent se
-     * instaló en public y la app corre con search_path identidad.
+     * instaló en public y la app corre con search_path identidad. {@code nivel} → igualdad
+     * del nivel del trayecto (sin él, "Matemática" traía tutores de cualquier nivel).
+     * Los filtros aplican al MISMO tema: nivel, materia y nombre juntos.
      */
     public List<UUID> acotarCandidatos(List<UUID> candidatos, String nombre, String materia) {
+        return acotarCandidatos(candidatos, nombre, materia, null);
+    }
+
+    public List<UUID> acotarCandidatos(List<UUID> candidatos, String nombre, String materia, String nivel) {
         StringBuilder sql = new StringBuilder("""
                 SELECT DISTINCT ptm.tutor_id::uuid
                 FROM matching.perfiles_tutor_matching ptm
@@ -73,6 +79,9 @@ public class PerfilTutorTemasRepository {
                 JOIN matching.trayectos tr ON tr.id = t.trayecto_id
                 WHERE ptm.tutor_id = ANY(?)
                 """);
+        if (nivel != null) {
+            sql.append(" AND tr.nivel = ?");
+        }
         if (materia != null) {
             sql.append(" AND tr.materia = ?");
         }
@@ -84,6 +93,9 @@ public class PerfilTutorTemasRepository {
             PreparedStatement ps = con.prepareStatement(sentencia);
             int i = 1;
             ps.setArray(i++, con.createArrayOf("uuid", candidatos.toArray()));
+            if (nivel != null) {
+                ps.setString(i++, nivel);
+            }
             if (materia != null) {
                 ps.setString(i++, materia);
             }

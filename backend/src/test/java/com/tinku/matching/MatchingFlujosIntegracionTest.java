@@ -439,6 +439,57 @@ class MatchingFlujosIntegracionTest {
                 .containsExactly(tutorB.toString(), tutorA.toString());
     }
 
+    /** ADR-M2-02 (revisión 2026-09-26): la reputación solo desempata. Antes se sumaba cruda
+     *  (hasta +1,6) y un Tutor con historial pero de otro tema le ganaba al relevante. */
+    @Test
+    void us4_laReputacionNoLeGanaAUnaDiferenciaRealDeRelevancia() throws Exception {
+        String tokenEstudiante = registrarAdultoYToken("29781111", "Ana", "Lopez", true, false);
+        String tokenA = registrarTutorYToken("29782222", "Pablo", "Sosa");
+        aprobarCredencialDe(tokenA);
+        String tokenB = registrarTutorYToken("29783333", "Diego", "Mendez");
+        aprobarCredencialDe(tokenB);
+        UUID relevante = usuarioPorDni("29782222").getId();
+        UUID conHistorial = usuarioPorDni("29783333").getId();
+
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(relevante, 0.7),
+                        new MatchingServiceClient.ResultadoMatch(conHistorial, 0.6)));
+        when(reputacion.senalesImplicitas(anyCollection()))
+                .thenReturn(Map.of(conHistorial, 1.6, relevante, 0.0)); // peso máximo de M7
+
+        MvcResult res = buscar("fracciones", tokenEstudiante);
+
+        assertThat(java.util.stream.StreamSupport.stream(
+                        objectMapper.readTree(res.getResponse().getContentAsString()).spliterator(), false)
+                .map(item -> item.get("tutorId").asText())
+                .toList())
+                .containsExactly(relevante.toString(), conHistorial.toString());
+    }
+
+    /** US-1: "si no hay resultados relevantes, lo comunica en vez de forzar resultados de baja
+     *  calidad". Antes se devolvía a todo Tutor con temas, tuviera o no que ver. */
+    @Test
+    void us1_resultadosPorDebajoDelPuntajeMinimo_noSeMuestran() throws Exception {
+        String tokenEstudiante = registrarAdultoYToken("29784444", "Ana", "Lopez", true, false);
+        String tokenA = registrarTutorYToken("29785555", "Pablo", "Sosa");
+        aprobarCredencialDe(tokenA);
+        String tokenB = registrarTutorYToken("29786666", "Diego", "Mendez");
+        aprobarCredencialDe(tokenB);
+        UUID relevante = usuarioPorDni("29785555").getId();
+        UUID nadaQueVer = usuarioPorDni("29786666").getId();
+
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(relevante, 0.55),
+                        new MatchingServiceClient.ResultadoMatch(nadaQueVer, 0.12)));
+
+        MvcResult res = buscar("guitarra", tokenEstudiante);
+
+        assertThat(objectMapper.readTree(res.getResponse().getContentAsString()))
+                .hasSize(1)
+                .first().satisfies(item ->
+                        assertThat(item.get("tutorId").asText()).isEqualTo(relevante.toString()));
+    }
+
     // ------------------------------------------------ US-6: búsquedas guardadas
 
     @Test

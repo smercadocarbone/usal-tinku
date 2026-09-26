@@ -195,6 +195,8 @@ export interface CuerpoBusqueda {
   textoBusqueda?: string;
   nombre?: string;
   filtroMateria?: string;
+  /** "primario" | "secundario" | "universitario": acota junto con la materia. */
+  filtroNivel?: string;
 }
 
 export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]> {
@@ -202,6 +204,7 @@ export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]
     texto_busqueda: body.textoBusqueda || undefined,
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
+    filtro_nivel: body.filtroNivel || undefined,
   });
 }
 

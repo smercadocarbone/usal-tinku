@@ -103,7 +103,7 @@ export default function BuscarPage() {
     );
   }, []);
 
-  const ejecutar = useCallback(async (q: string, m: string) => {
+  const ejecutar = useCallback(async (q: string, m: string, n = "") => {
     if (!q.trim() && !m) {
       setError("Escribí qué necesitás aprender o elegí una materia.");
       return;
@@ -114,7 +114,11 @@ export default function BuscarPage() {
     setYaGuardada(false);
     setConsulta({ texto: q.trim(), materia: m });
     try {
-      const lista = await buscarTutores({ textoBusqueda: q.trim() || undefined, filtroMateria: m || undefined });
+      const lista = await buscarTutores({
+        textoBusqueda: q.trim() || undefined,
+        filtroMateria: m || undefined,
+        filtroNivel: n || undefined,
+      });
       await hidratar(lista);
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos completar la búsqueda. Revisá tu conexión y probá de nuevo."));
@@ -174,7 +178,7 @@ export default function BuscarPage() {
   function elegirMateria(m: string) {
     const nueva = materia === m ? "" : m;
     setMateria(nueva);
-    if (nueva || texto.trim()) void ejecutar(texto, nueva);
+    if (nueva || texto.trim()) void ejecutar(texto, nueva, nivel);
     else {
       setResultados(null);
       setConsulta(null);
@@ -211,7 +215,10 @@ export default function BuscarPage() {
                 key={n.nivel}
                 activo={nivel === n.nivel}
                 onClick={() => {
-                  setNivel(nivel === n.nivel ? "" : n.nivel);
+                  const nuevo = nivel === n.nivel ? "" : n.nivel;
+                  setNivel(nuevo);
+                  // El nivel acota la búsqueda en el backend; si ya hay una, se rehace.
+                  if (texto.trim() || materia) void ejecutar(texto, materia, nuevo);
                 }}
               >
                 {rotuloNivel(n.nivel)}
@@ -242,7 +249,7 @@ export default function BuscarPage() {
           className="mt-5 flex items-center gap-2 rounded-[18px] bg-superficie p-2 shadow-elevado ring-1 ring-borde focus-within:ring-2 focus-within:ring-marca-600"
           onSubmit={(e) => {
             e.preventDefault();
-            void ejecutar(texto, materia);
+            void ejecutar(texto, materia, nivel);
           }}
         >
           <Search className="ml-3 size-5 shrink-0 text-tinta-tenue" aria-hidden />
@@ -285,7 +292,7 @@ export default function BuscarPage() {
           </Chip>
         )}
         {nivel && (
-          <Chip removible onClick={() => setNivel("")} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
+          <Chip removible onClick={() => { setNivel(""); if (texto.trim() || materia) void ejecutar(texto, materia, ""); }} aria-label={`Quitar filtro ${rotuloNivel(nivel)}`} className="hidden lg:inline-flex">
             {rotuloNivel(nivel)}
           </Chip>
         )}
@@ -318,7 +325,7 @@ export default function BuscarPage() {
 
       <section className="mt-8" aria-live="polite" aria-busy={buscando}>
         {error && (
-          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia)}>Probar de nuevo</Boton>}>
+          <Alerta tono="peligro" className="mb-6" accion={<Boton variante="secundario" tamano="sm" onClick={() => void ejecutar(texto, materia, nivel)}>Probar de nuevo</Boton>}>
             {error}
           </Alerta>
         )}
