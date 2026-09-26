@@ -64,6 +64,23 @@ class MercadoPagoWebhookVerificadorTest {
         assertThat(verificador.esFirmaValida(firma, null, "123456789")).isTrue();
     }
 
+    /** Regresión 2026-09-26: los avisos IPN (?id=&topic=payment) vienen firmados sin id. */
+    @Test
+    void avisoIpnFirmadoSinId_acepta() {
+        long ts = ahoraMs();
+        String firma = firmar(SECRET, ts, null, "req-uuid-abc");
+
+        assertThat(verificador.esFirmaValida(firma, "req-uuid-abc", "44748042531")).isTrue();
+    }
+
+    @Test
+    void avisoIpnSinIdConOtroSecret_rechaza() {
+        long ts = ahoraMs();
+        String firma = firmar(OTRO_SECRET, ts, null, "req-uuid-abc");
+
+        assertThat(verificador.esFirmaValida(firma, "req-uuid-abc", "44748042531")).isFalse();
+    }
+
     @Test
     void firmadoConOtroSecret_rechaza() {
         long ts = ahoraMs();
