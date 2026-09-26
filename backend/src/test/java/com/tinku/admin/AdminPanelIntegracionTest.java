@@ -782,6 +782,94 @@ class AdminPanelIntegracionTest {
                 .hasSize(1);
     }
 
+    /**
+     * Revisión por rol (R1): un Tutor puede ser además Admin, pero nunca resuelve un caso en el
+     * que es parte — su credencial, una Denuncia o Alerta que lo involucra, el dinero de una
+     * Reserva suya → 403 sin tocar nada. Y una cuenta de Menor nunca opera el panel (Art. II).
+     */
+    private Usuario tutorAdmin(RolAdmin rol) {
+        Usuario u = usuario(TipoUsuario.TUTOR);
+        com.tinku.admin.model.Admin fila = new com.tinku.admin.model.Admin();
+        fila.setUsuario(u);
+        fila.setRol(rol);
+        adminRepository.save(fila);
+        return u;
+    }
+
+    @Test
+    void r1_adminNoResuelveCasosPropios_yUnMenorNuncaEsAdmin_403() throws Exception {
+        Usuario tutorAdmin = tutorAdmin(RolAdmin.MODERACION_SEGURIDAD);
+        String tk = token(tutorAdmin);
+
+        CredencialAcademica propia = credencial(tutorAdmin, EstadoCredencial.PENDIENTE, null);
+        mvc.perform(post("/api/admin/moderacion/credenciales/" + propia.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "APROBAR"))))
+                .andExpect(status().isForbidden());
+        assertThat(credencialRepository.findById(propia.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoCredencial.PENDIENTE);
+
+        Denuncia contraEl = denuncia(usuario(TipoUsuario.ADULTO), tutorAdmin, false,
+                Instant.now().plusSeconds(3600));
+        mvc.perform(post("/api/admin/moderacion/denuncias/" + contraEl.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("resolucion", "infundada"))))
+                .andExpect(status().isForbidden());
+        assertThat(denunciaRepository.findById(contraEl.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoDenuncia.EN_REVISION);
+
+        AlertaSeguridad sobreEl = alerta(tutorAdmin, Instant.now());
+        mvc.perform(post("/api/admin/moderacion/alertas-seguridad/" + sobreEl.getId() + "/resolver")
+                        .header("Authorization", "Bearer " + tk)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "reactivar"))))
+                .andExpect(status().isForbidden());
+
+        Usuario tutorSoporte = tutorAdmin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva suya = new Reserva();
+        suya.setPagador(pagador);
+        suya.setBeneficiario(pagador);
+        suya.setTutor(tutorSoporte);
+        suya.setHorario(Instant.now().plusSeconds(3600));
+        suya.setPrecio(BigDecimal.valueOf(15000));
+        suya.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepository.save(suya);
+        Transaccion t = new Transaccion();
+        t.setReservaId(suya.getId());
+        t.setMpPaymentId("mp-propia-" + CONTADOR.incrementAndGet());
+        t.setMontoBruto(new BigDecimal("15000.00"));
+        t.setComisionPlataforma(new BigDecimal("2250.00"));
+        t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+        transaccionRepository.save(t);
+        mvc.perform(post("/api/admin/financiero/transacciones/" + t.getId() + "/reembolso-parcial")
+                        .header("Authorization", "Bearer " + token(tutorSoporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("monto", 6000))))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(reembolsoParcial);
+
+        // Art. II: aunque alguien le cargue una fila en admins, un Menor no entra al panel.
+        Usuario menor = new Usuario();
+        menor.setDni(String.format("%08d", 41_000_000 + CONTADOR.incrementAndGet()));
+        menor.setNombre("Menor");
+        menor.setApellido("Lopez");
+        menor.setFechaNacimiento(LocalDate.of(2014, 5, 15));
+        menor.setTipo(TipoUsuario.MENOR);
+        menor.setPasswordHash("hash");
+        menor.setAdultoResponsable(usuario(TipoUsuario.ADULTO));
+        menor = usuarioRepository.save(menor);
+        com.tinku.admin.model.Admin filaMenor = new com.tinku.admin.model.Admin();
+        filaMenor.setUsuario(menor);
+        filaMenor.setRol(RolAdmin.MODERACION_SEGURIDAD);
+        adminRepository.save(filaMenor);
+        mvc.perform(get("/api/admin/moderacion/denuncias")
+                        .header("Authorization", "Bearer " + token(menor)))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void adminInactivo_noAutoriza_403() throws Exception {
         Usuario moderador = usuario(TipoUsuario.ADULTO);
@@ -815,6 +903,167 @@ class AdminPanelIntegracionTest {
 
         mvc.perform(get("/api/admin/yo")
                         .header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------------------------------------------------------------- R4: reembolso del adicional
+
+    @Autowired com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
+    @Autowired org.quartz.Scheduler scheduler;
+
+    private Transaccion conAdicional(boolean bypass) {
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(usuario(TipoUsuario.TUTOR));
+        reserva.setHorario(Instant.now().minusSeconds(7200));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepository.save(reserva);
+        Transaccion t = new Transaccion();
+        t.setReservaId(reserva.getId());
+        t.setMpPaymentId("mp-adic-" + CONTADOR.incrementAndGet());
+        t.setMontoBruto(new BigDecimal("15770.00"));
+        t.setComisionPlataforma(new BigDecimal("4050.00"));
+        t.setMontoAdicionalResumen(new BigDecimal("770.00"));
+        t.setEstado(EstadoTransaccion.RETENIDO_ESCROW);
+        t.setEnBypass(bypass);
+        return transaccionRepository.save(t);
+    }
+
+    /** Corre el job a mano (sacando el trigger real para que Quartz no compita con el test). */
+    private java.util.Date correrJobAdicional(UUID transaccionId) throws Exception {
+        org.quartz.TriggerKey key = com.tinku.pagos.service.ReembolsoAdicionalOutbox.trigger(transaccionId);
+        scheduler.unscheduleJob(key);
+        reembolsoAdicional.ejecutar(transaccionId);
+        org.quartz.Trigger siguiente = scheduler.getTrigger(key);
+        return siguiente == null ? null : siguiente.getStartTime();
+    }
+
+    private Transaccion recargar(Transaccion t) {
+        return transaccionRepository.findById(t.getId()).orElseThrow();
+    }
+
+    /** Regresión: un fallo de MP ya no queda solo en un log; reintenta 5/15/60 y cae en la cola. */
+    @Test
+    void r4_adicionalFallaMp_reintentaConBackoff_yQuedaFallidoEnLaCola() throws Exception {
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Transaccion t = conAdicional(false);
+        org.mockito.Mockito.doThrow(new com.tinku.pagos.service.MercadoPagoNoDisponibleException())
+                .when(reembolsoParcial).reembolsarParcial(org.mockito.ArgumentMatchers.eq(t.getMpPaymentId()),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId());
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId()); // idempotente
+        assertThat(recargar(t).getAdicionalReembolsoEstado())
+                .isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.PENDIENTE);
+
+        long[] minutos = {5, 15, 60};
+        for (long m : minutos) {
+            java.util.Date proximo = correrJobAdicional(t.getId());
+            assertThat(proximo).isNotNull();
+            assertThat(java.time.Duration.between(Instant.now(), proximo.toInstant()).toMinutes())
+                    .isBetween(m - 1, m);
+        }
+        assertThat(correrJobAdicional(t.getId())).isNull();
+        Transaccion fallida = recargar(t);
+        assertThat(fallida.getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        assertThat(fallida.getAdicionalReembolsoIntentos()).isEqualTo(4);
+        assertThat(fallida.getAdicionalReembolsadoAt()).isNull();
+        verify(reembolsoParcial, org.mockito.Mockito.times(4)).reembolsarParcial(t.getMpPaymentId(),
+                new BigDecimal("770.00"), "adicional-" + t.getId());
+
+        mvc.perform(get("/api/admin/financiero/reembolsos-adicional")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == '" + t.getId() + "')].intentos").value(4));
+    }
+
+    @Test
+    void r4_soporteReintentaOResuelveAMano_soloSobreFallidos() throws Exception {
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        Usuario moderador = admin(RolAdmin.MODERACION_SEGURIDAD);
+        Transaccion t = conAdicional(false);
+        t.setAdicionalReembolsoEstado(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        t.setAdicionalReembolsoIntentos(4);
+        transaccionRepository.save(t);
+
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(moderador)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"));
+        assertThat(correrJobAdicional(t.getId())).isNull();
+        assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);
+        assertThat(recargar(t).getAdicionalReembolsadoAt()).isNotNull();
+        // Ya no está fallido: no se reintenta de nuevo.
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + t.getId() + "/reintentar")
+                        .header("Authorization", "Bearer " + token(soporte)))
+                .andExpect(status().isUnprocessableEntity());
+
+        Transaccion otra = conAdicional(false);
+        otra.setAdicionalReembolsoEstado(com.tinku.pagos.model.EstadoReembolsoAdicional.FALLIDO);
+        transaccionRepository.save(otra);
+        mvc.perform(post("/api/admin/financiero/reembolsos-adicional/" + otra.getId() + "/resuelto-manual")
+                        .header("Authorization", "Bearer " + token(soporte))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nota\":\"Devuelto desde el panel de MP, operación 123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("RESUELTO_MANUAL"));
+    }
+
+    @Test
+    void r4_bypass_soloMarca_sinLlamarAMercadoPago() {
+        Transaccion t = conAdicional(true);
+        reembolsoAdicional.reembolsarAdicional(t.getReservaId());
+        assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);
+        verifyNoInteractions(reembolsoParcial);
+    }
+
+    // ---------------------------------------------------------------- R5: Mis cobros
+
+    private Transaccion cobroDe(Usuario tutor, EstadoTransaccion estado, String adicional) {
+        Usuario pagador = usuario(TipoUsuario.ADULTO);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(pagador);
+        reserva.setTutor(tutor);
+        reserva.setHorario(Instant.now().minusSeconds(3600L * CONTADOR.incrementAndGet()));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        reservaRepository.save(reserva);
+        Transaccion t = new Transaccion();
+        t.setReservaId(reserva.getId());
+        t.setMpPaymentId("mp-cobro-" + CONTADOR.incrementAndGet());
+        t.setMontoAdicionalResumen(new BigDecimal(adicional));
+        t.setMontoBruto(new BigDecimal("15000.00").add(new BigDecimal(adicional)));
+        t.setComisionPlataforma(new BigDecimal("4050.00"));
+        t.setEstado(estado);
+        return transaccionRepository.save(t);
+    }
+
+    /** El neto excluye comisión y adicional; la pausa no dice el motivo; solo lo propio; solo Tutor. */
+    @Test
+    void r5_misCobros_netoSinAdicional_pausaComoEnRevision_soloLoPropio() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        cobroDe(tutor, EstadoTransaccion.RETENIDO_ESCROW, "770.00");
+        cobroDe(tutor, EstadoTransaccion.LIBERADO, "0");
+        cobroDe(tutor, EstadoTransaccion.PAUSADO_DENUNCIA, "0");
+        cobroDe(usuario(TipoUsuario.TUTOR), EstadoTransaccion.LIBERADO, "0");
+
+        mvc.perform(get("/api/pagos/mis-cobros").header("Authorization", "Bearer " + token(tutor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cobros.length()").value(3))
+                .andExpect(jsonPath("$.retenido").value(10950.0))
+                .andExpect(jsonPath("$.liberado").value(10950.0))
+                .andExpect(jsonPath("$.enRevision").value(10950.0))
+                .andExpect(jsonPath("$.cobros[?(@.estado == 'retenido')].precioSesion").value(15000.0))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("denuncia"))));
+
+        mvc.perform(get("/api/pagos/mis-cobros").header("Authorization", "Bearer " + token(usuario(TipoUsuario.ADULTO))))
                 .andExpect(status().isForbidden());
     }
 }

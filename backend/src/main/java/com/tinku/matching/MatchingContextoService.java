@@ -31,13 +31,16 @@ public class MatchingContextoService {
     private final UsuarioRepository usuarioRepo;
     private final AutorizacionTutorRepository autorizacionRepo;
     private final VerificadorHabilitacionMenores habilitacionMenores;
+    private final com.tinku.reservas.port.VerificadorCobroTutor verificadorCobro;
 
     public MatchingContextoService(UsuarioRepository usuarioRepo,
                                    AutorizacionTutorRepository autorizacionRepo,
-                                   VerificadorHabilitacionMenores habilitacionMenores) {
+                                   VerificadorHabilitacionMenores habilitacionMenores,
+                                   com.tinku.reservas.port.VerificadorCobroTutor verificadorCobro) {
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
         this.habilitacionMenores = habilitacionMenores;
+        this.verificadorCobro = verificadorCobro;
     }
 
     /**
@@ -86,6 +89,9 @@ public class MatchingContextoService {
         List<UUID> activos = contexto.esMenor() && contexto.conRestriccion()
                 ? usuarioRepo.idsActivosParaMatching(contexto.tutoresAutorizados())
                 : usuarioRepo.tutoresActivosParaMatching();
+        // ADR-M5-02: con OAuth activo, un Tutor que no puede cobrar no aparece (no se le puede reservar).
+        java.util.Set<UUID> cobran = verificadorCobro.quienesPuedenCobrar(activos);
+        activos = activos.stream().filter(cobran::contains).toList();
         if (contexto.esMenor()) {
             // FR-ID-026 (T02): a un menor solo le aparecen Tutores con CAP aprobado y vigente.
             return activos.stream().filter(habilitacionMenores::habilitadoParaMenores).toList();

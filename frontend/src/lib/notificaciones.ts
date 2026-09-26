@@ -1,7 +1,11 @@
 /** Bandeja in-app (FASE2-03, `/api/notificaciones`). */
 import { api } from "./api";
 
-export type TipoNotificacion = "KILLSWITCH_MENOR" | "DENUNCIA_RECIBIDA" | "CLASE_CANCELADA_TUTOR_SIN_HABILITACION";
+export type TipoNotificacion =
+  | "KILLSWITCH_MENOR"
+  | "DENUNCIA_RECIBIDA"
+  | "CLASE_CANCELADA_TUTOR_SIN_HABILITACION"
+  | "MP_CUENTA_DESCONECTADA";
 
 export interface Notificacion {
   id: string;
@@ -58,6 +62,15 @@ export function textoDe(n: Notificacion, formatear: (iso: string) => string): Te
         detalle: `${n.datos.horario ? `La clase del ${formatear(n.datos.horario)} se canceló` : "Se canceló una clase"} porque el tutor ya no está habilitado para dar clases a menores. Te devolvemos el total de lo que pagaste.`,
         href: "/buscar",
         accion: "Buscar otro tutor",
+        tono: "aviso",
+      };
+    case "MP_CUENTA_DESCONECTADA":
+      return {
+        titulo: "Volvé a conectar tu MercadoPago",
+        detalle:
+          "No pudimos renovar la conexión con tu cuenta. Hasta que la conectes de nuevo, no te pueden reservar clases nuevas; las que ya tenés siguen igual.",
+        href: "/cuenta/cobros",
+        accion: "Conectar MercadoPago",
         tono: "aviso",
       };
     default:

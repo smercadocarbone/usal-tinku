@@ -108,6 +108,14 @@ tinku:
     # jamás confirma un pago ni crea un escrow.
     webhook-secret: ${MP_WEBHOOK_SECRET:}
     marketplace-fee-percent: 27 # BR-PAG-01 (calibración tesis, Cap. 5)
+    # ADR-M5-02 (modelo A): app de marketplace de MP. Con client-id configurado, cada Tutor
+    # conecta su cuenta por OAuth y se cobra con SU token (reparto real con marketplace_fee);
+    # sin él, todo sigue con el token de la plataforma y nadie queda bloqueado.
+    oauth:
+      client-id: ${MP_CLIENT_ID:}
+      client-secret: ${MP_CLIENT_SECRET:}
+      # URL pública del backend: https://<api>/api/pagos/mp/callback (igual a la de la app de MP).
+      redirect-uri: ${MP_OAUTH_REDIRECT_URI:}
   ocr:
     # ADR-M1-01: Tesseract via Tess4J (in-process). tessdata apunta a la carpeta
     # que contiene spa.traineddata. Si vacío, Tess4J usa TESSDATA_PREFIX del entorno.
@@ -134,6 +142,10 @@ tinku:
       # FASE2-03: barrido del outbox (Tabla de Tiempos, cada 1 min).
       barrido-habilitado: true
       intervalo-segundos: 60
+  pagos:
+    # ADR-M5-02: clave AES-256 (32 bytes en base64) para cifrar los tokens OAuth de MP de los
+    # Tutores. Generar con `openssl rand -base64 32`. Sin ella no se puede conectar MercadoPago.
+    clave-cifrado: ${TINKU_CLAVE_CIFRADO:}
   tarifa:
     # T06 / DT2 (tesis Cap. 5): piso de USD 4 por hora expresado en ARS. PT3: valor
     # fijo, lo revisa un Admin una vez por mes (variable de entorno en Coolify);

@@ -121,4 +121,47 @@ test.describe("Reserva de una clase", () => {
       await expect(page.getByRole("heading", { name: "Reservar una clase" })).toHaveCount(0);
     }
   );
+
+  test(
+    "si el horario se ocupa mientras decide (409 HORARIO_OCUPADO), vuelve al paso 1 con ese horario tachado",
+    { tag: ["@e2e", "@reserva", "@RESERVAR-E2E-004"] },
+    async ({ page }) => {
+      await mockApi(page, {
+        [`GET /api/tutores/${TUTOR_ID}`]: jsonRoute(200, {
+          id: TUTOR_ID,
+          nombre: "Martín",
+          apellido: "Gómez",
+          tipo: "TUTOR",
+          capacidadEstudiante: false,
+          capacidadAdultoResponsable: false,
+          materias: ["Matemática"],
+          nivel: "secundario",
+          calificacionPromedio: 4.8,
+          cantidadCalificaciones: 12,
+          precioHora: 5000,
+        }),
+        [`GET /api/tutores/${TUTOR_ID}/franjas`]: jsonRoute(200, [
+          {
+            id: "f-1",
+            tutorId: TUTOR_ID,
+            diaSemana: null,
+            fechaEspecifica: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+            horaInicio: "10:00",
+            horaFin: "12:00",
+            activa: true,
+          },
+        ]),
+        "POST /api/reservas": jsonRoute(409, { error: "El horario ya está reservado.", codigo: "HORARIO_OCUPADO" }),
+      });
+
+      const reservar = new ReservarPage(page);
+      await reservar.goto(TUTOR_ID);
+      await reservar.elegirHorario("10:30 a 11:30");
+      await reservar.confirmar();
+
+      await expect(page.getByText("Ese horario se acaba de ocupar. Elegí otro.")).toBeVisible();
+      // Tachado (deshabilitado) u oculto: en ningún caso se puede volver a elegir.
+      await expect(page.getByRole("button", { name: /^10:30 a 11:30/, disabled: false })).toHaveCount(0);
+    }
+  );
 });

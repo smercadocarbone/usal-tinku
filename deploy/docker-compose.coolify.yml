@@ -109,6 +109,12 @@ services:
       # MercadoPago (M5). Sin MP_WEBHOOK_SECRET el webhook rechaza todo (fail-closed).
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+      # ADR-M5-02: app de marketplace (OAuth por Tutor). Sin MP_CLIENT_ID se cobra con el token
+      # de la plataforma, sin reparto. TINKU_CLAVE_CIFRADO: `openssl rand -base64 32`.
+      MP_CLIENT_ID: ${MP_CLIENT_ID:-}
+      MP_CLIENT_SECRET: ${MP_CLIENT_SECRET:-}
+      MP_OAUTH_REDIRECT_URI: ${MP_OAUTH_REDIRECT_URI:-}
+      TINKU_CLAVE_CIFRADO: ${TINKU_CLAVE_CIFRADO:-}
       MP_NOTIFICATION_URL: https://api.tinku.site/api/webhooks/mercadopago
       # Resumen (M6). Vacío = fail-closed.
       LLM_PROVEEDOR: ${LLM_PROVEEDOR:-}

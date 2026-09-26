@@ -10,6 +10,7 @@ import com.tinku.pagos.service.LiberacionEscrowService;
 import com.tinku.pagos.service.PasarelaService;
 import com.tinku.pagos.web.PrecioReferenciaResponse;
 import com.tinku.admin.AdminModeracionGate;
+import com.tinku.reservas.repository.ReservaRepository;
 import jakarta.validation.Valid;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -58,19 +59,81 @@ public class ColasFinancieroController {
     private final LiberacionEscrowService liberacionEscrow;
     private final ReembolsoParcialProveedor reembolsoParcial;
     private final PasarelaService pasarela;
+    private final ReservaRepository reservaRepo;
+    private final com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
                                      PrecioReferenciaRegionalRepository precioRepo,
                                      LiberacionEscrowService liberacionEscrow,
                                      ReembolsoParcialProveedor reembolsoParcial,
-                                     PasarelaService pasarela) {
+                                     PasarelaService pasarela,
+                                     ReservaRepository reservaRepo,
+                                     com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional) {
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;
         this.liberacionEscrow = liberacionEscrow;
         this.reembolsoParcial = reembolsoParcial;
         this.pasarela = pasarela;
+        this.reservaRepo = reservaRepo;
+        this.reembolsoAdicional = reembolsoAdicional;
+    }
+
+    // -------------------------------------------- R4: reembolsos del adicional de resumen
+
+    /** Cola de reembolsos del adicional (BR-PAG-11); por defecto, los FALLIDO. */
+    @GetMapping("/reembolsos-adicional")
+    public ResponseEntity<List<ReembolsoAdicionalResponse>> reembolsosAdicional(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "FALLIDO")
+            com.tinku.pagos.model.EstadoReembolsoAdicional estado,
+            Authentication authentication) {
+        gate.requiereSoporteFinanciero(authentication);
+        return ResponseEntity.ok(transaccionRepo.findByAdicionalReembolsoEstadoOrderByCreatedAtAsc(estado)
+                .stream().map(ReembolsoAdicionalResponse::from).toList());
+    }
+
+    @PostMapping("/reembolsos-adicional/{transaccionId}/reintentar")
+    public ResponseEntity<?> reintentarReembolsoAdicional(@PathVariable UUID transaccionId,
+                                                          Authentication authentication) {
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
+        return resolverAdicional(adminUsuarioId, transaccionId,
+                () -> reembolsoAdicional.reintentarManual(transaccionId));
+    }
+
+    /** Soporte lo devolvió por fuera (panel de MercadoPago): queda la nota. */
+    @PostMapping("/reembolsos-adicional/{transaccionId}/resuelto-manual")
+    public ResponseEntity<?> resolverReembolsoAdicional(@PathVariable UUID transaccionId,
+                                                        @RequestBody Map<String, String> cuerpo,
+                                                        Authentication authentication) {
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
+        String nota = cuerpo == null ? null : cuerpo.get("nota");
+        if (nota == null || nota.isBlank() || nota.length() > 300) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Contá cómo lo devolviste (hasta 300 caracteres)."));
+        }
+        return resolverAdicional(adminUsuarioId, transaccionId,
+                () -> reembolsoAdicional.resolverManual(transaccionId, nota.trim()));
+    }
+
+    private ResponseEntity<?> resolverAdicional(UUID adminUsuarioId, UUID transaccionId,
+                                                java.util.function.Supplier<Transaccion> accion) {
+        Transaccion t = transaccionRepo.findById(transaccionId).orElse(null);
+        if (t == null) {
+            return ResponseEntity.notFound().build();
+        }
+        exigirNoEsParteDeLaReserva(adminUsuarioId, t);
+        try {
+            return ResponseEntity.ok(ReembolsoAdicionalResponse.from(accion.get()));
+        } catch (com.tinku.pagos.service.ReembolsoAdicionalNoFallidoException e) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** Conflicto de interés: Soporte no opera el dinero de una Reserva en la que es parte. */
+    private void exigirNoEsParteDeLaReserva(UUID adminUsuarioId, Transaccion transaccion) {
+        reservaRepo.findById(transaccion.getReservaId()).ifPresent(r ->
+                AdminModeracionGate.exigirNoEsParteDelCaso(adminUsuarioId,
+                        r.getTutor().getId(), r.getPagador().getId(), r.getBeneficiario().getId()));
     }
 
     @GetMapping("/pagos-fallidos")
@@ -85,12 +148,13 @@ public class ColasFinancieroController {
     @PostMapping("/pagos-fallidos/{transaccionId}/reintentar")
     public ResponseEntity<?> reintentarLiberacion(@PathVariable UUID transaccionId,
                                                   Authentication authentication) {
-        gate.requiereSoporteFinanciero(authentication);
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
         Transaccion transaccion = transaccionRepo.findById(transaccionId)
                 .orElse(null);
         if (transaccion == null) {
             return ResponseEntity.notFound().build();
         }
+        exigirNoEsParteDeLaReserva(adminUsuarioId, transaccion);
         // Solo la cola de intervención manual (estado retenido + reintentos agotados):
         // una transacción aún en reintento automático no se toca en paralelo.
         if (transaccion.getEstado() != EstadoTransaccion.RETENIDO_ESCROW
@@ -117,12 +181,13 @@ public class ColasFinancieroController {
     public ResponseEntity<?> reembolsoParcial(@PathVariable UUID transaccionId,
                                               @Valid @RequestBody ReembolsoParcialRequest request,
                                               Authentication authentication) {
-        gate.requiereSoporteFinanciero(authentication);
+        UUID adminUsuarioId = gate.requiereSoporteFinanciero(authentication);
         Transaccion transaccion = transaccionRepo.findById(transaccionId)
                 .orElse(null);
         if (transaccion == null) {
             return ResponseEntity.notFound().build();
         }
+        exigirNoEsParteDeLaReserva(adminUsuarioId, transaccion);
         // Solo hay algo que parcializar si el dinero sigue en el escrow.
         boolean escrowDisponible = transaccion.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
                 || transaccion.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA;

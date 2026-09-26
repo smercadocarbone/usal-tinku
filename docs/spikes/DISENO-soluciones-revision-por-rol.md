@@ -56,6 +56,12 @@ ubicala con `rg` por el nombre del método (AGENTS §9).
 **Causa raíz:** las reglas "el Tutor es un camino de registro exclusivo" (Spec M1 §1 l. 13 y §6 l. 137)
 y "solo un AR da de alta menores" (FR-ID-020) viven en el frontend y en javadocs, no en el servicio.
 
+> **Implementado 2026-09-25 (T-ROL-R1), con la decisión del dueño "tutor-padre: sí" (ADR-M1-07):**
+> los Tutores **sí** pueden activar capacidades (no se crea `ck_tutor_sin_capacidades`). A cambio, el
+> Tutor nunca es parte de su propia Reserva (servicio + CHECK V37, validado porque no hay datos de
+> producción) ni le da clase a un menor a su cargo. Las guardas del Admin (§8) también quedaron hechas.
+> Lo de abajo es el diseño original.
+
 ### 1.2 Solución
 **Backend (servicios; una sola fuente de verdad por regla):**
 - `UsuarioService.actualizarCapacidades`: si `tipo != ADULTO` responde **403** con

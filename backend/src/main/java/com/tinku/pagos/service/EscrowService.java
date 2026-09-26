@@ -79,6 +79,7 @@ public class EscrowService {
     private final LiberacionEscrowService liberacionEscrow;
     private final ReembolsoProveedor reembolso;
     private final ComisionPlataforma comision;
+    private final CuentasMpService cuentasMp;
 
     public EscrowService(TransaccionRepository transaccionRepo,
                          ReservaRepository reservaRepo,
@@ -86,7 +87,8 @@ public class EscrowService {
                          MercadoPagoClient mercadopago,
                          LiberacionEscrowService liberacionEscrow,
                          ReembolsoProveedor reembolso,
-                         ComisionPlataforma comision) {
+                         ComisionPlataforma comision,
+                         CuentasMpService cuentasMp) {
         this.transaccionRepo = transaccionRepo;
         this.reservaRepo = reservaRepo;
         this.reservaService = reservaService;
@@ -94,6 +96,7 @@ public class EscrowService {
         this.liberacionEscrow = liberacionEscrow;
         this.reembolso = reembolso;
         this.comision = comision;
+        this.cuentasMp = cuentasMp;
     }
 
     // ------------------------------------------------------ webhook (T-M5-03)
@@ -133,19 +136,27 @@ public class EscrowService {
      */
     @Transactional
     public void confirmarDesdeRetorno(UUID reservaId, String mpPaymentId) {
-        PagoMercadoPago pago = mercadopago.getPago(mpPaymentId);
+        String token = cuentasMp.tokenParaReserva(reservaId);
+        PagoMercadoPago pago = mercadopago.getPago(mpPaymentId, token);
         if (!reservaId.toString().equals(pago.externalReference())) {
             throw new PagoNoCorrespondeException();
         }
-        procesarPagoAprobado(mpPaymentId);
+        procesarPagoAprobado(mpPaymentId, token);
     }
 
+    /** Pago con el token de la plataforma (sin OAuth configurado). */
     @Transactional
     public void procesarPagoAprobado(String mpPaymentId) {
+        procesarPagoAprobado(mpPaymentId, null);
+    }
+
+    /** {@code tokenVendedor}: el del Tutor dueño del pago (ADR-M5-02), o null = plataforma. */
+    @Transactional
+    public void procesarPagoAprobado(String mpPaymentId, String tokenVendedor) {
         if (transaccionRepo.findByMpPaymentId(mpPaymentId).isPresent()) {
             return;
         }
-        PagoMercadoPago pago = mercadopago.getPago(mpPaymentId);
+        PagoMercadoPago pago = mercadopago.getPago(mpPaymentId, tokenVendedor);
         if (!pago.aprobado()) {
             return;
         }

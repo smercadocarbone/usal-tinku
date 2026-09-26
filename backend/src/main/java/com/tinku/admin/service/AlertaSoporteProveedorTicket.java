@@ -68,4 +68,22 @@ public class AlertaSoporteProveedorTicket implements AlertaSoporteProveedor {
                     + "liberación agotada — transaccion=" + transaccion.getId(), e);
         }
     }
+
+    @Override
+    public void notificarPagoSinConciliar(java.util.UUID reservaId, String mpPaymentId, String motivo) {
+        try {
+            Usuario pagador = reservaRepo.findById(reservaId).map(r -> r.getPagador()).orElse(null);
+            if (pagador == null) {
+                log.warn("Pago sin conciliar sin Reserva para abrir ticket — reservaId={}, mpPaymentId={}",
+                        reservaId, mpPaymentId);
+                return;
+            }
+            ticketService.crear(pagador, "M5.pago_fallido",
+                    "Pagué y la clase no se confirmó",
+                    "Pago " + mpPaymentId + " aprobado en MercadoPago para la reserva " + reservaId
+                            + " que la conciliación no pudo resolver: " + motivo + ".");
+        } catch (RuntimeException e) {
+            log.error("No se pudo abrir el ticket por un pago sin conciliar — reservaId=" + reservaId, e);
+        }
+    }
 }

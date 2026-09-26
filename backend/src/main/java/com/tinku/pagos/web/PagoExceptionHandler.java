@@ -21,6 +21,11 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.tinku.pagos")
 public class PagoExceptionHandler {
 
+    @ExceptionHandler(com.tinku.pagos.service.CuentaMpException.class)
+    public ResponseEntity<Map<String, String>> handleCuentaMp(com.tinku.pagos.service.CuentaMpException ex) {
+        return ResponseEntity.status(ex.status()).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(SoloPagadorPreferenciaException.class)
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));

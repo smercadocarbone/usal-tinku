@@ -181,7 +181,7 @@ function ReservarFlujo() {
         router.replace(`/pagar?reserva=${reserva.id}`);
       }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409 && !/menores/i.test(err.message)) {
+      if (err instanceof ApiError && err.codigo === "HORARIO_OCUPADO") {
         // El horario se ocupó mientras decidía: vuelve al paso 1 con ese horario tachado.
         setTomados((t) => new Set(t).add(elegido.inicio));
         // Se vuelve a pedir la ocupación del día para todas las duraciones.

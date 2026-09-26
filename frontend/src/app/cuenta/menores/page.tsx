@@ -142,9 +142,10 @@ export default function MisChicosPage() {
                         </span>
                       </Link>
                     )}
-                    <Link href="/buscar" className="mt-auto text-sm font-semibold">
-                      Buscar un tutor para {m.nombre}
-                    </Link>
+                    <div className="mt-auto flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold">
+                      <Link href={`/cuenta/menores/${m.id}`}>Ver clases y tutores</Link>
+                      <Link href="/buscar">Buscar un tutor para {m.nombre}</Link>
+                    </div>
                   </Tarjeta>
                 </li>
               );

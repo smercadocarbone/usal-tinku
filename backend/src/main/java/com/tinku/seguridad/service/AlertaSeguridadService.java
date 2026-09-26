@@ -1,5 +1,6 @@
 package com.tinku.seguridad.service;
 
+import com.tinku.admin.AdminModeracionGate;
 import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.seguridad.repository.AlertaSeguridadRepository;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
@@ -113,6 +114,7 @@ public class AlertaSeguridadService {
     public AlertaSeguridad resolver(UUID alertaId, UUID adminId, DecisionAlerta decision,
                                     TipoSancion tipoSancion, Integer diasSuspension) {
         AlertaSeguridad alerta = buscar(alertaId);
+        AdminModeracionGate.exigirNoEsParteDelCaso(adminId, alerta.getDetectadoId());
         if (!AlertaSeguridad.ESTADO_PENDIENTE_REVISION.equals(alerta.getEstado())) {
             throw new AlertaYaResueltaException(alertaId);
         }

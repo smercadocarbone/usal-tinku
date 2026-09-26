@@ -82,7 +82,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            PreferenciaPago preferencia = cliente.crearPreferencia(pedido());
+            PreferenciaPago preferencia = cliente.crearPreferencia(pedido(), null);
 
             assertThat(preferencia.preferenceId()).isEqualTo("pref-123");
             assertThat(preferencia.initPoint())
@@ -119,7 +119,7 @@ class MercadoPagoClientHttpTest {
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
                     baseUrl, "mp-token", "https://tinku.app/api/webhooks/mercadopago");
 
-            cliente.crearPreferencia(pedido());
+            cliente.crearPreferencia(pedido(), null);
 
             assertThat(authHeader.get()).isEqualTo("Bearer mp-token");
             JsonNode root = objectMapper.readTree(captor.get());
@@ -140,7 +140,7 @@ class MercadoPagoClientHttpTest {
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
                     baseUrl, "mp-token", null, "https://tinku.site/");
 
-            cliente.crearPreferencia(pedido());
+            cliente.crearPreferencia(pedido(), null);
 
             JsonNode root = objectMapper.readTree(captor.get());
             String vuelta = "https://tinku.site/pagar?reserva=" + reservaId;
@@ -160,7 +160,7 @@ class MercadoPagoClientHttpTest {
         try {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             new MercadoPagoClientHttp(baseUrl, "mp-token", null, "http://localhost:3000")
-                    .crearPreferencia(pedido());
+                    .crearPreferencia(pedido(), null);
 
             JsonNode root = objectMapper.readTree(captor.get());
             assertThat(root.get("back_urls").get("success").asText())
@@ -184,7 +184,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
 
-            assertThatThrownBy(() -> cliente.crearPreferencia(pedido()))
+            assertThatThrownBy(() -> cliente.crearPreferencia(pedido(), null))
                     .isInstanceOf(MercadoPagoNoConfiguradoException.class);
             assertThat(hits.get()).isZero();
         } finally {
@@ -199,7 +199,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.crearPreferencia(pedido()))
+            assertThatThrownBy(() -> cliente.crearPreferencia(pedido(), null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -213,7 +213,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.crearPreferencia(pedido()))
+            assertThatThrownBy(() -> cliente.crearPreferencia(pedido(), null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -240,7 +240,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            PagoMercadoPago pago = cliente.getPago("pago-123");
+            PagoMercadoPago pago = cliente.getPago("pago-123", null);
 
             assertThat(pago.mpPaymentId()).isEqualTo("pago-123");
             assertThat(pago.aprobado()).isTrue();
@@ -262,7 +262,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            PagoMercadoPago pago = cliente.getPago("pago-456");
+            PagoMercadoPago pago = cliente.getPago("pago-456", null);
 
             assertThat(pago.aprobado()).isFalse();
             assertThat(pago.externalReference()).isEqualTo(reservaId.toString());
@@ -284,7 +284,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
 
-            assertThatThrownBy(() -> cliente.getPago("pago-789"))
+            assertThatThrownBy(() -> cliente.getPago("pago-789", null))
                     .isInstanceOf(MercadoPagoNoConfiguradoException.class);
             assertThat(hits.get()).isZero();
         } finally {
@@ -299,7 +299,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.getPago("pago-500"))
+            assertThatThrownBy(() -> cliente.getPago("pago-500", null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -335,7 +335,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            cliente.reembolsarPago("pago-reembolso");
+            cliente.reembolsarPago("pago-reembolso", null);
 
             // FR-PAG-009: body VACÍO — el reembolso total hace que MP devuelva
             // también su propia comisión (costo real cero para Tinku).
@@ -355,7 +355,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-500"))
+            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-500", null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -371,7 +371,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-2"))
+            assertThatThrownBy(() -> cliente.reembolsarPago("pago-reembolso-2", null))
                     .isInstanceOf(MercadoPagoNoConfiguradoException.class);
             assertThat(hits.get()).isZero();
         } finally {
@@ -392,7 +392,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            cliente.reembolsarPagoParcial("pago-parcial", new BigDecimal("60.00"));
+            cliente.reembolsarPagoParcial("pago-parcial", new BigDecimal("60.00"), null, null);
 
             // FR-PAG-010: reembolso TOTAL lleva body vacío ({}); el PARCIAL es el
             // único que manda amount explícito, y solo lo invoca el flujo manual
@@ -413,7 +413,7 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-500", new BigDecimal("10.00")))
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-500", new BigDecimal("10.00"), null, null))
                     .isInstanceOf(MercadoPagoNoDisponibleException.class);
         } finally {
             server.stop(0);
@@ -429,9 +429,61 @@ class MercadoPagoClientHttpTest {
             String baseUrl = "http://localhost:" + server.getAddress().getPort();
             MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "", null);
 
-            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-2", new BigDecimal("10.00")))
+            assertThatThrownBy(() -> cliente.reembolsarPagoParcial("pago-parcial-2", new BigDecimal("10.00"), null, null))
                     .isInstanceOf(MercadoPagoNoConfiguradoException.class);
             assertThat(hits.get()).isZero();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** R2: la preferencia vence con la Reserva y excluye efectivo (ticket, cajero). */
+    @Test
+    void r2_creaPreferencia_conVencimientoYSinEfectivo() throws Exception {
+        AtomicReference<String> captor = new AtomicReference<>();
+        HttpServer server = serverQueDevuelve("201", RESPUESTA_PREFERENCIA, captor);
+        try {
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
+                    "http://localhost:" + server.getAddress().getPort(), "mp-token", null);
+            java.time.Instant vence = java.time.Instant.parse("2026-09-25T15:15:00Z");
+            cliente.crearPreferencia(new PreferenciaRequest(reservaId, new BigDecimal("150.00"),
+                    new BigDecimal("22.50"), "Sesión de tutoría Tinku", vence), null);
+
+            JsonNode root = objectMapper.readTree(captor.get());
+            assertThat(root.get("expires").asBoolean()).isTrue();
+            assertThat(root.get("expiration_date_to").asText()).isEqualTo("2026-09-25T12:15:00.000-03:00");
+            assertThat(root.get("payment_methods").get("excluded_payment_types").findValuesAsString("id"))
+                    .containsExactlyInAnyOrder("ticket", "atm");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** R2: la búsqueda por external_reference parsea el id numérico de MP y filtra lo incompleto. */
+    @Test
+    void r2_buscaPagosPorReferencia() throws Exception {
+        AtomicReference<String> query = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/payments/search", exchange -> {
+            query.set(exchange.getRequestURI().getQuery());
+            responder(exchange, "200", """
+                    {"results":[
+                      {"id":123456789,"status":"approved","external_reference":"%s","transaction_amount":150.0},
+                      {"id":null,"status":"approved"}]}
+                    """.formatted(reservaId));
+        });
+        server.start();
+        try {
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(
+                    "http://localhost:" + server.getAddress().getPort(), "mp-token", null);
+            java.util.List<PagoMercadoPago> pagos = cliente.buscarPagosPorReferencia(reservaId.toString(), null);
+
+            assertThat(query.get()).contains("external_reference=" + reservaId);
+            assertThat(pagos).singleElement().satisfies(p -> {
+                assertThat(p.mpPaymentId()).isEqualTo("123456789");
+                assertThat(p.aprobado()).isTrue();
+                assertThat(p.monto()).isEqualByComparingTo("150");
+            });
         } finally {
             server.stop(0);
         }

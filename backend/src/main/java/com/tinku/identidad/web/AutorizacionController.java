@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Autorizaciones de Tutor (FR-ID-009, T-M1-11), endpoints autenticados: solo
@@ -45,6 +46,13 @@ public class AutorizacionController {
                 adulto, request.menorId(), request.tutorId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("id", autorizacion.getId(), "no_confiable", autorizacion.isNoConfiable()));
+    }
+
+    /** R5: Tutores autorizados para un menor (solo su Adulto Responsable). */
+    @org.springframework.web.bind.annotation.GetMapping
+    public java.util.List<AutorizacionService.AutorizacionVista> listar(
+            @org.springframework.web.bind.annotation.RequestParam UUID menorId, Authentication authentication) {
+        return autorizacionService.listar(usuarioActual.obtener(authentication), menorId);
     }
 
     @PatchMapping("/no-confiable")

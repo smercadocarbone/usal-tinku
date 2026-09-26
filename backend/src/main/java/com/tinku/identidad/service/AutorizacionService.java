@@ -44,6 +44,30 @@ public class AutorizacionService {
         }
     }
 
+    /**
+     * R5 (vista del AR por hijo): los Tutores autorizados para ESE menor. Solo su Adulto
+     * Responsable; cualquier otro (incluido el propio menor) → 403.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<AutorizacionVista> listar(Usuario adultoResponsable, UUID menorId) {
+        exigirCapacidadAdultoResponsable(adultoResponsable);
+        Usuario menor = usuarioRepo.findById(menorId).orElseThrow(MenorNoPerteneceException::new);
+        if (menor.getTipo() != TipoUsuario.MENOR || menor.getAdultoResponsable() == null
+                || !menor.getAdultoResponsable().getId().equals(adultoResponsable.getId())) {
+            throw new MenorNoPerteneceException();
+        }
+        return autorizacionRepo.findByAdultoResponsableIdAndMenorIdOrderByCreatedAtDesc(
+                        adultoResponsable.getId(), menorId).stream()
+                .map(a -> new AutorizacionVista(a.getTutor().getId(), a.getTutor().getNombre(),
+                        a.getTutor().getApellido(), a.getTutor().getFotoRef() != null, a.isNoConfiable(),
+                        a.getCreatedAt()))
+                .toList();
+    }
+
+    public record AutorizacionVista(UUID tutorId, String tutorNombre, String tutorApellido, boolean tieneFoto,
+                                    boolean noConfiable, java.time.Instant autorizadoAt) {
+    }
+
     /** Autoriza a un Tutor para uno de los menores a cargo del AR. Idempotente. */
     @Transactional
     public AutorizacionTutor autorizarTutor(Usuario adultoResponsable, UUID menorId, UUID tutorId) {
@@ -62,6 +86,12 @@ public class AutorizacionService {
                 .orElseThrow(TutorNoAutorizadoException::new);
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new TutorNoAutorizadoException("Solo perfiles de Tutor pueden ser autorizados.");
+        }
+        // Art. II (decisión 2026-09-25): un tutor no da clases a un menor del que es el Adulto
+        // Responsable; tiene que haber un adulto independiente entre los dos.
+        if (tutor.getId().equals(adultoResponsable.getId())) {
+            throw new TutorNoAutorizadoException(
+                    "No podés autorizarte como tutor de un menor a tu cargo.");
         }
         // FR-ID-026 (T02): autorizar es solo para menores → exige CAP aprobado y vigente.
         if (!habilitacion.habilitadoParaMenores(tutorId)) {

@@ -1,6 +1,6 @@
 import type { PayloadSesion } from "./auth";
 
-export type IconoNav = "buscar" | "clases" | "chicos" | "cuenta" | "agenda" | "perfil" | "panel";
+export type IconoNav = "buscar" | "clases" | "chicos" | "cuenta" | "agenda" | "perfil" | "panel" | "cobros";
 
 export interface ItemNav {
   href: string;
@@ -23,6 +23,8 @@ export function navegacionPorRol(payload: PayloadSesion | null | undefined, esAd
   }
 
   if (payload.tipo === "TUTOR") {
+    // Un Tutor puede además tomar clases o tener chicos a cargo (ADR-M1-07): esos accesos van
+    // en "Mi cuenta" para no pasar de 5 ítems en la barra de abajo del celular.
     return [
       { href: "/cuenta/horarios", label: "Mi agenda", icono: "agenda" },
       { href: "/cuenta/reservas", label: "Mis clases", icono: "clases", tambien: ["/cuenta/reservas/"] },
@@ -32,6 +34,7 @@ export function navegacionPorRol(payload: PayloadSesion | null | undefined, esAd
         icono: "perfil",
         tambien: ["/cuenta/materias", "/cuenta/precio"],
       },
+      { href: "/cuenta/cobros", label: "Cobros", icono: "cobros" },
       cuenta,
     ];
   }

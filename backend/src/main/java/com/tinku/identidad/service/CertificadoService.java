@@ -102,6 +102,12 @@ public class CertificadoService {
      * otro deja el CAP en revisión legal y no habilita (BR-CAP-02, PT1). Aprobar solo
      * prospera sin antecedentes. Solo se revisa un CAP pendiente o en revisión legal.
      */
+    /** Tutor dueño del CAP (el Admin no revisa el suyo: conflicto de interés). */
+    @Transactional(readOnly = true)
+    public UUID tutorDelCap(UUID capId) {
+        return capRepo.findById(capId).orElseThrow(CapNoEncontradoException::new).getTutor().getId();
+    }
+
     @Transactional
     public CertificadoAntecedentesPenales revisar(UUID capId, UUID adminRevisorId,
                                                   AccionRevisionCap accion, CategoriaAntecedenteCap categoria) {

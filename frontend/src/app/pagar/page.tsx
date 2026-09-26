@@ -158,7 +158,7 @@ function PagarFlujo() {
         }
       >
         {vencida || reserva.motivoCancelacion === "timeout_pago"
-          ? `Pasaron más de ${TIEMPOS.pagoMinutos} minutos sin pago y el horario se liberó. No se te cobró nada.`
+          ? `Pasaron más de ${TIEMPOS.pagoMinutos} minutos sin pago y el horario se liberó. Si llegaste a pagar después, te devolvemos el dinero solo, sin que tengas que pedirlo.`
           : "No hay nada para pagar."}
       </Pantalla>
     );

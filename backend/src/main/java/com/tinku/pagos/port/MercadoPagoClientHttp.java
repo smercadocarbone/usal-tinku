@@ -19,9 +19,10 @@ import java.util.UUID;
 
 /**
  * Cliente HTTP de MercadoPago (T-M5-02) via Checkout Pro en modalidad
- * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%)
- * para que el split quede definido al crear el pago (Plan M5 §3.1/§3.2) — al
- * liberar el escrow NO es una segunda transaccion.
+ * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%).
+ * <b>El reparto solo ocurre si la preferencia se crea con el token OAuth del
+ * Tutor (vendedor)</b> — ADR-M5-02. Con el token de la plataforma, Tinku es el
+ * vendedor y cobra el 100 %: el marketplace_fee no tiene efecto.
  *
  * El match entre la preferencia y la Reserva va por {@code external_reference}
  * = id de la Reserva: es la clave que usara el webhook de M5-B para reconciliar
@@ -70,13 +71,13 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public PreferenciaPago crearPreferencia(PreferenciaRequest request) {
-        exigirTokenConfigurado();
+    public PreferenciaPago crearPreferencia(PreferenciaRequest request, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         MpPreferenciaRespuesta respuesta;
         try {
             respuesta = restClient.post()
                     .uri(PATH_PREFERENCIAS)
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(cuerpo(request))
                     .retrieve()
@@ -95,13 +96,13 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public PagoMercadoPago getPago(String mpPaymentId) {
-        exigirTokenConfigurado();
+    public PagoMercadoPago getPago(String mpPaymentId, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         MpPagoRespuesta respuesta;
         try {
             respuesta = restClient.get()
                     .uri(PATH_PAGOS + mpPaymentId)
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .retrieve()
                     .onStatus(status -> status.isError(), (req, res) -> {
                         throw new MercadoPagoNoDisponibleException();
@@ -118,12 +119,41 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     }
 
     @Override
-    public void reembolsarPago(String mpPaymentId) {
-        exigirTokenConfigurado();
+    public List<PagoMercadoPago> buscarPagosPorReferencia(String externalReference, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
+        MpBusquedaRespuesta respuesta;
+        try {
+            respuesta = restClient.get()
+                    .uri(uri -> uri.path(PATH_PAGOS + "search")
+                            .queryParam("external_reference", externalReference)
+                            .queryParam("sort", "date_created")
+                            .queryParam("criteria", "desc")
+                            .build())
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
+                    .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        throw new MercadoPagoNoDisponibleException();
+                    })
+                    .body(MpBusquedaRespuesta.class);
+        } catch (RestClientException ex) {
+            throw new MercadoPagoNoDisponibleException();
+        }
+        if (respuesta == null || respuesta.results() == null) {
+            return List.of();
+        }
+        return respuesta.results().stream()
+                .filter(p -> p.id() != null && p.status() != null)
+                .map(p -> new PagoMercadoPago(String.valueOf(p.id()), p.status(), p.externalReference(), p.transactionAmount()))
+                .toList();
+    }
+
+    @Override
+    public void reembolsarPago(String mpPaymentId, String tokenVendedor) {
+        exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
                     .uri(PATH_PAGOS + mpPaymentId + "/refunds")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new MpReembolsoRequest(null))
                     .retrieve()
@@ -139,13 +169,19 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
     /** Reembolso PARCIAL por disputa (FR-PAG-010, T-M5-08): el cuerpo lleva el
      * {@code amount} a devolver. Solo el flujo manual de M8 lo invoca. */
     @Override
-    public void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto) {
-        exigirTokenConfigurado();
+    public void reembolsarPagoParcial(String mpPaymentId, BigDecimal monto, String tokenVendedor,
+                                      String claveIdempotencia) {
+        exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
                     .uri(PATH_PAGOS + mpPaymentId + "/refunds")
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
+                    .headers(h -> {
+                        if (claveIdempotencia != null) {
+                            h.set("X-Idempotency-Key", claveIdempotencia);
+                        }
+                    })
                     .body(new MpReembolsoRequest(monto))
                     .retrieve()
                     .onStatus(status -> status.isError(), (req, res) -> {
@@ -157,10 +193,15 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         }
     }
 
-    private void exigirTokenConfigurado() {
-        if (accessToken == null || accessToken.isBlank()) {
+    private void exigirTokenConfigurado(String tokenVendedor) {
+        if (token(tokenVendedor) == null || token(tokenVendedor).isBlank()) {
             throw new MercadoPagoNoConfiguradoException();
         }
+    }
+
+    /** El token del vendedor (Tutor, OAuth) o, sin él, el de la plataforma. */
+    private String token(String tokenVendedor) {
+        return tokenVendedor != null && !tokenVendedor.isBlank() ? tokenVendedor : accessToken;
     }
 
     /** Traduccion de la preferencia de dominio al JSON de /checkout/preferences
@@ -175,8 +216,18 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                 request.reservaId().toString(),
                 notificacion,
                 backUrls(request.reservaId()),
-                autoReturn());
+                autoReturn(),
+                request.expiraAt() == null ? null : true,
+                request.expiraAt() == null ? null : FECHA_MP.format(request.expiraAt()),
+                // R2: el efectivo (Rapipago, Pago Fácil, cajero) se acredita después de la
+                // ventana de 15 min y terminaría siempre en reembolso.
+                new MpMediosDePago(List.of(new MpTipoExcluido("ticket"), new MpTipoExcluido("atm"))));
     }
+
+    /** Formato de fechas de MP: ISO-8601 con milisegundos y offset (hora de Argentina). */
+    private static final java.time.format.DateTimeFormatter FECHA_MP =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+                    .withZone(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
 
     /** Sin back_urls el comprador se quedaba en MercadoPago después de pagar
      *  (producción, 2026-09-25). Vuelve a /pagar, que lee el estado que agrega MP. */
@@ -201,7 +252,28 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
             @JsonProperty("external_reference") String externalReference,
             @JsonProperty("notification_url") String notificationUrl,
             @JsonProperty("back_urls") MpBackUrls backUrls,
-            @JsonProperty("auto_return") String autoReturn) {
+            @JsonProperty("auto_return") String autoReturn,
+            Boolean expires,
+            @JsonProperty("expiration_date_to") String expirationDateTo,
+            @JsonProperty("payment_methods") MpMediosDePago paymentMethods) {
+    }
+
+    private record MpMediosDePago(
+            @JsonProperty("excluded_payment_types") List<MpTipoExcluido> excludedPaymentTypes) {
+    }
+
+    private record MpTipoExcluido(String id) {
+    }
+
+    private record MpBusquedaRespuesta(List<MpPagoBuscado> results) {
+    }
+
+    /** {@code id} llega como número en la API de MP; se acepta cualquier escalar. */
+    private record MpPagoBuscado(
+            Object id,
+            String status,
+            @JsonProperty("external_reference") String externalReference,
+            @JsonProperty("transaction_amount") BigDecimal transactionAmount) {
     }
 
     private record MpBackUrls(String success, String failure, String pending) {

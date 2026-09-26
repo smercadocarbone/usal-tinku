@@ -1,5 +1,7 @@
 package com.tinku.pagos.port;
 
+import com.tinku.pagos.repository.TransaccionRepository;
+import com.tinku.pagos.service.CuentasMpService;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -25,13 +27,21 @@ import java.math.BigDecimal;
 public class ReembolsoParcialProveedorMercadoPago implements ReembolsoParcialProveedor {
 
     private final MercadoPagoClient mercadopago;
+    private final CuentasMpService cuentasMp;
+    private final TransaccionRepository transaccionRepo;
 
-    public ReembolsoParcialProveedorMercadoPago(MercadoPagoClient mercadopago) {
+    public ReembolsoParcialProveedorMercadoPago(MercadoPagoClient mercadopago, CuentasMpService cuentasMp,
+                                                TransaccionRepository transaccionRepo) {
         this.mercadopago = mercadopago;
+        this.cuentasMp = cuentasMp;
+        this.transaccionRepo = transaccionRepo;
     }
 
     @Override
-    public void reembolsarParcial(String mpPaymentId, BigDecimal monto) {
-        mercadopago.reembolsarPagoParcial(mpPaymentId, monto);
+    public void reembolsarParcial(String mpPaymentId, BigDecimal monto, String claveIdempotencia) {
+        // ADR-M5-02: con el token del Tutor dueño del pago (sin OAuth, el de la plataforma).
+        String token = transaccionRepo.findByMpPaymentId(mpPaymentId)
+                .map(cuentasMp::tokenParaTransaccion).orElse(null);
+        mercadopago.reembolsarPagoParcial(mpPaymentId, monto, token, claveIdempotencia);
     }
 }

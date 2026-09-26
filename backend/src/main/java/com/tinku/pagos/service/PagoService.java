@@ -32,7 +32,7 @@ import java.util.UUID;
  * El cobro va a escrow: la preferencia se crea con {@code marketplace_fee} =
  * comisión de la plataforma (BR-PAG-01), y es el webhook de M5-B quien crea la
  * fila en {@code pagos.transacciones} y confirma la Reserva al recibir el pago
- * aprobado — este servicio no persiste nada.
+ * aprobado. Este servicio solo registra la preferencia para la conciliación (R2).
  */
 @Service
 public class PagoService {
@@ -48,6 +48,7 @@ public class PagoService {
     private final ReservaService reservaService;
     private final PasarelaService pasarela;
     private final PisoTarifa pisoTarifa;
+    private final ConciliacionPagosService conciliacion;
 
     public PagoService(ReservaRepository reservaRepo,
                        MercadoPagoClient mercadopago,
@@ -57,7 +58,8 @@ public class PagoService {
                        TransaccionRepository transaccionRepo,
                        ReservaService reservaService,
                        PasarelaService pasarela,
-                       PisoTarifa pisoTarifa) {
+                       PisoTarifa pisoTarifa,
+                       ConciliacionPagosService conciliacion) {
         this.reservaRepo = reservaRepo;
         this.mercadopago = mercadopago;
         this.comision = comision;
@@ -67,6 +69,7 @@ public class PagoService {
         this.reservaService = reservaService;
         this.pasarela = pasarela;
         this.pisoTarifa = pisoTarifa;
+        this.conciliacion = conciliacion;
     }
 
     /** Solo el pagador de la reserva (Artículo II) puede pedir que se confirme su pago. */
@@ -100,8 +103,15 @@ public class PagoService {
         // T09: se cobra sesión + adicional; el adicional va íntegro a la plataforma
         // (marketplace_fee = comisión sobre la sesión + adicional). La comisión NO se
         // calcula sobre el adicional.
-        return mercadopago.crearPreferencia(new PreferenciaRequest(
-                reserva.getId(), reserva.montoTotal(), comision.add(adicional(reserva)), DESCRIPCION_ITEM));
+        // R2: la preferencia vence junto con la Reserva sin pagar (Tabla de Tiempos) y queda
+        // registrada para conciliar el pago aunque no vuelva el navegador ni llegue el webhook.
+        // ADR-M5-02: con el token del Tutor (vendedor) para que MP reparta con marketplace_fee.
+        String tokenVendedor = conciliacion.tokenVendedor(reserva.getTutor().getId());
+        PreferenciaPago preferencia = mercadopago.crearPreferencia(new PreferenciaRequest(
+                reserva.getId(), reserva.montoTotal(), comision.add(adicional(reserva)), DESCRIPCION_ITEM,
+                reserva.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO)), tokenVendedor);
+        conciliacion.registrarPreferencia(reserva.getId(), preferencia.preferenceId());
+        return preferencia;
     }
 
     /**

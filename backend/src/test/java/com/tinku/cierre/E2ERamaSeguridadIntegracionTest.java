@@ -150,7 +150,7 @@ class E2ERamaSeguridadIntegracionTest {
     void programarMocks() {
         when(almacenamiento.guardar(any(), any()))
                 .thenReturn("https://cdn.test/" + UUID.randomUUID() + ".png");
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
     }
 
@@ -268,7 +268,7 @@ class E2ERamaSeguridadIntegracionTest {
                         .content(objectMapper.writeValueAsString(
                                 Map.of("reservaId", reservaId.toString()))))
                 .andExpect(status().isOk());
-        when(mercadopago.getPago(mpPaymentId)).thenReturn(
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(
                 new PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(),
                         new BigDecimal("15000")));
         var payload = objectMapper.createObjectNode();

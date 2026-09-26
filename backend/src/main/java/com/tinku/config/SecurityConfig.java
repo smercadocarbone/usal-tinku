@@ -126,6 +126,9 @@ public class SecurityConfig {
                 // x-signature (HMAC-SHA256). Sin firma válida → 401.
                 .requestMatchers("/api/webhooks/livekit",
                         "/api/webhooks/mercadopago").permitAll()
+                // ADR-M5-02: vuelta de la autorización de MercadoPago. El navegador llega sin JWT;
+                // la autenticación es el state de un solo uso (CuentasMpService.completarConexion).
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/pagos/mp/callback").permitAll()
                 // Healthcheck del contenedor (sin detalles, ver application.yml).
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Defensa en profundidad (auditoría 2026-09-18): antes solo

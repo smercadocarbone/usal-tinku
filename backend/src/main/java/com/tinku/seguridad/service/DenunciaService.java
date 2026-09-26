@@ -1,5 +1,6 @@
 package com.tinku.seguridad.service;
 
+import com.tinku.admin.AdminModeracionGate;
 import com.tinku.aula.SesionService;
 import com.tinku.aula.model.SesionAprendizaje;
 import com.tinku.aula.repository.SesionAprendizajeRepository;
@@ -251,6 +252,8 @@ public class DenunciaService {
     public Denuncia resolver(UUID denunciaId, UUID adminId, ResolucionDenuncia resolucion,
                              TipoSancion tipoSancion, Integer diasSuspension) {
         Denuncia denuncia = buscar(denunciaId);
+        AdminModeracionGate.exigirNoEsParteDelCaso(adminId,
+                denuncia.getDenuncianteId(), denuncia.getDenunciadoId());
         if (denuncia.getEstado() != EstadoDenuncia.EN_REVISION) {
             throw new DenunciaYaResueltaException(denunciaId);
         }

@@ -129,7 +129,7 @@ class PagosFlujosIntegracionTest {
         when(reputacion.senalesImplicitas(anyCollection())).thenReturn(Map.of());
         when(reputacion.tutoresEnSombraBrMatch01(anyCollection())).thenReturn(Set.of());
         when(reputacionBloqueo.tutoresConCalificacionPendiente()).thenReturn(Set.of());
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
     }
 
@@ -288,7 +288,7 @@ class PagosFlujosIntegracionTest {
         // BR-PAG-01: la comisión de la plataforma llega como marketplace_fee sobre
         // el precio congelado de la Reserva (FR-PAG-013): 15000 → 4050.00 (27%).
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         PreferenciaRequest pedido = captor.getValue();
         assertThat(pedido.reservaId()).isEqualTo(reservaId);
         assertThat(pedido.montoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
@@ -362,7 +362,7 @@ class PagosFlujosIntegracionTest {
     void us1_sinCredencialesMercadoPago_503() throws Exception {
         EscenarioPago e = escenarioPago();
         UUID reservaId = crearReservaDirecta(e.tokenAr(), e.tutorId(), e.menorId(), e.horario());
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenThrow(new MercadoPagoNoConfiguradoException());
 
         mockMvc.perform(post("/api/pagos/preferencia")
@@ -426,7 +426,7 @@ class PagosFlujosIntegracionTest {
         // y la preferencia de pago se arma sobre ese precio congelado.
         pedirPreferencia(tokenEst, reservaId);
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("23000"));
     }
 
@@ -650,7 +650,7 @@ class PagosFlujosIntegracionTest {
 
         // BR-PAG-01 intacta: 27 % solo sobre la sesión (4050); el adicional va entero a la plataforma.
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
-        verify(mercadopago).crearPreferencia(captor.capture());
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
         assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4820.00"));
     }
@@ -699,5 +699,129 @@ class PagosFlujosIntegracionTest {
                         .header("Authorization", "Bearer " + e.tokenTutor())
                         .contentType("audio/webm").content(AUDIO_WEBM))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    // ------------------------------------------------ R2: conciliación de pagos
+
+    @Autowired com.tinku.pagos.service.ConciliacionPagosService conciliacion;
+    @Autowired com.tinku.reservas.jobs.ReservaTimeoutPagoJob timeoutJob;
+    @Autowired com.tinku.pagos.repository.TransaccionRepository transaccionRepository;
+    @Autowired com.tinku.pagos.repository.PreferenciaMpRepository preferenciaRepository;
+
+    /** Reserva de un adulto (60 min = 15000) con su preferencia ya pedida, antigüedad {@code minutos}. */
+    private UUID reservaConPreferencia(long minutos) throws Exception {
+        String dniEst = dniUnico();
+        String dniTutor = dniUnico();
+        String tokenEst = registrarAdultoYToken(dniEst, "Lucas", "Diaz", true, false);
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        LocalDate fecha = LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2);
+        publicarFranjaPuntual(tokenTutor, fecha);
+        UUID reservaId = crearReservaDirecta(tokenEst, usuarioPorDni(dniTutor).getId(), null, dentroDeFranja(fecha));
+        pedirPreferencia(tokenEst, reservaId);
+        capJdbc.update("UPDATE pagos.preferencias_pago SET created_at = now() - make_interval(mins => ?) "
+                + "WHERE reserva_id = ?", (int) minutos, reservaId);
+        return reservaId;
+    }
+
+    private void mpDevuelvePagoAprobado(UUID reservaId, String mpPaymentId, String monto) {
+        var pago = new MercadoPagoClient.PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(),
+                new BigDecimal(monto));
+        when(mercadopago.buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(reservaId.toString()), any())).thenReturn(java.util.List.of(pago));
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(pago);
+    }
+
+    private void correrTimeout(UUID reservaId) {
+        org.quartz.JobExecutionContext ctx = org.mockito.Mockito.mock(org.quartz.JobExecutionContext.class);
+        org.quartz.JobDataMap datos = new org.quartz.JobDataMap();
+        datos.put(com.tinku.reservas.jobs.ReservaTimeoutPagoJob.PARAM_RESERVA_ID, reservaId.toString());
+        when(ctx.getMergedJobDataMap()).thenReturn(datos);
+        timeoutJob.execute(ctx);
+    }
+
+    private com.tinku.reservas.model.EstadoReserva estadoDe(UUID reservaId) {
+        return reservaRepository.findById(reservaId).orElseThrow().getEstado();
+    }
+
+    /** Regresión: pagó, cerró la pestaña y el webhook se perdió → antes quedaba cobrado sin confirmar. */
+    @Test
+    void r2_pagoAprobadoSinWebhookNiRetorno_seConfirmaPorConciliacion() throws Exception {
+        UUID reservaId = reservaConPreferencia(5);
+        mpDevuelvePagoAprobado(reservaId, "mp-conc-1", "15000");
+
+        conciliacion.barrer();
+
+        assertThat(estadoDe(reservaId)).isEqualTo(com.tinku.reservas.model.EstadoReserva.CONFIRMADA);
+        assertThat(transaccionRepository.findByMpPaymentId("mp-conc-1")).isPresent();
+        assertThat(preferenciaRepository.findById(reservaId).orElseThrow().getConciliadoAt()).isNotNull();
+    }
+
+    /** La preferencia vence con la Reserva y no acepta efectivo; queda registrada para conciliar. */
+    @Test
+    void r2_preferenciaVenceConLaReservaYQuedaRegistrada() throws Exception {
+        UUID reservaId = reservaConPreferencia(0);
+        ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
+        verify(mercadopago, org.mockito.Mockito.atLeastOnce()).crearPreferencia(captor.capture(), any());
+        PreferenciaRequest pedido = captor.getAllValues().stream()
+                .filter(r -> r.reservaId().equals(reservaId)).findFirst().orElseThrow();
+        Reserva reserva = reservaRepository.findById(reservaId).orElseThrow();
+        assertThat(pedido.expiraAt()).isEqualTo(reserva.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO));
+        assertThat(preferenciaRepository.findById(reservaId).orElseThrow().getPreferenceId()).isEqualTo("pref-mock");
+    }
+
+    @Test
+    void r2_timeoutConcilia_antesDeCancelar() throws Exception {
+        UUID reservaId = reservaConPreferencia(16);
+        mpDevuelvePagoAprobado(reservaId, "mp-conc-2", "15000");
+
+        correrTimeout(reservaId);
+
+        assertThat(estadoDe(reservaId)).isEqualTo(com.tinku.reservas.model.EstadoReserva.CONFIRMADA);
+    }
+
+    @Test
+    void r2_mpCaido_elTimeoutCancelaIgual() throws Exception {
+        UUID reservaId = reservaConPreferencia(16);
+        when(mercadopago.buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(reservaId.toString()), any()))
+                .thenThrow(new com.tinku.pagos.service.MercadoPagoNoDisponibleException());
+
+        correrTimeout(reservaId);
+
+        assertThat(estadoDe(reservaId)).isEqualTo(com.tinku.reservas.model.EstadoReserva.CANCELADA);
+    }
+
+    /** Pagó tarde (la Reserva ya venció) y no llegó ningún aviso: el barrido lo reembolsa. */
+    @Test
+    void r2_pagoAprobadoTrasTimeout_sinWebhook_seReembolsaPorBarrido() throws Exception {
+        UUID reservaId = reservaConPreferencia(20);
+        correrTimeout(reservaId); // MP todavía sin pagos → vence
+        assertThat(estadoDe(reservaId)).isEqualTo(com.tinku.reservas.model.EstadoReserva.CANCELADA);
+
+        mpDevuelvePagoAprobado(reservaId, "mp-conc-3", "15000");
+        conciliacion.barrer();
+
+        verify(mercadopago).reembolsarPago(org.mockito.ArgumentMatchers.eq("mp-conc-3"), any());
+        assertThat(transaccionRepository.findByMpPaymentId("mp-conc-3")).get()
+                .extracting(t -> t.getEstado()).isEqualTo(com.tinku.pagos.model.EstadoTransaccion.REEMBOLSADO);
+        assertThat(preferenciaRepository.findById(reservaId).orElseThrow().getConciliadoAt()).isNotNull();
+    }
+
+    /** Pasadas las 48 hs la preferencia sale del barrido; un monto que no coincide se avisa una vez. */
+    @Test
+    void r2_barridoRespetaVentana48h_yAvisaUnaSolaVezSiElMontoNoCoincide() throws Exception {
+        UUID vieja = reservaConPreferencia(49 * 60);
+        UUID rara = reservaConPreferencia(5);
+        mpDevuelvePagoAprobado(rara, "mp-conc-4", "999");
+
+        conciliacion.barrer();
+        conciliacion.barrer();
+
+        verify(mercadopago, org.mockito.Mockito.never()).buscarPagosPorReferencia(org.mockito.ArgumentMatchers.eq(vieja.toString()), any());
+        assertThat(estadoDe(rara)).isEqualTo(com.tinku.reservas.model.EstadoReserva.PENDIENTE_PAGO);
+        var preferencia = preferenciaRepository.findById(rara).orElseThrow();
+        assertThat(preferencia.getAlertadoAt()).isNotNull();
+        assertThat(preferencia.getConciliadoAt()).isNull();
+        assertThat(capJdbc.queryForObject(
+                "SELECT count(*) FROM admin.tickets_soporte WHERE detalle LIKE ?", Integer.class,
+                "%" + rara + "%")).isEqualTo(1);
     }
 }

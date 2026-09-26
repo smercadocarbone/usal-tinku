@@ -18,7 +18,11 @@ public enum TipoNotificacion {
     /** PT10 (T02): el Tutor perdió la habilitación para menores (CAP vencido) y se canceló
      *  la clase con reembolso total. Al Adulto Responsable. Sin datos del CAP (T03 §2.3).
      *  Datos: reservaId, horario. */
-    CLASE_CANCELADA_TUTOR_SIN_HABILITACION(true);
+    CLASE_CANCELADA_TUTOR_SIN_HABILITACION(true),
+
+    /** ADR-M5-02: no se pudo renovar la conexión de MercadoPago del Tutor; deja de ser
+     *  reservable hasta reconectar. Al Tutor. Sin datos. */
+    MP_CUENTA_DESCONECTADA(true);
 
     private final boolean porEmail;
 

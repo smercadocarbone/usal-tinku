@@ -1,5 +1,6 @@
 package com.tinku.pagos.port;
 
+import com.tinku.pagos.service.CuentasMpService;
 import com.tinku.pagos.model.Transaccion;
 import org.springframework.stereotype.Component;
 
@@ -20,13 +21,15 @@ import org.springframework.stereotype.Component;
 public class ReembolsoProveedorMercadoPago implements ReembolsoProveedor {
 
     private final MercadoPagoClient mercadopago;
+    private final CuentasMpService cuentasMp;
 
-    public ReembolsoProveedorMercadoPago(MercadoPagoClient mercadopago) {
+    public ReembolsoProveedorMercadoPago(MercadoPagoClient mercadopago, CuentasMpService cuentasMp) {
         this.mercadopago = mercadopago;
+        this.cuentasMp = cuentasMp;
     }
 
     @Override
     public void reembolsarTotal(Transaccion transaccion) {
-        mercadopago.reembolsarPago(transaccion.getMpPaymentId());
+        mercadopago.reembolsarPago(transaccion.getMpPaymentId(), cuentasMp.tokenParaTransaccion(transaccion));
     }
 }

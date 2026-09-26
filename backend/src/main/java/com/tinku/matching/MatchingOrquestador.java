@@ -51,7 +51,9 @@ public class MatchingOrquestador {
         }
 
         ContextoAutorizacion contexto = contextoService.resolverContexto(buscador);
-        List<UUID> candidatos = contextoService.tutoresCandidatos(contexto);
+        // ADR-M1-07: un Tutor que busca clases para sí nunca se encuentra a sí mismo.
+        List<UUID> candidatos = contextoService.tutoresCandidatos(contexto).stream()
+                .filter(id -> !id.equals(buscador.getId())).toList();
         if (nombre != null || materia != null) {
             candidatos = perfilMatchingRepo.acotarCandidatos(candidatos, nombre, materia);
         }

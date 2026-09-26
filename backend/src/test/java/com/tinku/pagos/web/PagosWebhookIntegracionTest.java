@@ -301,7 +301,7 @@ class PagosWebhookIntegracionTest {
     }
 
     private void pagoAprobado(String mpPaymentId, UUID reservaId, BigDecimal monto) {
-        when(mercadopago.getPago(mpPaymentId)).thenReturn(
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(
                 new PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(), monto));
     }
 
@@ -383,14 +383,14 @@ class PagosWebhookIntegracionTest {
         assertThat(transaccionRepository.findByReservaId(reservaId)).isNotPresent();
         assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.PENDIENTE_PAGO);
-        verify(mercadopago, times(0)).getPago(any());
+        verify(mercadopago, times(0)).getPago(any(), any());
     }
 
     @Test
     void webhook_pagoAunNoAprobado_ackSinEfectos() throws Exception {
         UUID reservaId = crearReservaEnPendiente();
         String mpPaymentId = "pago-pendiente";
-        when(mercadopago.getPago(mpPaymentId))
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any()))
                 .thenReturn(new PagoMercadoPago(mpPaymentId, "pending",
                         reservaId.toString(), new BigDecimal("15000")));
 
@@ -426,7 +426,7 @@ class PagosWebhookIntegracionTest {
         // Una sola fila de escrow y una sola reconciliación contra el provider.
         assertThat(transaccionRepository.findAll().stream()
                 .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
-        verify(mercadopago, times(1)).getPago(mpPaymentId);
+        verify(mercadopago, times(1)).getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any());
     }
 
     @Test
@@ -504,8 +504,8 @@ class PagosWebhookIntegracionTest {
         assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.CONFIRMADA);
         // El pago perdedor se devuelve entero; el ganador, nunca.
-        verify(mercadopago, times(1)).reembolsarPago(perdedor);
-        verify(mercadopago, never()).reembolsarPago(ganador);
+        verify(mercadopago, times(1)).reembolsarPago(org.mockito.ArgumentMatchers.eq(perdedor), any());
+        verify(mercadopago, never()).reembolsarPago(org.mockito.ArgumentMatchers.eq(ganador), any());
     }
 
     @Test
@@ -531,7 +531,7 @@ class PagosWebhookIntegracionTest {
     void webhook_externalReferenceDesconocida_ackSinEfectos() throws Exception {
         UUID reservaId = crearReservaEnPendiente();
         String mpPaymentId = "pago-ajeno";
-        when(mercadopago.getPago(mpPaymentId)).thenReturn(
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(
                 new PagoMercadoPago(mpPaymentId, "approved",
                         UUID.randomUUID().toString(), new BigDecimal("15000")));
 
@@ -563,7 +563,7 @@ class PagosWebhookIntegracionTest {
                 .andExpect(status().isOk());
 
         assertThat(transaccionRepository.findByReservaId(reservaId)).isNotPresent();
-        verify(mercadopago, times(0)).getPago(any());
+        verify(mercadopago, times(0)).getPago(any(), any());
     }
 
     // ------------------------------------------------ M5-D: pago tardío
@@ -592,7 +592,7 @@ class PagosWebhookIntegracionTest {
         assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.CANCELADA);
-        verify(mercadopago).reembolsarPago(mpPaymentId);
+        verify(mercadopago).reembolsarPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any());
     }
 
     @Test
@@ -616,6 +616,6 @@ class PagosWebhookIntegracionTest {
         // Una sola fila y un solo reembolso: el reenvío no re-embolsa.
         assertThat(transaccionRepository.findAll().stream()
                 .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
-        verify(mercadopago, times(1)).reembolsarPago(mpPaymentId);
+        verify(mercadopago, times(1)).reembolsarPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any());
     }
 }

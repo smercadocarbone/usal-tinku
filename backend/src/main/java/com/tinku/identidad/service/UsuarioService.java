@@ -127,6 +127,12 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario registrarMenor(RegistroMenorRequest request, byte[] fotoDni, Usuario adultoResponsable) {
+        // FR-ID-020 / Art. II (revisión por rol, punto 1): solo quien tiene la capacidad de
+        // Adulto Responsable da de alta un menor, y nunca otro menor. Antes del OCR, para no
+        // consumir intentos. Un Tutor puede serlo (decisión 2026-09-25) si la activó.
+        if (adultoResponsable.getTipo() == TipoUsuario.MENOR || !adultoResponsable.isCapacidadAdultoResponsable()) {
+            throw new AltaMenorNoPermitidaException();
+        }
         // FASE2-02: antes del OCR, así una contraseña inválida no consume intentos.
         PoliticaPassword.exigirDistintaDelDni(request.password(), request.dniDeclarado());
         ocrBackoffService.chequearPuedeIntentar(request.dniDeclarado());
@@ -226,8 +232,9 @@ public class UsuarioService {
         boolean estudiante = request.capacidadEstudiante();
         boolean adultoResp = request.capacidadAdultoResponsable();
 
-        // FR-ID-001: nunca quedar sin capacidades.
-        if (!estudiante && !adultoResp) {
+        // FR-ID-001: un Adulto nunca queda sin capacidades. Para un Tutor son opcionales
+        // (revisión por rol, decisión tutor-padre): puede tomar clases o tener menores a cargo.
+        if (!estudiante && !adultoResp && usuario.getTipo() != TipoUsuario.TUTOR) {
             throw new IllegalArgumentException("Debe mantener al menos una capacidad activa.");
         }
 

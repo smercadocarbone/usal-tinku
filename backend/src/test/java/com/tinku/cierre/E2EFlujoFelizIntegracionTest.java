@@ -153,7 +153,7 @@ class E2EFlujoFelizIntegracionTest {
     void programarMocks() {
         when(almacenamiento.guardar(any(), any()))
                 .thenReturn("https://cdn.test/" + UUID.randomUUID() + ".png");
-        when(mercadopago.crearPreferencia(any()))
+        when(mercadopago.crearPreferencia(any(), any()))
                 .thenReturn(new PreferenciaPago("pref-mock", "https://mercadopago.com/mock", false));
         when(transcript.transcript(any(UUID.class))).thenReturn(TRANSCRIPT_CON_DATOS);
         when(resumenProveedor.generarResumen(any()))
@@ -314,7 +314,7 @@ class E2EFlujoFelizIntegracionTest {
     }
 
     private void pagoAprobado(String mpPaymentId, UUID reservaId, String monto) throws Exception {
-        when(mercadopago.getPago(mpPaymentId)).thenReturn(
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any())).thenReturn(
                 new PagoMercadoPago(mpPaymentId, "approved", reservaId.toString(),
                         new BigDecimal(monto)));
         mockMvc.perform(post("/api/webhooks/mercadopago")
