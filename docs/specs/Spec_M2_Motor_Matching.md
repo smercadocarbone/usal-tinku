@@ -53,6 +53,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 
 - **Dado** que ningún Tutor alcance el mínimo de relevancia para lo que escribí, **cuando** el sistema reconozca el área del tema (materia y nivel del tema del catálogo más parecido), **entonces** me recomienda Tutores de esa área, aclarando que es una recomendación y no un match exacto (FR-MATCH-011).
 - **Dado** que no haya Tutores de ese nivel, **cuando** sí los haya de la misma materia en otro nivel, **entonces** me recomienda esos.
+- **Dado** que escriba el nivel en la búsqueda ("divisiones en primario"), **cuando** el sistema la procese, **entonces** lo toma como nivel, igual que si eligiera el filtro, y reconoce el tema aunque use otras palabras que el catálogo ("divisiones" → "División").
 - **Dado** que el sistema no reconozca ningún área parecida, **cuando** eso ocurra, **entonces** comunica que no hay resultados (US-1).
 
 ### US-8 — El catálogo se actualiza con lo que se busca _(agregada 2026-09-26)_

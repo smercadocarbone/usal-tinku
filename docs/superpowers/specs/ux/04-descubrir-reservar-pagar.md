@@ -32,8 +32,16 @@ Es la spec más importante de UX: de acá sale cada peso que entra a la platafor
   FR-REP-007), **precio por hora** con `Precio`, y "Próximo horario: jue 25 · 18:00". Toda la tarjeta
   es clickeable (`Tarjeta interactiva`).
 - **Ordenar:** relevancia (default), precio y calificación.
-- **Resultados vacíos:** "No encontramos tutores para '…'. Probá con otras palabras o sacá filtros."
-  con los filtros activos removibles.
+- **Resultados en lenguaje natural** _(actualizado 2026-09-26)_: nada de "0 tutores para '…'".
+  - Con resultados: "Encontramos 3 tutores para ayudarte con **divisiones en primario**".
+  - Sin tutor exacto pero con área reconocida (FR-MATCH-011): aviso "Todavía nadie da clases de
+    divisiones en primario. Pero estos tutores de Matemática de primario seguro te pueden ayudar con
+    eso." y la lista "Te recomendamos 3 tutores de Matemática de primario".
+  - Sin nada: "Todavía no encontramos tutores para enseñarte divisiones en primario" + "Probá
+    contándolo con otras palabras o eligiendo la materia", con los filtros activos removibles.
+- **Qué se entiende del texto** _(2026-09-26)_: el nivel escrito ("en primario", "de la facu") vale
+  como el chip de nivel, y el tema se reconoce aunque no se use la palabra exacta del catálogo
+  ("divisiones" → "División"). Ver ADR-M2-02/03/04.
 - Si hubo búsqueda y el rol es Adulto Responsable, la marca de "no autorizado para tu hijo" que ya
   existe (`noAutorizado`) se muestra como una insignia con acción "Autorizar".
 
@@ -84,7 +92,8 @@ mira un perfil público.
 **Propuesta — reserva en pasos (`Pasos`):**
 1. **Cuándo:** calendario de 14 días con los días que tienen disponibilidad marcados; al elegir un
    día, los horarios de inicio en bloques de 30 min (`GET /api/tutores/{id}/horarios?fecha=&duracionMinutos=`,
-   ya existe). Nunca fechas pasadas ni horarios dentro de la ventana mínima (FR-RES-013).
+   ya existe). Nunca fechas pasadas ni horarios dentro de la ventana mínima (FR-RES-013: 30 min
+   desde 2026-09-26, eran 15).
 2. **Cuánto:** duración en múltiplos de 30 min (30, 60, 90… hasta lo que permita la franja, D6),
    con el **precio calculado en vivo** (`precioHora × unidades / 2`).
 3. **Para quién** (solo Adulto Responsable): su propio uso o uno de sus hijos, con aviso si ese hijo

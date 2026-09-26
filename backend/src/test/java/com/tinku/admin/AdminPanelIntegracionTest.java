@@ -911,7 +911,24 @@ class AdminPanelIntegracionTest {
     @Autowired com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
     @Autowired org.quartz.Scheduler scheduler;
 
-    private Transaccion conAdicional(boolean bypass) {
+    /**
+     * Los tests de R4 corren el job a mano. El primer disparo se agenda para "ahora" y Quartz lo
+     * corría en paralelo: los dos agendaban el reintento a la vez (CI rojo en PR #70). Con el grupo
+     * pausado, los triggers nuevos nacen pausados y solo corre la ejecución del test.
+     */
+    private void pausarQuartzDeAdicionales() throws org.quartz.SchedulerException {
+        scheduler.pauseTriggers(org.quartz.impl.matchers.GroupMatcher.triggerGroupEquals(
+                com.tinku.pagos.service.ReembolsoAdicionalOutbox.GRUPO_JOB));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void reanudarQuartz() throws org.quartz.SchedulerException {
+        scheduler.resumeTriggers(org.quartz.impl.matchers.GroupMatcher.triggerGroupEquals(
+                com.tinku.pagos.service.ReembolsoAdicionalOutbox.GRUPO_JOB));
+    }
+
+    private Transaccion conAdicional(boolean bypass) throws org.quartz.SchedulerException {
+        pausarQuartzDeAdicionales();
         Usuario pagador = usuario(TipoUsuario.ADULTO);
         Reserva reserva = new Reserva();
         reserva.setPagador(pagador);
@@ -1016,7 +1033,7 @@ class AdminPanelIntegracionTest {
     }
 
     @Test
-    void r4_bypass_soloMarca_sinLlamarAMercadoPago() {
+    void r4_bypass_soloMarca_sinLlamarAMercadoPago() throws Exception {
         Transaccion t = conAdicional(true);
         reembolsoAdicional.reembolsarAdicional(t.getReservaId());
         assertThat(recargar(t).getAdicionalReembolsoEstado()).isEqualTo(com.tinku.pagos.model.EstadoReembolsoAdicional.HECHO);

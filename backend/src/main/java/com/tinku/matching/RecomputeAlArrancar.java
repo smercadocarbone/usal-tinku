@@ -23,6 +23,7 @@ public class RecomputeAlArrancar {
 
     @EventListener(ApplicationReadyEvent.class)
     public void alArrancar() {
-        disparador.dispararDespuesDelCommit();
+        // El servicio Python puede tardar ~1 min en cargar el modelo: 10 intentos cada 30 s.
+        disparador.dispararConReintentos(10, java.time.Duration.ofSeconds(30));
     }
 }

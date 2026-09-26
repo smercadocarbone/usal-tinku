@@ -118,6 +118,39 @@ public class PerfilTutorTemasRepository {
                 temaId).stream().findFirst();
     }
 
+    /**
+     * FR-MATCH-011 sin embeddings: el área (nivel, materia) cuyos temas o materia contienen más
+     * raíces de lo escrito ("divisi" → "División", Matemática de primario). {@code nivel} opcional.
+     */
+    public java.util.Optional<AreaTema> areaPorPalabras(List<String> raices, String nivel) {
+        if (raices.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        String[] patrones = raices.stream().map(r -> "%" + r + "%").toArray(String[]::new);
+        StringBuilder sql = new StringBuilder("""
+                SELECT tr.nivel, tr.materia, count(*) AS coincidencias
+                  FROM matching.temas t
+                  JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+                 WHERE (lower(public.unaccent(t.nombre)) LIKE ANY (?)
+                        OR lower(public.unaccent(tr.materia)) LIKE ANY (?))
+                """);
+        if (nivel != null) {
+            sql.append(" AND tr.nivel = ?");
+        }
+        sql.append(" GROUP BY tr.nivel, tr.materia ORDER BY coincidencias DESC, tr.materia LIMIT 1");
+        String sentencia = sql.toString();
+        return jdbc.query(con -> {
+            PreparedStatement ps = con.prepareStatement(sentencia);
+            ps.setArray(1, con.createArrayOf("text", patrones));
+            ps.setArray(2, con.createArrayOf("text", patrones));
+            if (nivel != null) {
+                ps.setString(3, nivel);
+            }
+            return ps;
+        }, (rs, rowNum) -> new AreaTema(rs.getString("nivel"), rs.getString("materia")))
+                .stream().findFirst();
+    }
+
     /** (nivel, materia) de los temas elegidos, en el orden en que el Tutor los eligió
      *  (primera aparición de cada trayecto en {@code tema_ids}). Sin fila o sin temas → []. */
     public List<String[]> nivelYMateriaDeTemas(UUID tutorId) {

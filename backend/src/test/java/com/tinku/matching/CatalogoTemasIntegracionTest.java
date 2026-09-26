@@ -634,7 +634,7 @@ class CatalogoTemasIntegracionTest {
         assertThat(lista).hasSize(1);
         assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(secundario.toString());
         assertThat(lista.get(0).get("porArea").asBoolean()).isTrue();
-        assertThat(lista.get(0).get("area").asText()).isEqualTo("Matemática · Secundario");
+        assertThat(lista.get(0).get("area").asText()).isEqualTo("Matemática de secundario");
     }
 
     @Test
@@ -665,6 +665,66 @@ class CatalogoTemasIntegracionTest {
 
         assertThat(objectMapper.readTree(buscar("guitarra electrica", null, null, token)
                 .getResponse().getContentAsString())).isEmpty();
+    }
+
+    /** Producción 2026-09-26: "divisiones en primario" no traía a nadie. Ahora se entiende el nivel
+     *  escrito y el tema por sus palabras aunque el modelo no reconozca el área (catálogo sin
+     *  embeber todavía), y el tutor de Matemática de primario aparece como recomendación. */
+    @Test
+    void divisionesEnPrimario_sinAreaPorSimilitud_reconoceTemaYNivelPorLasPalabras() throws Exception {
+        String token = registrarAdultoYToken("30911111", true, false);
+        UUID primario = tutorConTemas("30912222", List.of(divisionId));
+        UUID secundario = tutorConTemas("30913333", List.of(factorizacionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(secundario, 0.2),
+                        new MatchingServiceClient.ResultadoMatch(primario, 0.1)));
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of()); // catálogo todavía sin embeber
+
+        JsonNode lista = objectMapper.readTree(buscar("divisiones en primario", null, null, token)
+                .getResponse().getContentAsString());
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(primario.toString());
+        assertThat(lista.get(0).get("porArea").asBoolean()).isTrue();
+        assertThat(lista.get(0).get("area").asText()).isEqualTo("Matemática de primario");
+    }
+
+    /** El nivel escrito vale como el chip: un tutor de secundario no aparece como resultado
+     *  directo de "división en primario", aunque su puntaje sea más alto. */
+    @Test
+    void nivelEscritoEnElTexto_acotaLosResultadosDirectos() throws Exception {
+        String token = registrarAdultoYToken("30914444", true, false);
+        UUID primario = tutorConTemas("30915555", List.of(divisionId));
+        UUID secundario = tutorConTemas("30916666", List.of(factorizacionId));
+        when(matchingClient.match(any(), anyString()))
+                .thenReturn(List.of(new MatchingServiceClient.ResultadoMatch(secundario, 0.8),
+                        new MatchingServiceClient.ResultadoMatch(primario, 0.6)));
+
+        JsonNode lista = objectMapper.readTree(buscar("división en primaria", null, null, token)
+                .getResponse().getContentAsString());
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(primario.toString());
+        assertThat(lista.get(0).get("porArea").asBoolean()).isFalse();
+    }
+
+    /** Un tutor del área sin puntaje semántico (su embedding todavía no se calculó) igual se
+     *  recomienda: antes quedaba afuera y la búsqueda volvía vacía. */
+    @Test
+    void recomendacionPorArea_incluyeTutoresDelAreaSinPuntajeTodavia() throws Exception {
+        String token = registrarAdultoYToken("30917777", true, false);
+        UUID primario = tutorConTemas("30918888", List.of(divisionId));
+        when(matchingClient.match(any(), anyString())).thenReturn(List.of());
+        when(matchingClient.temasCercanos(anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(List.of());
+
+        JsonNode lista = objectMapper.readTree(buscar("divisiones", null, null, token)
+                .getResponse().getContentAsString());
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("tutorId").asText()).isEqualTo(primario.toString());
+        assertThat(lista.get(0).get("porArea").asBoolean()).isTrue();
     }
 
     // ------------------------------------------------ FR-MATCH-012 / FR-ADM-009: temas sugeridos

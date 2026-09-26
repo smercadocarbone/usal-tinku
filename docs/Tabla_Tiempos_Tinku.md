@@ -5,7 +5,8 @@
 | Plazo                                             | Valor                    | Dónde aplica                                                                                                          | Módulo |
 | ------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------- | ------ |
 | Creación de sala + botón de unirse                | T-5 min                  | Antes del horario agendado                                                                                            | M3, M4 |
-| Ventana mínima para reservar                      | T-15 min                 | No se permite reservar más cerca del horario                                                                          | M4     |
+| Ventana mínima para reservar                      | T-30 min                 | No se permite reservar más cerca del horario (eran 15 min hasta 2026-09-26: el pago puede tardar 15 min en confirmarse) | M4     |
+| Límite para cambiar de horario _(FR-RES-016, 2026-09-26)_ | T-60 min (doble de la ventana mínima) | Con menos de 24 hs se reprograma conservando el pago; el horario liberado queda abierto a otra reserva. Sin límite de cambios | M4     |
 | Duración mínima de franja/sesión _(agregado)_     | 30 min                   | Rechaza la publicación de franjas más cortas — evita sesiones sistemáticamente por debajo del umbral de resumen de M6 | M4     |
 | Duración máxima de franja/sesión _(agregado)_     | 180 min (3 hs)           | Rechaza la publicación de franjas más largas — límite de exposición (Artículo II) y de costo de infraestructura       | M4     |
 | Timeout de no-show                                | T+10 min                 | Automático y manual, ambos casos                                                                                      | M3, M4 |

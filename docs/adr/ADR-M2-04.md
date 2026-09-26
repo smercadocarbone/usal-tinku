@@ -31,6 +31,19 @@
 4. **Actualizar el catálogo** sigue siendo una migración nueva (`V{n}__..._temas.sql`), que
    el recompute embebe sola. No hay edición del catálogo desde el panel (fuera de alcance).
 
+## Enmienda (2026-09-26, prueba en producción)
+"divisiones en primario" no traía a nadie. Tres ajustes:
+- **Nivel escrito:** si el texto dice primario/secundario/universidad (`InterpreteBusqueda`),
+  vale como el chip de nivel para los resultados directos y manda sobre el nivel del área.
+- **Área por palabras:** si el modelo no reconoce el área (catálogo todavía sin embeber, o
+  similitud baja), se buscan las raíces de las palabras en los nombres de temas y materias
+  (`divisiones` → `divisi` → "División", Matemática de primario). Sin costo de modelo.
+- **Tutores del área sin puntaje** (embedding pendiente) también se recomiendan, al final.
+- El recompute al arrancar se reintenta (10 veces, cada 30 s): el servicio Python puede estar
+  cargando el modelo cuando arranca el backend.
+- Log sin datos personales por búsqueda sin resultado directo: candidatos, con puntaje, área
+  reconocida y recomendados, para diagnosticar en producción.
+
 ## Alternativas descartadas
 - **Guardar cada búsqueda** (texto + usuario + fecha): más datos personales y más
   almacenamiento de lo necesario para saber qué temas faltan.

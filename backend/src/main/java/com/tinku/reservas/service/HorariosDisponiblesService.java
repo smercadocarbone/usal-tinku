@@ -22,14 +22,14 @@ import java.util.UUID;
  * Tasks_Tinku_Implementacion.md). No define reglas de negocio nuevas — solo
  * orquesta franjas ya publicadas (FR-RES-012), reservas no canceladas
  * existentes (mismo criterio que la EXCLUDE de FR-RES-007) y la ventana
- * mínima de 15 min (FR-RES-013), todas ya vigentes en {@link FranjaService}/
+ * mínima de 30 min (FR-RES-013), todas ya vigentes en {@link FranjaService}/
  * {@link ReservaService}.
  */
 @Service
 public class HorariosDisponiblesService {
 
-    /** FR-RES-013 — no se reserva a menos de 15 min del inicio (Tabla_Tiempos_Tinku.md). */
-    private static final Duration VENTANA_MINIMA = Duration.ofMinutes(15);
+    /** FR-RES-013 — la misma ventana mínima que al reservar (Tabla_Tiempos_Tinku.md). */
+    private static final Duration VENTANA_MINIMA = ReservaService.VENTANA_MINIMA;
 
     /** D6: la agenda se parte en bloques de 30 minutos. */
     private static final int PASO_MINUTOS = 30;

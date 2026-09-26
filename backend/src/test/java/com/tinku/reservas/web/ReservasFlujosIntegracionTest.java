@@ -47,6 +47,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -410,7 +411,7 @@ class ReservasFlujosIntegracionTest {
         mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
                         .header("Authorization", "Bearer " + e.tokenAr()))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("15 minutos")));
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("30 minutos")));
     }
 
     @Test
@@ -939,7 +940,7 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
-    void frRes013_directaFueraDeVentana15Min_queda422() throws Exception {
+    void frRes013_directaFueraDeVentana30Min_queda422() throws Exception {
         // La ventana mínima (FR-RES-013) se valida antes que la franja: no hace falta
         // publicar una franja desde now() (cerca de la medianoche no entraba). El
         // mensaje confirma que el rechazo es por la ventana y no por otra regla.
@@ -954,7 +955,7 @@ class ReservasFlujosIntegracionTest {
                                 "horario", pronto.toString(),
                                 "duracionMinutos", 30))))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("15 minutos")));
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("30 minutos")));
     }
 
     @Test
@@ -1086,48 +1087,69 @@ class ReservasFlujosIntegracionTest {
         assertThat(startSala).isEqualTo(nuevoHorario.minus(java.time.Duration.ofMinutes(5)));
     }
 
-    @Test
-    void frRes016_reprogramarConMenosDe24hs_seTrataComoCancelacionTardia() throws Exception {
-        String dni = dniUnico();
-        String dniTutor = dniUnico();
-        String token = registrarAdultoYToken(dni, "Lucas", "Diaz", true, false);
-        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
-        UUID tutorId = usuarioPorDni(dniTutor).getId();
-
-        // Franja HOY que cubre `pronto` (≈2hs → <24hs de anticipación), respetando
-        // FR-RES-024 (30-180 min) sin depender de la hora del día.
-        Instant pronto = Instant.now().plus(2, java.time.temporal.ChronoUnit.HOURS)
-                .truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
-        if (pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isAfter(LocalTime.of(23, 0))) {
-            // Cerca de la medianoche la franja de 2 h no entra en el día: las 9:00 de mañana
-            // siguen estando a menos de 24 hs (ahora son más de las 21:00).
-            pronto = pronto.atZone(ReservasZonaHoraria.ZONA).toLocalDate().plusDays(1)
-                    .atTime(9, 0).atZone(ReservasZonaHoraria.ZONA).toInstant();
-        }
-        ZonedDateTime punto = pronto.atZone(ReservasZonaHoraria.ZONA);
-        // D6: la franja arranca en `pronto` (minuto entero) → horario alineado a 30'.
+    /** Reserva confirmada que empieza en {@code horario} (hoy o mañana), con franja que lo cubre. */
+    private UUID reservaConfirmadaPronto(String token, String tokenTutor, UUID tutorId, Instant horario) throws Exception {
+        ZonedDateTime punto = horario.atZone(ReservasZonaHoraria.ZONA);
         LocalTime inicio = punto.toLocalTime();
-        LocalTime fin = punto.toLocalTime().plusHours(2);
-        if (inicio.isAfter(punto.toLocalTime())) inicio = LocalTime.MIDNIGHT;
+        LocalTime fin = inicio.plusHours(2);
         if (fin.isBefore(inicio)) fin = LocalTime.of(23, 59, 59);
         publicarFranja(tokenTutor, punto.toLocalDate(), inicio, fin);
-
-        UUID reservaId = crearReservaDirecta(token, tutorId, null, pronto);
+        UUID reservaId = crearReservaDirecta(token, tutorId, null, horario);
         confirmarPago(token, reservaId);
+        return reservaId;
+    }
 
-        // El intento de reprogramación con <24hs se trata como cancelación tardía.
+    /** Un horario a {@code minutos} de ahora, en minuto entero: la franja arranca ahí (D6). */
+    private static Instant prontoAlineado(long minutosDesdeAhora) {
+        return Instant.now().plus(minutosDesdeAhora, java.time.temporal.ChronoUnit.MINUTES)
+                .truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
+    }
+
+    /** FR-RES-016 (enmendado 2026-09-26): con menos de 24 hs se cambia de horario sin perder el
+     *  pago. Antes, el pedido cancelaba la clase sin avisar (cancelación tardía). */
+    @Test
+    void frRes016_reprogramarConMenosDe24hs_cambiaElHorarioYConservaElPago() throws Exception {
+        String token = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        Instant pronto = prontoAlineado(180);
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isBefore(LocalTime.of(21, 30)),
+                "cerca de la medianoche la franja de 2 h no entra en el día");
+        UUID reservaId = reservaConfirmadaPronto(token, tokenTutor, tutorId, pronto);
+        Instant nuevo = pronto.plus(Duration.ofMinutes(60)); // dentro de la misma franja
+
+        reprogramar(token, reservaId, nuevo);
+
+        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
+        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(r.getHorario()).isEqualTo(nuevo);
+    }
+
+    /** Con menos de 1 hora (el doble de la ventana mínima) ya no se cambia: se rechaza con un
+     *  mensaje y la clase sigue en pie — nunca se cancela sola. */
+    @Test
+    void frRes016_reprogramarConMenosDeUnaHora_seRechazaYLaClaseSigue() throws Exception {
+        String token = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        Instant pronto = prontoAlineado(45); // entre 30 y 60 min: se puede reservar, no reprogramar
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isBefore(LocalTime.of(21, 30)),
+                "cerca de la medianoche la franja de 2 h no entra en el día");
+        UUID reservaId = reservaConfirmadaPronto(token, tokenTutor, tutorId, pronto);
+
         mockMvc.perform(post("/api/reservas/{id}/reprogramar", reservaId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "nuevoHorario", dentroDeFranja(
-                                        LocalDate.now(ReservasZonaHoraria.ZONA).plusDays(2)).toString()))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("cancelada"));
+                                "nuevoHorario", pronto.plus(Duration.ofMinutes(60)).toString()))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("menos de 1 hora")));
 
-        Reserva r = reservaRepo.findById(reservaId).orElseThrow();
-        assertThat(r.getEstado()).isEqualTo(EstadoReserva.CANCELADA);
-        assertThat(r.getMotivoCancelacion()).isEqualTo(MotivoCancelacion.VOLUNTARIA);
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
     }
 
     @Test

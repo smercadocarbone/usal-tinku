@@ -75,6 +75,12 @@ próximas de pasadas.
   explique la política **antes** de confirmar (FR-RES-008/016: con más de 24 hs, reembolso total;
   con menos, se le paga al tutor; leé la política del backend, no la inventes), y "Reportar un
   problema" en un menú secundario.
+- **Cambiar horario** _(actualizado 2026-09-26, FR-RES-016)_: elegir otro horario libre del tutor,
+  sin volver a pagar, **hasta 1 hora antes** de la clase — también con menos de 24 hs y sin límite
+  de cambios. El modal lo explica ("Podés cambiar el horario sin volver a pagar hasta una hora antes
+  de la clase"). Con menos de 1 hora, el botón de confirmar queda deshabilitado con el aviso "Falta
+  menos de una hora para la clase, así que ya no se puede cambiar el horario. Si no vas a poder,
+  podés cancelarla." El cambio nunca cancela la clase.
 - Si hay resumen automático de la clase (M6), mostrarlo acá cuando exista.
 - **Backend:** `ReservaResponse` hoy manda solo ids. Sumar: nombre del tutor, nombre del
   beneficiario, materia (si la reserva la tiene), duración (FASE2-01) y **acciones disponibles

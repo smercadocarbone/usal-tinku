@@ -61,6 +61,36 @@ public class RecomputeEmbeddingsDisparador {
         });
     }
 
+    /**
+     * Al arrancar, el servicio Python puede estar todavía cargando el modelo (en Coolify los
+     * servicios levantan juntos): se reintenta unas veces con espera en el hilo de fondo.
+     * No es plata ni seguridad (AGENTS §1.3); si todos fallan, lo pone al día el próximo
+     * cambio de temas.
+     */
+    public void dispararConReintentos(int intentos, java.time.Duration espera) {
+        hilo.submit(() -> {
+            for (int i = 1; i <= intentos; i++) {
+                try {
+                    matchingClient.recomputarEmbeddings();
+                    LOG.info("Embeddings de matching recalculados al arrancar (intento {})", i);
+                    return;
+                } catch (RuntimeException e) {
+                    if (i == intentos) {
+                        LOG.warn("No se pudo recalcular los embeddings al arrancar tras {} intentos ({})",
+                                intentos, e.getClass().getSimpleName());
+                        return;
+                    }
+                    try {
+                        Thread.sleep(espera.toMillis());
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
     @PreDestroy
     void cerrar() {
         hilo.shutdown();
