@@ -18,7 +18,9 @@ import {
   LocalVideoTrack,
   Room,
   RoomEvent,
+  ScreenSharePresets,
   Track,
+  VideoQuality,
 } from "livekit-client";
 import { Mic, MicOff, MoreVertical, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
 import { api, ApiError, subirAudioResumen } from "@/lib/api";
@@ -231,6 +233,10 @@ export default function AulaPage() {
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const localScreenVideoRef = useRef<HTMLVideoElement>(null);
   const remoteScreenVideoRef = useRef<HTMLVideoElement>(null);
+  // La pista de cada tile. El <video> de un tile se crea DESPUÉS del evento que trae la pista
+  // (la pantalla compartida recién existe cuando llega) y se vuelve a crear al cambiar cuál se ve
+  // en grande: por eso se conecta cuando el elemento aparece (ref de abajo), no en el evento.
+  const pistasRef = useRef<Partial<Record<TileId, Track>>>({});
   const previaVideoTrackRef = useRef<LocalVideoTrack | null>(null);
   const previaAudioTrackRef = useRef<LocalAudioTrack | null>(null);
   // ADR-M3-04: grabación de solo audio para el resumen (solo el Tutor, solo si el backend lo indica).
@@ -512,19 +518,14 @@ export default function AulaPage() {
         if (pub.source === Track.Source.Microphone && pub.track) {
           grabadorRef.current?.agregarPista("local", pub.track.mediaStreamTrack);
         }
-        if (
-          pub.source === Track.Source.Camera &&
-          pub.track?.kind === Track.Kind.Video &&
-          localVideoRef.current
-        ) {
-          pub.track.attach(localVideoRef.current);
+        if (pub.source === Track.Source.Camera && pub.track?.kind === Track.Kind.Video) {
+          pistasRef.current["camara-local"] = pub.track;
+          if (localVideoRef.current) pub.track.attach(localVideoRef.current);
         }
-        if (
-          pub.source === Track.Source.ScreenShare &&
-          pub.track?.kind === Track.Kind.Video &&
-          localScreenVideoRef.current
-        ) {
-          pub.track.attach(localScreenVideoRef.current);
+        if (pub.source === Track.Source.ScreenShare && pub.track?.kind === Track.Kind.Video) {
+          // Antes solo se marcaba "compartiendo" si el <video> ya existía — y no existe hasta
+          // marcarlo: la pantalla propia nunca aparecía.
+          pistasRef.current["pantalla-local"] = pub.track;
           setCompartiendoPantalla(true);
           setTileDestacada("pantalla-local");
         }
@@ -532,6 +533,7 @@ export default function AulaPage() {
 
       room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
         if (pub.source === Track.Source.ScreenShare) {
+          delete pistasRef.current["pantalla-local"];
           setCompartiendoPantalla(false);
           setTileDestacada((actual) => (actual === "pantalla-local" ? "camara-remota" : actual));
         }
@@ -539,12 +541,17 @@ export default function AulaPage() {
 
       room.on(RoomEvent.TrackSubscribed, (track, pub, participante) => {
         if (track.kind === Track.Kind.Video && pub.source === Track.Source.ScreenShare) {
-          if (remoteScreenVideoRef.current) track.attach(remoteScreenVideoRef.current);
+          // El <video> de la pantalla remota recién se crea al marcar que hay pantalla: la pista
+          // se conecta cuando aparece (antes se intentaba acá, con el elemento todavía en null, y
+          // el otro veía negro). Siempre la mejor calidad: es texto chico que se tiene que leer.
+          pistasRef.current["pantalla-remota"] = track;
+          pub.setVideoQuality(VideoQuality.HIGH);
           setRemoteCompartiendoPantalla(true);
           setRemoteNombre(participante.name ?? "");
           setTileDestacada("pantalla-remota");
-        } else if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
-          track.attach(remoteVideoRef.current);
+        } else if (track.kind === Track.Kind.Video) {
+          pistasRef.current["camara-remota"] = track;
+          if (remoteVideoRef.current) track.attach(remoteVideoRef.current);
           setRemoteActivo(true);
           setRemoteNombre(participante.name ?? "");
         } else if (track.kind === Track.Kind.Audio && remoteAudioRef.current) {
@@ -560,9 +567,11 @@ export default function AulaPage() {
         grabadorRef.current?.quitarPista(pub.trackSid);
         if (track.kind === Track.Kind.Video) {
           if (pub.source === Track.Source.ScreenShare) {
+            delete pistasRef.current["pantalla-remota"];
             setRemoteCompartiendoPantalla(false);
             setTileDestacada((actual) => (actual === "pantalla-remota" ? "camara-remota" : actual));
           } else {
+            delete pistasRef.current["camara-remota"];
             setRemoteActivo(false);
           }
         }
@@ -623,8 +632,9 @@ export default function AulaPage() {
         const camPub = room.localParticipant.getTrackPublication(
           Track.Source.Camera
         );
-        if (camPub?.videoTrack && localVideoRef.current) {
-          camPub.videoTrack.attach(localVideoRef.current);
+        if (camPub?.videoTrack) {
+          pistasRef.current["camara-local"] = camPub.videoTrack;
+          if (localVideoRef.current) camPub.videoTrack.attach(localVideoRef.current);
         }
       }
 
@@ -646,7 +656,9 @@ export default function AulaPage() {
       } else {
         setError(mensajeErrorDispositivo(err));
       }
-      if (estadoRef.current !== "sala_no_disponible") setEstado("error");
+      // El 422 ya dejó "sala_no_disponible" (con "Volver a intentar"). Antes se leía
+      // estadoRef, que todavía no se había actualizado, y la sala terminaba en "error".
+      if (!(err instanceof ApiError && err.status === 422)) setEstado("error");
     }
   }, [sesionId, camaraId, microfonoId, evaluarDegradacion, cerrarGrabacion]);
 
@@ -700,7 +712,13 @@ export default function AulaPage() {
   async function alternarCompartirPantalla() {
     if (!roomRef.current) return;
     try {
-      await roomRef.current.localParticipant.setScreenShareEnabled(!compartiendoPantalla);
+      // Resolución 1080 y "detail": en una clase se comparte texto y fórmulas, que con la
+      // calidad por defecto (pensada para video) llegaban borrosos.
+      await roomRef.current.localParticipant.setScreenShareEnabled(
+        !compartiendoPantalla,
+        { audio: false, contentHint: "detail", resolution: ScreenSharePresets.h1080fps15.resolution },
+        { screenShareEncoding: ScreenSharePresets.h1080fps15.encoding }
+      );
       // El estado real (`compartiendoPantalla`) lo confirman los eventos
       // LocalTrackPublished/LocalTrackUnpublished de arriba — no acá, para que
       // quede correcto también cuando el usuario corta desde el botón nativo
@@ -926,7 +944,11 @@ export default function AulaPage() {
             const contenido = (
               <>
                 <video
-                  ref={t.videoRef}
+                  ref={(el) => {
+                    t.videoRef.current = el;
+                    const pista = pistasRef.current[t.id];
+                    if (el && pista) pista.attach(el);
+                  }}
                   autoPlay
                   playsInline
                   muted={t.id === "camara-local" || t.id === "pantalla-local"}

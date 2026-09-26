@@ -180,7 +180,12 @@ public class ReembolsoAdicionalOutbox {
             }
             // El job es durable: después del primer disparo sigue guardado sin trigger.
             if (scheduler.checkExists(new JobKey("adicional-job-" + transaccionId, GRUPO_JOB))) {
-                scheduler.scheduleJob(nuevo);
+                try {
+                    scheduler.scheduleJob(nuevo);
+                } catch (org.quartz.ObjectAlreadyExistsException carrera) {
+                    // Otro hilo lo agendó entre el chequeo y acá: se reprograma, no se falla.
+                    scheduler.rescheduleJob(key, nuevo);
+                }
                 return;
             }
             scheduler.scheduleJob(JobBuilder.newJob(ReembolsoAdicionalJob.class)

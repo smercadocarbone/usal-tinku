@@ -105,7 +105,7 @@ export default function Modal({
           </div>
           {children && <div className="overflow-y-auto px-6 py-3">{children}</div>}
           {pie && (
-            <div className="safe-bottom flex flex-col-reverse gap-2 border-t border-borde px-6 py-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-borde px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
               {pie}
             </div>
           )}
