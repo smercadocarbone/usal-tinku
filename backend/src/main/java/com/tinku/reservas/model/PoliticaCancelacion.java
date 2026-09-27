@@ -15,6 +15,8 @@ import java.util.UUID;
  *   <li>Con 24 hs o más de anticipación → reembolso total.</li>
  *   <li>Si cancela el Tutor (no el pagador) → reembolso total, siempre.</li>
  *   <li>Si cancela el pagador con menos de 24 hs → se le paga al Tutor.</li>
+ *   <li>Clase de un paquete (ADR-M5-03): si la cancela el pagador, nunca hay devolución (se mueve
+ *       con 24 hs o se da por tomada); si la cancela el Tutor, se devuelve esa clase.</li>
  * </ul>
  */
 public final class PoliticaCancelacion {
@@ -28,6 +30,9 @@ public final class PoliticaCancelacion {
         boolean conMargen = !ahora.plus(VENTANA_SIN_PENALIDAD).isAfter(reserva.getHorario());
         boolean canceloElPagador = reserva.getPagador() != null
                 && reserva.getPagador().getId().equals(canceladaPorUsuarioId);
+        if (reserva.getPaquete() != null) {
+            return !canceloElPagador;
+        }
         return conMargen || !canceloElPagador;
     }
 }

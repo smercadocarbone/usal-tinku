@@ -123,7 +123,27 @@ export const api = {
     manageSesion(() => request<T>(path, { method: "PATCH", body })),
   delete: <T>(path: string) =>
     manageSesion(() => request<T>(path, { method: "DELETE" })),
+  /** Bytes (archivo), no JSON: CSV de cobros, adjuntos, videos. */
+  blob: (path: string) =>
+    manageSesion(async () => {
+      const res = await fetch(`${API_BASE_URL}${path}`, { headers: headersConToken() });
+      if (!res.ok) {
+        const [mensaje, detalles] = await leerError(res);
+        throw new ApiError(res.status, mensaje, detalles);
+      }
+      return res.blob();
+    }),
 };
+
+/** Descarga un Blob como archivo con ese nombre. */
+export function guardarArchivo(blob: Blob, nombre: string): void {
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ---- Contrato 2b (M2): catálogo de temas + búsqueda ---- */
 
@@ -168,6 +188,10 @@ export interface ResultadoBusqueda {
   porArea?: boolean;
   /** "Matemática · Secundario" cuando {@link porArea}. */
   area?: string | null;
+  /** FR-MATCH-013: tarifa vigente (null si no la configuró). */
+  precioHora?: number | null;
+  /** FR-MATCH-013: primer bloque libre de los próximos 14 días (null si no tiene). */
+  proximoHorario?: string | null;
 }
 
 export function getCatalogos(filtros?: FiltrosCatalogos): Promise<NivelCatalogo[]> {
@@ -201,6 +225,8 @@ export interface CuerpoBusqueda {
   filtroMateria?: string;
   /** "primario" | "secundario" | "universitario": acota junto con la materia. */
   filtroNivel?: string;
+  /** FR-MATCH-014: precio máximo por hora. */
+  precioMaxHora?: number;
 }
 
 export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]> {
@@ -209,6 +235,7 @@ export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
     filtro_nivel: body.filtroNivel || undefined,
+    precio_max_hora: body.precioMaxHora || undefined,
   });
 }
 

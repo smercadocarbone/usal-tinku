@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { Search, Trash2, Flag } from "lucide-react";
 import AppShell from "@/components/shell/AppShell";
+import Pizarra from "@/components/aula/Pizarra";
+import { aplicar, type MensajePizarra, type Trazo } from "@/lib/pizarra";
 import {
   Acordeon,
   Alerta,
@@ -69,6 +71,8 @@ export default function Galeria() {
   const [estrellas, setEstrellas] = useState(4);
   const [modal, setModal] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  const [trazos, setTrazos] = useState<Trazo[]>([]);
+  const [ultimoMensaje, setUltimoMensaje] = useState<MensajePizarra | null>(null);
 
   return (
     <AppShell>
@@ -241,6 +245,22 @@ export default function Galeria() {
           >
             Se anonimizan sus datos y no va a poder volver a entrar. Sus clases futuras se cancelan.
           </ModalConfirmacion>
+        </Seccion>
+
+        <Seccion titulo="Pizarra (aula)">
+          <div className="relative h-[480px] overflow-hidden rounded-tarjeta">
+            <Pizarra
+              trazos={trazos}
+              onMensaje={(m) => {
+                setUltimoMensaje(m);
+                setTrazos((prev) => aplicar(prev, m, true));
+              }}
+              onCerrar={() => setTrazos([])}
+            />
+          </div>
+          <p className="text-sm text-tinta-tenue" data-testid="pizarra-estado">
+            {trazos.length} trazos · último mensaje: {ultimoMensaje?.op ?? "ninguno"}
+          </p>
         </Seccion>
       </div>
     </AppShell>

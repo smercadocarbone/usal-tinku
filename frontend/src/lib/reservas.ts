@@ -1,3 +1,4 @@
+import { api } from "./api";
 import { ETIQUETA_ESTADO_RESERVA } from "./etiquetas";
 
 /** Etiqueta humana del estado (B6: los enums no se renderizan crudos). */
@@ -34,6 +35,16 @@ export interface Reserva {
   precioAdicionalResumen?: number | null;
   /** Lo que se paga: clase + adicional. */
   montoTotal?: number | null;
+  /** v2.5: el beneficiario es un Menor (habilita la nota del Tutor al AR, FR-RES-026). */
+  beneficiarioMenor?: boolean;
+  /** v2.5 (FR-RES-032..037): la clase es parte de un paquete del mes. */
+  paqueteId?: string | null;
+  /** Número de clase dentro del paquete (1..4). */
+  paqueteClase?: number | null;
+  paqueteTotal?: number | null;
+  paqueteVigenteHasta?: string | null;
+  /** El paquete entero todavía se puede cancelar con devolución total (solo al pagador). */
+  puedeCancelarPaquete?: boolean;
 }
 
 /** Solicitud de clase de un menor (`/api/solicitudes`). */
@@ -59,3 +70,120 @@ export function finDe(r: Reserva): string | null {
 }
 
 export const ESTADOS_PROXIMOS = new Set(["pendiente_pago", "confirmada", "en_curso"]);
+
+/* ---- Enmienda v2.5: pedido previo (FR-RES-027, solo texto) y nota del Tutor (FR-RES-026) ---- */
+
+export interface PedidoPrevio {
+  reservaId: string;
+  texto: string;
+  updatedAt: string;
+  /** Todavía se puede cambiar (reserva activa y la clase no empezó). */
+  editable: boolean;
+}
+
+export interface NotaClase {
+  reservaId: string;
+  texto: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Solo el Tutor, dentro de las 48 hs. */
+  editable: boolean;
+}
+
+/** `undefined` (204): todavía no hay pedido. */
+export function getPedido(reservaId: string): Promise<PedidoPrevio | undefined> {
+  return api.get<PedidoPrevio | undefined>(`/api/reservas/${reservaId}/pedido`);
+}
+
+export function guardarPedido(reservaId: string, texto: string): Promise<PedidoPrevio> {
+  return api.put<PedidoPrevio>(`/api/reservas/${reservaId}/pedido`, { texto });
+}
+
+export function getNota(reservaId: string): Promise<NotaClase | undefined> {
+  return api.get<NotaClase | undefined>(`/api/reservas/${reservaId}/nota`);
+}
+
+export function escribirNota(reservaId: string, texto: string): Promise<NotaClase> {
+  return api.put<NotaClase>(`/api/reservas/${reservaId}/nota`, { texto });
+}
+
+/* ---- Enmienda v2.5: pedido de reprogramación del Tutor (FR-RES-029..031) ---- */
+
+export interface PedidoReprogramacion {
+  id: string;
+  reservaId: string;
+  horarioOriginal: string;
+  horarioPropuesto: string;
+  motivo: string | null;
+  estado: string;
+  createdAt: string;
+  /** Hasta cuándo se puede responder (T-60 de la clase original); después se cancela y se devuelve. */
+  venceAt: string;
+  /** Quien pagó (con un menor, su adulto responsable). */
+  puedoResponder: boolean;
+  /** El Tutor. */
+  puedoRetirar: boolean;
+}
+
+export function getPedidoReprogramacion(reservaId: string): Promise<PedidoReprogramacion | undefined> {
+  return api.get<PedidoReprogramacion | undefined>(`/api/reservas/${reservaId}/pedido-reprogramacion`);
+}
+
+export function pedirReprogramacion(reservaId: string, nuevoHorario: string, motivo: string): Promise<PedidoReprogramacion> {
+  return api.post<PedidoReprogramacion>(`/api/reservas/${reservaId}/pedido-reprogramacion`, {
+    nuevoHorario,
+    ...(motivo.trim() ? { motivo: motivo.trim() } : {}),
+  });
+}
+
+export function responderReprogramacion(reservaId: string, acepta: boolean): Promise<void> {
+  return api.post<void>(`/api/reservas/${reservaId}/pedido-reprogramacion/${acepta ? "aceptar" : "rechazar"}`);
+}
+
+export function retirarReprogramacion(reservaId: string): Promise<void> {
+  return api.delete<void>(`/api/reservas/${reservaId}/pedido-reprogramacion`);
+}
+
+/* ---- Enmienda v2.5: paquete del mes (FR-RES-032..037, ADR-M5-03) ---- */
+
+export interface OfertaPaquete {
+  disponible: boolean;
+  descuentoPorcentaje: number;
+  clases: number;
+  semanas: number;
+}
+
+export interface Paquete {
+  id: string;
+  reservaAnclaId: string;
+  cantidadClases: number;
+  duracionMinutos: number;
+  descuentoPorcentaje: number;
+  precioTotal: number;
+  estado: string;
+  vigenteHasta: string;
+  fechas: string[];
+}
+
+export function getOfertaPaquete(tutorId: string): Promise<OfertaPaquete> {
+  return api.get<OfertaPaquete>(`/api/reservas/paquete/oferta?tutorId=${encodeURIComponent(tutorId)}`);
+}
+
+export function crearPaquete(body: {
+  tutorId: string;
+  horario: string;
+  duracionMinutos: number;
+  beneficiarioId?: string;
+}): Promise<Paquete> {
+  return api.post<Paquete>("/api/reservas/paquete", body);
+}
+
+export function cancelarPaquete(paqueteId: string): Promise<void> {
+  return api.post<void>(`/api/reservas/paquete/${paqueteId}/cancelar`);
+}
+
+/** Las 4 fechas del paquete: la primera y la misma hora las 3 semanas siguientes. */
+export function fechasDelPaquete(primera: string, clases = 4): string[] {
+  const t = new Date(primera).getTime();
+  return Array.from({ length: clases }, (_, i) => new Date(t + i * 7 * 86400000).toISOString());
+}

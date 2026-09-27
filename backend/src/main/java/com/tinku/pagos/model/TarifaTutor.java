@@ -35,4 +35,12 @@ public class TarifaTutor {
 
     @Column(name = "updated_at", nullable = false, updatable = false)
     private Instant updatedAt = Instant.now();
+
+    /** v2.5 (ADR-M5-03): ofrece el paquete mensual. */
+    @Column(name = "paquete_habilitado", nullable = false)
+    private boolean paqueteHabilitado = false;
+
+    /** v2.5: descuento del paquete sobre el precio por hora (0 a 30 %). */
+    @Column(name = "paquete_descuento_porcentaje", nullable = false)
+    private int paqueteDescuentoPorcentaje = 0;
 }

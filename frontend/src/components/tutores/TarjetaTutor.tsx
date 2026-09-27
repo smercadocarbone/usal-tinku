@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, ChevronRight, Lock } from "lucide-react";
+import { BadgeCheck, CalendarClock, ChevronRight, Lock } from "lucide-react";
+import { fechaHoraCorta } from "@/lib/formatos";
 import { Avatar, Boton, Estrellas, Insignia, Precio, Tarjeta, enlaceTarjeta } from "@/components/ui";
 import { TIEMPOS } from "@/lib/tiempos";
 import { nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
@@ -12,10 +13,15 @@ export interface TarjetaTutorProps {
   noAutorizado?: boolean;
   avisoAutorizacion?: boolean;
   onSolicitarAutorizacion?: () => void;
+  /**
+   * FR-MATCH-013: primer horario libre de los próximos 14 días. `undefined` = no se sabe (no se
+   * muestra nada); `null` = no tiene horarios en ese plazo.
+   */
+  proximoHorario?: string | null;
 }
 
 /** Tarjeta de resultado (UX-04 §1): toda la tarjeta lleva al perfil. */
-export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, onSolicitarAutorizacion }: TarjetaTutorProps) {
+export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, onSolicitarAutorizacion, proximoHorario }: TarjetaTutorProps) {
   const foto = useFotoTutor(tutor.id, tutor.tieneFoto);
   const nombre = `${tutor.nombre} ${tutor.apellido}`.trim();
   const materias = tutor.materias.slice(0, 3);
@@ -52,6 +58,13 @@ export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, o
           <p className="text-[15px] leading-relaxed text-tinta-suave">
             {materias.join(" · ")}
             {resto > 0 && <span className="text-tinta-tenue"> y {resto} más</span>}
+          </p>
+        )}
+
+        {proximoHorario !== undefined && (
+          <p className={proximoHorario ? "flex items-center gap-1.5 text-sm font-semibold text-exito" : "flex items-center gap-1.5 text-sm text-tinta-tenue"}>
+            <CalendarClock className="size-4 shrink-0" aria-hidden />
+            {proximoHorario ? <>Próximo horario: {fechaHoraCorta(proximoHorario)}</> : <>Sin horarios en las próximas 2 semanas</>}
           </p>
         )}
 

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -40,6 +41,50 @@ public class HorariosDisponiblesService {
     public HorariosDisponiblesService(FranjaService franjaService, ReservaRepository reservaRepo) {
         this.franjaService = franjaService;
         this.reservaRepo = reservaRepo;
+    }
+
+    /** FR-MATCH-013: horizonte del "próximo horario libre" en la búsqueda (Tabla_Tiempos_Tinku.md). */
+    public static final int HORIZONTE_PROXIMO_LIBRE_DIAS = 14;
+
+    /**
+     * FR-MATCH-013: el primer bloque de 30 min libre del Tutor desde ahora + la ventana mínima,
+     * dentro del horizonte; vacío si no hay. Mismas reglas que {@link #horariosDelDia} pero con
+     * dos consultas por Tutor (franjas y reservas del período), no una por día: corre por cada
+     * resultado de la búsqueda.
+     */
+    public Optional<Instant> proximoLibre(UUID tutorId) {
+        List<FranjaDisponibilidad> franjas = franjaService.franjasActivas(tutorId);
+        if (franjas.isEmpty()) {
+            return Optional.empty();
+        }
+        Instant ahora = Instant.now();
+        LocalDate hoy = LocalDate.now(ReservasZonaHoraria.ZONA);
+        LocalDate fin = hoy.plusDays(HORIZONTE_PROXIMO_LIBRE_DIAS);
+        List<Reserva> reservas = reservaRepo.findByTutor_IdAndEstadoNotAndHorarioBetween(tutorId,
+                EstadoReserva.CANCELADA, hoy.atStartOfDay(ReservasZonaHoraria.ZONA).toInstant(),
+                fin.plusDays(1).atStartOfDay(ReservasZonaHoraria.ZONA).toInstant());
+        Duration bloque = Duration.ofMinutes(PASO_MINUTOS);
+        for (LocalDate fecha = hoy; fecha.isBefore(fin); fecha = fecha.plusDays(1)) {
+            LocalDate dia = fecha;
+            Optional<Instant> primero = franjas.stream()
+                    .filter(f -> FranjaService.aplicaA(f, dia))
+                    .flatMap(f -> {
+                        List<Instant> inicios = new ArrayList<>();
+                        for (LocalTime c = f.getHoraInicio(); !c.plusMinutes(PASO_MINUTOS).isAfter(f.getHoraFin());
+                             c = c.plusMinutes(PASO_MINUTOS)) {
+                            inicios.add(dia.atTime(c).atZone(ReservasZonaHoraria.ZONA).toInstant());
+                        }
+                        return inicios.stream();
+                    })
+                    .filter(inicio -> !ahora.plus(VENTANA_MINIMA).isAfter(inicio))
+                    .filter(inicio -> reservas.stream()
+                            .noneMatch(r -> seSuperponen(r, inicio, inicio.plus(bloque))))
+                    .min(Instant::compareTo);
+            if (primero.isPresent()) {
+                return primero;
+            }
+        }
+        return Optional.empty();
     }
 
     public List<TimeSlotResponse> horariosDelDia(UUID tutorId, LocalDate fecha, int duracionMinutos) {

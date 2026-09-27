@@ -177,3 +177,25 @@ Tutor y pagador aceptaron la cláusula `GRABACION_AUDIO_RESUMEN` en su versión 
 - **Evento:** `AudioResumenRecibidoEvent` (en memoria, lo consume M6 para disparar la generación).
   No es un `SesionEvento`: no cambia el estado de la Sesión.
 - **Borrado:** al obtener el transcript, o a las 24 hs del fin como máximo (Tabla de Tiempos).
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Pizarra compartida (ADR-M3-06)
+
+### US-9 — Pizarra compartida entre adultos
+*Como* Tutor o Estudiante adulto, *quiero* escribir y dibujar sobre una pizarra que el otro ve en
+vivo, *para* resolver ejercicios juntos.
+
+- **Dado** que ningún participante es Menor, **cuando** abro la pizarra, **entonces** lo que dibujo
+  lo ve el otro en vivo, y si entra tarde recibe lo que ya estaba dibujado (FR-AULA-011).
+- **Dado** que un participante es Menor, **cuando** estoy en la sala, **entonces** la pizarra no
+  está disponible y cualquier mensaje de pizarra se descarta (FR-AULA-012, Art. II).
+- **Dado** que la clase termina, **cuando** se cierra la sala, **entonces** la pizarra no queda
+  guardada en ningún lado; solo se puede descargar como imagen en el propio dispositivo
+  (FR-AULA-013, Art. V).
+
+| ID | Descripción |
+| --- | --- |
+| FR-AULA-011 | Pizarra sobre `<canvas>` sincronizada por el canal de datos de LiveKit (`topic: "pizarra"`, confiable), coordenadas normalizadas, sincronización al entrar. |
+| FR-AULA-012 | El token de la sala informa `pizarraHabilitada` = ningún participante es Menor. Sin habilitación, el cliente no la muestra y descarta los mensajes. Se habilita con Menores recién con T-M3-06. |
+| FR-AULA-013 | Nada de la pizarra se persiste en Tinku ni en LiveKit. |

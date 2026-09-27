@@ -14,7 +14,11 @@ export type TipoNotificacion =
   | "CLASE_EMPEZO"
   | "PAGO_LIBERADO"
   | "CREDENCIAL_REVISADA"
-  | "CAP_REVISADO";
+  | "CAP_REVISADO"
+  | "NOTA_CLASE"
+  | "REPROGRAMACION_PEDIDA"
+  | "REPROGRAMACION_ACEPTADA"
+  | "REPROGRAMACION_RECHAZADA";
 
 export interface Notificacion {
   id: string;
@@ -151,6 +155,41 @@ export function textoDe(n: Notificacion, formatear: (iso: string) => string): Te
         : n.datos.resultado === "rechazado"
           ? { titulo: "No pudimos aprobar tu certificado", detalle: "Podés ver el detalle y volver a cargarlo.", href: "/cuenta", accion: "Ver mi cuenta", tono: "aviso" }
           : { titulo: "Tu certificado necesita una revisión más", detalle: "Te avisamos cuando esté.", tono: "info" };
+    case "NOTA_CLASE":
+      return {
+        titulo: "El tutor te dejó una nota de la clase",
+        detalle: "Cuenta cómo le fue y qué conviene practicar.",
+        href: `/cuenta/reservas/${n.datos.reservaId}`,
+        accion: "Leer la nota",
+        tono: "info",
+      };
+    case "REPROGRAMACION_PEDIDA":
+      return {
+        titulo: "El tutor te propone otro horario",
+        detalle: `Para la clase del ${formatear(n.datos.horario)}: ${formatear(n.datos.horarioPropuesto)}. Aceptalo o cancelá con la devolución completa.`,
+        href: `/cuenta/reservas/${n.datos.reservaId}`,
+        accion: "Responder",
+        tono: "aviso",
+      };
+    case "REPROGRAMACION_ACEPTADA":
+      return {
+        titulo: "Aceptaron el horario nuevo",
+        detalle: `La clase pasa al ${formatear(n.datos.horario)}.`,
+        href: `/cuenta/reservas/${n.datos.reservaId}`,
+        accion: "Ver la clase",
+        tono: "info",
+      };
+    case "REPROGRAMACION_RECHAZADA":
+      return {
+        titulo: "La clase se canceló",
+        detalle:
+          n.datos.motivo === "vencido"
+            ? "Nadie respondió tu pedido de cambio de horario a tiempo. Se le devuelve el pago a quien pagó."
+            : "Prefirieron cancelar en vez de cambiar el horario. Se le devuelve el pago a quien pagó.",
+        href: `/cuenta/reservas/${n.datos.reservaId}`,
+        accion: "Ver la clase",
+        tono: "aviso",
+      };
     default:
       return { titulo: "Aviso de Tinku", detalle: "", tono: "info" };
   }

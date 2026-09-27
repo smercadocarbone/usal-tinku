@@ -102,3 +102,21 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 ---
 
 **Estado: APROBADO.** Listo para pasar al Plan técnico de M2.
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Próximo horario libre y filtro por precio
+
+### US-9 — Encontrar horario y precio sin abrir cada perfil
+*Como* Estudiante o Adulto Responsable, *quiero* ver en los resultados cuánto cobra cada Tutor y
+cuándo tiene el próximo horario libre, y filtrar por precio máximo, *para* decidir rápido.
+
+- **Dado** que busco, **cuando** veo los resultados, **entonces** cada uno trae su precio por hora y
+  su próximo bloque libre de los próximos 14 días (o que no tiene en ese plazo) (FR-MATCH-013).
+- **Dado** que indico un precio máximo por hora, **cuando** busco, **entonces** no aparece ningún
+  Tutor que cobre más (FR-MATCH-014). El orden del ranking no cambia.
+
+| ID | Descripción |
+| --- | --- |
+| FR-MATCH-013 | `BusquedaResponse` incluye `precioHora` y `proximoHorario` (primer bloque de 30 min libre entre ahora + la ventana mínima y 14 días, Tabla de Tiempos), calculado con la misma lógica de disponibilidad de M4. |
+| FR-MATCH-014 | `precio_max_hora` opcional en `POST /api/busquedas`: filtra en Java después del ranking; no cambia el contrato con el matching-service. |

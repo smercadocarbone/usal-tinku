@@ -147,3 +147,78 @@ está deshabilitado, si el beneficiario es Menor (Art. II), si el Tutor no acept
 grabación o si el pagador no la aceptó. El precio del adicional se congela en la Reserva
 (`precio_adicional_resumen`) y `ReservaResponse` expone `montoTotal`. Las Solicitudes de un Menor
 nunca llevan el adicional. `GET /api/reservas/adicional-resumen?tutorId=` dice si el Tutor lo ofrece.
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Pedido previo, nota del Tutor, pedido de reprogramación y paquete mensual
+
+Decisiones D-1 a D-8 de `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`.
+
+### US-11 — Pedido previo a la clase (ADR-M4-01)
+*Como* quien reserva, *quiero* contarle al Tutor qué quiero ver, *para* no
+perder el comienzo de la clase explicándolo.
+
+- **Dado** que soy el pagador de una Reserva `pendiente_pago` o `confirmada` que todavía no empezó,
+  **cuando** escribo el pedido (hasta 1000 caracteres, solo texto), **entonces** el Tutor lo ve en el
+  detalle de la reserva (FR-RES-027).
+- **Dado** que el beneficiario es un Menor, **cuando** hay un pedido, **entonces** lo escribió su
+  Adulto Responsable: el Menor no escribe nada (Art. II).
+
+### US-12 — Nota del Tutor al Adulto Responsable
+*Como* Adulto Responsable, *quiero* que el Tutor me cuente brevemente cómo le fue a mi hijo, *para*
+acompañarlo sin que se grabe nada.
+
+- **Dado** que terminó una clase con un Menor, **cuando** el Tutor escribe la nota (hasta 1000
+  caracteres, filtrada como las calificaciones), **entonces** me llega el aviso `NOTA_CLASE` y la veo
+  en el detalle de la reserva; el Menor no la ve (FR-RES-026).
+- **Dado** que el Tutor quiere corregirla, **cuando** pasaron menos de 48 hs desde que la escribió,
+  **entonces** puede editarla; después queda fija.
+
+### US-13 — Pedido de reprogramación del Tutor
+*Como* Tutor, *quiero* proponer otro horario cuando no puedo dar una clase, *para* no cancelarla.
+*Como* alumno (o Adulto Responsable), *quiero* aceptar el horario nuevo o cancelar con la devolución.
+
+- **Dado** que la reserva está `confirmada` y falta más de 1 hora, **cuando** el Tutor propone un
+  horario libre dentro de sus franjas (y a más de la ventana mínima) con un motivo opcional,
+  **entonces** queda un pedido `pendiente` y avisa a quien pagó (FR-RES-029). Solo uno abierto por reserva.
+- **Dado** que hay un pedido pendiente, **cuando** el pagador lo acepta, **entonces** la reserva pasa
+  al horario nuevo con el mismo efecto que un cambio de horario (precio, Sesión re-agendada)
+  (FR-RES-030); **cuando** lo rechaza, **entonces** la reserva se cancela con el Tutor como quien
+  cancela (devolución total; en un paquete, la de esa clase).
+- **Dado** que nadie respondió, **cuando** llega T-60 de la clase original, **entonces** el pedido
+  vence y la reserva se cancela igual que en el rechazo (FR-RES-031, Tabla de Tiempos).
+- **Dado** que el beneficiario es Menor, **cuando** hay un pedido, **entonces** lo responde el
+  Adulto Responsable, nunca el Menor (Art. II).
+
+### US-14 — Paquete mensual (ADR-M5-03)
+*Como* Tutor, *quiero* ofrecer un paquete del mes con descuento; *como* quien reserva, *quiero*
+reservar y pagar el mes de una vez.
+
+- **Dado** que el Tutor habilitó el paquete, **cuando** elijo un horario y una duración, **entonces**
+  se arman 4 clases semanales (mismo día y hora) que tienen que cumplir cada una todas las reglas de
+  una reserva suelta; si alguna no entra, veo qué fechas chocan (FR-RES-032).
+- **Dado** que se creó el paquete, **cuando** pasan 15 min sin pagar, **entonces** vencen las 4
+  reservas juntas (FR-RES-033).
+- **Dado** que falta más de 24 hs para la primera clase, **cuando** cancelo el paquete, **entonces**
+  se cancelan las 4 y se devuelve el total (FR-RES-034).
+- **Dado** que falta más de 24 hs para una clase del paquete, **cuando** la muevo, **entonces** el
+  horario nuevo tiene que estar dentro de la vigencia (4 semanas desde la primera) (FR-RES-035).
+- **Dado** que cancelo yo una clase del paquete, **cuando** lo hago, **entonces** no hay devolución:
+  la clase se da por tomada (FR-RES-036).
+- **Dado** que el Tutor cancela, no se presenta o su pedido de reprogramación termina en
+  cancelación, **cuando** pasa, **entonces** se devuelve el precio de esa clase (FR-RES-037, FR-PAG-022).
+
+| ID | Descripción |
+| --- | --- |
+| FR-RES-026 | Nota del Tutor en reservas `finalizada` con beneficiario Menor: una por reserva, ≤ 1000 caracteres, filtrada (FR-REP-011), editable 48 hs. La ven el AR y el Tutor. Aviso `NOTA_CLASE` al AR. |
+| FR-RES-027 _(enmendado 2026-09-27: solo texto)_ | Pedido previo: lo carga el pagador en `pendiente_pago`/`confirmada` antes del inicio; texto ≤ 1000 caracteres filtrado, sin archivos. Lo ven el pagador y el Tutor. |
+| FR-RES-028 | _Retirado el 2026-09-27:_ era el borrado del archivo adjunto, que ya no existe (ADR-M4-01). |
+| FR-RES-029 | Pedido de reprogramación del Tutor: reserva `confirmada`, más de 1 h a la clase, horario propuesto en franja, libre y a más de la ventana mínima. Uno pendiente por reserva; el Tutor puede retirarlo. |
+| FR-RES-030 | Aceptar = reprogramar (mismo camino que FR-RES-015/016). Rechazar = cancelar con el Tutor como quien cancela (FR-RES-008: devolución). Responde el pagador (el AR si es Menor). |
+| FR-RES-031 | A T-60 de la clase original, un pedido pendiente vence y la reserva se cancela como en el rechazo. Job Quartz persistido. |
+| FR-RES-032 | Paquete: 4 clases semanales generadas desde un horario; cada una se valida como reserva suelta; 422 con las fechas que chocan. Solo si el Tutor lo habilitó. |
+| FR-RES-033 | Las reservas de un paquete comparten el timeout de pago de 15 min. |
+| FR-RES-034 | Cancelar el paquete entero: solo hasta 24 hs antes de la primera clase y con todas `confirmada`; devolución total. |
+| FR-RES-035 | Mover una clase de un paquete: hasta 24 hs antes y dentro de la vigencia del paquete. |
+| FR-RES-036 | Una clase de paquete cancelada por el pagador no se devuelve: se libera al Tutor. |
+| FR-RES-037 | Una clase de paquete que se cancela por el Tutor (o un pedido de reprogramación rechazado o vencido) se devuelve por su precio (ADR-M5-03). |

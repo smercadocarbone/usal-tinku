@@ -1,5 +1,5 @@
 /** Cobros del Tutor y conexión de MercadoPago (R3/R5, ADR-M5-02). */
-import { api } from "./api";
+import { api, guardarArchivo } from "./api";
 
 export type EstadoCobro = "retenido" | "en_revision" | "liberado" | "reembolsado";
 
@@ -45,4 +45,20 @@ export function urlConectarMp(): Promise<{ url: string }> {
 
 export function desconectarMp(): Promise<void> {
   return api.delete("/api/pagos/mp/conexion");
+}
+
+/** Los últimos `cantidad` meses (el actual primero) como AAAA-MM con su nombre para mostrar. */
+export function ultimosMeses(cantidad = 12, hoy = new Date()): { valor: string; texto: string }[] {
+  return Array.from({ length: cantidad }, (_, i) => {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const valor = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+    const texto = fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+    return { valor, texto: texto.charAt(0).toUpperCase() + texto.slice(1) };
+  });
+}
+
+/** FR-PAG-020: CSV de los cobros del mes para facturar en ARCA. */
+export async function descargarCobrosDelMes(mes: string): Promise<void> {
+  const csv = await api.blob(`/api/pagos/cobros/export?mes=${encodeURIComponent(mes)}`);
+  guardarArchivo(csv, `tinku-cobros-${mes}.csv`);
 }

@@ -80,6 +80,8 @@ public class EscrowService {
     private final ReembolsoProveedor reembolso;
     private final ComisionPlataforma comision;
     private final CuentasMpService cuentasMp;
+    private final com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial;
+    private final com.tinku.pagos.port.AlertaSoporteProveedor alertaSoporte;
 
     public EscrowService(TransaccionRepository transaccionRepo,
                          ReservaRepository reservaRepo,
@@ -88,7 +90,11 @@ public class EscrowService {
                          LiberacionEscrowService liberacionEscrow,
                          ReembolsoProveedor reembolso,
                          ComisionPlataforma comision,
-                         CuentasMpService cuentasMp) {
+                         CuentasMpService cuentasMp,
+                         com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial,
+                         com.tinku.pagos.port.AlertaSoporteProveedor alertaSoporte) {
+        this.reembolsoParcial = reembolsoParcial;
+        this.alertaSoporte = alertaSoporte;
         this.transaccionRepo = transaccionRepo;
         this.reservaRepo = reservaRepo;
         this.reservaService = reservaService;
@@ -173,6 +179,11 @@ public class EscrowService {
         if (transaccionRepo.findByMpPaymentId(mpPaymentId).isPresent()) {
             return;
         }
+        // ADR-M5-03: la ancla de un paquete confirma las 4 clases con este único pago.
+        if (reserva.getPaquete() != null) {
+            procesarPagoPaquete(pago, reserva, mpPaymentId);
+            return;
+        }
         if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
             reembolsarPagoTardio(pago, reserva);
             return;
@@ -204,6 +215,45 @@ public class EscrowService {
         // Transición pendiente_pago → confirmada + ReservaConfirmadaEvent (M3
         // crea y agenda la Sesión). Idempotente; corre dentro de esta transacción.
         reservaService.confirmarPagoSimulado(reserva.getId());
+    }
+
+    /**
+     * FR-PAG-021: el pago del paquete (por el total) confirma sus 4 clases. Una {@code Transaccion}
+     * por clase, por el precio de esa clase: la ancla con el id del pago y las demás {@code id#n}
+     * (ver {@link Transaccion#idPagoMp()}). Si alguna clase ya no está pendiente (venció o se
+     * canceló), el pago se devuelve entero como un pago tardío.
+     */
+    private void procesarPagoPaquete(PagoMercadoPago pago, Reserva ancla, String mpPaymentId) {
+        com.tinku.reservas.model.Paquete paquete = ancla.getPaquete();
+        java.util.List<Reserva> clases = reservaRepo.findByPaquete_IdOrderByHorario(paquete.getId());
+        if (!com.tinku.reservas.model.Paquete.PENDIENTE_PAGO.equals(paquete.getEstado())
+                || clases.stream().anyMatch(r -> r.getEstado() != EstadoReserva.PENDIENTE_PAGO)) {
+            reembolsarPagoTardio(pago, ancla);
+            return;
+        }
+        if (pago.monto() == null || pago.monto().compareTo(paquete.getPrecioTotal()) != 0) {
+            throw new PagoInconsistenteException(ancla.getId(), mpPaymentId);
+        }
+        java.util.List<Transaccion> transacciones = new java.util.ArrayList<>();
+        int n = 1;
+        for (Reserva clase : clases) {
+            Transaccion t = new Transaccion();
+            t.setReservaId(clase.getId());
+            t.setMpPaymentId(clase.getId().equals(ancla.getId()) ? mpPaymentId : mpPaymentId + "#" + (++n));
+            t.setMontoBruto(clase.getPrecio());
+            t.setComisionPlataforma(comision.calcular(clase.getPrecio()));
+            transacciones.add(t);
+        }
+        try {
+            transaccionRepo.saveAllAndFlush(transacciones);
+        } catch (DataIntegrityViolationException e) {
+            LOG.info("Webhook de MP duplicado para el paquete {} (pago {}): no-op idempotente.",
+                    paquete.getId(), mpPaymentId);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return;
+        }
+        paquete.setEstado(com.tinku.reservas.model.Paquete.CONFIRMADO);
+        clases.forEach(c -> reservaService.confirmarPagoSimulado(c.getId()));
     }
 
     /** La {@code external_reference} de la preferencia ES el id de la Reserva
@@ -394,6 +444,11 @@ public class EscrowService {
 
     private void reembolsarSiRetenida(UUID reservaId) {
         transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+            if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
+                    && reservaRepo.findById(reservaId).map(r -> r.getPaquete() != null).orElse(false)) {
+                reembolsarClaseDePaquete(t);
+                return;
+            }
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 // Única vía de reembolso (Plan §3.3, FR-PAG-009): el port real de
                 // M5-D llama a MP con body vacío. En bypass (V22) no hay dinero
@@ -411,6 +466,63 @@ public class EscrowService {
         });
     }
 
+    /**
+     * FR-PAG-022 (ADR-M5-03): una clase de un paquete se devuelve por su precio, en parcial del
+     * pago único, con clave de idempotencia por transacción. Si MercadoPago la rechaza (por ejemplo,
+     * el Tutor ya retiró la plata) no se traba la cancelación: la clase queda retenida y sin
+     * liberación, y Soporte Financiero recibe el aviso para devolverla desde el panel.
+     */
+    private void reembolsarClaseDePaquete(Transaccion t) {
+        if (!t.isEnBypass()) {
+            try {
+                reembolsoParcial.reembolsarParcial(t.idPagoMp(), t.getMontoBruto(), "clase-" + t.getId());
+            } catch (RuntimeException e) {
+                LOG.warn("No se pudo devolver la clase {} del paquete (pago {}): queda para Soporte Financiero",
+                        t.getReservaId(), t.idPagoMp(), e);
+                t.setLiberarAt(null);
+                transaccionRepo.save(t);
+                liberacionEscrow.cancelarLiberacion(t.getId());
+                alertaSoporte.notificarPagoSinConciliar(t.getReservaId(), t.idPagoMp(),
+                        "no se pudo devolver una clase de un paquete ($" + t.getMontoBruto().toPlainString()
+                                + "): devolverla desde reembolsos parciales");
+                return;
+            }
+        }
+        t.setEstado(EstadoTransaccion.REEMBOLSADO);
+        t.setLiberarAt(null);
+        transaccionRepo.save(t);
+        liberacionEscrow.cancelarLiberacion(t.getId());
+    }
+
+    /**
+     * FR-PAG-023: el paquete entero cancelado antes de la primera clase se devuelve completo, de
+     * una vez (reembolso total del pago, body vacío). Las {@code reserva.cancelada} de sus clases
+     * no mueven plata: {@link #onReservaCancelada} las ignora con el paquete cancelado.
+     */
+    @EventListener
+    @Transactional
+    public void onPaqueteCancelado(com.tinku.reservas.evento.PaqueteCanceladoEvent evento) {
+        java.util.List<Transaccion> transacciones = reservaRepo.findByPaquete_IdOrderByHorario(evento.getPaqueteId())
+                .stream()
+                .map(r -> transaccionRepo.findByReservaId(r.getId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .filter(t -> t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW)
+                .toList();
+        if (transacciones.isEmpty()) {
+            return;
+        }
+        Transaccion ancla = transaccionRepo.findByReservaId(evento.getReservaId()).orElse(transacciones.get(0));
+        if (!ancla.isEnBypass()) {
+            reembolso.reembolsarTotal(ancla); // usa idPagoMp(): el pago único entero
+        }
+        for (Transaccion t : transacciones) {
+            t.setEstado(EstadoTransaccion.REEMBOLSADO);
+            t.setLiberarAt(null);
+            transaccionRepo.save(t);
+            liberacionEscrow.cancelarLiberacion(t.getId());
+        }
+    }
+
     // ------------------------------------------------------ M5-D (T-M5-07)
 
     /** Cancelación tardía (US-7, FR-RES-008/016): asimetría según quién cancela.
@@ -426,6 +538,11 @@ public class EscrowService {
                     Reserva reserva = reservaRepo.findById(evento.getReservaId()).orElse(null);
                     if (reserva == null) {
                         return; // invariable: no hay Reserva sin escrow confirmado
+                    }
+                    // FR-PAG-023: el paquete entero lo devuelve onPaqueteCancelado, de una vez.
+                    if (reserva.getPaquete() != null
+                            && com.tinku.reservas.model.Paquete.CANCELADO.equals(reserva.getPaquete().getEstado())) {
+                        return;
                     }
                     if (PoliticaCancelacion.reembolsoTotal(
                             reserva, evento.getCanceladaPorUsuarioId(), Instant.now())) {

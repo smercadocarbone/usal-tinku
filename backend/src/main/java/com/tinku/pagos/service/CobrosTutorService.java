@@ -6,13 +6,17 @@ import com.tinku.pagos.model.EstadoTransaccion;
 import com.tinku.pagos.model.Transaccion;
 import com.tinku.pagos.repository.TransaccionRepository;
 import com.tinku.reservas.model.Reserva;
+import com.tinku.reservas.service.ReservasZonaHoraria;
 import com.tinku.reservas.service.SoloTutorException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -49,6 +53,69 @@ public class CobrosTutorService {
         BigDecimal liberado = sumar(cobros, "liberado");
         BigDecimal reembolsado = sumar(cobros, "reembolsado");
         return new MisCobros(retenido, enRevision, liberado, reembolsado, cobros);
+    }
+
+    /**
+     * FR-PAG-020: los cobros de un mes (por fecha de cobro, hora de Argentina) en CSV, para
+     * facturar. Sale el DNI del pagador solo si es un adulto: es el receptor de la factura. El
+     * alumno figura por nombre. Las transacciones de prueba (bypass) no salen.
+     */
+    @Transactional(readOnly = true)
+    public String exportarMes(Usuario tutor, YearMonth mes) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR) {
+            throw new SoloTutorException("Solo un tutor tiene cobros.");
+        }
+        Instant desde = mes.atDay(1).atStartOfDay(ReservasZonaHoraria.ZONA).toInstant();
+        Instant hasta = mes.plusMonths(1).atDay(1).atStartOfDay(ReservasZonaHoraria.ZONA).toInstant();
+        StringBuilder csv = new StringBuilder(
+                "Fecha de cobro;Fecha de la clase;Pagó;DNI de quien pagó;Alumno;Precio de la clase;"
+                        + "Comisión Tinku;Neto;Estado;Operación MercadoPago\r\n");
+        for (Object[] fila : transaccionRepo.cobrosDelTutorEntre(tutor.getId(), desde, hasta)) {
+            Transaccion t = (Transaccion) fila[0];
+            Reserva r = (Reserva) fila[1];
+            Cobro c = cobro(t, r);
+            Usuario pagador = r.getPagador();
+            String dniPagador = pagador != null && pagador.getTipo() != TipoUsuario.MENOR ? pagador.getDni() : "";
+            csv.append(FECHA.format(t.getCreatedAt())).append(';')
+                    .append(FECHA_HORA.format(r.getHorario())).append(';')
+                    .append(celda(pagador == null ? "" : pagador.getNombre() + " " + pagador.getApellido())).append(';')
+                    .append(celda(dniPagador)).append(';')
+                    .append(celda(c.alumnoNombre() + " " + c.alumnoApellido())).append(';')
+                    .append(importe(c.precioSesion())).append(';')
+                    .append(importe(c.comision())).append(';')
+                    .append(importe(c.neto())).append(';')
+                    .append(ESTADO_LEGIBLE.get(c.estado())).append(';')
+                    .append(celda(t.idPagoMp())).append("\r\n");
+        }
+        return csv.toString();
+    }
+
+    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            .withZone(ReservasZonaHoraria.ZONA);
+    private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+            .withZone(ReservasZonaHoraria.ZONA);
+    private static final Map<String, String> ESTADO_LEGIBLE = Map.of(
+            "retenido", "A liberar", "en_revision", "En revisión",
+            "liberado", "Liberado", "reembolsado", "Devuelto al alumno");
+
+    /** Coma decimal (Excel en español) y sin separador de miles. */
+    private static String importe(BigDecimal monto) {
+        return monto.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',');
+    }
+
+    /** Escapa {@code ;}, comillas y saltos, y neutraliza fórmulas (inyección CSV). */
+    static String celda(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        String v = valor.strip();
+        if (!v.isEmpty() && "=+-@".indexOf(v.charAt(0)) >= 0) {
+            v = "'" + v;
+        }
+        if (v.contains(";") || v.contains("\"") || v.contains("\n") || v.contains("\r")) {
+            v = "\"" + v.replace("\"", "\"\"") + "\"";
+        }
+        return v;
     }
 
     private static Cobro cobro(Transaccion t, Reserva r) {

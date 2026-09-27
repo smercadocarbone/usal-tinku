@@ -13,7 +13,8 @@ import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tut
 import { DURACIONES_CLASE, duracionFranja, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, type Franja } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import AppShell from "@/components/shell/AppShell";
-import { Alerta, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
+import { Alerta, AreaTexto, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
+import { crearPaquete, fechasDelPaquete, getOfertaPaquete, guardarPedido, type OfertaPaquete } from "@/lib/reservas";
 
 interface Horario {
   franja: Franja;
@@ -58,6 +59,11 @@ function ReservarFlujo() {
   // T09: adicional de resumen automático (nunca para un menor, ADR-M3-04).
   const [adicional, setAdicional] = useState<AdicionalResumen | null>(null);
   const [conResumen, setConResumen] = useState(false);
+  // v2.5 (FR-RES-027): pedido previo opcional, se manda apenas se crea la reserva.
+  const [pedidoTexto, setPedidoTexto] = useState("");
+  // v2.5 (FR-RES-032): paquete del mes, si el tutor lo ofrece.
+  const [oferta, setOferta] = useState<OfertaPaquete | null>(null);
+  const [modalidad, setModalidad] = useState<"clase" | "paquete">("clase");
 
   // B9: sin tutor no hay nada que reservar — a buscar.
   useEffect(() => {
@@ -80,6 +86,9 @@ function ReservarFlujo() {
       getAdicionalResumen(tutorId)
         .then(setAdicional)
         .catch(() => setAdicional(null));
+      getOfertaPaquete(tutorId)
+        .then(setOferta)
+        .catch(() => setOferta(null));
     }
   }, [tutorId, esMenor]);
 
@@ -143,12 +152,19 @@ function ReservarFlujo() {
   }
 
   const precioElegido = precioClase(tutor?.precioHora ?? null, elegido?.duracion ?? duracion);
+  const precioPaquete =
+    tutor?.precioHora != null && oferta?.disponible
+      ? (Math.round((tutor.precioHora * (elegido?.duracion ?? duracion) * (100 - oferta.descuentoPorcentaje)) / 60) / 100) * oferta.clases
+      : null;
 
   const pasos = esMenor ? ["Cuándo", "Pedido"] : esAR ? ["Cuándo", "Para quién", "Confirmar"] : ["Cuándo", "Confirmar"];
   const pasoConfirmar = pasos.length - 1;
   const beneficiario = paraQuien === "yo" ? null : (menores?.find((m) => m.id === paraQuien) ?? null);
   // Art. II / ADR-M3-04: el resumen graba audio — nunca se ofrece si la clase es para un menor.
-  const ofrecerResumen = !esMenor && !beneficiario && adicional?.disponible === true;
+  const ofrecerPaquete = !esMenor && oferta?.disponible === true;
+  const esPaquete = ofrecerPaquete && modalidad === "paquete";
+  // El resumen es un adicional por clase suelta; el paquete no lo incluye (ADR-M5-03).
+  const ofrecerResumen = !esMenor && !beneficiario && !esPaquete && adicional?.disponible === true;
   const resumenElegido = ofrecerResumen && conResumen;
   const puedeParaMi = payload?.cap_est !== false;
 
@@ -168,6 +184,17 @@ function ReservarFlujo() {
           duracionMinutos: elegido.duracion,
         });
         setPedidoEnviado(true);
+      } else if (esPaquete) {
+        const paquete = await crearPaquete({
+          tutorId,
+          horario: elegido.inicio,
+          duracionMinutos: elegido.duracion,
+          ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
+        });
+        if (pedidoTexto.trim()) {
+          await guardarPedido(paquete.reservaAnclaId, pedidoTexto).catch(() => undefined);
+        }
+        router.replace(`/pagar?reserva=${paquete.reservaAnclaId}`);
       } else {
         const reserva = await api.post<{ id: string }>("/api/reservas", {
           tutorId,
@@ -176,10 +203,22 @@ function ReservarFlujo() {
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
           ...(resumenElegido ? { resumenContratado: true } : {}),
         });
+        if (pedidoTexto.trim()) {
+          // Si falla, la reserva ya existe: se paga igual y el pedido se puede escribir después.
+          await guardarPedido(reserva.id, pedidoTexto).catch(() => undefined);
+        }
         router.replace(`/pagar?reserva=${reserva.id}`);
       }
     } catch (err) {
-      if (err instanceof ApiError && err.codigo === "HORARIO_OCUPADO") {
+      const chocan = err instanceof ApiError && Array.isArray(err.detalles?.fechas) ? (err.detalles.fechas as string[]) : [];
+      if (esPaquete && chocan.length > 0) {
+        // FR-RES-032: alguna de las 4 semanas está ocupada o fuera de la agenda del tutor.
+        setError(
+          `El tutor no tiene libre ${chocan.length === 1 ? "esta fecha" : "estas fechas"}: ${chocan
+            .map((f) => fechaHoraLarga(f))
+            .join("; ")}. Probá con otro día u horario, o reservá una clase suelta.`
+        );
+      } else if (err instanceof ApiError && err.codigo === "HORARIO_OCUPADO") {
         // El horario se ocupó mientras decidía: vuelve al paso 1 con ese horario tachado.
         setTomados((t) => new Set(t).add(elegido.inicio));
         // Se vuelve a pedir la ocupación del día para todas las duraciones.
@@ -419,13 +458,53 @@ function ReservarFlujo() {
                 </Dato>
                 <Dato titulo="Duración">{duracionLegible(elegido.duracion)}</Dato>
                 {esAR && <Dato titulo="Para">{beneficiario ? beneficiario.nombre : "Vos"}</Dato>}
-                <Dato titulo="Precio">
+                <Dato titulo={esPaquete ? "Total del paquete" : "Precio"}>
                   <Precio
-                    valor={precioElegido !== null && resumenElegido && adicional ? precioElegido + adicional.precio : precioElegido}
+                    valor={
+                      esPaquete
+                        ? precioPaquete
+                        : precioElegido !== null && resumenElegido && adicional
+                          ? precioElegido + adicional.precio
+                          : precioElegido
+                    }
                     sinValor="Se calcula al reservar"
                   />
                 </Dato>
               </dl>
+              {ofrecerPaquete && oferta && (
+                <div role="radiogroup" aria-label="Cómo querés reservar" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <OpcionModalidad
+                    activo={modalidad === "clase"}
+                    onClick={() => setModalidad("clase")}
+                    titulo="Solo esta clase"
+                    detalle={precioElegido !== null ? formatearPesos(precioElegido) : undefined}
+                  />
+                  <OpcionModalidad
+                    activo={modalidad === "paquete"}
+                    onClick={() => setModalidad("paquete")}
+                    titulo={`Paquete del mes · ${oferta.clases} clases`}
+                    detalle={`${precioPaquete !== null ? formatearPesos(precioPaquete) : ""}${oferta.descuentoPorcentaje > 0 ? ` · ${oferta.descuentoPorcentaje} % off` : ""}`}
+                  />
+                </div>
+              )}
+              {esPaquete && oferta && (
+                <div className="rounded-2xl border border-borde p-3.5 text-sm text-tinta-suave">
+                  <p className="font-semibold text-tinta">Una clase por semana, mismo día y horario:</p>
+                  <ul className="mt-2 flex list-none flex-col gap-1 p-0">
+                    {fechasDelPaquete(elegido.inicio, oferta.clases).map((f, i) => (
+                      <li key={f} className="first-letter:uppercase">
+                        {i + 1}. {fechaHoraLarga(f)}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3">
+                    Un solo pago. Podés cancelar el paquete entero con devolución total hasta {TIEMPOS.paqueteCancelacionHoras} hs
+                    antes de la primera clase. Después, una clase se puede mover hasta {TIEMPOS.paqueteCancelacionHoras} hs antes
+                    (dentro de las {oferta.semanas} semanas); con menos, se cuenta como tomada. Si el tutor cancela una, te
+                    devolvemos esa clase.
+                  </p>
+                </div>
+              )}
               {ofrecerResumen && adicional && (
                 <div className="flex flex-col gap-3 rounded-2xl border border-borde p-3.5">
                   <label className="flex cursor-pointer items-start gap-3" aria-label="Agregar resumen automático de la clase">
@@ -452,6 +531,23 @@ function ReservarFlujo() {
                 </div>
               )}
               {!esMenor && (
+                <details className="rounded-2xl border border-borde p-3.5" open={!!pedidoTexto}>
+                  <summary className="cursor-pointer text-[15px] font-semibold">¿Qué querés ver en la clase? (opcional)</summary>
+                  <div className="mt-3">
+                    <AreaTexto
+                      id="pedido-reserva"
+                      etiqueta="Contale al tutor qué necesitás"
+                      etiquetaOculta
+                      placeholder="El tema, qué te cuesta o para cuándo es el examen"
+                      value={pedidoTexto}
+                      maxLength={1000}
+                      contador
+                      onChange={(e) => setPedidoTexto(e.target.value)}
+                    />
+                  </div>
+                </details>
+              )}
+              {!esMenor && (
                 <p className="flex gap-2.5 rounded-2xl bg-fondo p-3.5 text-sm text-tinta-suave">
                   <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
                   Pagás ahora (tenés {TIEMPOS.pagoMinutos} minutos); el dinero queda retenido y se le libera al tutor {TIEMPOS.liberacionHoras} hs después de la clase.
@@ -469,7 +565,7 @@ function ReservarFlujo() {
                 textoCargando={esMenor ? "Enviando…" : "Reservando…"}
                 onClick={confirmar}
               >
-                {esMenor ? "Enviarle el pedido a mi adulto responsable" : "Confirmar y pagar"}
+                {esMenor ? "Enviarle el pedido a mi adulto responsable" : esPaquete ? "Confirmar y pagar el paquete" : "Confirmar y pagar"}
               </Boton>
             </div>
           </section>
@@ -487,6 +583,34 @@ function Dato({ titulo, children }: { titulo: string; children: React.ReactNode 
       <dt className="text-tinta-tenue">{titulo}</dt>
       <dd className="m-0 text-right font-semibold text-tinta">{children}</dd>
     </div>
+  );
+}
+
+function OpcionModalidad({
+  activo,
+  onClick,
+  titulo,
+  detalle,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  titulo: string;
+  detalle?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={activo}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-16 cursor-pointer flex-col justify-center rounded-2xl border-2 bg-superficie px-4 py-2 text-left",
+        activo ? "border-tinta shadow-elevado" : "border-borde hover:border-borde-fuerte"
+      )}
+    >
+      <span className="text-[15px] font-bold">{titulo}</span>
+      {detalle && <span className="tabular text-sm text-tinta-suave">{detalle}</span>}
+    </button>
   );
 }
 

@@ -28,6 +28,12 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, UUID> 
             + "where r.id = t.reservaId and r.tutor.id = :tutorId order by r.horario desc")
     List<Object[]> cobrosDelTutor(UUID tutorId, org.springframework.data.domain.Pageable pagina);
 
+    /** FR-PAG-020: [Transaccion, Reserva] del Tutor cobradas en [desde, hasta), sin bypass. */
+    @org.springframework.data.jpa.repository.Query("select t, r from Transaccion t, com.tinku.reservas.model.Reserva r "
+            + "where r.id = t.reservaId and r.tutor.id = :tutorId and t.enBypass = false "
+            + "and t.createdAt >= :desde and t.createdAt < :hasta order by t.createdAt")
+    List<Object[]> cobrosDelTutorEntre(UUID tutorId, java.time.Instant desde, java.time.Instant hasta);
+
     /** R4: cola de reembolsos del adicional por estado. */
     List<Transaccion> findByAdicionalReembolsoEstadoOrderByCreatedAtAsc(
             com.tinku.pagos.model.EstadoReembolsoAdicional estado);

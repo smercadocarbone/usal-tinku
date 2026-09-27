@@ -390,6 +390,20 @@ public class SesionService {
     }
 
     /**
+     * FR-AULA-012 (ADR-M3-06): la pizarra solo existe si ningún participante es Menor (Art. II),
+     * hasta que el kill-switch del cliente (T-M3-06) también la analice. El Tutor y el pagador
+     * son siempre adultos: alcanza con mirar al beneficiario. Ante la duda (sin sesión o sin
+     * reserva), no hay pizarra.
+     */
+    @Transactional(readOnly = true)
+    public boolean pizarraHabilitada(UUID sesionId) {
+        return sesionRepo.findById(sesionId)
+                .flatMap(s -> reservaRepo.findById(s.getReservaId()))
+                .map(r -> r.getBeneficiario().getTipo() != TipoUsuario.MENOR)
+                .orElse(false);
+    }
+
+    /**
      * Resuelve la Sesión a partir de su Reserva — el sentido inverso de
      * {@link #obtenerToken}, que necesita el frontend para poder armar un botón
      * "Entrar a la clase"/"Calificar" desde la pantalla de una Reserva sin ya

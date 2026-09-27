@@ -1,6 +1,10 @@
 package com.tinku.reservas.web;
 
 import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
+import com.tinku.reservas.service.NotaClaseNoPermitidaException;
+import com.tinku.reservas.service.PedidoPrevioNoEditableException;
+import com.tinku.reservas.service.PedidoPrevioVacioException;
+import com.tinku.reservas.service.PedidoReprogramacionException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
 import com.tinku.reservas.service.FranjaSuperpuestaException;
@@ -58,7 +62,9 @@ public class ReservasExceptionHandler {
     @ExceptionHandler({HorarioFueraDeFranjaException.class, VentanaMinimaException.class,
             DuracionFranjaInvalidaException.class, DuracionMinutosInvalidaException.class,
             ReservaNoReprogramableException.class, ReservaNoCancelableException.class,
-            AdicionalResumenNoDisponibleException.class, AutoReservaNoPermitidaException.class, TutorSinCobroException.class})
+            AdicionalResumenNoDisponibleException.class, AutoReservaNoPermitidaException.class, TutorSinCobroException.class,
+            PedidoPrevioNoEditableException.class, PedidoPrevioVacioException.class,
+            NotaClaseNoPermitidaException.class, PedidoReprogramacionException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));
@@ -126,6 +132,14 @@ public class ReservasExceptionHandler {
         java.util.regex.Matcher m = mensaje == null ? null
                 : java.util.regex.Pattern.compile("constraint \"([^\"]+)\"").matcher(mensaje);
         return m != null && m.find() ? m.group(1) : null;
+    }
+
+    /** ADR-M5-03: el paquete no se puede armar o cancelar; {@code fechas} = las que chocan. */
+    @ExceptionHandler(com.tinku.reservas.service.PaqueteNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handlePaquete(com.tinku.reservas.service.PaqueteNoDisponibleException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
+                "error", ex.getMessage(),
+                "fechas", ex.getFechas().stream().map(Object::toString).toList()));
     }
 
     @ExceptionHandler(TarifaNoConfiguradaException.class)

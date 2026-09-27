@@ -148,3 +148,27 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 ---
 
 **Estado: APROBADO.**
+
+---
+
+## Enmienda v2.5 (2026-09-26) — Video de presentación del Tutor (ADR-M1-09) — DIFERIDO
+
+> **Fuera del MVP (decisión del dueño, 2026-09-27).** Se conserva como diseño para cuando se retome;
+> no hay nada implementado.
+
+### US-8 — Video de presentación
+*Como* Tutor, *quiero* subir un video corto presentándome, *para* que un alumno o una familia me
+conozca antes de pagar.
+
+- **Dado** que subo un MP4 o WebM de hasta 90 segundos y 30 MB, **cuando** lo envío, **entonces**
+  queda `pendiente` de revisión y no se ve en mi perfil público (FR-ID-034).
+- **Dado** que un Admin de Moderación y Seguridad lo aprueba, **cuando** alguien abre mi perfil,
+  **entonces** ve el video; si lo rechaza, recibo el motivo y puedo subir otro (FR-ID-035, FR-ADM-011).
+- **Dado** que subo un video nuevo o borro el actual, **cuando** lo hago, **entonces** el anterior
+  se borra del almacenamiento y el nuevo vuelve a `pendiente` (FR-ID-036).
+
+| ID | Descripción |
+| --- | --- |
+| FR-ID-034 | Un video de presentación por Tutor: MP4/WebM, ≤ 90 s (medido en el navegador), ≤ 30 MB, tipo validado por los primeros bytes. Nace `pendiente`. |
+| FR-ID-035 | Solo un video `aprobado` se sirve en el perfil público (`GET /api/tutores/{id}/video`, con soporte de `Range`). Nunca una URL externa. |
+| FR-ID-036 | Reemplazar o borrar el video borra el archivo anterior; la baja de la cuenta lo borra (Art. V). Las subidas de credencial, CAP, foto y evidencia validan su propio límite de 5 MB en código. |

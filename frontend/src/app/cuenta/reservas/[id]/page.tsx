@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { CalendarClock, ChevronLeft, CircleSlash, Flag, Sparkles, Video, WalletCards } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronLeft, CircleSlash, Flag, Sparkles, Video, WalletCards } from "lucide-react";
 import {
   api,
   ApiError,
@@ -13,7 +13,7 @@ import {
   type ResumenSesionInfo,
   type SesionInfo,
 } from "@/lib/api";
-import { finDe, type Reserva } from "@/lib/reservas";
+import { cancelarPaquete, finDe, getPedidoReprogramacion, type PedidoReprogramacion, type Reserva } from "@/lib/reservas";
 import { ETIQUETA_MOTIVO_CANCELACION, etiqueta } from "@/lib/etiquetas";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
@@ -24,12 +24,17 @@ import { nombreCorto } from "@/lib/tutores";
 import { cn } from "@/lib/cn";
 import FormularioCalificacion from "@/components/FormularioCalificacion";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
+import NotaClaseTarjeta from "@/components/reservas/NotaClaseTarjeta";
+import PedidoPrevioTarjeta from "@/components/reservas/PedidoPrevioTarjeta";
+import PedidoReprogramacionTarjeta from "@/components/reservas/PedidoReprogramacionTarjeta";
+import ProponerHorario from "@/components/reservas/ProponerHorario";
 import {
   Alerta,
   Avatar,
   Boton,
   EstadoReserva,
   EstadoVacio,
+  Insignia,
   Menu,
   Modal,
   ModalConfirmacion,
@@ -74,6 +79,9 @@ export default function ReservaDetallePage() {
   const [cancelando, setCancelando] = useState(false);
   const [reprogramar, setReprogramar] = useState(false);
   const [reportar, setReportar] = useState(false);
+  const [pedidoReprog, setPedidoReprog] = useState<PedidoReprogramacion | null>(null);
+  const [proponer, setProponer] = useState(false);
+  const [confirmarPaquete, setConfirmarPaquete] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -92,6 +100,14 @@ export default function ReservaDetallePage() {
       return;
     }
     setCargando(false);
+    // FR-RES-029: pedido de cambio de horario del Tutor esperando respuesta.
+    if (r.estado === "confirmada") {
+      getPedidoReprogramacion(params.id)
+        .then((p) => setPedidoReprog(p ?? null))
+        .catch(() => setPedidoReprog(null));
+    } else {
+      setPedidoReprog(null);
+    }
     // B11: sin Sesión por construcción (pendiente/cancelada) no se pide.
     if (r.estado === "pendiente_pago" || r.estado === "cancelada") return;
     try {
@@ -128,6 +144,21 @@ export default function ReservaDetallePage() {
     }
   }
 
+  async function cancelarElPaquete() {
+    if (!reserva?.paqueteId) return;
+    setCancelando(true);
+    try {
+      await cancelarPaquete(reserva.paqueteId);
+      setConfirmarPaquete(false);
+      toast.mostrar("Cancelaste el paquete. Te devolvemos el total.");
+      await cargar();
+    } catch (err) {
+      toast.mostrar(mensajeDeError(err, "No pudimos cancelar el paquete."), { tono: "error" });
+    } finally {
+      setCancelando(false);
+    }
+  }
+
   if (cargando) return <SkeletonPerfil etiqueta="Cargando la clase…" />;
   if (error || !reserva) {
     return (
@@ -155,8 +186,15 @@ export default function ReservaDetallePage() {
   const puedeEntrar = sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
   // AUD-028: califica quien pagó; en la clase de un menor, su Adulto Responsable.
   const puedeCalificar = sesion !== null && sesion.estado === "finalizada" && !esMenor;
-  const puedeReprogramar = r.estado === "confirmada" && !esMenor;
+  // FR-RES-016: cambia el horario quien pagó. El Tutor no lo cambia: lo propone (FR-RES-029).
+  const faltaMasDeUnaHora =
+    ahora === 0 || new Date(r.horario).getTime() - ahora > TIEMPOS.limiteReprogramacionMinutos * 60000;
+  const puedeReprogramar = r.estado === "confirmada" && !esMenor && payload?.sub === r.pagadorId && !pedidoReprog;
+  const puedeProponer = r.estado === "confirmada" && esTutor && payload?.sub === r.tutorId && !pedidoReprog && faltaMasDeUnaHora;
   const cancelada = r.estado === "cancelada";
+  // v2.5 (ADR-M5-03): clase de un paquete del mes.
+  const dePaquete = !!r.paqueteId;
+  const puedeCancelarPaquete = dePaquete && r.puedeCancelarPaquete === true && payload?.sub === r.pagadorId;
   const empiezaPronto = ahora > 0 && new Date(r.horario).getTime() - ahora < 60 * 60000;
 
   return (
@@ -183,6 +221,11 @@ export default function ReservaDetallePage() {
             <EstadoReserva estado={r.estado} />
             {r.duracionMinutos ? <span className="text-sm text-tinta-tenue">{duracionLegible(r.duracionMinutos)}</span> : null}
             {r.precio !== null && <span className="tabular text-sm font-semibold">{formatearPesos(r.precio)}</span>}
+            {dePaquete && r.paqueteClase && (
+              <Insignia tono="info" icono={<CalendarDays />}>
+                Clase {r.paqueteClase} de 4 · paquete del mes
+              </Insignia>
+            )}
           </div>
         </div>
         {!esMenor && !esTutor && !cancelada && (
@@ -209,6 +252,16 @@ export default function ReservaDetallePage() {
         </Alerta>
       )}
 
+      {pedidoReprog && !esMenor && (
+        <PedidoReprogramacionTarjeta
+          pedido={pedidoReprog}
+          onResuelto={(mensaje) => {
+            toast.mostrar(mensaje);
+            void cargar();
+          }}
+        />
+      )}
+
       {/* Acción principal según el estado */}
       <div className="mt-8 flex flex-col gap-3">
         {puedePagar && (
@@ -226,11 +279,16 @@ export default function ReservaDetallePage() {
             <CalendarClock className="size-4" aria-hidden /> El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes de la clase.
           </p>
         )}
-        {(puedeReprogramar || puedeCancelar) && (
+        {(puedeReprogramar || puedeProponer || puedeCancelar) && (
           <div className="flex flex-col gap-2 sm:flex-row">
             {puedeReprogramar && (
               <Boton variante="secundario" className="flex-1" onClick={() => setReprogramar(true)}>
                 Cambiar horario
+              </Boton>
+            )}
+            {puedeProponer && (
+              <Boton variante="secundario" className="flex-1" onClick={() => setProponer(true)}>
+                Proponer otro horario
               </Boton>
             )}
             {puedeCancelar && (
@@ -239,6 +297,11 @@ export default function ReservaDetallePage() {
               </Boton>
             )}
           </div>
+        )}
+        {puedeCancelarPaquete && (
+          <Boton variante="fantasma" className="self-start text-peligro" onClick={() => setConfirmarPaquete(true)}>
+            Cancelar el paquete entero
+          </Boton>
         )}
       </div>
 
@@ -273,6 +336,22 @@ export default function ReservaDetallePage() {
         </section>
       )}
 
+      <PedidoPrevioTarjeta
+        reservaId={r.id}
+        soyPagador={payload?.sub === r.pagadorId}
+        soyTutor={payload?.sub === r.tutorId}
+        reservaEditable={(r.estado === "pendiente_pago" || r.estado === "confirmada") && (ahora === 0 || new Date(r.horario).getTime() > ahora)}
+      />
+
+      {r.beneficiarioMenor && !esMenor && (
+        <NotaClaseTarjeta
+          reservaId={r.id}
+          soyTutor={payload?.sub === r.tutorId}
+          finalizada={r.estado === "finalizada"}
+          nombreAlumno={r.beneficiarioNombre}
+        />
+      )}
+
       {resumen?.disponible && (
         <Tarjeta className="mt-10">
           <h2 className="flex items-center gap-2 text-lg font-bold">
@@ -297,7 +376,16 @@ export default function ReservaDetallePage() {
         textoConfirmar="Cancelar la clase"
       >
         {r.estado === "pendiente_pago" ? (
-          <p>Todavía no pagaste, así que no se te cobra nada. El horario vuelve a quedar libre.</p>
+          <p>
+            Todavía no pagaste, así que no se te cobra nada. {dePaquete ? "Se liberan las 4 clases del paquete." : "El horario vuelve a quedar libre."}
+          </p>
+        ) : dePaquete && esTutor ? (
+          <p>Si cancelás, le devolvemos a quien pagó el valor de esta clase. Las otras clases del paquete siguen en pie.</p>
+        ) : dePaquete ? (
+          <p>
+            <strong className="text-tinta">Es una clase de tu paquete:</strong> si la cancelás, no hay devolución y el tutor
+            la cobra igual. Si falta más de {TIEMPOS.paqueteCancelacionHoras} hs, mejor cambiala de horario.
+          </p>
         ) : r.cancelarReembolsaTotal === false ? (
           <p>
             <strong className="text-tinta">Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} hs:</strong> si cancelás ahora, el pago se le libera
@@ -310,6 +398,20 @@ export default function ReservaDetallePage() {
         )}
       </ModalConfirmacion>
 
+      <ModalConfirmacion
+        abierto={confirmarPaquete}
+        onCerrar={() => setConfirmarPaquete(false)}
+        onConfirmar={cancelarElPaquete}
+        cargando={cancelando}
+        titulo="¿Cancelar el paquete entero?"
+        textoConfirmar="Cancelar el paquete"
+      >
+        <p>
+          Se cancelan las 4 clases y te devolvemos el total por el mismo medio de pago. Se puede hasta{" "}
+          {TIEMPOS.paqueteCancelacionHoras} hs antes de la primera clase.
+        </p>
+      </ModalConfirmacion>
+
       {puedeReprogramar && (
         <CambiarHorario
           abierto={reprogramar}
@@ -319,6 +421,19 @@ export default function ReservaDetallePage() {
             setReserva(nueva);
             setReprogramar(false);
             toast.mostrar("Cambiamos el horario");
+          }}
+        />
+      )}
+
+      {puedeProponer && (
+        <ProponerHorario
+          abierto={proponer}
+          onCerrar={() => setProponer(false)}
+          reserva={r}
+          onPedido={(p) => {
+            setPedidoReprog(p);
+            setProponer(false);
+            toast.mostrar("Le mandamos tu propuesta");
           }}
         />
       )}
@@ -353,6 +468,8 @@ function CambiarHorario({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ahora = useAhora();
+  const dePaquete = !!reserva.paqueteId;
+  const vigenteHasta = reserva.paqueteVigenteHasta ? new Date(reserva.paqueteVigenteHasta).getTime() : null;
 
   useEffect(() => {
     if (!abierto || franjas) return;
@@ -369,12 +486,15 @@ function CambiarHorario({
       d.franjas
         .map((f) => ({ id: `${d.fecha}-${f.id}`, inicio: inicioISO(d.fecha, f.horaInicio), dia: d.referencia, f }))
         .filter((o) => new Date(o.inicio).getTime() > limite && o.inicio !== new Date(reserva.horario).toISOString())
+        // FR-RES-035: la clase de un paquete se mueve solo dentro de su vigencia.
+        .filter((o) => !vigenteHasta || new Date(o.inicio).getTime() < vigenteHasta)
     );
-  }, [franjas, ahora, reserva.horario]);
+  }, [franjas, ahora, reserva.horario, vigenteHasta]);
 
-  // FR-RES-016: se puede cambiar sin perder el pago hasta 1 hora antes de la clase.
-  const fueraDePlazo =
-    ahora > 0 && new Date(reserva.horario).getTime() - ahora < TIEMPOS.limiteReprogramacionMinutos * 60000;
+  // FR-RES-016: se puede cambiar sin perder el pago hasta 1 hora antes de la clase;
+  // la de un paquete, hasta 24 hs antes (Tabla de Tiempos v2.5).
+  const plazoMinutos = dePaquete ? TIEMPOS.paqueteCancelacionHoras * 60 : TIEMPOS.limiteReprogramacionMinutos;
+  const fueraDePlazo = ahora > 0 && new Date(reserva.horario).getTime() - ahora < plazoMinutos * 60000;
 
   async function guardar() {
     const o = opciones.find((x) => x.id === elegido);
@@ -411,9 +531,15 @@ function CambiarHorario({
       <div className="flex flex-col gap-3 pb-2">
         {fueraDePlazo ? (
           <Alerta tono="aviso">
-            Falta menos de una hora para la clase, así que ya no se puede cambiar el horario. Si no vas a poder, podés
-            cancelarla.
+            {dePaquete
+              ? `Falta menos de ${TIEMPOS.paqueteCancelacionHoras} hs para esta clase del paquete, así que ya no se puede mover.`
+              : "Falta menos de una hora para la clase, así que ya no se puede cambiar el horario. Si no vas a poder, podés cancelarla."}
           </Alerta>
+        ) : dePaquete ? (
+          <p className="text-sm text-tinta-suave">
+            Es una clase de tu paquete: podés moverla hasta {TIEMPOS.paqueteCancelacionHoras} hs antes, a un horario dentro
+            de las {TIEMPOS.paqueteVigenciaSemanas} semanas del paquete.
+          </p>
         ) : (
           <p className="text-sm text-tinta-suave">
             Podés cambiar el horario sin volver a pagar hasta una hora antes de la clase.

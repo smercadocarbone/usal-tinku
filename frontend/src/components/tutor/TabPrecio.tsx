@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, TrendingUp } from "lucide-react";
+import { CalendarDays, Eye, TrendingUp, Wallet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatearPesos } from "@/lib/formatos";
-import { Alerta, Selector, useToast } from "@/components/ui";
+import { Alerta, Boton, Selector, useToast } from "@/components/ui";
+
+/** ADR-M5-03: tope del descuento del paquete (el backend rechaza más con 422). */
+export const DESCUENTO_MAXIMO_PAQUETE = 30;
+
+/** Precio de una clase del paquete: mismo redondeo que `ReservaService.precioDe` (HALF_UP a centavos). */
+export function precioClasePaquete(precioHora: number, minutos: number, descuento: number): number {
+  return Math.round((precioHora * minutos * (100 - descuento)) / 60) / 100;
+}
+
 
 const PROVINCIAS = [
   "Buenos Aires",
@@ -33,6 +42,12 @@ const PROVINCIAS = [
   "Tucumán",
 ];
 
+/** Lo que le queda al Tutor: mismo redondeo a centavos que `ComisionPlataforma` del backend. */
+export function netoPorHora(precio: number, comisionPorcentaje: number): number {
+  const comision = Math.round(precio * comisionPorcentaje) / 100;
+  return Math.round((precio - comision) * 100) / 100;
+}
+
 interface ReferenciaRegional {
   provincia: string;
   valorSugerido: number;
@@ -42,6 +57,11 @@ interface Tarifa {
   precioHora: number | null;
   /** T06: piso por hora vigente (el backend rechaza con 422 por debajo). */
   pisoHora?: number | null;
+  /** FR-PAG-019: comisión de Tinku, para mostrar cuánto le queda al Tutor. */
+  comisionPorcentaje?: number;
+  /** FR-RES-032: el Tutor ofrece el paquete del mes y con qué descuento. */
+  paqueteHabilitado?: boolean;
+  paqueteDescuentoPorcentaje?: number;
 }
 
 /**
@@ -58,15 +78,19 @@ export default function TabPrecio() {
   const [provincia, setProvincia] = useState("");
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
   const [piso, setPiso] = useState<number | null>(null);
+  const [comision, setComision] = useState<number | null>(null);
   // Espejo del ref para poder mostrarlo en el render (lint react/refs).
   const [precioGuardado, setPrecioGuardado] = useState<number | null>(null);
   const guardado = useRef<number | null>(null);
+  const [paquete, setPaquete] = useState<{ habilitado: boolean; descuento: number }>({ habilitado: false, descuento: 0 });
 
   useEffect(() => {
     api
       .get<Tarifa | undefined>("/api/pagos/tarifa")
       .then((t) => {
         if (t?.pisoHora) setPiso(Number(t.pisoHora));
+        if (t?.comisionPorcentaje != null) setComision(Number(t.comisionPorcentaje));
+        if (t?.paqueteHabilitado != null) setPaquete({ habilitado: t.paqueteHabilitado, descuento: Number(t.paqueteDescuentoPorcentaje ?? 0) });
         if (t?.precioHora) {
           guardado.current = Number(t.precioHora);
           setPrecioGuardado(Number(t.precioHora));
@@ -176,6 +200,24 @@ export default function TabPrecio() {
         </div>
       )}
 
+      {numero !== null && numero > 0 && comision !== null && (
+        <div className="flex items-start gap-3 rounded-2xl bg-marca-50 p-4" aria-live="polite">
+          <Wallet className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
+          <div className="text-[15px]">
+            <p>
+              Te quedan <strong>{formatearPesos(netoPorHora(numero, comision))} por hora</strong>
+              {" "}({formatearPesos(netoPorHora(numero / 2, comision))} por una clase de 30 minutos).
+            </p>
+            <p className="mt-1 text-[13px] text-tinta-suave">
+              Tinku se queda con el {comision} %. MercadoPago te cobra aparte su propia comisión, según el plazo de
+              acreditación que tengas en tu cuenta.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {precioGuardado !== null && <PaqueteDelMes precioHora={precioGuardado} piso={piso} valor={paquete} onGuardado={setPaquete} />}
+
       <div className="max-w-sm">
         <Selector id="provincia" etiqueta="Tu provincia (para ver el precio de referencia)" value={provincia} onChange={(e) => setProvincia(e.target.value)}>
           <option value="">Elegí tu provincia</option>
@@ -194,5 +236,115 @@ export default function TabPrecio() {
         </Alerta>
       )}
     </section>
+  );
+}
+
+/**
+ * Paquete del mes (FR-RES-032, ADR-M5-03): 4 clases semanales pagadas juntas, con un descuento
+ * opcional. Se guarda con `PUT /api/pagos/tarifa/paquete`; el backend valida tope y piso.
+ */
+function PaqueteDelMes({
+  precioHora,
+  piso,
+  valor,
+  onGuardado,
+}: {
+  precioHora: number;
+  piso: number | null;
+  valor: { habilitado: boolean; descuento: number };
+  onGuardado: (v: { habilitado: boolean; descuento: number }) => void;
+}) {
+  const toast = useToast();
+  const [error, setError] = useState<string | null>(null);
+  const [descuento, setDescuento] = useState(String(valor.descuento));
+  // Si el valor del servidor llega después del primer render, se refleja en el campo.
+  const [ultimoValor, setUltimoValor] = useState(valor.descuento);
+  if (ultimoValor !== valor.descuento) {
+    setUltimoValor(valor.descuento);
+    setDescuento(String(valor.descuento));
+  }
+
+  const guardar = (habilitado: boolean, d: number) => {
+    api
+      .put("/api/pagos/tarifa/paquete", { habilitado, descuentoPorcentaje: d })
+      .then(() => {
+        setError(null);
+        onGuardado({ habilitado, descuento: d });
+        toast.mostrar(habilitado ? "Guardamos tu paquete del mes" : "Ya no ofrecés el paquete del mes");
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof ApiError && err.status === 422 ? err.message : "No pudimos guardar el paquete. Probá de nuevo.");
+      });
+  };
+
+  const d = descuento === "" ? 0 : Number(descuento);
+  const fueraDeRango = !Number.isInteger(d) || d < 0 || d > DESCUENTO_MAXIMO_PAQUETE;
+  const horaConDescuento = (precioHora * (100 - d)) / 100;
+  const bajoPiso = piso !== null && horaConDescuento < piso;
+
+  return (
+    <div className="rounded-2xl border border-borde p-4">
+      <label className="flex items-start gap-3" aria-label="Ofrecer el paquete del mes">
+        <input
+          type="checkbox"
+          aria-label="Ofrecer el paquete del mes"
+          className="mt-1 size-5 accent-marca-700"
+          checked={valor.habilitado}
+          onChange={(e) => guardar(e.target.checked, fueraDeRango || bajoPiso ? 0 : d)}
+        />
+        <span>
+          <span className="flex items-center gap-2 font-bold">
+            <CalendarDays className="size-4 text-marca-700" aria-hidden /> Ofrecer el paquete del mes
+          </span>
+          <span className="block text-[13px] text-tinta-tenue">
+            4 clases, una por semana, en el mismo día y horario, con un solo pago. Si cancelás vos una clase, se le
+            devuelve esa clase; si la cancela el alumno con menos de 24 hs, la cobrás igual.
+          </span>
+        </span>
+      </label>
+      {valor.habilitado && (
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="descuento-paquete" className="text-sm font-bold">
+              Descuento (%)
+            </label>
+            <input
+              id="descuento-paquete"
+              type="number"
+              min={0}
+              max={DESCUENTO_MAXIMO_PAQUETE}
+              step={1}
+              inputMode="numeric"
+              value={descuento}
+              onChange={(e) => setDescuento(e.target.value)}
+              aria-invalid={fueraDeRango || bajoPiso || undefined}
+              className="tabular mt-1 block min-h-11 w-24 rounded-control border border-borde-control bg-superficie px-3 text-lg font-bold"
+            />
+          </div>
+          <Boton variante="secundario" disabled={fueraDeRango || bajoPiso || d === valor.descuento} onClick={() => guardar(true, d)}>
+            Guardar descuento
+          </Boton>
+          <p className="basis-full text-[13px] text-tinta-tenue">
+            Un paquete de 4 clases de 1 hora sale {formatearPesos(precioClasePaquete(precioHora, 60, fueraDeRango ? 0 : d) * 4)}.
+            {" "}Hasta {DESCUENTO_MAXIMO_PAQUETE} %.
+          </p>
+          {fueraDeRango && (
+            <Alerta tono="peligro" className="basis-full">
+              El descuento va de 0 a {DESCUENTO_MAXIMO_PAQUETE} %, sin decimales.
+            </Alerta>
+          )}
+          {!fueraDeRango && bajoPiso && (
+            <Alerta tono="peligro" className="basis-full">
+              Con ese descuento la hora queda por debajo del mínimo de {formatearPesos(piso!)}.
+            </Alerta>
+          )}
+        </div>
+      )}
+      {error && (
+        <Alerta tono="peligro" className="mt-3">
+          {error}
+        </Alerta>
+      )}
+    </div>
   );
 }

@@ -30,6 +30,6 @@ public class ReembolsoProveedorMercadoPago implements ReembolsoProveedor {
 
     @Override
     public void reembolsarTotal(Transaccion transaccion) {
-        mercadopago.reembolsarPago(transaccion.getMpPaymentId(), cuentasMp.tokenParaTransaccion(transaccion));
+        mercadopago.reembolsarPago(transaccion.idPagoMp(), cuentasMp.tokenParaTransaccion(transaccion));
     }
 }

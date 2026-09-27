@@ -17,4 +17,10 @@ public interface TarifaProveedor {
     /** Tarifa por hora vigente del Tutor. Puede cambiar con el tiempo — la
      * Reserva congela el valor al crearse (FR-PAG-013), no al reprogramarse. */
     BigDecimal precioHora(UUID tutorId);
+
+    /**
+     * v2.5 (ADR-M5-03): descuento del paquete mensual si el Tutor lo ofrece; vacío si no lo
+     * ofrece (o no configuró su tarifa).
+     */
+    java.util.Optional<Integer> descuentoPaquete(UUID tutorId);
 }

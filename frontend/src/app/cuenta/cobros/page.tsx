@@ -3,11 +3,21 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, CircleDollarSign, Link2, Wallet } from "lucide-react";
-import { Alerta, Boton, EstadoVacio, Insignia, ModalConfirmacion, Precio, SkeletonLista, Tarjeta, useToast } from "@/components/ui";
+import { CheckCircle2, CircleDollarSign, Download, Link2, Wallet } from "lucide-react";
+import { Alerta, Boton, EstadoVacio, Insignia, ModalConfirmacion, Precio, Selector, SkeletonLista, Tarjeta, useToast } from "@/components/ui";
 import type { TonoInsignia } from "@/components/ui";
 import { mensajeDeError } from "@/lib/api";
-import { desconectarMp, getEstadoMp, getMisCobros, urlConectarMp, type EstadoCobro, type EstadoConexionMp, type MisCobros } from "@/lib/cobros";
+import {
+  descargarCobrosDelMes,
+  desconectarMp,
+  getEstadoMp,
+  getMisCobros,
+  ultimosMeses,
+  urlConectarMp,
+  type EstadoCobro,
+  type EstadoConexionMp,
+  type MisCobros,
+} from "@/lib/cobros";
 import { fechaHoraLarga } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 
@@ -143,6 +153,7 @@ function MisCobrosContenido() {
             <Total titulo="Cobrado" valor={cobros.liberado} />
             <Total titulo="Devuelto" valor={cobros.reembolsado} />
           </div>
+          <ExportarMes />
           <p className="mt-3 text-sm text-tinta-tenue">
             Cada clase queda &quot;por cobrar&quot; hasta {TIEMPOS.liberacionHoras} hs después de darla. &quot;En revisión&quot; quiere
             decir que el equipo de Tinku está revisando algo de esa clase.
@@ -191,6 +202,45 @@ function MisCobrosContenido() {
         Mientras esté desconectado no te van a poder reservar clases nuevas.
       </ModalConfirmacion>
     </div>
+  );
+}
+
+/** FR-PAG-020: descarga del mes en CSV para facturar y declarar en ARCA. */
+function ExportarMes() {
+  const toast = useToast();
+  const meses = ultimosMeses();
+  const [mes, setMes] = useState(meses[0].valor);
+  const [descargando, setDescargando] = useState(false);
+
+  async function descargar() {
+    setDescargando(true);
+    try {
+      await descargarCobrosDelMes(mes);
+    } catch (err) {
+      toast.mostrar(mensajeDeError(err, "No pudimos descargar tus cobros."), { tono: "error" });
+    } finally {
+      setDescargando(false);
+    }
+  }
+
+  return (
+    <Tarjeta className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="flex-1">
+        <Selector id="mes-export" etiqueta="Para facturar (ARCA)" value={mes} onChange={(e) => setMes(e.target.value)}>
+          {meses.map((m) => (
+            <option key={m.valor} value={m.valor}>
+              {m.texto}
+            </option>
+          ))}
+        </Selector>
+        <p className="mt-1 text-[13px] text-tinta-tenue">
+          Planilla con cada cobro del mes: quién pagó (con su DNI), el precio, la comisión y lo que te queda.
+        </p>
+      </div>
+      <Boton variante="secundario" onClick={() => void descargar()} disabled={descargando}>
+        <Download className="size-4" aria-hidden /> {descargando ? "Descargando…" : "Descargar planilla"}
+      </Boton>
+    </Tarjeta>
   );
 }
 

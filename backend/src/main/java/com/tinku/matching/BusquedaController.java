@@ -30,13 +30,16 @@ public class BusquedaController {
     private final MatchingOrquestador orquestador;
     private final BusquedasGuardadasService guardadasService;
     private final UsuarioActual usuarioActual;
+    private final DatosDeReservaResultados datosDeReserva;
 
     public BusquedaController(MatchingOrquestador orquestador,
                               BusquedasGuardadasService guardadasService,
-                              UsuarioActual usuarioActual) {
+                              UsuarioActual usuarioActual,
+                              DatosDeReservaResultados datosDeReserva) {
         this.orquestador = orquestador;
         this.guardadasService = guardadasService;
         this.usuarioActual = usuarioActual;
+        this.datosDeReserva = datosDeReserva;
     }
 
     /** US-1: búsqueda en lenguaje natural. US-2: respeta el contexto del menor.
@@ -55,7 +58,7 @@ public class BusquedaController {
         }
         List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto, nombre, materia,
                 trimToNull(request.filtroNivel()));
-        return ResponseEntity.ok(resultados);
+        return ResponseEntity.ok(datosDeReserva.completar(resultados, request.precioMaxHora()));
     }
 
     /** US-6: guarda una búsqueda para re-ejecutar después (FR-MATCH-008).
@@ -96,7 +99,7 @@ public class BusquedaController {
         Usuario usuario = usuarioActual.obtener(authentication);
         BusquedaGuardada guardada = guardadasService.propia(usuario.getId(), id);
         List<BusquedaResponse> resultados = orquestador.buscar(usuario, guardada.getTextoBusqueda());
-        return ResponseEntity.ok(resultados);
+        return ResponseEntity.ok(datosDeReserva.completar(resultados, null));
     }
 
     /** Primer campo no vacío siguiendo el orden del contrato 2b: texto_busqueda

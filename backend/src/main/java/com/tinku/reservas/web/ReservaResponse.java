@@ -19,7 +19,8 @@ import java.util.UUID;
  * calculadas acá, para que la regla de negocio no se duplique en el frontend:</p>
  * <ul>
  *   <li>{@code pagoVenceAt}: fin del plazo para pagar (FR-RES-020), solo en {@code pendiente_pago}.</li>
- *   <li>{@code puedePagar}: quien mira es el pagador y el plazo sigue vigente.</li>
+ *   <li>{@code puedePagar}: quien mira es el pagador, el plazo sigue vigente y, en un paquete, es la
+ *   reserva ancla.</li>
  *   <li>{@code puedeCancelar}: mismas condiciones que {@code ReservaService.cancelar}
  *       (pagador o Tutor, {@code pendiente_pago}/{@code confirmada}) y la clase
  *       todavía no empezó.</li>
@@ -27,6 +28,7 @@ import java.util.UUID;
  *       ({@link PoliticaCancelacion}); {@code null} si no puede cancelar.</li>
  * </ul>
  * Nombres: solo nombre y apellido de los participantes (nunca DNI ni email).
+ * {@code beneficiarioMenor} (v2.5): la pantalla ofrece la nota del Tutor al AR (FR-RES-026).
  */
 public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID tutorId,
                               Instant horario, BigDecimal precio, EstadoReserva estado,
@@ -41,15 +43,33 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                               Instant horarioFin,
                               boolean resumenContratado,
                               BigDecimal precioAdicionalResumen,
-                              BigDecimal montoTotal) {
+                              BigDecimal montoTotal,
+                              boolean beneficiarioMenor,
+                              UUID paqueteId,
+                              Integer paqueteClase,
+                              BigDecimal paqueteTotal,
+                              Instant paqueteVigenteHasta,
+                              boolean puedeCancelarPaquete) {
 
     public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora) {
+        return from(r, quienMira, ahora, null, false);
+    }
+
+    /**
+     * {@code paqueteClase} (1..4) y {@code puedeCancelarPaquete} los calcula quien tiene las
+     * clases del paquete a mano ({@code ReservaService.vista}); {@code puedeCancelarPaquete} solo
+     * para quien pagó (FR-RES-034).
+     */
+    public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora, Integer paqueteClase,
+                                       boolean paqueteCancelable) {
         boolean pendiente = r.getEstado() == EstadoReserva.PENDIENTE_PAGO;
         Instant vence = pendiente ? r.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO) : null;
         UUID yo = quienMira == null ? null : quienMira.getId();
         boolean esPagador = yo != null && r.getPagador().getId().equals(yo);
         boolean esTutor = yo != null && r.getTutor().getId().equals(yo);
-        boolean puedePagar = esPagador && pendiente && vence.isAfter(ahora);
+        // ADR-M5-03: un paquete se paga una sola vez, desde su reserva ancla.
+        boolean esAncla = r.getPaquete() == null || r.getId().equals(r.getPaquete().getReservaAnclaId());
+        boolean puedePagar = esPagador && pendiente && esAncla && vence.isAfter(ahora);
         boolean puedeCancelar = (esPagador || esTutor)
                 && (pendiente || r.getEstado() == EstadoReserva.CONFIRMADA)
                 && r.getHorario().isAfter(ahora);
@@ -64,6 +84,12 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                 beneficiario.getNombre(), beneficiario.getApellido(),
                 r.getDuracionMinutos(),
                 vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin(),
-                r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal());
+                r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal(),
+                beneficiario.getTipo() == com.tinku.identidad.model.TipoUsuario.MENOR,
+                r.getPaquete() == null ? null : r.getPaquete().getId(),
+                paqueteClase,
+                r.getPaquete() == null ? null : r.getPaquete().getPrecioTotal(),
+                r.getPaquete() == null ? null : r.getPaquete().getVigenteHasta(),
+                paqueteCancelable && esPagador);
     }
 }

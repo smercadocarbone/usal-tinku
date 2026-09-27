@@ -33,7 +33,7 @@ public class LiberacionProveedorMercadoPago implements LiberacionProveedor {
 
     @Override
     public void liberarAlTutor(Transaccion transaccion) {
-        MercadoPagoClient.PagoMercadoPago pago = mercadopago.getPago(transaccion.getMpPaymentId(),
+        MercadoPagoClient.PagoMercadoPago pago = mercadopago.getPago(transaccion.idPagoMp(),
                 cuentasMp.tokenParaTransaccion(transaccion));
         if (!pago.aprobado()) {
             // Revertido / contracargo: no es liberable; va al backoff.

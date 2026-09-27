@@ -30,4 +30,12 @@ export const TIEMPOS = {
   minimoCalificaciones: 5,
   /** Espera tras agotar intentos de OCR. */
   esperaOcrHoras: 24,
+  /** v2.5: corrección de la nota del Tutor al AR. */
+  edicionNotaHoras: 48,
+  /** v2.5: horizonte del "próximo horario libre" en la búsqueda. */
+  horizonteProximoHorarioDias: 14,
+  /** v2.5 (ADR-M5-03): cancelar el paquete entero o mover una de sus clases, hasta estas horas antes. */
+  paqueteCancelacionHoras: 24,
+  /** v2.5 (ADR-M5-03): vigencia del paquete desde la primera clase. */
+  paqueteVigenciaSemanas: 4,
 } as const;

@@ -191,7 +191,13 @@ public class ColasFinancieroController {
         // Solo hay algo que parcializar si el dinero sigue en el escrow.
         boolean escrowDisponible = transaccion.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
                 || transaccion.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA;
-        boolean montoParcial = request.monto().compareTo(transaccion.getMontoBruto()) < 0;
+        // ADR-M5-03: una clase de un paquete es una parte del pago; devolverla entera sigue siendo
+        // un parcial del pago (lo que queda cuando falló la devolución automática).
+        boolean claseDePaquete = reservaRepo.findById(transaccion.getReservaId())
+                .map(r -> r.getPaquete() != null).orElse(false);
+        boolean montoParcial = claseDePaquete
+                ? request.monto().compareTo(transaccion.getMontoBruto()) <= 0
+                : request.monto().compareTo(transaccion.getMontoBruto()) < 0;
         if (!escrowDisponible || !montoParcial) {
             return ResponseEntity.unprocessableEntity()
                     .body(Map.of("error",
@@ -205,7 +211,7 @@ public class ColasFinancieroController {
                     .body(Map.of("error",
                             "Transacción simulada (modo Bypass): no hay dinero real que reembolsar."));
         }
-        reembolsoParcial.reembolsarParcial(transaccion.getMpPaymentId(), request.monto());
+        reembolsoParcial.reembolsarParcial(transaccion.idPagoMp(), request.monto());
         return ResponseEntity.ok(PagoFallidoResponse.from(
                 transaccionRepo.findById(transaccionId).orElseThrow()));
     }

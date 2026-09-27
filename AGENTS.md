@@ -34,6 +34,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 - El menor tiene cuenta y sesión propias, pero no puede pagar, autorizar Tutores nuevos, ni presentar Denuncias — eso lo hace su Adulto Responsable en su nombre. Es una restricción de permisos a nivel de endpoint/autorización, no una limitación de cuenta.
 - La rama de kill-switch con menor presente **nunca** continúa la sesión ni pregunta al menor si vio algo — corta directo. La rama de "ambos adultos" sí pregunta y puede continuar.
 - Si una tarea te deja en duda sobre a cuál de estos dos casos aplica, tratala como si hubiera un menor — nunca al revés.
+- **Enmienda v2.5:** la pizarra compartida nunca se habilita en una clase con un Menor hasta que el kill-switch del cliente (T-M3-06) la analice; el pedido previo y la respuesta a un pedido de reprogramación del Tutor los hace el Adulto Responsable, nunca el Menor; la nota del Tutor va al AR y es texto filtrado, no una grabación.
 - **Flag T-TES-10 (piloto sin menores):** `tinku.menores.sesiones-habilitadas` solo pasa a `true` cuando cierran **T-M3-06** (kill-switch en cliente) y **T02** (CAP). Mientras tanto es `false` (default) y el corte es fail-closed en `ReservaService.crearReserva` y `SolicitudService.crear`.
 
 ## 4. Convención de eventos de dominio
@@ -71,7 +72,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 
 ## 8. Gobernanza de este archivo
 
-Este archivo refleja la Constitución v2.4. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
+Este archivo refleja la Constitución v2.5. Si la Constitución se enmienda, este archivo se actualiza en el mismo commit que la enmienda — nunca de forma independiente ni implícita.
 
 `docs/Tasks_Tinku_Implementacion.md` y `docs/Tasks_Tinku_Chunks.md` se actualizan juntos o no se actualiza ninguno — la divergencia entre los dos fue AUD-030.
 

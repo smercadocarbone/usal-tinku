@@ -48,4 +48,11 @@ public class TarifaProveedorTutor implements TarifaProveedor {
                     return tarifaStub;
                 });
     }
+
+    @Override
+    public java.util.Optional<Integer> descuentoPaquete(UUID tutorId) {
+        return tarifaRepo.findByTutorId(tutorId)
+                .filter(t -> t.isPaqueteHabilitado())
+                .map(t -> t.getPaqueteDescuentoPorcentaje());
+    }
 }

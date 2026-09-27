@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Clock } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock } from "lucide-react";
 import { duracionLegible, fechaHoraCorta } from "@/lib/formatos";
 import { nombreCorto } from "@/lib/tutores";
 import type { Reserva } from "@/lib/reservas";
 import { useAhora } from "@/lib/useAhora";
-import { Avatar, EstadoReserva, Tarjeta, clasesBoton, enlaceTarjeta } from "@/components/ui";
+import { Avatar, EstadoReserva, Insignia, Tarjeta, clasesBoton, enlaceTarjeta } from "@/components/ui";
 
 export interface TarjetaClaseProps {
   reserva: Reserva;
@@ -53,6 +53,11 @@ export default function TarjetaClase({ reserva: r, vista }: TarjetaClaseProps) {
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <EstadoReserva estado={r.estado} />
+          {r.paqueteId && r.paqueteClase && (
+            <Insignia tono="info" tamano="sm" icono={<CalendarDays />} title="Clase del paquete del mes">
+              Paquete {r.paqueteClase}/4
+            </Insignia>
+          )}
           {r.puedePagar && vencePago !== null && (
             <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-aviso">
               <Clock className="size-3.5" aria-hidden /> {vencePago} min para pagar

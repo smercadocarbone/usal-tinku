@@ -786,6 +786,8 @@ class SesionesIntegracionTest {
         assertThat(body.get("token").asText()).isEqualTo("jwt-test-token");
         assertThat(body.get("livekitUrl").asText()).isEqualTo("wss://test.livekit.cloud");
         assertThat(body.get("livekitRoomId").asText()).isEqualTo("sesion-" + sesion.getId());
+        // FR-AULA-012 (ADR-M3-06): el beneficiario es un Menor → sin pizarra (Art. II).
+        assertThat(body.get("pizarraHabilitada").asBoolean()).isFalse();
         // AUD-003: la identity de LiveKit es el UUID, nunca el DNI — LiveKit la difunde al
         // otro participante (con menores, dato sensible bajo Ley 25.326).
         // El claim name lleva solo el nombre de pila (minimización, Art. V): sin apellido.
@@ -793,6 +795,26 @@ class SesionesIntegracionTest {
                 e.tutorId().toString(), "Pablo", "sesion-" + sesion.getId());
         verify(liveKitService, never())
                 .generarTokenParticipante(eq(e.dniTutor()), anyString(), anyString());
+    }
+
+    /** FR-AULA-011/012 (ADR-M3-06): entre adultos la sala ofrece la pizarra. */
+    @Test
+    void tM3Token_claseEntreAdultos_habilitaLaPizarra() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        reserva.setBeneficiario(usuarioRepository.findByDni(e.dniAr()).orElseThrow());
+        reservaRepository.save(reserva);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setLivekitRoomId("sesion-" + sesion.getId());
+        sesionRepository.save(sesion);
+
+        MvcResult res = mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(objectMapper.readTree(res.getResponse().getContentAsString()).get("pizarraHabilitada").asBoolean())
+                .isTrue();
     }
 
     @Test

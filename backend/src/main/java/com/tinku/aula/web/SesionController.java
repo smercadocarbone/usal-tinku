@@ -82,7 +82,7 @@ public class SesionController {
         String[] resultado = sesionService.obtenerToken(usuario, id);
         return ResponseEntity.ok(new TokenSesionResponse(
                 resultado[0], liveKitService.getBaseUrl(), resultado[1],
-                audioResumenService.debeGrabar(usuario, id)));
+                audioResumenService.debeGrabar(usuario, id), sesionService.pizarraHabilitada(id)));
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */

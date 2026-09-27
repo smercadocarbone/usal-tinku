@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -38,6 +39,7 @@ import java.util.UUID;
 public class PagoService {
 
     private static final String DESCRIPCION_ITEM = "Sesión de tutoría Tinku";
+    private static final String DESCRIPCION_PAQUETE = "Paquete de 4 clases de tutoría Tinku";
 
     private final ReservaRepository reservaRepo;
     private final MercadoPagoClient mercadopago;
@@ -94,6 +96,10 @@ public class PagoService {
                 || !reserva.getPagador().getId().equals(usuario.getId())) {
             throw new SoloPagadorPreferenciaException();
         }
+        // ADR-M5-03: un paquete se paga entero desde su clase ancla.
+        if (reserva.getPaquete() != null) {
+            return generarPreferenciaPaquete(reserva);
+        }
         // FR-PAG-013: el monto es el precio congelado al crear la Reserva (M4).
         // BR-PAG-01: comisión compartida con EscrowService vía ComisionPlataforma.
         BigDecimal comision = this.comision.calcular(reserva.getPrecio());
@@ -111,6 +117,47 @@ public class PagoService {
                 reserva.getId(), reserva.montoTotal(), comision.add(adicional(reserva)), DESCRIPCION_ITEM,
                 reserva.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO)), tokenVendedor);
         conciliacion.registrarPreferencia(reserva.getId(), preferencia.preferenceId());
+        return preferencia;
+    }
+
+    /**
+     * FR-PAG-021 (ADR-M5-03): una preferencia por el total del paquete, con
+     * {@code external_reference} = la clase ancla (la conciliación, la vuelta del navegador y el
+     * webhook siguen trabajando por id de Reserva). {@code marketplace_fee} = la suma de la
+     * comisión de cada clase, el mismo número que después registra cada {@code Transaccion}.
+     */
+    private PreferenciaPago generarPreferenciaPaquete(Reserva ancla) {
+        com.tinku.reservas.model.Paquete paquete = ancla.getPaquete();
+        if (!ancla.getId().equals(paquete.getReservaAnclaId())) {
+            throw new PreferenciaNoDisponibleException();
+        }
+        List<Reserva> clases = reservaRepo.findByPaquete_IdOrderByHorario(paquete.getId());
+        if (clases.stream().anyMatch(r -> r.getEstado() != EstadoReserva.PENDIENTE_PAGO)) {
+            throw new PreferenciaNoDisponibleException();
+        }
+        BigDecimal comisionTotal = clases.stream().map(r -> comision.calcular(r.getPrecio()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (!pasarela.estaHabilitada()) {
+            for (Reserva clase : clases) {
+                if (!transaccionRepo.existsByReservaId(clase.getId())) {
+                    Transaccion t = new Transaccion();
+                    t.setReservaId(clase.getId());
+                    t.setMpPaymentId("bypass-" + clase.getId());
+                    t.setMontoBruto(clase.getPrecio());
+                    t.setComisionPlataforma(comision.calcular(clase.getPrecio()));
+                    t.setEnBypass(true);
+                    transaccionRepo.save(t);
+                }
+            }
+            paquete.setEstado(com.tinku.reservas.model.Paquete.CONFIRMADO);
+            clases.forEach(c -> reservaService.confirmarPagoSimulado(c.getId()));
+            return new PreferenciaPago("bypass-" + ancla.getId(), null, true);
+        }
+        String tokenVendedor = conciliacion.tokenVendedor(ancla.getTutor().getId());
+        PreferenciaPago preferencia = mercadopago.crearPreferencia(new PreferenciaRequest(
+                ancla.getId(), paquete.getPrecioTotal(), comisionTotal, DESCRIPCION_PAQUETE,
+                ancla.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO)), tokenVendedor);
+        conciliacion.registrarPreferencia(ancla.getId(), preferencia.preferenceId());
         return preferencia;
     }
 
@@ -178,6 +225,39 @@ public class PagoService {
                 });
         tarifa.setPrecioHora(precioHora);
         tarifa.setUpdatedAt(Instant.now());
+        return tarifaTutorRepo.save(tarifa);
+    }
+
+    /** v2.5 (ADR-M5-03): tope del descuento del paquete. */
+    public static final int MAX_DESCUENTO_PAQUETE = 30;
+
+    /**
+     * El Tutor ofrece (o deja de ofrecer) el paquete mensual con un descuento de 0 a 30 %
+     * (ADR-M5-03). Necesita una tarifa configurada, y el precio por hora con el descuento no
+     * puede quedar por debajo del piso (T06). Solo hacia adelante: los paquetes ya creados
+     * congelaron su precio (FR-PAG-013).
+     */
+    @Transactional
+    public TarifaTutor configurarPaquete(Usuario tutor, boolean habilitado, int descuentoPorcentaje) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR) {
+            throw new SoloTutorException("Solo las cuentas de Tutor ofrecen paquetes.");
+        }
+        if (descuentoPorcentaje < 0 || descuentoPorcentaje > MAX_DESCUENTO_PAQUETE) {
+            throw new PaqueteConfigInvalidaException("El descuento tiene que ser de 0 a " + MAX_DESCUENTO_PAQUETE + " %.");
+        }
+        TarifaTutor tarifa = tarifaTutorRepo.findByTutorId(tutor.getId())
+                .orElseThrow(() -> new PaqueteConfigInvalidaException("Primero configurá tu precio por hora."));
+        if (habilitado) {
+            BigDecimal conDescuento = tarifa.getPrecioHora()
+                    .multiply(BigDecimal.valueOf(100 - descuentoPorcentaje))
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            if (conDescuento.compareTo(pisoTarifa.pisoHora()) < 0) {
+                throw new PaqueteConfigInvalidaException("Con ese descuento la hora queda por debajo del mínimo de $"
+                        + pisoTarifa.pisoHora().toPlainString() + ". Probá con un descuento menor.");
+            }
+        }
+        tarifa.setPaqueteHabilitado(habilitado);
+        tarifa.setPaqueteDescuentoPorcentaje(descuentoPorcentaje);
         return tarifaTutorRepo.save(tarifa);
     }
 
