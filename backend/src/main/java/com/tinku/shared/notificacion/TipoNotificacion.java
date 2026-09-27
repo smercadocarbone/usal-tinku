@@ -71,10 +71,7 @@ public enum TipoNotificacion {
 
     /** FR-RES-030/031: al Tutor, cuando el alumno eligió cancelar o el pedido venció. Datos: reservaId,
      *  horario, motivo ("rechazado" | "vencido"). */
-    REPROGRAMACION_RECHAZADA(true),
-
-    /** FR-ADM-011: al Tutor. Datos: resultado ("aprobado" | "rechazado"), motivo (si se rechazó). */
-    VIDEO_REVISADO(true);
+    REPROGRAMACION_RECHAZADA(true);
 
     private final boolean porEmail;
 

@@ -106,7 +106,9 @@ No se define ninguna regla de negocio nueva acá — es la superficie desde dond
 
 ---
 
-## Enmienda v2.5 (2026-09-26) — Cola de videos de presentación (ADR-M1-09)
+## Enmienda v2.5 (2026-09-26) — Cola de videos de presentación (ADR-M1-09) — DIFERIDO
+
+> **Fuera del MVP (decisión del dueño, 2026-09-27)**, junto con el video de Spec_M1 US-8.
 
 ### US-9 — Revisar videos de presentación
 *Como* Admin de Moderación y Seguridad, *quiero* ver los videos de presentación pendientes y

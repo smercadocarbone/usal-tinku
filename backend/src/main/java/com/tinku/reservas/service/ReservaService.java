@@ -97,7 +97,6 @@ public class ReservaService {
     private final Notificador notificador;
     private final AdicionalResumen adicionalResumen;
     private final VerificadorCobroTutor verificadorCobro;
-    private final PedidoPrevioService pedidosPrevios;
 
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
@@ -111,8 +110,7 @@ public class ReservaService {
                           PoliticaSesionesMenores politicaMenores,
                           Notificador notificador,
                           AdicionalResumen adicionalResumen,
-                          VerificadorCobroTutor verificadorCobro,
-                          PedidoPrevioService pedidosPrevios) {
+                          VerificadorCobroTutor verificadorCobro) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -126,7 +124,6 @@ public class ReservaService {
         this.notificador = notificador;
         this.adicionalResumen = adicionalResumen;
         this.verificadorCobro = verificadorCobro;
-        this.pedidosPrevios = pedidosPrevios;
     }
 
     /**
@@ -305,7 +302,6 @@ public class ReservaService {
         reserva.setMotivoCancelacion(MotivoCancelacion.VOLUNTARIA);
         reservaRepo.save(reserva);
         cancelarTimeoutPago(reserva.getId());
-        pedidosPrevios.borrarArchivoDe(reserva.getId()); // ADR-M4-01: al cancelarse, en el acto
         if (estabaConfirmada) {
             // Manual con escrow: M5 decide reembolso/liberación; M3 limpia su Sesión.
             events.publishEvent(new ReservaCanceladaEvent(
@@ -478,7 +474,6 @@ public class ReservaService {
         reserva.setMotivoCancelacion(motivo);
         reservaRepo.save(reserva);
         cancelarTimeoutPago(reserva.getId());
-        pedidosPrevios.borrarArchivoDe(reserva.getId());
         if (estabaConfirmada) {
             events.publishEvent(new ReservaCanceladaEvent(
                     this, reserva.getId(), canceladaPorUsuarioId));
@@ -581,8 +576,7 @@ public class ReservaService {
             reserva.setEstado(EstadoReserva.CANCELADA);
             reserva.setMotivoCancelacion(MotivoCancelacion.TIMEOUT_PAGO);
             reservaRepo.save(reserva);
-            pedidosPrevios.borrarArchivoDe(reserva.getId());
-        }
+            }
     }
 
     /**

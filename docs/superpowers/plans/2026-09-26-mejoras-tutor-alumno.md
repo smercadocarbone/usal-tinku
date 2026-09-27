@@ -15,8 +15,8 @@
 | D-3 | Paquete: cancelación del alumno          | Con 24 hs o más, la clase se mueve a otro horario libre dentro del paquete; con menos, la clase se da por tomada y el Tutor cobra. Arrepentirse del paquete entero, solo antes de la primera clase (devolución total).                                              |
 | D-4 | Pedido de reprogramación del Tutor       | El alumno (o el Adulto Responsable si es menor) acepta o cancela con devolución total hasta T-60 de la clase original. Sin respuesta a T-60: se cancela con devolución total y cuenta como cancelación del Tutor.                                                    |
 | D-5 | Pizarra compartida                       | Solo en clases entre adultos. Con un Menor se habilita recién cuando el kill-switch del cliente (T-M3-06) también la analice.                                                                                                                                      |
-| D-6 | Pedido previo ("qué querés ver")         | Texto (filtrado como las calificaciones) + 1 archivo (foto o PDF), borrado 24 hs después del fin de la clase. Lo escribe quien reserva; con un menor lo escribe y lo ve el Adulto Responsable.                                                                      |
-| D-7 | Presentación del Tutor                   | Video corto subido a Tinku (no links externos), revisado por el Admin antes de publicarse.                                                                                                                                                                         |
+| D-6 | Pedido previo ("qué querés ver")         | **Solo texto** (filtrado como las calificaciones). Lo escribe quien reserva; con un menor lo escribe y lo ve el Adulto Responsable. _El 2026-09-26 incluía un archivo; el dueño lo sacó el 2026-09-27._ |
+| D-7 | Presentación del Tutor                   | **Fuera del MVP** (2026-09-27). El diseño de un video corto moderado queda en ADR-M1-09 para cuando se retome. |
 | D-8 | Control de agenda                        | El descanso entre clases lo decide el Tutor con sus franjas; el máximo de clases por día no hace falta. Sí: pedido de reprogramación del Tutor (D-4).                                                                                                               |
 | D-9 | Lo demás                                 | Precio neto visible al Tutor; export mensual de cobros para ARCA; próximo horario libre y filtro por precio en la búsqueda; nota del Tutor al Adulto Responsable en clases con menores; prueba en pantalla chica.                                                   |
 
@@ -38,9 +38,9 @@ suite en verde.
 2. **P2: Export de cobros por mes** (M5).
 3. **P3: Búsqueda: próximo horario libre y filtro por precio** (M2/M4).
 4. **P4: Nota del Tutor al Adulto Responsable** (M4).
-5. **P5: Pedido previo con adjunto** (M4).
+5. **P5: Pedido previo en texto** (M4).
 6. **P6: Pedido de reprogramación del Tutor** (M4/M5).
-7. **P7: Video de presentación** (M1/M8).
+7. ~~**P7: Video de presentación** (M1/M8).~~ Fuera del MVP (2026-09-27).
 8. **P8: Pizarra compartida** (M3).
 9. **P9: Paquete mensual** (M4/M5).
 10. **P10: Prueba en pantalla chica** (transversal).
@@ -100,27 +100,19 @@ suite en verde.
 - Aviso al AR: `NOTA_CLASE` (in-app + email).
 - Tabla `reservas.notas_clase` (reserva_id PK, texto, created_at, updated_at).
 
-### P5 — Pedido previo con adjunto (FR-RES-027/028)
+### P5 — Pedido previo en texto (FR-RES-027)
 
-- Tabla `reservas.pedidos_previos`:
-  - `reserva_id` PK y `texto` (hasta 1000 caracteres, filtrado);
-  - `archivo_ref`, `archivo_nombre` y `archivo_tipo` (null si no hay archivo);
-  - `created_at`, `updated_at`.
+- Tabla `reservas.pedidos_previos`: `reserva_id` PK, `texto` (hasta 1000 caracteres, filtrado),
+  `created_at` y `updated_at`.
 - Lo carga o edita el **pagador**, mientras la reserva está `pendiente_pago` o `confirmada` y
-  antes del inicio. Con un menor, el pagador es siempre el AR (Art. II): el Menor no escribe ni
-  sube nada.
-- Archivo: JPG, PNG o PDF de hasta 5 MB, uno solo. Se valida el tipo por los primeros bytes,
-  no por la extensión.
+  antes del inicio. Con un menor, el pagador es siempre el AR (Art. II): el Menor no escribe nada.
 - Lo ven el Tutor y el pagador. El beneficiario adulto es el mismo pagador.
-- **Borrado:**
-  - un job de Quartz persistido borra el archivo 24 hs después del fin agendado de la clase;
-  - la cancelación lo borra en el acto;
-  - el texto queda: es parte de la reserva, como el horario.
-  - Tabla de Tiempos: fila "Retención del adjunto del pedido previo".
-- Endpoints: `PUT /api/reservas/{id}/pedido` (multipart: `texto` + `archivo` opcional),
-  `DELETE /api/reservas/{id}/pedido/archivo` y `GET /api/reservas/{id}/pedido/archivo`.
+- **Sin archivos** (decisión del dueño, 2026-09-27): el ejercicio se muestra en la clase
+  compartiendo pantalla. No hay nada que guardar ni borrar aparte del texto, que queda con la
+  reserva.
+- Endpoints: `PUT /api/reservas/{id}/pedido` (`{texto}`) y `GET /api/reservas/{id}/pedido`.
 - Frontend:
-  - un paso opcional en `/reservar`: "¿Qué querés ver?", texto y archivo;
+  - un campo opcional en `/reservar`: "¿Qué querés ver en la clase?";
   - una tarjeta en el detalle de la reserva, editable hasta el inicio.
 
 ### P6 — Pedido de reprogramación del Tutor (FR-RES-029..031)
@@ -153,29 +145,11 @@ suite en verde.
   - al vencer, `CLASE_CANCELADA` a los dos.
 - El Menor no acepta ni rechaza nada: el pedido va al AR (Art. II).
 
-### P7 — Video de presentación (FR-ID-034..036, FR-ADM-011)
+### P7 — Video de presentación — fuera del MVP
 
-- `identidad.videos_presentacion`:
-  - `tutor_id` PK, `archivo_ref`, `tipo` y `duracion_segundos`;
-  - `estado` (`pendiente|aprobado|rechazado`) y `motivo_rechazo`;
-  - `created_at` y `revisado_at`.
-
-  Un video por Tutor: subir otro reemplaza al anterior y vuelve a `pendiente`.
-- Límites:
-  - MP4 o WebM, hasta 90 segundos (lo mide el navegador al elegirlo y lo manda) y hasta 30 MB;
-  - el backend valida el tipo por los primeros bytes y el tamaño.
-  - Para subirlo se sube el límite global de multipart a 30 MB. Las subidas existentes
-    (credencial, CAP, foto, evidencia) pasan a validar su propio límite de 5 MB en código: hoy
-    dependen del límite global.
-- Moderación: nueva cola en `/admin` (Moderación y Seguridad) con reproductor, Aprobar y
-  Rechazar con motivo. Aviso al Tutor: `VIDEO_REVISADO`.
-- Perfil público: el video aparece solo `aprobado`. `GET /api/tutores/{id}/video` sirve los
-  bytes con `Range` para que el navegador pueda adelantar.
-- Borrado: al reemplazarlo, al borrarlo el Tutor o con la baja de la cuenta. Sin retención extra.
-- Justificación Art. V en **ADR-M1-09**: el video lo publica el propio Tutor adulto, con
-  finalidad explícita y consentida (su presentación comercial). No es un video de una clase: la
-  prohibición de grabar clases no cambia. Se descartan los links externos (YouTube, Drive)
-  porque abren un canal de contacto fuera de la plataforma sin moderación.
+El dueño lo sacó del MVP el 2026-09-27. El diseño (video corto subido a Tinku, moderado por el
+Admin, sin links externos) queda en **ADR-M1-09** con estado "Diferido", y Spec_M1 US-8 y
+Spec_M8 US-9 quedan marcados igual. No hay código ni migración.
 
 ### P8 — Pizarra compartida (FR-AULA-011..013)
 
@@ -268,7 +242,7 @@ suite en verde.
   - landing, login y registro en pasos;
   - buscar, perfil, reservar (suelta y paquete) y pagar;
   - Mis clases, detalle, pedido previo y nota;
-  - "Mi cuenta" del Tutor: precio, cobros, horarios y video;
+  - "Mi cuenta" del Tutor: precio, cobros y horarios;
   - aula: lobby, llamada, pizarra y finalizar;
   - Admin: colas.
 - Criterio de "roto":
@@ -301,18 +275,18 @@ suite en verde.
 
 - **Constitución:** enmienda v2.5, Art. VI. AGENTS.md se actualiza en el mismo commit.
 - **Specs:**
-  - M1: US-8, video;
+  - M1: US-8, video (diferido);
   - M2: US-9, próximo horario y precio;
   - M3: US-9, pizarra;
   - M4: US-11 a US-14, pedido previo, nota, pedido de reprogramación y paquete;
   - M5: US-10 a US-12, precio neto, export y pago del paquete. Enmienda a FR-PAG-009;
-  - M8: US-9, cola de videos.
+  - M8: US-9, cola de videos (diferido).
 - **ADRs:**
-  - ADR-M1-09: video de presentación;
+  - ADR-M1-09: video de presentación (diferido);
   - ADR-M3-06: pizarra;
-  - ADR-M4-01: pedido previo con adjunto y su retención;
+  - ADR-M4-01: pedido previo, solo texto;
   - ADR-M5-03: paquete mensual y devolución parcial por falta del Tutor.
-- **Tabla de Tiempos:** 7 filas nuevas (horizonte del próximo horario, retención del adjunto,
+- **Tabla de Tiempos:** 6 filas nuevas (horizonte del próximo horario,
   vencimiento del pedido de reprogramación, vigencia del paquete, arrepentimiento del paquete,
   mover una clase del paquete y corrección de la nota del Tutor).
 - **Tasks:** `Tasks_Tinku_Implementacion.md` y `Tasks_Tinku_Chunks.md`, juntos: sección

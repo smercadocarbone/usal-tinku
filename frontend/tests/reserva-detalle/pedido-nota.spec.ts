@@ -25,25 +25,23 @@ function reserva(extra: Record<string, unknown> = {}) {
 
 test.describe("Detalle de reserva — pedido previo y nota", () => {
   test(
-    "quien pagó escribe el pedido con un archivo y lo manda al tutor",
+    "quien pagó escribe el pedido y se lo manda al tutor",
     { tag: ["@e2e", "@PEDIDO-PREVIO-E2E-001"] },
     async ({ page, context, baseURL }) => {
       await setFakeSessionConPayload(context, baseURL!, { tipo: "ADULTO", sub: "u-ar", cap_ar: true });
-      let cuerpo = "";
+      let cuerpo: unknown = null;
       await mockApi(page, {
         [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, reserva()),
         [`GET /api/reservas/${RESERVA_ID}/pedido`]: async (route) => route.fulfill({ status: 204 }),
         [`GET /api/reservas/${RESERVA_ID}/nota`]: async (route) => route.fulfill({ status: 204 }),
         [`PUT /api/reservas/${RESERVA_ID}/pedido`]: async (route) => {
-          cuerpo = route.request().postDataBuffer()?.toString("latin1") ?? "";
+          cuerpo = route.request().postDataJSON();
           await route.fulfill({
             status: 200,
             contentType: "application/json",
             body: JSON.stringify({
               reservaId: RESERVA_ID,
               texto: "Divisiones de dos cifras",
-              archivoNombre: "ejercicio.png",
-              archivoTipo: "image/png",
               updatedAt: new Date().toISOString(),
               editable: true,
             }),
@@ -54,17 +52,13 @@ test.describe("Detalle de reserva — pedido previo y nota", () => {
       await page.goto(`/cuenta/reservas/${RESERVA_ID}`);
       await page.getByRole("button", { name: "Escribir el pedido" }).click();
       await page.getByLabel("Contale al tutor qué necesitás").fill("Divisiones de dos cifras");
-      await page.locator('input[type="file"]').setInputFiles({
-        name: "ejercicio.png",
-        mimeType: "image/png",
-        buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-      });
+      // Solo texto: no hay dónde subir archivos (decisión del dueño, 2026-09-27).
+      await expect(page.locator('input[type="file"]')).toHaveCount(0);
       await page.getByRole("button", { name: "Mandar al tutor" }).click();
 
       await expect(page.getByText("Le mandamos tu pedido al tutor")).toBeVisible();
-      await expect(page.getByRole("button", { name: "ejercicio.png" })).toBeVisible();
-      expect(cuerpo).toContain('name="texto"');
-      expect(cuerpo).toContain('name="archivo"; filename="ejercicio.png"');
+      expect(cuerpo).toEqual({ texto: "Divisiones de dos cifras" });
+      await expect(page.getByRole("button", { name: "Cambiar el pedido" })).toBeVisible();
       // Clase con un menor sin terminar: el AR no ve todavía ninguna nota.
       await expect(page.getByRole("heading", { name: "Nota del tutor sobre la clase" })).toHaveCount(0);
     }
@@ -82,8 +76,6 @@ test.describe("Detalle de reserva — pedido previo y nota", () => {
         [`GET /api/reservas/${RESERVA_ID}/pedido`]: jsonRoute(200, {
           reservaId: RESERVA_ID,
           texto: "Divisiones de dos cifras",
-          archivoNombre: null,
-          archivoTipo: null,
           updatedAt: "2026-01-01T12:00:00Z",
           editable: false,
         }),

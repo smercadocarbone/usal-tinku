@@ -37,7 +37,7 @@ No se persiste ningún dato — en particular video — más allá de lo estrict
 
 El alcance del MVP está cerrado en nueve módulos (Identidad y Perfiles, Motor de Matching, Aula Virtual, Reservas y Agenda, Motor de Pagos, Resumen Automático, Calificaciones y Reputación, Panel de Administración, Denuncias y Seguridad). Ninguna funcionalidad nueva se incorpora sin una enmienda explícita a este documento.
 
-**Funcionalidades incorporadas por la enmienda v2.5 (2026-09-26), dentro de los mismos nueve módulos:** precio neto visible al Tutor y export mensual de sus cobros (M5); próximo horario libre y filtro por precio en la búsqueda (M2); pedido previo con un adjunto, nota del Tutor al Adulto Responsable en clases con Menores, pedido de reprogramación del Tutor y paquete mensual (M4/M5); video de presentación del Tutor moderado por el Admin (M1/M8); pizarra compartida solo entre adultos (M3). Detalle y decisiones en `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`.
+**Funcionalidades incorporadas por la enmienda v2.5 (2026-09-26), dentro de los mismos nueve módulos:** precio neto visible al Tutor y export mensual de sus cobros (M5); próximo horario libre y filtro por precio en la búsqueda (M2); pedido previo en texto, nota del Tutor al Adulto Responsable en clases con Menores, pedido de reprogramación del Tutor y paquete mensual (M4/M5); pizarra compartida solo entre adultos (M3). El video de presentación del Tutor queda fuera del MVP (ADR-M1-09, diferido el 2026-09-27). Detalle y decisiones en `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`.
 
 ---
 
@@ -169,7 +169,7 @@ Spec_M5 (BR-PAG-11, reembolso parcial del adicional), Spec_M6 (FR-SUM-001), Tabl
 **Motivo:** el dueño del producto revisó la plataforma desde el rol del Tutor y del Alumno y pidió
 lo que hace falta para que Tinku sea una opción a considerar al dar y al tomar clases: saber cuánto
 le queda por clase, facturar, poder reprogramar en vez de cancelar, cobrar por mes, contar qué se
-quiere ver antes de la clase, una pizarra, presentarse en video, encontrar horario y precio rápido
+quiere ver antes de la clase, una pizarra, encontrar horario y precio rápido
 y, para las familias, saber cómo le fue al chico sin grabar nada. Todo cae dentro de los nueve
 módulos existentes.
 **Cambia:** Artículo VI (se agrega la lista de funcionalidades incorporadas).
@@ -177,12 +177,11 @@ módulos existentes.
 habilita con un Menor hasta que el kill-switch del cliente la analice; el Menor no escribe el pedido
 previo ni responde un pedido de reprogramación (lo hace su Adulto Responsable); la nota del Tutor es
 texto filtrado y no una grabación. El **Artículo V** se respeta con justificación explícita de cada
-dato nuevo: el adjunto del pedido previo se borra 24 hs después de la clase (ADR-M4-01) y el video
-de presentación lo publica el propio Tutor con esa única finalidad (ADR-M1-09); ninguna clase se
-graba. La devolución parcial del paquete (ADR-M5-03) es una regla de negocio de M5, no un cambio
+dato nuevo: el pedido previo es solo texto filtrado, sin archivos (ADR-M4-01); ninguna clase se
+graba. El video de presentación del Tutor se evaluó y quedó fuera del MVP (ADR-M1-09). La devolución parcial del paquete (ADR-M5-03) es una regla de negocio de M5, no un cambio
 constitucional.
-**Bajado a Spec/Plan en:** Spec_M1 (US-8), Spec_M2 (US-9), Spec_M3 (US-9), Spec_M4 (US-11 a US-14),
-Spec_M5 (US-10 a US-12, enmienda a FR-PAG-009), Spec_M8 (US-9), Tabla_Tiempos_Tinku.md,
+**Bajado a Spec/Plan en:** Spec_M2 (US-9), Spec_M3 (US-9), Spec_M4 (US-11 a US-14),
+Spec_M5 (US-10 a US-12, enmienda a FR-PAG-009), Tabla_Tiempos_Tinku.md,
 `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`.
 
 ---

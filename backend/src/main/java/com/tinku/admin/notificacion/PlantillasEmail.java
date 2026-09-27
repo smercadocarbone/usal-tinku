@@ -181,17 +181,6 @@ public class PlantillasEmail {
                             ? "Nadie respondió tu pedido de cambio de horario a tiempo."
                             : "El alumno prefirió cancelar en vez de pasar la clase al horario que propusiste.",
                     fecha(n.getDatos().get("horario")), urlPublica, n.getDatos().get("reservaId")));
-            case VIDEO_REVISADO -> new MensajeEmail(email, "aprobado".equals(n.getDatos().get("resultado"))
-                    ? "Tinku: tu video ya está en tu perfil" : "Tinku: no pudimos publicar tu video", """
-                    Hola %s:
-
-                    %s
-                    %s/cuenta/perfil-tutor
-                    """.formatted(nombre, "aprobado".equals(n.getDatos().get("resultado"))
-                            ? "Revisamos tu video de presentación y ya se ve en tu perfil."
-                            : "Revisamos tu video de presentación y no lo pudimos publicar. Motivo: "
-                                    + n.getDatos().getOrDefault("motivo", "-") + ". Podés subir otro.",
-                    urlPublica));
         };
     }
 

@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { MessageSquareText, Paperclip, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { MessageSquareText } from "lucide-react";
 import { mensajeDeError } from "@/lib/api";
-import { getArchivoPedido, getPedido, guardarPedido, quitarArchivoPedido, type PedidoPrevio } from "@/lib/reservas";
-import { TIEMPOS } from "@/lib/tiempos";
-import { AreaTexto, Boton, SubidaArchivo, Tarjeta, useToast } from "@/components/ui";
+import { getPedido, guardarPedido, type PedidoPrevio } from "@/lib/reservas";
+import { AreaTexto, Boton, Tarjeta, useToast } from "@/components/ui";
 
 const MAX_TEXTO = 1000;
 
@@ -20,27 +19,22 @@ export interface PedidoPrevioTarjetaProps {
 }
 
 /**
- * Pedido previo a la clase (FR-RES-027, ADR-M4-01): "qué querés ver" + un archivo opcional. Lo
- * escribe quien pagó y lo lee el Tutor. No es un chat: va en un solo sentido.
+ * Pedido previo a la clase (FR-RES-027): "qué querés ver", en texto. Lo escribe quien pagó y lo lee
+ * el Tutor. No es un chat: va en un solo sentido.
  */
 export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, reservaEditable }: PedidoPrevioTarjetaProps) {
   const toast = useToast();
   const [pedido, setPedido] = useState<PedidoPrevio | null | undefined>(undefined);
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState("");
-  const [archivo, setArchivo] = useState<File | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cargar = useCallback(() => {
+  useEffect(() => {
     getPedido(reservaId)
       .then((p) => setPedido(p ?? null))
       .catch(() => setPedido(null));
   }, [reservaId]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
 
   if (pedido === undefined || (!soyPagador && !soyTutor)) return null;
   // El Tutor solo ve la tarjeta si hay algo que leer.
@@ -50,7 +44,6 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
 
   function empezar() {
     setTexto(pedido?.texto ?? "");
-    setArchivo(null);
     setError(null);
     setEditando(true);
   }
@@ -59,32 +52,13 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
     setGuardando(true);
     setError(null);
     try {
-      setPedido(await guardarPedido(reservaId, texto, archivo));
+      setPedido(await guardarPedido(reservaId, texto));
       setEditando(false);
       toast.mostrar("Le mandamos tu pedido al tutor");
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos guardar el pedido."));
     } finally {
       setGuardando(false);
-    }
-  }
-
-  async function quitarArchivo() {
-    try {
-      await quitarArchivoPedido(reservaId);
-      cargar();
-    } catch (err) {
-      toast.mostrar(mensajeDeError(err, "No pudimos quitar el archivo."), { tono: "error" });
-    }
-  }
-
-  async function verArchivo() {
-    try {
-      const url = URL.createObjectURL(await getArchivoPedido(reservaId));
-      window.open(url, "_blank", "noopener");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (err) {
-      toast.mostrar(mensajeDeError(err, "No pudimos abrir el archivo."), { tono: "error" });
     }
   }
 
@@ -106,19 +80,9 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
             contador
             onChange={(e) => setTexto(e.target.value)}
           />
-          <SubidaArchivo
-            etiqueta="Ejercicio o apunte (opcional)"
-            formatosTexto="Foto (JPG o PNG) o PDF"
-            accept="image/jpeg,image/png,application/pdf"
-            maxMb={5}
-            archivo={archivo}
-            onCambio={setArchivo}
-            capturar
-            ayuda={`El archivo se borra ${TIEMPOS.retencionAdjuntoPedidoHoras} hs después de la clase.`}
-          />
           {error && <p className="text-sm font-semibold text-peligro" role="alert">{error}</p>}
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Boton onClick={() => void guardar()} cargando={guardando} textoCargando="Guardando…" disabled={!texto.trim() && !archivo && !pedido?.archivoNombre}>
+            <Boton onClick={() => void guardar()} cargando={guardando} textoCargando="Guardando…" disabled={!texto.trim()}>
               Mandar al tutor
             </Boton>
             <Boton variante="secundario" onClick={() => setEditando(false)}>
@@ -128,19 +92,7 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
         </div>
       ) : pedido ? (
         <div className="mt-3 flex flex-col gap-3">
-          {pedido.texto && <p className="whitespace-pre-line text-[15px] leading-relaxed text-tinta-suave">{pedido.texto}</p>}
-          {pedido.archivoNombre && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Boton variante="secundario" tamano="sm" icono={<Paperclip />} onClick={() => void verArchivo()}>
-                {pedido.archivoNombre}
-              </Boton>
-              {puedeEditar && (
-                <Boton variante="fantasma" tamano="sm" icono={<Trash2 />} onClick={() => void quitarArchivo()} aria-label="Quitar el archivo">
-                  Quitar
-                </Boton>
-              )}
-            </div>
-          )}
+          <p className="whitespace-pre-line text-[15px] leading-relaxed text-tinta-suave">{pedido.texto}</p>
           {puedeEditar && (
             <Boton variante="secundario" className="w-fit" onClick={empezar}>
               Cambiar el pedido
@@ -150,7 +102,7 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
       ) : (
         <div className="mt-3 flex flex-col gap-3">
           <p className="text-[15px] text-tinta-suave">
-            Contale al tutor qué querés ver y, si querés, adjuntá el ejercicio. Así la clase arranca directo en lo que necesitás.
+            Contale al tutor qué querés ver. Así la clase arranca directo en lo que necesitás.
           </p>
           {puedeEditar && (
             <Boton variante="secundario" className="w-fit" onClick={empezar}>

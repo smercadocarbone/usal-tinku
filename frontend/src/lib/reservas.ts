@@ -63,13 +63,11 @@ export function finDe(r: Reserva): string | null {
 
 export const ESTADOS_PROXIMOS = new Set(["pendiente_pago", "confirmada", "en_curso"]);
 
-/* ---- Enmienda v2.5: pedido previo (FR-RES-027/028) y nota del Tutor (FR-RES-026) ---- */
+/* ---- Enmienda v2.5: pedido previo (FR-RES-027, solo texto) y nota del Tutor (FR-RES-026) ---- */
 
 export interface PedidoPrevio {
   reservaId: string;
-  texto: string | null;
-  archivoNombre: string | null;
-  archivoTipo: string | null;
+  texto: string;
   updatedAt: string;
   /** Todavía se puede cambiar (reserva activa y la clase no empezó). */
   editable: boolean;
@@ -89,20 +87,8 @@ export function getPedido(reservaId: string): Promise<PedidoPrevio | undefined> 
   return api.get<PedidoPrevio | undefined>(`/api/reservas/${reservaId}/pedido`);
 }
 
-/** El texto va como parte `text/plain;charset=utf-8` para que no se rompan los acentos. */
-export function guardarPedido(reservaId: string, texto: string, archivo: File | null): Promise<PedidoPrevio> {
-  const datos = new FormData();
-  if (texto.trim()) datos.append("texto", new Blob([texto], { type: "text/plain;charset=utf-8" }));
-  if (archivo) datos.append("archivo", archivo);
-  return api.put<PedidoPrevio>(`/api/reservas/${reservaId}/pedido`, datos);
-}
-
-export function quitarArchivoPedido(reservaId: string): Promise<void> {
-  return api.delete<void>(`/api/reservas/${reservaId}/pedido/archivo`);
-}
-
-export function getArchivoPedido(reservaId: string): Promise<Blob> {
-  return api.blob(`/api/reservas/${reservaId}/pedido/archivo`);
+export function guardarPedido(reservaId: string, texto: string): Promise<PedidoPrevio> {
+  return api.put<PedidoPrevio>(`/api/reservas/${reservaId}/pedido`, { texto });
 }
 
 export function getNota(reservaId: string): Promise<NotaClase | undefined> {

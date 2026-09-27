@@ -151,7 +151,10 @@ _Como_ Tutor, _quiero_ contar quién soy y mostrar mi cara en mi perfil público
 
 ---
 
-## Enmienda v2.5 (2026-09-26) — Video de presentación del Tutor (ADR-M1-09)
+## Enmienda v2.5 (2026-09-26) — Video de presentación del Tutor (ADR-M1-09) — DIFERIDO
+
+> **Fuera del MVP (decisión del dueño, 2026-09-27).** Se conserva como diseño para cuando se retome;
+> no hay nada implementado.
 
 ### US-8 — Video de presentación
 *Como* Tutor, *quiero* subir un video corto presentándome, *para* que un alumno o una familia me

@@ -20,7 +20,6 @@
 | Vigencia del paquete mensual _(v2.5, ADR-M5-03)_  | 4 semanas desde la primera clase | Una clase movida tiene que quedar dentro de la vigencia | M4, M5 |
 | Arrepentimiento del paquete entero _(v2.5, ADR-M5-03)_ | Hasta 24 hs antes de la primera clase | Devolución total. Después, las clases solo se mueven (con 24 hs o más) o se dan por tomadas | M4, M5 |
 | Mover una clase del paquete _(v2.5, ADR-M5-03)_   | Hasta 24 hs antes        | Dentro de la vigencia. Con menos, la clase se da por tomada si el alumno no asiste | M4     |
-| Retención del adjunto del pedido previo _(v2.5, ADR-M4-01)_ | 24 hs desde el fin agendado de la clase | Job de Quartz persistido; si la reserva se cancela, se borra en el acto. El texto queda | M4     |
 | Horizonte del "próximo horario libre" en la búsqueda _(v2.5)_ | 14 días | Desde ahora + la ventana mínima para reservar | M2, M4 |
 | Corrección de la nota del Tutor al AR _(v2.5)_    | 48 hs desde que la escribe | Mismo criterio que la ventana de edición de la calificación | M4     |
 | Recordatorio de sesión (T-24h)                    | 24 hs antes              | No se dispara si la reserva se hizo con menos margen. Al Tutor, al alumno y a quien pagó (implementado 2026-09-26) | M4     |

@@ -1,7 +1,8 @@
 # ADR-M1-09 — Video de presentación del Tutor, subido a Tinku y moderado
 
-**Estado:** Aceptado (decisión del dueño del producto, 2026-09-26; D-7 de
-`docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`).
+**Estado:** **Diferido — fuera del MVP** (decisión del dueño del producto, 2026-09-27). Se había
+aceptado el 2026-09-26 (D-7 de `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`) y se
+conserva como diseño para cuando se retome. No hay código ni migración.
 
 ## Contexto
 Antes de pagar, el alumno o la familia quiere ver al Tutor y cómo explica. El perfil ya tiene

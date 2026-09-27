@@ -1,9 +1,9 @@
 package com.tinku.reservas.web;
 
-import com.tinku.reservas.service.ArchivoPedidoInvalidoException;
 import com.tinku.reservas.service.BeneficiarioNoPerteneceException;
 import com.tinku.reservas.service.NotaClaseNoPermitidaException;
 import com.tinku.reservas.service.PedidoPrevioNoEditableException;
+import com.tinku.reservas.service.PedidoPrevioVacioException;
 import com.tinku.reservas.service.PedidoReprogramacionException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
@@ -63,7 +63,7 @@ public class ReservasExceptionHandler {
             DuracionFranjaInvalidaException.class, DuracionMinutosInvalidaException.class,
             ReservaNoReprogramableException.class, ReservaNoCancelableException.class,
             AdicionalResumenNoDisponibleException.class, AutoReservaNoPermitidaException.class, TutorSinCobroException.class,
-            PedidoPrevioNoEditableException.class, ArchivoPedidoInvalidoException.class,
+            PedidoPrevioNoEditableException.class, PedidoPrevioVacioException.class,
             NotaClaseNoPermitidaException.class, PedidoReprogramacionException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)

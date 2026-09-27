@@ -13,7 +13,7 @@ import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tut
 import { DURACIONES_CLASE, duracionFranja, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, type Franja } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import AppShell from "@/components/shell/AppShell";
-import { Alerta, AreaTexto, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, SubidaArchivo, Tarjeta, clasesBoton } from "@/components/ui";
+import { Alerta, AreaTexto, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
 import { guardarPedido } from "@/lib/reservas";
 
 interface Horario {
@@ -61,7 +61,6 @@ function ReservarFlujo() {
   const [conResumen, setConResumen] = useState(false);
   // v2.5 (FR-RES-027): pedido previo opcional, se manda apenas se crea la reserva.
   const [pedidoTexto, setPedidoTexto] = useState("");
-  const [pedidoArchivo, setPedidoArchivo] = useState<File | null>(null);
 
   // B9: sin tutor no hay nada que reservar — a buscar.
   useEffect(() => {
@@ -180,9 +179,9 @@ function ReservarFlujo() {
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
           ...(resumenElegido ? { resumenContratado: true } : {}),
         });
-        if (pedidoTexto.trim() || pedidoArchivo) {
+        if (pedidoTexto.trim()) {
           // Si falla, la reserva ya existe: se paga igual y el pedido se puede escribir después.
-          await guardarPedido(reserva.id, pedidoTexto, pedidoArchivo).catch(() => undefined);
+          await guardarPedido(reserva.id, pedidoTexto).catch(() => undefined);
         }
         router.replace(`/pagar?reserva=${reserva.id}`);
       }
@@ -460,9 +459,9 @@ function ReservarFlujo() {
                 </div>
               )}
               {!esMenor && (
-                <details className="rounded-2xl border border-borde p-3.5" open={!!pedidoTexto || !!pedidoArchivo}>
+                <details className="rounded-2xl border border-borde p-3.5" open={!!pedidoTexto}>
                   <summary className="cursor-pointer text-[15px] font-semibold">¿Qué querés ver en la clase? (opcional)</summary>
-                  <div className="mt-3 flex flex-col gap-3">
+                  <div className="mt-3">
                     <AreaTexto
                       id="pedido-reserva"
                       etiqueta="Contale al tutor qué necesitás"
@@ -472,16 +471,6 @@ function ReservarFlujo() {
                       maxLength={1000}
                       contador
                       onChange={(e) => setPedidoTexto(e.target.value)}
-                    />
-                    <SubidaArchivo
-                      etiqueta="Ejercicio o apunte"
-                      formatosTexto="Foto (JPG o PNG) o PDF"
-                      accept="image/jpeg,image/png,application/pdf"
-                      maxMb={5}
-                      archivo={pedidoArchivo}
-                      onCambio={setPedidoArchivo}
-                      capturar
-                      ayuda={`Lo ve solo el tutor y se borra ${TIEMPOS.retencionAdjuntoPedidoHoras} hs después de la clase.`}
                     />
                   </div>
                 </details>

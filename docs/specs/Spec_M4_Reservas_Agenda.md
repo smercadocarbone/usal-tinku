@@ -155,16 +155,14 @@ nunca llevan el adicional. `GET /api/reservas/adicional-resumen?tutorId=` dice s
 Decisiones D-1 a D-8 de `docs/superpowers/plans/2026-09-26-mejoras-tutor-alumno.md`.
 
 ### US-11 — Pedido previo a la clase (ADR-M4-01)
-*Como* quien reserva, *quiero* contarle al Tutor qué quiero ver y adjuntar el ejercicio, *para* no
+*Como* quien reserva, *quiero* contarle al Tutor qué quiero ver, *para* no
 perder el comienzo de la clase explicándolo.
 
 - **Dado** que soy el pagador de una Reserva `pendiente_pago` o `confirmada` que todavía no empezó,
-  **cuando** escribo el pedido (hasta 1000 caracteres) y opcionalmente adjunto una foto o PDF (≤ 5 MB),
-  **entonces** el Tutor lo ve en el detalle de la reserva (FR-RES-027).
-- **Dado** que la clase terminó hace 24 hs, o la reserva se canceló, **cuando** pasa eso, **entonces**
-  el archivo se borra; el texto queda (FR-RES-028).
+  **cuando** escribo el pedido (hasta 1000 caracteres, solo texto), **entonces** el Tutor lo ve en el
+  detalle de la reserva (FR-RES-027).
 - **Dado** que el beneficiario es un Menor, **cuando** hay un pedido, **entonces** lo escribió su
-  Adulto Responsable: el Menor no escribe ni sube nada (Art. II).
+  Adulto Responsable: el Menor no escribe nada (Art. II).
 
 ### US-12 — Nota del Tutor al Adulto Responsable
 *Como* Adulto Responsable, *quiero* que el Tutor me cuente brevemente cómo le fue a mi hijo, *para*
@@ -213,8 +211,8 @@ reservar y pagar el mes de una vez.
 | ID | Descripción |
 | --- | --- |
 | FR-RES-026 | Nota del Tutor en reservas `finalizada` con beneficiario Menor: una por reserva, ≤ 1000 caracteres, filtrada (FR-REP-011), editable 48 hs. La ven el AR y el Tutor. Aviso `NOTA_CLASE` al AR. |
-| FR-RES-027 | Pedido previo: lo carga el pagador en `pendiente_pago`/`confirmada` antes del inicio; texto ≤ 1000 filtrado + un archivo JPG/PNG/PDF ≤ 5 MB validado por firma. Lo ven el pagador y el Tutor. |
-| FR-RES-028 | El archivo del pedido previo se borra a las 24 hs del fin agendado (job Quartz persistido) o al cancelarse la reserva. |
+| FR-RES-027 _(enmendado 2026-09-27: solo texto)_ | Pedido previo: lo carga el pagador en `pendiente_pago`/`confirmada` antes del inicio; texto ≤ 1000 caracteres filtrado, sin archivos. Lo ven el pagador y el Tutor. |
+| FR-RES-028 | _Retirado el 2026-09-27:_ era el borrado del archivo adjunto, que ya no existe (ADR-M4-01). |
 | FR-RES-029 | Pedido de reprogramación del Tutor: reserva `confirmada`, más de 1 h a la clase, horario propuesto en franja, libre y a más de la ventana mínima. Uno pendiente por reserva; el Tutor puede retirarlo. |
 | FR-RES-030 | Aceptar = reprogramar (mismo camino que FR-RES-015/016). Rechazar = cancelar con el Tutor como quien cancela (FR-RES-008: devolución). Responde el pagador (el AR si es Menor). |
 | FR-RES-031 | A T-60 de la clase original, un pedido pendiente vence y la reserva se cancela como en el rechazo. Job Quartz persistido. |

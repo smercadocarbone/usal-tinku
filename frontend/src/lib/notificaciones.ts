@@ -18,8 +18,7 @@ export type TipoNotificacion =
   | "NOTA_CLASE"
   | "REPROGRAMACION_PEDIDA"
   | "REPROGRAMACION_ACEPTADA"
-  | "REPROGRAMACION_RECHAZADA"
-  | "VIDEO_REVISADO";
+  | "REPROGRAMACION_RECHAZADA";
 
 export interface Notificacion {
   id: string;
@@ -191,16 +190,6 @@ export function textoDe(n: Notificacion, formatear: (iso: string) => string): Te
         accion: "Ver la clase",
         tono: "aviso",
       };
-    case "VIDEO_REVISADO":
-      return n.datos.resultado === "aprobado"
-        ? { titulo: "Tu video ya está en tu perfil", detalle: "Lo revisamos y quedó publicado.", href: "/cuenta/perfil-tutor", accion: "Ver mi perfil", tono: "info" }
-        : {
-            titulo: "No pudimos publicar tu video",
-            detalle: n.datos.motivo ? `Motivo: ${n.datos.motivo}. Podés subir otro.` : "Podés subir otro.",
-            href: "/cuenta/perfil-tutor",
-            accion: "Subir otro",
-            tono: "aviso",
-          };
     default:
       return { titulo: "Aviso de Tinku", detalle: "", tono: "info" };
   }

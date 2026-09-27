@@ -30,8 +30,6 @@ export const TIEMPOS = {
   minimoCalificaciones: 5,
   /** Espera tras agotar intentos de OCR. */
   esperaOcrHoras: 24,
-  /** v2.5 (ADR-M4-01): el adjunto del pedido previo se borra a las 24 hs del fin de la clase. */
-  retencionAdjuntoPedidoHoras: 24,
   /** v2.5: corrección de la nota del Tutor al AR. */
   edicionNotaHoras: 48,
   /** v2.5: horizonte del "próximo horario libre" en la búsqueda. */
