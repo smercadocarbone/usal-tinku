@@ -94,4 +94,14 @@ public class Transaccion {
 
     @Column(name = "adicional_reembolso_nota", length = 300)
     private String adicionalReembolsoNota;
+
+    /**
+     * v2.5 (ADR-M5-03): el id del pago en MercadoPago. Las clases de un paquete comparten un solo
+     * pago; la ancla guarda el id tal cual y las demás {@code id#n} (la unicidad de
+     * {@code mp_payment_id} sigue valiendo). Toda operación contra MercadoPago usa este valor.
+     */
+    public String idPagoMp() {
+        int i = mpPaymentId.indexOf('#');
+        return i < 0 ? mpPaymentId : mpPaymentId.substring(0, i);
+    }
 }

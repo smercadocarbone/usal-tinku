@@ -13,6 +13,8 @@ import com.tinku.reservas.jobs.ReservaTimeoutPagoJob;
 import com.tinku.reservas.model.EstadoReserva;
 import com.tinku.reservas.model.EstadoSolicitud;
 import com.tinku.reservas.model.MotivoCancelacion;
+import com.tinku.reservas.model.Paquete;
+import com.tinku.reservas.model.PoliticaCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
@@ -166,15 +168,23 @@ public class ReservaService {
     public Reserva crearDirecta(Usuario pagador, NuevaReservaDirectaRequest request) {
         Usuario tutor = usuarioRepo.findById(request.tutorId())
                 .orElseThrow(TutorNoEncontradoException::new);
+        Usuario beneficiario = beneficiarioDe(pagador, request.tutorId(), request.beneficiarioId());
+        return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos(),
+                request.conResumen());
+    }
 
-        if (request.beneficiarioId() == null) {
+    /**
+     * Para quién es la clase (directa o paquete): sin {@code beneficiarioId}, el Estudiante adulto
+     * para sí mismo; con él, el pagador tiene que ser el Adulto Responsable de ese menor y el Tutor
+     * estar autorizado para él (FR-RES-021). Se decide con datos de M1, nunca por un flag.
+     */
+    Usuario beneficiarioDe(Usuario pagador, UUID tutorId, UUID beneficiarioId) {
+        if (beneficiarioId == null) {
             exigirCapacidadEstudiante(pagador);
-            return crearReserva(pagador, pagador, tutor, request.horario(), request.duracionMinutos(),
-                    request.conResumen());
+            return pagador;
         }
-
         exigirCapacidadAdultoResponsable(pagador);
-        Usuario beneficiario = usuarioRepo.findById(request.beneficiarioId())
+        Usuario beneficiario = usuarioRepo.findById(beneficiarioId)
                 .orElseThrow(BeneficiarioNoPerteneceException::new);
         if (beneficiario.getTipo() != TipoUsuario.MENOR
                 || beneficiario.getAdultoResponsable() == null
@@ -182,11 +192,10 @@ public class ReservaService {
             throw new BeneficiarioNoPerteneceException();
         }
         if (!autorizacionRepo.findTutorIdsByAdultoResponsableIdAndMenorIdAndNoConfiableFalse(
-                pagador.getId(), beneficiario.getId()).contains(request.tutorId())) {
+                pagador.getId(), beneficiario.getId()).contains(tutorId)) {
             throw new TutorNoAutorizadoParaMenorException();
         }
-        return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos(),
-                request.conResumen());
+        return beneficiario;
     }
 
     /**
@@ -233,6 +242,12 @@ public class ReservaService {
             throw new VentanaMinimaException("Falta menos de 1 hora para la clase: ya no se puede "
                     + "cambiar el horario. Si no vas a poder, podés cancelarla.");
         }
+        // ADR-M5-03 / Tabla_Tiempos: una clase del paquete se mueve con 24 hs o más.
+        if (reserva.getPaquete() != null
+                && Instant.now().plus(PoliticaCancelacion.VENTANA_SIN_PENALIDAD).isAfter(reserva.getHorario())) {
+            throw new VentanaMinimaException("Faltan menos de 24 horas: una clase del paquete ya no se puede "
+                    + "mover. Si no vas a poder, se da por tomada.");
+        }
         Instant horarioAnterior = reserva.getHorario();
         aplicarNuevoHorario(reserva, nuevoHorario);
         notificador.notificar(reserva.getTutor().getId(), TipoNotificacion.CLASE_REPROGRAMADA, Map.of(
@@ -259,6 +274,14 @@ public class ReservaService {
     /** FR-RES-029: el horario propuesto por el Tutor cumple las mismas reglas que un cambio. */
     public void validarHorarioPropuesto(Reserva reserva, Instant nuevoHorario) {
         validarNuevoHorario(reserva, nuevoHorario);
+    }
+
+    /** FR-RES-034: una clase del paquete que se cancela entero (el reembolso total lo hace M5). */
+    @Transactional
+    public void cancelarClaseDePaquete(Reserva clase, UUID pagadorId) {
+        if (clase.getEstado() == EstadoReserva.PENDIENTE_PAGO || clase.getEstado() == EstadoReserva.CONFIRMADA) {
+            cancelarPorSistema(clase, MotivoCancelacion.VOLUNTARIA, pagadorId);
+        }
     }
 
     /**
@@ -345,7 +368,13 @@ public class ReservaService {
     }
 
     private ReservaResponse vista(Reserva r, Usuario usuario, Instant ahora) {
-        return ReservaResponse.from(r, usuario, ahora);
+        if (r.getPaquete() == null) {
+            return ReservaResponse.from(r, usuario, ahora);
+        }
+        List<Reserva> clases = reservaRepo.findByPaquete_IdOrderByHorario(r.getPaquete().getId());
+        int indice = clases.stream().map(Reserva::getId).toList().indexOf(r.getId());
+        return ReservaResponse.from(r, usuario, ahora, indice + 1,
+                PaqueteService.puedeCancelarse(r.getPaquete(), clases, ahora));
     }
 
     /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor. */
@@ -488,6 +517,55 @@ public class ReservaService {
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
                                  Instant horario, Integer duracionMinutos, boolean conResumen) {
+        validarNuevaClase(pagador, beneficiario, tutor, horario, duracionMinutos);
+
+        // T09: el adicional de resumen se valida en el backend (Art. II: nunca con un menor).
+        if (conResumen) {
+            adicionalResumen.validarContratacion(pagador, beneficiario, tutor);
+        }
+
+        // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
+        // D6 regla 5: precio = tarifa por hora × minutos / 60.
+        Reserva reserva = nuevaClase(pagador, beneficiario, tutor, horario, duracionMinutos,
+                precioDe(tutor.getId(), duracionMinutos, 0), null);
+        if (conResumen) {
+            reserva.setResumenContratado(true);
+            reserva.setPrecioAdicionalResumen(adicionalResumen.precio()); // congelado como el precio
+        }
+        Reserva guardada = reservaRepo.save(reserva);
+        programarTimeoutPago(guardada);
+        return guardada;
+    }
+
+    /** Precio de una clase: tarifa por hora × minutos / 60, menos el descuento (paquete, ADR-M5-03). */
+    BigDecimal precioDe(UUID tutorId, int duracionMinutos, int descuentoPorcentaje) {
+        return tarifaProveedor.precioHora(tutorId)
+                .multiply(BigDecimal.valueOf(duracionMinutos))
+                .multiply(BigDecimal.valueOf(100 - descuentoPorcentaje))
+                .divide(BigDecimal.valueOf(6000), 2, RoundingMode.HALF_UP);
+    }
+
+    /** Una clase en {@code pendiente_pago}, sin guardar ni agendar nada. */
+    static Reserva nuevaClase(Usuario pagador, Usuario beneficiario, Usuario tutor, Instant horario,
+                              int duracionMinutos, BigDecimal precio, Paquete paquete) {
+        Reserva reserva = new Reserva();
+        reserva.setPagador(pagador);
+        reserva.setBeneficiario(beneficiario);
+        reserva.setTutor(tutor);
+        reserva.definirHorario(horario, duracionMinutos);
+        reserva.setPrecio(precio);
+        reserva.setPaquete(paquete);
+        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        return reserva;
+    }
+
+    /**
+     * Todas las reglas de una clase nueva, sin crearla: Tutor reservable y que cobra, piloto sin
+     * menores y CAP, calificación pendiente, ventana mínima, duración y franja. La usan la reserva
+     * suelta y cada clase de un paquete (FR-RES-032).
+     */
+    void validarNuevaClase(Usuario pagador, Usuario beneficiario, Usuario tutor,
+                           Instant horario, Integer duracionMinutos) {
         exigirTutorReservable(tutor, pagador, beneficiario);
         // ADR-M5-02: con OAuth activo, un Tutor sin MercadoPago conectado no puede cobrar.
         if (!verificadorCobro.puedeCobrar(tutor.getId())) {
@@ -514,34 +592,10 @@ public class ReservaService {
             throw new HorarioFueraDeFranjaException(
                     "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
-
-        // T09: el adicional de resumen se valida en el backend (Art. II: nunca con un menor).
-        if (conResumen) {
-            adicionalResumen.validarContratacion(pagador, beneficiario, tutor);
-        }
-
-        // FR-PAG-013: el precio se congela al crear la Reserva (fuente: M5, tarifa del Tutor).
-        Reserva reserva = new Reserva();
-        reserva.setPagador(pagador);
-        reserva.setBeneficiario(beneficiario);
-        reserva.setTutor(tutor);
-        reserva.definirHorario(horario, duracionMinutos);
-        // D6 regla 5: precio = tarifa por hora × minutos / 60.
-        reserva.setPrecio(tarifaProveedor.precioHora(tutor.getId())
-                .multiply(BigDecimal.valueOf(duracionMinutos))
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
-        if (conResumen) {
-            reserva.setResumenContratado(true);
-            reserva.setPrecioAdicionalResumen(adicionalResumen.precio()); // congelado como el precio
-        }
-        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
-        Reserva guardada = reservaRepo.save(reserva);
-        programarTimeoutPago(guardada);
-        return guardada;
     }
 
     /** Job puntual de Quartz a {@code created_at + 15min} (FR-RES-020, persistido). */
-    void programarTimeoutPago(Reserva reserva) {
+    public void programarTimeoutPago(Reserva reserva) {
         JobDetail detail = JobBuilder.newJob(ReservaTimeoutPagoJob.class)
                 .withIdentity("timeout-pago-" + reserva.getId(), GRUPO_JOB)
                 .usingJobData(ReservaTimeoutPagoJob.PARAM_RESERVA_ID, reserva.getId().toString())
@@ -572,11 +626,23 @@ public class ReservaService {
     }
 
     private void expirarSiSiguePendiente(Reserva reserva) {
-        if (reserva.getEstado() == EstadoReserva.PENDIENTE_PAGO) {
-            reserva.setEstado(EstadoReserva.CANCELADA);
-            reserva.setMotivoCancelacion(MotivoCancelacion.TIMEOUT_PAGO);
-            reservaRepo.save(reserva);
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+            return;
+        }
+        // FR-RES-033: las clases de un paquete vencen juntas (un solo pago para todas).
+        List<Reserva> clases = reserva.getPaquete() == null
+                ? List.of(reserva)
+                : reservaRepo.findByPaquete_IdOrderByHorario(reserva.getPaquete().getId());
+        for (Reserva clase : clases) {
+            if (clase.getEstado() == EstadoReserva.PENDIENTE_PAGO) {
+                clase.setEstado(EstadoReserva.CANCELADA);
+                clase.setMotivoCancelacion(MotivoCancelacion.TIMEOUT_PAGO);
+                reservaRepo.save(clase);
             }
+        }
+        if (reserva.getPaquete() != null) {
+            reserva.getPaquete().setEstado(Paquete.CANCELADO);
+        }
     }
 
     /**
@@ -613,6 +679,13 @@ public class ReservaService {
 
     private void validarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
         exigirTutorReservable(reserva.getTutor(), reserva.getPagador(), reserva.getBeneficiario());
+        // ADR-M5-03: una clase del paquete se mueve dentro de su vigencia (Tabla_Tiempos).
+        if (reserva.getPaquete() != null && nuevoHorario.plus(Duration.ofMinutes(reserva.getDuracionMinutos()))
+                .isAfter(reserva.getPaquete().getVigenteHasta())) {
+            throw new HorarioFueraDeFranjaException("El horario nuevo tiene que quedar dentro del paquete, antes del "
+                    + java.time.format.DateTimeFormatter.ofPattern("dd/MM").withZone(ReservasZonaHoraria.ZONA)
+                    .format(reserva.getPaquete().getVigenteHasta()) + ".");
+        }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
                     "Faltan menos de 30 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");

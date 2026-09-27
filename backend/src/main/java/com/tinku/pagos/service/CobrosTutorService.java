@@ -85,7 +85,7 @@ public class CobrosTutorService {
                     .append(importe(c.comision())).append(';')
                     .append(importe(c.neto())).append(';')
                     .append(ESTADO_LEGIBLE.get(c.estado())).append(';')
-                    .append(celda(t.getMpPaymentId())).append("\r\n");
+                    .append(celda(t.idPagoMp())).append("\r\n");
         }
         return csv.toString();
     }

@@ -56,6 +56,11 @@ public class Reserva {
     @JoinColumn(name = "solicitud_origen_id")
     private SolicitudSesion solicitudOrigen;
 
+    /** v2.5 (ADR-M5-03): la clase es parte de un paquete mensual; null si es suelta. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paquete_id")
+    private Paquete paquete;
+
     @Column(nullable = false)
     private Instant horario;
 

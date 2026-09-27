@@ -43,9 +43,24 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                               boolean resumenContratado,
                               BigDecimal precioAdicionalResumen,
                               BigDecimal montoTotal,
-                              boolean beneficiarioMenor) {
+                              boolean beneficiarioMenor,
+                              UUID paqueteId,
+                              Integer paqueteClase,
+                              BigDecimal paqueteTotal,
+                              Instant paqueteVigenteHasta,
+                              boolean puedeCancelarPaquete) {
 
     public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora) {
+        return from(r, quienMira, ahora, null, false);
+    }
+
+    /**
+     * {@code paqueteClase} (1..4) y {@code puedeCancelarPaquete} los calcula quien tiene las
+     * clases del paquete a mano ({@code ReservaService.vista}); {@code puedeCancelarPaquete} solo
+     * para quien pagó (FR-RES-034).
+     */
+    public static ReservaResponse from(Reserva r, Usuario quienMira, Instant ahora, Integer paqueteClase,
+                                       boolean paqueteCancelable) {
         boolean pendiente = r.getEstado() == EstadoReserva.PENDIENTE_PAGO;
         Instant vence = pendiente ? r.getCreatedAt().plus(ReservaService.TIMEOUT_PENDIENTE_PAGO) : null;
         UUID yo = quienMira == null ? null : quienMira.getId();
@@ -67,6 +82,11 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
                 r.getDuracionMinutos(),
                 vence, puedePagar, puedeCancelar, reembolsaTotal, r.getHorarioFin(),
                 r.isResumenContratado(), r.getPrecioAdicionalResumen(), r.montoTotal(),
-                beneficiario.getTipo() == com.tinku.identidad.model.TipoUsuario.MENOR);
+                beneficiario.getTipo() == com.tinku.identidad.model.TipoUsuario.MENOR,
+                r.getPaquete() == null ? null : r.getPaquete().getId(),
+                paqueteClase,
+                r.getPaquete() == null ? null : r.getPaquete().getPrecioTotal(),
+                r.getPaquete() == null ? null : r.getPaquete().getVigenteHasta(),
+                paqueteCancelable && esPagador);
     }
 }

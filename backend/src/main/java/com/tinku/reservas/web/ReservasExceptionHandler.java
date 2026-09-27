@@ -134,6 +134,14 @@ public class ReservasExceptionHandler {
         return m != null && m.find() ? m.group(1) : null;
     }
 
+    /** ADR-M5-03: el paquete no se puede armar o cancelar; {@code fechas} = las que chocan. */
+    @ExceptionHandler(com.tinku.reservas.service.PaqueteNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handlePaquete(com.tinku.reservas.service.PaqueteNoDisponibleException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
+                "error", ex.getMessage(),
+                "fechas", ex.getFechas().stream().map(Object::toString).toList()));
+    }
+
     @ExceptionHandler(TarifaNoConfiguradaException.class)
     public ResponseEntity<Map<String, String>> handleSinTarifa(TarifaNoConfiguradaException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

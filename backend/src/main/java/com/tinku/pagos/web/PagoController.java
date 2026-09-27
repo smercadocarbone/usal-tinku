@@ -103,6 +103,19 @@ public class PagoController {
         return cobrosTutor.de(usuarioActual.obtener(authentication));
     }
 
+    public record ConfigPaqueteRequest(boolean habilitado, int descuentoPorcentaje) {
+    }
+
+    /** v2.5 (ADR-M5-03): el Tutor ofrece el paquete mensual y fija su descuento. */
+    @PutMapping("/tarifa/paquete")
+    public ResponseEntity<TarifaTutorResponse> configurarPaquete(@RequestBody ConfigPaqueteRequest request,
+                                                                 Authentication authentication) {
+        return ResponseEntity.ok(TarifaTutorResponse.from(
+                pagoService.configurarPaquete(usuarioActual.obtener(authentication), request.habilitado(),
+                        request.descuentoPorcentaje()),
+                pisoTarifa.pisoHora(), comision.porcentaje()));
+    }
+
     /** FR-PAG-020: CSV del mes (separador {@code ;} y BOM para que Excel en español lo abra bien). */
     @GetMapping("/cobros/export")
     public ResponseEntity<byte[]> exportarCobros(@RequestParam String mes, Authentication authentication) {

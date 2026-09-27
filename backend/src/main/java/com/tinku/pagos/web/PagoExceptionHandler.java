@@ -42,6 +42,11 @@ public class PagoExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(com.tinku.pagos.service.PaqueteConfigInvalidaException.class)
+    public ResponseEntity<Map<String, String>> handlePaqueteConfig(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(TarifaBajoPisoException.class)
     public ResponseEntity<Map<String, Object>> handleBajoPiso(TarifaBajoPisoException ex) {
         // T06: el piso viaja en el cuerpo para que el frontend lo muestre sin otra llamada.

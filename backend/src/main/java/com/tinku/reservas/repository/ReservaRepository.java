@@ -56,4 +56,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
      *  constraint de FR-RES-007 (V9): {@code estado <> 'cancelada'}. */
     List<Reserva> findByTutor_IdAndEstadoNotAndHorarioBetween(
             UUID tutorId, EstadoReserva estadoExcluido, Instant desde, Instant hasta);
+
+    /** v2.5: las clases de un paquete, en orden. */
+    List<Reserva> findByPaquete_IdOrderByHorario(UUID paqueteId);
 }
