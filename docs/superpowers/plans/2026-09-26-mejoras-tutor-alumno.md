@@ -254,6 +254,11 @@ Spec_M8 US-9 quedan marcados igual. No hay código ni migración.
   - un modal que no entra en la pantalla.
 - Se corrige y se agrega un spec e2e `@mobile` que verifica que no haya scroll horizontal en
   esas rutas.
+- _Resultado (2026-09-27):_ `tests/ux/pantalla-chica.spec.ts`, 12 casos a 360 y 390 px, sin
+  desbordes. La llamada real del aula necesita un servidor LiveKit y queda fuera de este spec; el
+  tablero de la pizarra se prueba con la demo de `/dev/componentes`. La revisión encontró un bug
+  (las clases 2-4 de un paquete ofrecían "Pagar") y una falta (la lista no marcaba las clases del
+  paquete); los dos se corrigieron.
 
 ## Estudio del control de agenda (D-8)
 

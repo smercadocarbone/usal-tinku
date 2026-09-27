@@ -180,7 +180,11 @@ class PaqueteIntegracionTest extends FlujosReservaBase {
         verify(mercadopago).crearPreferencia(pedido.capture(), any());
         assertThat(pedido.getValue().montoBruto()).isEqualByComparingTo("43200");
         assertThat(pedido.getValue().comisionPlataforma()).isEqualByComparingTo("11664.00");
-        // Pagar desde otra clase del paquete no corresponde.
+        // Pagar desde otra clase del paquete no corresponde: ni se ofrece ni se acepta.
+        mockMvc.perform(get("/api/reservas/{id}", clases.get(0).getId()).header("Authorization", "Bearer " + s.e().tokenAlumno()))
+                .andExpect(jsonPath("$.puedePagar").value(true));
+        mockMvc.perform(get("/api/reservas/{id}", clases.get(1).getId()).header("Authorization", "Bearer " + s.e().tokenAlumno()))
+                .andExpect(jsonPath("$.puedePagar").value(false));
         mockMvc.perform(post("/api/pagos/preferencia").header("Authorization", "Bearer " + s.e().tokenAlumno())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("reservaId", clases.get(1).getId().toString()))))

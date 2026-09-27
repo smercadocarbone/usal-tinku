@@ -19,7 +19,8 @@ import java.util.UUID;
  * calculadas acá, para que la regla de negocio no se duplique en el frontend:</p>
  * <ul>
  *   <li>{@code pagoVenceAt}: fin del plazo para pagar (FR-RES-020), solo en {@code pendiente_pago}.</li>
- *   <li>{@code puedePagar}: quien mira es el pagador y el plazo sigue vigente.</li>
+ *   <li>{@code puedePagar}: quien mira es el pagador, el plazo sigue vigente y, en un paquete, es la
+ *   reserva ancla.</li>
  *   <li>{@code puedeCancelar}: mismas condiciones que {@code ReservaService.cancelar}
  *       (pagador o Tutor, {@code pendiente_pago}/{@code confirmada}) y la clase
  *       todavía no empezó.</li>
@@ -66,7 +67,9 @@ public record ReservaResponse(UUID id, UUID pagadorId, UUID beneficiarioId, UUID
         UUID yo = quienMira == null ? null : quienMira.getId();
         boolean esPagador = yo != null && r.getPagador().getId().equals(yo);
         boolean esTutor = yo != null && r.getTutor().getId().equals(yo);
-        boolean puedePagar = esPagador && pendiente && vence.isAfter(ahora);
+        // ADR-M5-03: un paquete se paga una sola vez, desde su reserva ancla.
+        boolean esAncla = r.getPaquete() == null || r.getId().equals(r.getPaquete().getReservaAnclaId());
+        boolean puedePagar = esPagador && pendiente && esAncla && vence.isAfter(ahora);
         boolean puedeCancelar = (esPagador || esTutor)
                 && (pendiente || r.getEstado() == EstadoReserva.CONFIRMADA)
                 && r.getHorario().isAfter(ahora);
