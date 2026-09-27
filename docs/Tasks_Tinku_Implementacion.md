@@ -293,7 +293,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-TA-05: Pedido previo en texto (FR-RES-027, ADR-M4-01). _El adjunto se sacó el 2026-09-27 por decisión del dueño: solo texto._
 - [x] T-TA-06: Pedido de reprogramación del Tutor con vencimiento a T-60 (FR-RES-029..031).
 - [ ] T-TA-07: Video de presentación del Tutor + cola de moderación (FR-ID-034..036, FR-ADM-011, ADR-M1-09). _**Diferido, fuera del MVP** (decisión del dueño, 2026-09-27)._
-- [ ] T-TA-08: Pizarra compartida solo entre adultos (FR-AULA-011..013, ADR-M3-06).
+- [x] T-TA-08: Pizarra compartida solo entre adultos (FR-AULA-011..013, ADR-M3-06).
 - [ ] T-TA-09: Paquete mensual: reserva, pago único, movimientos y devolución parcial por falta del Tutor (FR-RES-032..037, FR-PAG-021..023, ADR-M5-03).
 - [ ] T-TA-10: Prueba en pantalla chica (360/390 px) y spec e2e `@mobile` sin scroll horizontal.
 - [ ] T-ESP-01..04: Especialidades del Tutor y verificación de credenciales contra registro oficial (ADR-M1-06, chunks E1–E4 del spike `docs/spikes/SPIKE-M1-M2-especialidad-y-credenciales.md`). Pendiente: cláusula de consentimiento.

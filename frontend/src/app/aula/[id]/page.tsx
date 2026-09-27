@@ -22,10 +22,12 @@ import {
   Track,
   VideoQuality,
 } from "livekit-client";
-import { Mic, MicOff, MoreVertical, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
+import { Mic, MicOff, MoreVertical, PenLine, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
 import { api, ApiError, subirAudioResumen } from "@/lib/api";
 import { GrabadorAudioResumen } from "@/lib/grabadorAudioResumen";
 import Logo from "@/components/Logo";
+import Pizarra from "@/components/aula/Pizarra";
+import { aplicar, codificar, decodificar, mensajesDeSync, type MensajePizarra, type Trazo } from "@/lib/pizarra";
 import { ModalConfirmacion } from "@/components/ui";
 
 interface TokenResponse {
@@ -34,6 +36,8 @@ interface TokenResponse {
   livekitRoomId: string;
   /** ADR-M3-04: solo true para el Tutor de una clase con el adicional de resumen. */
   grabarAudioResumen?: boolean;
+  /** FR-AULA-012 (ADR-M3-06): ningún participante es Menor. Sin esto, no hay pizarra. */
+  pizarraHabilitada?: boolean;
 }
 
 type Estado =
@@ -157,6 +161,11 @@ function BotonControl({
   );
 }
 
+/** Pizarra (ADR-M3-06): canal de datos confiable con `topic`, separado del modo texto. */
+function publicarPizarra(room: Room, m: MensajePizarra) {
+  void room.localParticipant.publishData(codificar(m), { reliable: true, topic: "pizarra" });
+}
+
 interface OpcionMenuLlamada {
   id: string;
   label: string;
@@ -257,6 +266,16 @@ export default function AulaPage() {
   const [compartiendoPantalla, setCompartiendoPantalla] = useState(false);
   const [remoteCompartiendoPantalla, setRemoteCompartiendoPantalla] = useState(false);
   const [tileDestacada, setTileDestacada] = useState<TileId>("camara-remota");
+
+  // ---- FR-AULA-011..013 (ADR-M3-06): pizarra compartida, solo entre adultos ----
+  const [pizarraHabilitada, setPizarraHabilitada] = useState(false);
+  const pizarraHabilitadaRef = useRef(false);
+  const [pizarraAbierta, setPizarraAbierta] = useState(false);
+  const [trazos, setTrazos] = useState<Trazo[]>([]);
+  const trazosRef = useRef<Trazo[]>([]);
+  useEffect(() => {
+    trazosRef.current = trazos;
+  }, [trazos]);
 
   // ---- FR-AULA-002: degradación automática video → audio → texto ----
   const [camApagadaPorDegradacion, setCamApagadaPorDegradacion] = useState(false);
@@ -587,7 +606,21 @@ export default function AulaPage() {
       // NO es un chat de la clase — solo existe mientras `modoTexto` está
       // activo (conexión `Lost` sostenida) y se ignora cualquier paquete que
       // no tenga el formato esperado (podría venir de otra parte del SDK).
-      room.on(RoomEvent.DataReceived, (payload) => {
+      room.on(RoomEvent.DataReceived, (payload, _participante, _tipo, topic) => {
+        if (topic === "pizarra") {
+          // FR-AULA-012: sin habilitación (hay un Menor) todo paquete de pizarra se descarta.
+          if (!pizarraHabilitadaRef.current) return;
+          const m = decodificar(payload);
+          if (!m) return;
+          if (m.op === "sync-pedido") {
+            for (const s of mensajesDeSync(trazosRef.current)) publicarPizarra(room, s);
+          } else if (m.op === "abrir") {
+            setPizarraAbierta(true);
+          } else {
+            setTrazos((prev) => aplicar(prev, m, false));
+          }
+          return;
+        }
         try {
           const data = JSON.parse(new TextDecoder().decode(payload)) as {
             tipo?: string;
@@ -620,11 +653,15 @@ export default function AulaPage() {
       });
 
       roomRef.current = room;
+      pizarraHabilitadaRef.current = tokenResp.pizarraHabilitada === true;
+      setPizarraHabilitada(pizarraHabilitadaRef.current);
       if (tokenResp.grabarAudioResumen && !grabadorRef.current) {
         grabadorRef.current = GrabadorAudioResumen.crear();
         setGrabandoResumen(grabadorRef.current !== null);
       }
       await room.connect(tokenResp.livekitUrl, tokenResp.token);
+      // Si el otro ya estaba dibujando, que nos mande lo que hay en la pizarra.
+      if (pizarraHabilitadaRef.current) publicarPizarra(room, { op: "sync-pedido" });
       const micPub = room.localParticipant?.getTrackPublication(Track.Source.Microphone);
       if (micPub?.track) grabadorRef.current?.agregarPista("local", micPub.track.mediaStreamTrack);
 
@@ -730,6 +767,21 @@ export default function AulaPage() {
         setError("No se pudo compartir la pantalla.");
       }
     }
+  }
+
+  /** Una acción propia en la pizarra: se aplica acá y se le manda al otro. */
+  function accionPizarra(m: MensajePizarra) {
+    setTrazos((prev) => aplicar(prev, m, true));
+    if (roomRef.current) publicarPizarra(roomRef.current, m);
+  }
+
+  function alternarPizarra() {
+    if (pizarraAbierta) {
+      setPizarraAbierta(false);
+      return;
+    }
+    setPizarraAbierta(true);
+    if (roomRef.current) publicarPizarra(roomRef.current, { op: "abrir" });
   }
 
   function enviarMensajeTexto(e: React.FormEvent) {
@@ -904,8 +956,9 @@ export default function AulaPage() {
       videoRef: remoteScreenVideoRef,
     });
   }
-  const tileDestacadaActual = tiles.find((t) => t.id === tileDestacada) ?? tiles[0];
-  const miniaturas = tiles.filter((t) => t.id !== tileDestacadaActual.id);
+  // Con la pizarra abierta, la pizarra ocupa el escenario y todos los videos pasan a miniatura.
+  const tileDestacadaActual = pizarraAbierta ? null : (tiles.find((t) => t.id === tileDestacada) ?? tiles[0]);
+  const miniaturas = tiles.filter((t) => t.id !== tileDestacadaActual?.id);
 
   return (
     <main className="flex min-h-screen flex-col p-0">
@@ -939,7 +992,7 @@ export default function AulaPage() {
 
         <div className="relative flex min-h-0 flex-1 bg-black">
           {tiles.map((t) => {
-            const esDestacada = t.id === tileDestacadaActual.id;
+            const esDestacada = t.id === tileDestacadaActual?.id;
             const indiceMini = esDestacada ? -1 : miniaturas.findIndex((m) => m.id === t.id);
             const contenido = (
               <>
@@ -981,15 +1034,21 @@ export default function AulaPage() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTileDestacada(t.id)}
+                onClick={() => {
+                  setTileDestacada(t.id);
+                  setPizarraAbierta(false);
+                }}
                 aria-label={`Ver en grande: ${t.etiqueta}`}
-                className="absolute bottom-4 w-[140px] cursor-pointer overflow-hidden rounded-lg border-2 border-gray-700 bg-black transition-[right] hover:border-gray-500 sm:w-[180px]"
-                style={{ right: `${16 + indiceMini * 196}px` }}
+                className={`absolute bottom-4 z-10 cursor-pointer overflow-hidden rounded-lg border-2 border-gray-700 bg-black transition-[right] hover:border-gray-500 ${pizarraAbierta ? "w-[96px] sm:w-[140px]" : "w-[140px] sm:w-[180px]"}`}
+                style={{ right: `${16 + indiceMini * (pizarraAbierta ? 108 : 196)}px` }}
               >
                 {contenido}
               </button>
             );
           })}
+          {pizarraAbierta && pizarraHabilitada && (
+            <Pizarra trazos={trazos} onMensaje={accionPizarra} onCerrar={() => setPizarraAbierta(false)} />
+          )}
           <audio ref={remoteAudioRef} autoPlay />
 
           {modoTexto && (
@@ -1068,6 +1127,16 @@ export default function AulaPage() {
                     Icono: compartiendoPantalla ? ScreenShareOff : ScreenShare,
                     onClick: alternarCompartirPantalla,
                   },
+                  ...(pizarraHabilitada
+                    ? [
+                        {
+                          id: "pizarra",
+                          label: pizarraAbierta ? "Cerrar pizarra" : "Abrir pizarra",
+                          Icono: PenLine,
+                          onClick: alternarPizarra,
+                        },
+                      ]
+                    : []),
                 ]}
               />
               <span className="mx-1 h-6 w-px bg-gray-700" />
