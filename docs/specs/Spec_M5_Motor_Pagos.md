@@ -179,8 +179,8 @@ fijar mi precio sabiendo lo que voy a cobrar.
   (FR-PAG-021).
 - **Dado** que una clase del paquete se devuelve por falta del Tutor, **cuando** se ejecuta,
   **entonces** es una devolución parcial por el precio de esa clase, con clave de idempotencia; si
-  MercadoPago la rechaza, entra a reintentos y después a la cola de Soporte Financiero, sin trabar la
-  cancelación (FR-PAG-022).
+  MercadoPago la rechaza, la clase queda retenida sin liberarse y se abre un ticket en la cola de Soporte
+  Financiero, sin trabar la cancelación (FR-PAG-022).
 - **Dado** que se cancela el paquete entero antes de la primera clase, **cuando** se ejecuta,
   **entonces** es una devolución total del pago (FR-PAG-023).
 
@@ -188,6 +188,6 @@ fijar mi precio sabiendo lo que voy a cobrar.
 | --- | --- |
 | FR-PAG-019 | `GET /api/pagos/tarifa` expone `comisionPorcentaje`; la pantalla de precio del Tutor muestra el neto por hora. Solo el Tutor lo ve. |
 | FR-PAG-020 | `GET /api/pagos/cobros/export?mes=AAAA-MM`: CSV (`;`, UTF-8 con BOM) de las transacciones del Tutor creadas en ese mes (hora de Argentina), sin bypass. Incluye nombre y DNI del pagador adulto (receptor de la factura); nunca datos de un Menor más allá del nombre del alumno. |
-| FR-PAG-021 | Preferencia de paquete con `external_reference = "paquete:{id}"`; el webhook, la vuelta del navegador y la conciliación la reconocen. Ancla de idempotencia `pagos.pagos_paquete` y una `Transaccion` por clase con `paquete_id`. |
-| FR-PAG-022 | Devolución parcial automática por el `monto_bruto` de la clase cuando M5 devolvería una clase suelta (cancela el Tutor, no-show del Tutor, interrupción, resolución a favor del alumno). La comisión de MP que no se recupere queda del lado del Tutor (ADR-M5-03). Reintentos 5/15/60 y cola de Soporte Financiero. |
+| FR-PAG-021 | Preferencia de paquete por el total, con `external_reference` = id de la reserva ancla (la primera clase); el webhook, la vuelta del navegador y la conciliación la reconocen como a una clase suelta. Con el pago aprobado, una `Transaccion` por clase: la ancla con el id de pago de MP y las demás con sufijo `#n`, así la unicidad de V24 da la idempotencia (ADR-M5-03). |
+| FR-PAG-022 | Devolución parcial automática por el `monto_bruto` de la clase cuando M5 devolvería una clase suelta (cancela el Tutor, no-show del Tutor, interrupción, resolución a favor del alumno). La comisión de MP que no se recupere queda del lado del Tutor (ADR-M5-03). Si MP la rechaza, la clase queda retenida sin liberación y va a la cola de Soporte Financiero, que la devuelve con el reembolso parcial manual. |
 | FR-PAG-023 | Cancelación del paquete entero (FR-RES-034): devolución total del pago con body vacío. |

@@ -127,12 +127,14 @@ function PagarFlujo() {
   if (estado === "cargando") return <SkeletonPerfil etiqueta="Preparando el pago…" />;
 
   const conQuien = reserva?.tutorNombre ? `con ${reserva.tutorNombre}` : "";
+  // v2.5 (ADR-M5-03): la reserva ancla de un paquete paga las 4 clases de una vez.
+  const esPaquete = !!reserva?.paqueteId;
 
   if (reserva?.estado === "confirmada" || reserva?.estado === "en_curso") {
     return (
       <Pantalla
         icono={<CheckCircle2 />}
-        titulo="¡Clase reservada!"
+        titulo={esPaquete ? "¡Paquete reservado!" : "¡Clase reservada!"}
         acciones={
           <>
             <Link href={`/cuenta/reservas/${reserva.id}`} className={clasesBoton("primario", "lg", "w-full")}>Ver mi clase</Link>
@@ -140,7 +142,7 @@ function PagarFlujo() {
           </>
         }
       >
-        Tu clase {conQuien} es el <span className="font-semibold text-tinta">{fechaHoraLarga(reserva.horario, finDe(reserva))}</span>. El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes.
+        {esPaquete ? "La primera de tus 4 clases" : "Tu clase"} {conQuien} es el <span className="font-semibold text-tinta">{fechaHoraLarga(reserva.horario, finDe(reserva))}</span>. El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes.
       </Pantalla>
     );
   }
@@ -209,7 +211,8 @@ function PagarFlujo() {
           <div className="flex items-start gap-3">
             <CalendarCheck2 className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
             <div>
-              <p className="font-bold">Clase {conQuien}</p>
+              <p className="font-bold">{esPaquete ? `Paquete del mes ${conQuien}` : `Clase ${conQuien}`}</p>
+              {esPaquete && <p className="text-sm text-tinta-tenue">4 clases, una por semana. La primera:</p>}
               <p className="text-[15px] text-tinta-suave first-letter:uppercase">{fechaHoraLarga(reserva.horario, finDe(reserva))}</p>
               {reserva.duracionMinutos ? <p className="text-sm text-tinta-tenue">{duracionLegible(reserva.duracionMinutos)}</p> : null}
             </div>
@@ -230,7 +233,9 @@ function PagarFlujo() {
               )}
               <div className="flex items-baseline justify-between">
                 <span className="text-[15px] text-tinta-suave">Total</span>
-                <span className="tabular text-3xl font-extrabold">{formatearPesos(reserva.montoTotal ?? reserva.precio)}</span>
+                <span className="tabular text-3xl font-extrabold">
+                  {formatearPesos(esPaquete && reserva.paqueteTotal != null ? reserva.paqueteTotal : (reserva.montoTotal ?? reserva.precio))}
+                </span>
               </div>
             </div>
           )}

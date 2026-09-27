@@ -196,19 +196,20 @@ Spec_M8 US-9 quedan marcados igual. No hay código ni migración.
    - Tutor reservable, Menor autorizado y CAP.
 
    Si alguna no entra, responde 422 con la lista de fechas que chocan.
-2. Se crean el `paquete` y sus 4 reservas en `pendiente_pago`, con un solo timeout de 15 min
-   (el del paquete: vence todo junto).
-3. `POST /api/pagos/paquetes/{id}/preferencia`:
-   - una preferencia por el total, `external_reference = "paquete:{id}"`;
-   - `marketplace_fee` = 27 % del total;
+2. `POST /api/reservas/paquete` crea el `paquete` y sus 4 reservas en `pendiente_pago`. La
+   primera es la **reserva ancla**; el timeout de 15 min se programa solo sobre ella y, al vencer,
+   cancela las 4 juntas.
+3. _(Implementado así, 2026-09-27; ver ADR-M5-03 §3.)_ El frontend va a
+   `/pagar?reserva={reservaAnclaId}` y la preferencia de siempre (`POST /api/pagos/preferencia`)
+   detecta el paquete:
+   - una preferencia por el total, `external_reference` = id de la reserva ancla;
+   - `marketplace_fee` = suma de la comisión de cada clase;
    - con el token del Tutor.
-4. Webhook, retorno y conciliación reconocen el prefijo `paquete:`. Con el pago aprobado y el
-   monto igual al total:
-   - una `pagos.pagos_paquete` (`paquete_id` PK, `mp_payment_id` único, monto) como ancla de
-     idempotencia;
-   - una `Transaccion` por clase con `paquete_id` y el mismo `mp_payment_id`. La unicidad de
-     `mp_payment_id` pasa a un índice parcial `WHERE paquete_id IS NULL`, en una migración nueva;
-   - confirma las 4 reservas, lo que dispara el evento de cada una y M3 crea cada Sesión.
+4. Webhook, retorno y conciliación funcionan igual que con una clase suelta. Con el pago aprobado:
+   - una `Transaccion` por clase: la ancla con el id de pago de MP y las demás con sufijo `#2..#4`
+     (la `UNIQUE` de V24 queda intacta y da la idempotencia; `idPagoMp()` devuelve el id real);
+   - el paquete pasa a `confirmado` y se confirman las 4 reservas, lo que dispara el evento de cada
+     una y M3 crea cada Sesión.
 
 **Cancelaciones y devoluciones:**
 
@@ -222,11 +223,12 @@ Spec_M8 US-9 quedan marcados igual. No hay código ni migración.
 | Kill-switch o denuncia                                                                  | Igual que hoy (pausa y resolución), por clase. La devolución, si corresponde, es parcial.                                         |
 
 - Regla única en `EscrowService.reembolsarSiRetenida`: si la transacción es de un paquete,
-  llama a `ReembolsoParcialProveedor` por `montoBruto` de esa clase. Si el paquete entero está
-  sin consumir y todo lo retenido es el total, llama a `reembolsarTotal`.
+  llama a `ReembolsoParcialProveedor` por `montoBruto` de esa clase (clave `clase-{transaccionId}`).
+  La cancelación del paquete entero (`PaqueteCanceladoEvent`) hace **un** reembolso total.
 - Si MercadoPago rechaza el parcial (por ejemplo, el Tutor retiró la plata), no se aborta la
-  cancelación: la transacción queda `reembolso_fallido` en la cola de Soporte Financiero. Ya
-  existe para el adicional (R4); se reusa el mismo outbox con reintentos 5/15/60.
+  cancelación: la transacción queda retenida sin liberación y se abre un ticket en la cola de
+  Soporte Financiero, que la devuelve con el reembolso parcial manual del panel. _(Cambio sobre el
+  borrador: no se reusa el outbox de R4; ver ADR-M5-03 §7.)_
 - **Liberación:** sin cambios, por clase (fin + 24 hs). Con el modelo A la plata ya está en la
   cuenta del Tutor. La "liberación" es la ventana lógica en la que Tinku puede devolver.
 - Tabla de Tiempos: "Vigencia del paquete mensual: 4 semanas desde la primera clase",

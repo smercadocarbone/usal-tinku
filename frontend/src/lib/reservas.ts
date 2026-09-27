@@ -37,6 +37,14 @@ export interface Reserva {
   montoTotal?: number | null;
   /** v2.5: el beneficiario es un Menor (habilita la nota del Tutor al AR, FR-RES-026). */
   beneficiarioMenor?: boolean;
+  /** v2.5 (FR-RES-032..037): la clase es parte de un paquete del mes. */
+  paqueteId?: string | null;
+  /** Número de clase dentro del paquete (1..4). */
+  paqueteClase?: number | null;
+  paqueteTotal?: number | null;
+  paqueteVigenteHasta?: string | null;
+  /** El paquete entero todavía se puede cancelar con devolución total (solo al pagador). */
+  puedeCancelarPaquete?: boolean;
 }
 
 /** Solicitud de clase de un menor (`/api/solicitudes`). */
@@ -134,4 +142,48 @@ export function responderReprogramacion(reservaId: string, acepta: boolean): Pro
 
 export function retirarReprogramacion(reservaId: string): Promise<void> {
   return api.delete<void>(`/api/reservas/${reservaId}/pedido-reprogramacion`);
+}
+
+/* ---- Enmienda v2.5: paquete del mes (FR-RES-032..037, ADR-M5-03) ---- */
+
+export interface OfertaPaquete {
+  disponible: boolean;
+  descuentoPorcentaje: number;
+  clases: number;
+  semanas: number;
+}
+
+export interface Paquete {
+  id: string;
+  reservaAnclaId: string;
+  cantidadClases: number;
+  duracionMinutos: number;
+  descuentoPorcentaje: number;
+  precioTotal: number;
+  estado: string;
+  vigenteHasta: string;
+  fechas: string[];
+}
+
+export function getOfertaPaquete(tutorId: string): Promise<OfertaPaquete> {
+  return api.get<OfertaPaquete>(`/api/reservas/paquete/oferta?tutorId=${encodeURIComponent(tutorId)}`);
+}
+
+export function crearPaquete(body: {
+  tutorId: string;
+  horario: string;
+  duracionMinutos: number;
+  beneficiarioId?: string;
+}): Promise<Paquete> {
+  return api.post<Paquete>("/api/reservas/paquete", body);
+}
+
+export function cancelarPaquete(paqueteId: string): Promise<void> {
+  return api.post<void>(`/api/reservas/paquete/${paqueteId}/cancelar`);
+}
+
+/** Las 4 fechas del paquete: la primera y la misma hora las 3 semanas siguientes. */
+export function fechasDelPaquete(primera: string, clases = 4): string[] {
+  const t = new Date(primera).getTime();
+  return Array.from({ length: clases }, (_, i) => new Date(t + i * 7 * 86400000).toISOString());
 }

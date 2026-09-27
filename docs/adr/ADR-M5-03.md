@@ -29,13 +29,20 @@
    - El Tutor lo habilita y puede fijar un descuento de 0 a 30 % sobre su precio por hora.
    - El precio por hora con descuento no puede quedar por debajo del piso (T06).
    - El total se congela en el paquete (FR-PAG-013).
-   - La comisión (27 %) se calcula sobre el total.
-3. **Un solo pago.**
-   - Una preferencia por el total, con `external_reference = "paquete:{id}"` y el token del Tutor.
-   - Con el pago aprobado se crea `pagos.pagos_paquete` como ancla de idempotencia (con
-     `mp_payment_id` único) y una `Transaccion` por clase con `paquete_id`.
-   - La unicidad de `transacciones.mp_payment_id` pasa a un índice parcial para las transacciones
-     sin paquete (migración nueva; la V24 no se edita).
+   - La comisión (27 %) se calcula clase por clase y el `marketplace_fee` es la suma.
+3. **Un solo pago** _(ajustado al implementar, 2026-09-27)_.
+   - La primera clase es la **reserva ancla** (`paquetes.reserva_ancla_id`). La preferencia es por
+     el total, con `external_reference = {id de la reserva ancla}` y el token del Tutor. Así, el
+     webhook, la vuelta del navegador, la conciliación y la página `/pagar` siguen funcionando por id
+     de reserva, sin un segundo formato de referencia.
+   - Con el pago aprobado se crea una `Transaccion` por clase. La de la ancla guarda el id de pago
+     de MercadoPago tal cual; las otras, el mismo id con sufijo `#2`, `#3` y `#4`. La restricción
+     `UNIQUE` de `transacciones.mp_payment_id` (V24) queda intacta y es la que da idempotencia:
+     un webhook repetido choca con la ancla. `Transaccion.idPagoMp()` devuelve el id real (sin
+     sufijo) para devoluciones, liberación, conciliación y el export de cobros.
+   - Se descartaron la tabla `pagos_paquete` y el índice parcial del borrador: agregaban una
+     migración y un camino de idempotencia paralelo para lo mismo que ya resuelve la V24.
+   - Sin pago dentro del plazo de 15 min, vencen las 4 clases juntas y el paquete queda cancelado.
 4. **Cancelaciones del alumno: sin devolución parcial (D-1, D-3).**
    - El paquete entero se puede cancelar hasta 24 hs antes de la primera clase, con devolución
      **total**.
@@ -56,14 +63,20 @@
    - Lo que MercadoPago no devuelva de su comisión en un parcial queda del lado del Tutor. Esta es
      la regla del dueño: "el Tutor afronta los gastos de MercadoPago".
    - Es lo contrario de FR-PAG-010 (disputas manuales), donde lo absorbe Tinku.
-7. **Si el parcial falla.** Por ejemplo, porque el Tutor retiró la plata:
+7. **Si el parcial falla** _(ajustado al implementar, 2026-09-27)_. Por ejemplo, porque el Tutor
+   retiró la plata:
    - la cancelación no se aborta;
-   - la transacción entra al mismo outbox con reintentos de R4 (5/15/60 min);
-   - agotados los reintentos, pasa a la cola de Soporte Financiero.
+   - la transacción queda retenida y **sin liberación programada** (no se le paga al Tutor una clase
+     que no dio);
+   - se abre un ticket en la cola de Soporte Financiero, que la devuelve con el reembolso parcial
+     manual del panel (tope: el `monto_bruto` de esa clase).
 
-   Esto evita que un error de MercadoPago deje una clase "confirmada" que nadie va a dar.
+   No se reusa el outbox con reintentos de R4: un parcial rechazado por falta de saldo no se arregla
+   reintentando a los 5 minutos, y una persona tiene que hablar con el Tutor igual. Esto evita que un
+   error de MercadoPago deje una clase "confirmada" que nadie va a dar.
 
 ## Consecuencias
+- El borde ("25 hs antes" contra "23 hs antes") se prueba en `PaqueteIntegracionTest`.
 - FR-PAG-009 pasa a decir: "prohibido el reembolso parcial automático, salvo BR-PAG-11 (adicional)
   y ADR-M5-03 (clase de un paquete por falta del Tutor)".
 - Riesgo aceptado: el Tutor puede retirar la plata del paquete antes de dar las clases. La
