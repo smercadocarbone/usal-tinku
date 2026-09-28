@@ -99,4 +99,26 @@ test.describe("Configuración de Precio del tutor", () => {
       await expect(page.getByText(/Tinku se queda con el 27 %/)).toBeVisible();
     }
   );
+
+  test(
+    "ADR-M5-04 (opción A): el neto descuenta la comisión de Tinku y la estimada de MercadoPago",
+    { tag: ["@e2e", "@CUENTA-PRECIO-NETO-E2E-002"] },
+    async ({ page, context, baseURL }) => {
+      await setFakeSessionConPayload(context, baseURL!, { tipo: "TUTOR" });
+      await mockApi(page, {
+        "GET /api/pagos/tarifa": async (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: '{"tutorId":"t-1","precioHora":15000,"pisoHora":6140,"comisionPorcentaje":21,"comisionMercadoPagoPorcentaje":6.04}',
+          }),
+      });
+
+      await page.goto("/cuenta/precio");
+      // 15.000 − 3.150 (21 %) − 906 (6,04 %) = 10.944; media hora: 7.500 − 1.575 − 453 = 5.472.
+      await expect(page.getByText(/Te quedan aprox\./)).toContainText("10.944");
+      await expect(page.getByText(/Te quedan aprox\./)).toContainText("5.472");
+      await expect(page.getByText(/comisión de Tinku \(21 %\) y la de MercadoPago \(~6,04 %\)/)).toBeVisible();
+    }
+  );
 });

@@ -42,10 +42,20 @@ const PROVINCIAS = [
   "Tucumán",
 ];
 
-/** Lo que le queda al Tutor: mismo redondeo a centavos que `ComisionPlataforma` del backend. */
-export function netoPorHora(precio: number, comisionPorcentaje: number): number {
+/**
+ * Lo que le queda al Tutor (FR-PAG-019, ADR-M5-04): el precio menos la comisión de Tinku (mismo
+ * redondeo a centavos que `ComisionPlataforma`) y menos la de MercadoPago, que con el modelo A se
+ * descuenta de sus fondos. La de MercadoPago es una estimación: la real depende de su cuenta.
+ */
+export function netoPorHora(precio: number, comisionPorcentaje: number, comisionMercadoPagoPorcentaje = 0): number {
   const comision = Math.round(precio * comisionPorcentaje) / 100;
-  return Math.round((precio - comision) * 100) / 100;
+  const comisionMp = Math.round(precio * comisionMercadoPagoPorcentaje) / 100;
+  return Math.round((precio - comision - comisionMp) * 100) / 100;
+}
+
+/** "6,04": el porcentaje con coma decimal, como se lee en Argentina. */
+function porcentajeLegible(p: number): string {
+  return p.toLocaleString("es-AR", { maximumFractionDigits: 2 });
 }
 
 interface ReferenciaRegional {
@@ -59,6 +69,8 @@ interface Tarifa {
   pisoHora?: number | null;
   /** FR-PAG-019: comisión de Tinku, para mostrar cuánto le queda al Tutor. */
   comisionPorcentaje?: number;
+  /** ADR-M5-04: tasa estimada de MercadoPago (con IVA) que se descuenta de los fondos del Tutor. */
+  comisionMercadoPagoPorcentaje?: number;
   /** FR-RES-032: el Tutor ofrece el paquete del mes y con qué descuento. */
   paqueteHabilitado?: boolean;
   paqueteDescuentoPorcentaje?: number;
@@ -79,6 +91,7 @@ export default function TabPrecio() {
   const [referencia, setReferencia] = useState<ReferenciaRegional | null>(null);
   const [piso, setPiso] = useState<number | null>(null);
   const [comision, setComision] = useState<number | null>(null);
+  const [comisionMp, setComisionMp] = useState<number | null>(null);
   // Espejo del ref para poder mostrarlo en el render (lint react/refs).
   const [precioGuardado, setPrecioGuardado] = useState<number | null>(null);
   const guardado = useRef<number | null>(null);
@@ -90,6 +103,7 @@ export default function TabPrecio() {
       .then((t) => {
         if (t?.pisoHora) setPiso(Number(t.pisoHora));
         if (t?.comisionPorcentaje != null) setComision(Number(t.comisionPorcentaje));
+        if (t?.comisionMercadoPagoPorcentaje != null) setComisionMp(Number(t.comisionMercadoPagoPorcentaje));
         if (t?.paqueteHabilitado != null) setPaquete({ habilitado: t.paqueteHabilitado, descuento: Number(t.paqueteDescuentoPorcentaje ?? 0) });
         if (t?.precioHora) {
           guardado.current = Number(t.precioHora);
@@ -205,13 +219,22 @@ export default function TabPrecio() {
           <Wallet className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
           <div className="text-[15px]">
             <p>
-              Te quedan <strong>{formatearPesos(netoPorHora(numero, comision))} por hora</strong>
-              {" "}({formatearPesos(netoPorHora(numero / 2, comision))} por una clase de 30 minutos).
+              Te quedan {comisionMp !== null && "aprox. "}
+              <strong>{formatearPesos(netoPorHora(numero, comision, comisionMp ?? 0))} por hora</strong>
+              {" "}({formatearPesos(netoPorHora(numero / 2, comision, comisionMp ?? 0))} por una clase de 30 minutos).
             </p>
-            <p className="mt-1 text-[13px] text-tinta-suave">
-              Tinku se queda con el {comision} %. MercadoPago te cobra aparte su propia comisión, según el plazo de
-              acreditación que tengas en tu cuenta.
-            </p>
+            {comisionMp !== null ? (
+              <p className="mt-1 text-[13px] text-tinta-suave">
+                Ya descontamos la comisión de Tinku ({comision} %) y la de MercadoPago (~{porcentajeLegible(comisionMp)} %).
+                La de MercadoPago depende del plazo de acreditación que tengas en tu cuenta, así que lo que te llega puede
+                variar un poco.
+              </p>
+            ) : (
+              <p className="mt-1 text-[13px] text-tinta-suave">
+                Tinku se queda con el {comision} %. MercadoPago te cobra aparte su propia comisión, según el plazo de
+                acreditación que tengas en tu cuenta.
+              </p>
+            )}
           </div>
         </div>
       )}
