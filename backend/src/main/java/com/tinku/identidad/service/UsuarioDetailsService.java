@@ -41,7 +41,8 @@ public class UsuarioDetailsService implements UserDetailsService {
 
     /**
      * Para el filtro JWT (AUD-027): carga por id, exige cuenta ACTIVA y que la versión de
-     * credenciales del token sea la vigente. El principal queda con el UUID como nombre.
+     * credenciales del token sea la vigente. El principal queda con el UUID como nombre y lleva
+     * al {@link Usuario} cargado (AUD-036.1).
      */
     public UserDetails cargarParaToken(UUID usuarioId, Integer cvDelToken) throws UsernameNotFoundException {
         Usuario u = usuarioRepository.findById(usuarioId)
@@ -52,7 +53,6 @@ public class UsuarioDetailsService implements UserDetailsService {
         if (cvDelToken == null || cvDelToken != u.getCredentialsVersion()) {
             throw new UsernameNotFoundException("Token emitido antes de un cambio de credenciales");
         }
-        return new User(u.getId().toString(), u.getPasswordHash(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + u.getTipo().name())));
+        return new UsuarioAutenticado(u);
     }
 }

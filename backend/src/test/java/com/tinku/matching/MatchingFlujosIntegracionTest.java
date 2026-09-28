@@ -1,5 +1,10 @@
 package com.tinku.matching;
 
+import com.tinku.matching.port.MatchingServiceClient;
+import com.tinku.matching.port.ReputacionSignalProvider;
+import com.tinku.matching.service.MatchingNoDisponibleException;
+import com.tinku.matching.web.BusquedaRequest;
+
 import tools.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.RegistroAdultoRequest;
 import com.tinku.identidad.dto.RegistroMenorRequest;

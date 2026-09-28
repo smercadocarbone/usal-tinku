@@ -16,7 +16,7 @@ import com.tinku.identidad.ocr.ResultadoOcr;
 import com.tinku.identidad.port.PerfilMatchingProvider;
 import com.tinku.identidad.port.ReputacionPerfilProvider;
 import com.tinku.identidad.repository.UsuarioRepository;
-import com.tinku.matching.ReputacionSignalProvider;
+import com.tinku.matching.port.ReputacionSignalProvider;
 import com.tinku.aula.evento.SesionFinalizadaEvent;
 import com.tinku.aula.evento.SesionNoShowEstudianteEvent;
 import com.tinku.aula.evento.SesionNoShowTutorEvent;
