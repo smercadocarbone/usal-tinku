@@ -1,5 +1,13 @@
 package com.tinku.matching;
 
+import com.tinku.matching.model.NivelTrayecto;
+import com.tinku.matching.model.Tema;
+import com.tinku.matching.model.Trayecto;
+import com.tinku.matching.port.MatchingServiceClient;
+import com.tinku.matching.port.ReputacionSignalProvider;
+import com.tinku.matching.repository.TemaRepository;
+import com.tinku.matching.repository.TrayectoRepository;
+
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.tinku.identidad.dto.CargarCredencialRequest;

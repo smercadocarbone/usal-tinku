@@ -1,7 +1,7 @@
 package com.tinku.admin.web;
 
 import com.tinku.admin.AdminModeracionGate;
-import com.tinku.matching.TemasSugeridosService;
+import com.tinku.matching.service.TemasSugeridosService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;

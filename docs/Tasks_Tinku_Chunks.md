@@ -14,7 +14,7 @@
 - [x] **Chunk 000-D** — Cuentas externas: LiveKit, MercadoPago (T-000-06, T-000-07) — _confirmado por integración real de `LiveKitService` (M3-A) y `MercadoPagoClient`/webhook con firma HMAC (M5-A/B) contra las APIs reales, no solo stubs._
 - [x] **Chunk 000-E** — Servicio Python de matching: health check (T-000-08) — _`GET /health` real, consumido además por `SaludInfraestructuraService` de M8 (ADR-M8-01)._
 - [x] **Chunk 000-F** — CI mínimo (T-000-09) — _cerrado 2026-09-25: CI de PR para los 3 servicios + smoke E2E nocturno (AUD-031). Nota original: `.github/workflows/ci-backend.yml` existe (build + `mvn verify` con path filter en `backend/**`), pero no hay pipeline para `frontend/` ni `matching-service/`. Pendiente real, no cosmético._
-- [ ] **Chunk 000-H** — Reconciliación de deuda técnica pre-existente (fuera de Tasks_Tinku_Implementacion.md original) — _ítem "ADR-000-01 (schema de Quartz)" ya completado fuera de orden durante el merge de 000-B, commit 4eab0b9. No pedirlo de nuevo en el prompt de este chunk._
+- [x] **Chunk 000-H** — Reconciliación de deuda técnica pre-existente (fuera de Tasks_Tinku_Implementacion.md original) — _ítem "ADR-000-01 (schema de Quartz)" ya completado fuera de orden durante el merge de 000-B, commit 4eab0b9. Cerrado 2026-09-28 tras revisarlo: la deuda que motivó el chunk (seguridad JWT/login de 000-C que vivía solo en el working directory) quedó en git en 055ade9 y mergeada en 193fc72, con `JwtAuthTest` y `SecurityHttpTest`; ADR-000-01 y ADR-M1-01 existen. No quedan ítems sin commitear ni sin ADR._
 
 ## SPIKE — en paralelo desde el día 1, otra sesión/branch
 
@@ -50,7 +50,7 @@ _(requiere M1 cerrado)_
 
 > Nota: M2-C referencia M7 y M9 (reputación, suspensión) que todavía no existen como módulos completos en este punto del roadmap — usar stubs/interfaces mínimas y dejarlo señalado para cuando M7/M9 se implementen.
 
-- [ ] **Chunk M2-F** — Catálogo granular de temas + búsqueda por nombre (T-M2-11…T-M2-17) — _contratos cerrados en `docs/plan/Plan_M2_Temas.md` (rama `chunk/m2-f-temas`): trayectos+temas con descripciones (reemplaza el uso de `materias_niveles`), `tema_ids` por Tutor, búsqueda por nombre/materia en Java antes de `/match`, recompute de embeddings en matching-service. Nota: la "Res. CFE 371/23" del encargo no existe (res. 371 es de 2020/E TP) — fuentes reales en Plan_M2_Temas.md §1. V12 ya tiene el skeleton; seed en V13._
+- [x] **Chunk M2-F** — Catálogo granular de temas + búsqueda por nombre (T-M2-11…T-M2-17) — _contratos cerrados en `docs/plan/Plan_M2_Temas.md` (rama `chunk/m2-f-temas`): trayectos+temas con descripciones (reemplaza el uso de `materias_niveles`), `tema_ids` por Tutor, búsqueda por nombre/materia en Java antes de `/match`, recompute de embeddings en matching-service. Nota: la "Res. CFE 371/23" del encargo no existe (res. 371 es de 2020/E TP) — fuentes reales en Plan_M2_Temas.md §1. V12 ya tiene el skeleton; seed en V13._ _Cerrado 2026-09-28 (sin tildar por olvido): T-M2-11..17 hechas y verificadas en `Tasks_Tinku_Implementacion.md`; las migraciones quedaron como V19 (esquema) y V20 (seed) al renumerar por colisión; tests en `CatalogoTemasIntegracionTest` y `MatchingFlujosIntegracionTest`._
 
 ## M4 — Sistema de Reservas y Agenda
 

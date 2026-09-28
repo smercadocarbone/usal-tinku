@@ -1,6 +1,6 @@
 package com.tinku.reputacion.service;
 
-import com.tinku.matching.ReputacionSignalProvider;
+import com.tinku.matching.port.ReputacionSignalProvider;
 import com.tinku.reputacion.model.SenalesImplicitasTutor;
 import com.tinku.reputacion.repository.CalificacionRepository;
 import com.tinku.reputacion.repository.SenalesImplicitasTutorRepository;

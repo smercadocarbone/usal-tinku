@@ -10,7 +10,7 @@ import java.util.UUID;
  * materias/nivel} viven en {@code matching.materias_niveles} y se relacionan vía
  * {@code matching.perfiles_tutor_matching.materias_niveles_ids}.
  *
- * Implementación real: {@code com.tinku.matching.PerfilMatchingProviderReal}.
+ * Implementación real: {@code com.tinku.matching.port.PerfilMatchingProviderReal}.
  */
 public interface PerfilMatchingProvider {
 

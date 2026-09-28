@@ -1,0 +1,65 @@
+package com.tinku.matching.service;
+
+import com.tinku.matching.repository.PerfilTutorTemasRepository;
+
+import com.tinku.identidad.model.TipoUsuario;
+import com.tinku.identidad.model.Usuario;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Temas elegidos por un Tutor para su perfil de matching (contrato 2b): GET
+ * devuelve los propios de cualquier perfil; el PUT guarda SOLO {@code tema_ids}
+ * mediante upsert y no toca {@code embedding} ni {@code activo_para_matching}.
+ * El embedding lo repuebla el recompute de 2c, que se pide después del commit
+ * ({@link RecomputeEmbeddingsDisparador}), nunca dentro de este PUT.
+ */
+@Service
+public class PerfilTutorTemasService {
+
+    private final PerfilTutorTemasRepository perfilRepo;
+    private final CatalogoService catalogoService;
+    private final RecomputeEmbeddingsDisparador recompute;
+
+    public PerfilTutorTemasService(PerfilTutorTemasRepository perfilRepo,
+                                   CatalogoService catalogoService,
+                                   RecomputeEmbeddingsDisparador recompute) {
+        this.perfilRepo = perfilRepo;
+        this.catalogoService = catalogoService;
+        this.recompute = recompute;
+    }
+
+    /** GET /api/tutores/me/temas: sin fila en el perfil -> lista vacía. */
+    @Transactional(readOnly = true)
+    public List<UUID> temasDel(Usuario usuario) {
+        return perfilRepo.findTemaIds(usuario.getId());
+    }
+
+    /** PUT /api/tutores/me/temas: solo TUTOR (403); ids no UUID -> 422;
+     * UUID no existente en el catálogo -> 404; lista vacía es válida. */
+    @Transactional
+    public List<UUID> guardarTemas(Usuario usuario, List<String> temaIdsCrudos) {
+        if (usuario.getTipo() != TipoUsuario.TUTOR) {
+            throw new TemasSoloTutorException();
+        }
+        LinkedHashSet<UUID> ids = new LinkedHashSet<>();
+        for (String crudo : temaIdsCrudos) {
+            try {
+                ids.add(UUID.fromString(crudo));
+            } catch (IllegalArgumentException e) {
+                throw new TemaIdMalformadoException();
+            }
+        }
+        if (!catalogoService.existen(ids)) {
+            throw new TemaInexistenteException();
+        }
+        List<UUID> normalizados = List.copyOf(ids);
+        perfilRepo.upsertTemaIds(usuario.getId(), normalizados);
+        recompute.dispararDespuesDelCommit();
+        return normalizados;
+    }
+}
