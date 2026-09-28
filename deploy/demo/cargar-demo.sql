@@ -225,7 +225,7 @@ BEGIN
             -- Pago liberado, marcado en_bypass: no movió dinero real (V22).
             INSERT INTO pagos.transacciones (reserva_id, mp_payment_id, monto_bruto, comision_plataforma,
                                              estado, liberar_at, en_bypass, created_at)
-            VALUES (v_reserva, 'demo-' || v_reserva, v_precio, round(v_precio * 0.27, 2), 'liberado',
+            VALUES (v_reserva, 'demo-' || v_reserva, v_precio, round(v_precio * 0.21, 2), 'liberado',
                     inicio + interval '1 day', TRUE, inicio - interval '3 days');
 
             -- Las dos direcciones: sin la oculta (tutor_a_estudiante) el Tutor quedaría
