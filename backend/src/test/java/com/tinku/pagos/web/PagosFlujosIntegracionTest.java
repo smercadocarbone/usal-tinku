@@ -665,6 +665,36 @@ class PagosFlujosIntegracionTest {
         assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3920.00"));
     }
 
+    @Autowired com.tinku.pagos.service.ComisionPlataforma comisionPlataforma;
+
+    /**
+     * ADR-M5-04: el {@code marketplace_fee} de la preferencia es el 21 % de la sesión que sale de la
+     * property configurada ({@code application.yml}, no el default del {@code @Value}) más el
+     * adicional del resumen entero (BR-PAG-11, T09): la comisión nunca se calcula sobre los $770.
+     */
+    @Test
+    void adrM504_marketplaceFee_es21PorCientoDeLaSesion_yElAdicionalEntraEntero() throws Exception {
+        assertThat(comisionPlataforma.porcentaje()).isEqualTo(21);
+
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        MvcResult res = reservarConResumen(e.tokenEst(), e.tutorId(), e.horario())
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        pedirPreferencia(e.tokenEst(), reservaId);
+
+        ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
+        BigDecimal sesion = new BigDecimal("15000");
+        BigDecimal adicional = new BigDecimal("770");
+        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(sesion.add(adicional));
+        // 21 % de 15.000 = 3.150, más los 770 del adicional sin comisión encima.
+        assertThat(captor.getValue().comisionPlataforma())
+                .isEqualByComparingTo(new BigDecimal("3150.00").add(adicional));
+        assertThat(captor.getValue().comisionPlataforma().subtract(adicional))
+                .isEqualByComparingTo(sesion.multiply(new BigDecimal("0.21")));
+    }
+
     @Test
     void reservaConAdicional_alumnoSinAceptarClausula_422_yTutorSinClausula_422() throws Exception {
         EscenarioAdicional sinAlumno = escenarioAdicional(true, false);
