@@ -108,6 +108,9 @@ tinku:
     # jamás confirma un pago ni crea un escrow.
     webhook-secret: ${MP_WEBHOOK_SECRET:}
     marketplace-fee-percent: 21 # BR-PAG-01, ADR-M5-04 (antes 27 %, T-TES-05)
+    # FR-PAG-019 (ADR-M5-04): tasa de MercadoPago con IVA que se le muestra al Tutor para estimar su
+    # neto. Solo informativa (la real depende del plazo de acreditación de su cuenta).
+    comision-procesamiento-percent: ${MP_COMISION_PROCESAMIENTO_PERCENT:6.04}
     # ADR-M5-02 (modelo A): app de marketplace de MP. Con client-id configurado, cada Tutor
     # conecta su cuenta por OAuth y se cobra con SU token (reparto real con marketplace_fee);
     # sin él, todo sigue con el token de la plataforma y nadie queda bloqueado.

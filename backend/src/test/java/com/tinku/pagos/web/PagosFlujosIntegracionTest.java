@@ -867,14 +867,18 @@ class PagosFlujosIntegracionTest {
 
     // ------------------------------------------------ v2.5: precio neto y export (FR-PAG-019/020)
 
-    /** FR-PAG-019: el Tutor recibe el porcentaje de comisión para calcular cuánto le queda. */
+    /**
+     * FR-PAG-019 (ADR-M5-04, opción A): el Tutor recibe la comisión de Tinku y la tasa estimada de
+     * MercadoPago (que con el modelo A se descuenta de sus fondos) para ver cuánto le queda.
+     */
     @Test
-    void getTarifa_exponeElPorcentajeDeComision() throws Exception {
+    void getTarifa_exponeLaComisionDeTinkuYLaEstimadaDeMercadoPago() throws Exception {
         String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
 
         mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.comisionPorcentaje").value(21));
+                .andExpect(jsonPath("$.comisionPorcentaje").value(21))
+                .andExpect(jsonPath("$.comisionMercadoPagoPorcentaje").value(6.04));
     }
 
     private com.tinku.pagos.model.Transaccion transaccion(UUID reservaId, String mpId, boolean bypass, Instant cobro) {
