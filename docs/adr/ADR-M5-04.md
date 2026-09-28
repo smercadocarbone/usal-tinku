@@ -62,9 +62,17 @@ Decisiones Técnicas de la Constitución, porque esa fila no fija el porcentaje.
 
 - **BR-PAG-01 = 21 %.** El historial queda en Spec_M5, y los comentarios de código citan
   BR-PAG-01 sin el número, para que no vuelvan a quedar viejos.
-- **Pestaña "Precio" del Tutor (FR-PAG-019).** Muestra el porcentaje que devuelve el backend, así
-  que pasa a decir 21 % sin cambios. El neto que calcula todavía no descuenta la comisión de
-  MercadoPago: queda como decisión aparte del dueño, fuera de este ADR.
+- **Pestaña "Precio" del Tutor (FR-PAG-019), opción A (decisión del dueño, 2026-09-28).** El neto
+  descuenta las dos comisiones: la de Tinku y una tasa **estimada** de MercadoPago (6,04 % con IVA,
+  `tinku.mercadopago.comision-procesamiento-percent`, env `MP_COMISION_PROCESAMIENTO_PERCENT`), que
+  `GET /api/pagos/tarifa` expone como `comisionMercadoPagoPorcentaje`. Se muestra como "aprox.",
+  con el desglose y la aclaración de que la real depende del plazo de acreditación de la cuenta.
+  Esa tasa es solo informativa: ningún monto de Tinku se calcula con ella.
+  - Descartada, la opción B: mostrar solo el neto de Tinku con una aclaración. Es exacto sobre lo
+    que Tinku controla, pero el número grande quedaba unos 6 puntos arriba de lo que le llega al
+    Tutor, justo la sorpresa que este ADR quiere evitar.
+  - "Mis cobros" y el CSV mensual siguen mostrando el neto de la comisión de Tinku. Usar la
+    comisión real de cada pago (que informa MercadoPago) queda como mejora aparte.
 - **Transacciones anteriores.** Conservan la comisión con la que se crearon: los reportes de
   cobros muestran 27 % en las viejas y 21 % en las nuevas.
 - **Revisión.** La métrica para revisar la comisión después del piloto sigue diferida
