@@ -24,8 +24,8 @@ el adicional (T08), así que no existe el caso "sin consentimiento".
 2. **Regla de menores:** si el beneficiario es MENOR, el adicional **no se ofrece** y el backend
    rechaza `resumenContratado = true` con **422** (no confiar en el frontend).
 3. **Pago:** el monto cobrado = precio de la sesión + adicional. En la preferencia de
-   MercadoPago, el adicional va **íntegro a la plataforma**: `marketplace_fee = comisión (27 % de
-   la sesión) + adicional`. La comisión **no** se calcula sobre el adicional. Reflejarlo en
+   MercadoPago, el adicional va **íntegro a la plataforma**: `marketplace_fee = comisión (21 % de
+   la sesión, ADR-M5-04) + adicional`. La comisión **no** se calcula sobre el adicional. Reflejarlo en
    `Transaccion` con un campo separado para no mezclar conceptos.
 4. **Reembolso del adicional:** reembolso **parcial** por el monto exacto del adicional cuando el
    resumen queda `fallido`, vía la API de reembolsos de MercadoPago. Es la **única excepción** a

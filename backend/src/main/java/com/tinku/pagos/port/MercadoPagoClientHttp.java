@@ -19,7 +19,7 @@ import java.util.UUID;
 
 /**
  * Cliente HTTP de MercadoPago (T-M5-02) via Checkout Pro en modalidad
- * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01, 27%).
+ * Marketplace: la preferencia lleva {@code marketplace_fee} (BR-PAG-01).
  * <b>El reparto solo ocurre si la preferencia se crea con el token OAuth del
  * Tutor (vendedor)</b> — ADR-M5-02. Con el token de la plataforma, Tinku es el
  * vendedor y cobra el 100 %: el marketplace_fee no tiene efecto.

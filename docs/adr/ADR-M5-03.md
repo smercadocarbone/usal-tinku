@@ -29,7 +29,7 @@
    - El Tutor lo habilita y puede fijar un descuento de 0 a 30 % sobre su precio por hora.
    - El precio por hora con descuento no puede quedar por debajo del piso (T06).
    - El total se congela en el paquete (FR-PAG-013).
-   - La comisión (27 %) se calcula clase por clase y el `marketplace_fee` es la suma.
+   - La comisión (BR-PAG-01) se calcula clase por clase y el `marketplace_fee` es la suma.
 3. **Un solo pago** _(ajustado al implementar, 2026-09-27)_.
    - La primera clase es la **reserva ancla** (`paquetes.reserva_ancla_id`). La preferencia es por
      el total, con `external_reference = {id de la reserva ancla}` y el token del Tutor. Así, el

@@ -367,7 +367,7 @@ class E2EFlujoFelizIntegracionTest {
         Transaccion transaccion = transaccionRepository.findByReservaId(reservaId).orElseThrow();
         assertThat(transaccion.getEstado()).isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
         assertThat(transaccion.getMontoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
+        assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("3150.00"));
         assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
                 .isEqualTo(EstadoReserva.CONFIRMADA);
 

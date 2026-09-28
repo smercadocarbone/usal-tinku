@@ -339,7 +339,7 @@ class PagosWebhookIntegracionTest {
         assertThat(transaccion.getMpPaymentId()).isEqualTo(mpPaymentId);
         assertThat(transaccion.getEstado()).isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
         assertThat(transaccion.getMontoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
+        assertThat(transaccion.getComisionPlataforma()).isEqualByComparingTo(new BigDecimal("3150.00"));
         assertThat(transaccion.getLiberarAt()).isNull();
 
         // Transición pendiente_pago → confirmada (y con ella M3 agenda la Sesión).

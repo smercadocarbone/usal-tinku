@@ -5,6 +5,7 @@ import com.tinku.pagos.model.PrecioReferenciaRegional;
 import com.tinku.pagos.port.MercadoPagoClient.PreferenciaPago;
 import com.tinku.pagos.repository.TarifaTutorRepository;
 import com.tinku.pagos.service.PagoService;
+import com.tinku.pagos.service.ComisionMercadoPagoEstimada;
 import com.tinku.pagos.service.ComisionPlataforma;
 import com.tinku.pagos.service.PisoTarifa;
 import com.tinku.shared.UsuarioActual;
@@ -57,11 +58,12 @@ public class PagoController {
     private final EscrowService escrowService;
     private final com.tinku.pagos.service.CobrosTutorService cobrosTutor;
     private final ComisionPlataforma comision;
+    private final ComisionMercadoPagoEstimada comisionMp;
 
     public PagoController(PagoService pagoService, UsuarioActual usuarioActual, TarifaTutorRepository tarifaRepo,
                           PisoTarifa pisoTarifa, EscrowService escrowService,
                           com.tinku.pagos.service.CobrosTutorService cobrosTutor,
-                          ComisionPlataforma comision) {
+                          ComisionPlataforma comision, ComisionMercadoPagoEstimada comisionMp) {
         this.pagoService = pagoService;
         this.usuarioActual = usuarioActual;
         this.tarifaRepo = tarifaRepo;
@@ -69,6 +71,7 @@ public class PagoController {
         this.escrowService = escrowService;
         this.cobrosTutor = cobrosTutor;
         this.comision = comision;
+        this.comisionMp = comisionMp;
     }
 
     /** Al volver de MercadoPago con el pago aprobado: confirma consultando a MP (ver
@@ -113,7 +116,7 @@ public class PagoController {
         return ResponseEntity.ok(TarifaTutorResponse.from(
                 pagoService.configurarPaquete(usuarioActual.obtener(authentication), request.habilitado(),
                         request.descuentoPorcentaje()),
-                pisoTarifa.pisoHora(), comision.porcentaje()));
+                pisoTarifa.pisoHora(), comision.porcentaje(), comisionMp.porcentaje()));
     }
 
     /** FR-PAG-020: CSV del mes (separador {@code ;} y BOM para que Excel en español lo abra bien). */
@@ -139,8 +142,8 @@ public class PagoController {
         UUID yo = usuarioActual.obtener(authentication).getId();
         BigDecimal piso = pisoTarifa.pisoHora();
         return ResponseEntity.ok(tarifaRepo.findByTutorId(yo)
-                .map(t -> TarifaTutorResponse.from(t, piso, comision.porcentaje()))
-                .orElseGet(() -> TarifaTutorResponse.sinTarifa(yo, piso, comision.porcentaje())));
+                .map(t -> TarifaTutorResponse.from(t, piso, comision.porcentaje(), comisionMp.porcentaje()))
+                .orElseGet(() -> TarifaTutorResponse.sinTarifa(yo, piso, comision.porcentaje(), comisionMp.porcentaje())));
     }
 
     @PutMapping("/tarifa")
@@ -150,6 +153,6 @@ public class PagoController {
         return ResponseEntity.ok(TarifaTutorResponse.from(
                 pagoService.actualizarTarifaTutor(
                         usuarioActual.obtener(authentication), request.precioHora()),
-                pisoTarifa.pisoHora(), comision.porcentaje()));
+                pisoTarifa.pisoHora(), comision.porcentaje(), comisionMp.porcentaje()));
     }
 }

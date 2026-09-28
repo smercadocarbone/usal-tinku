@@ -1,5 +1,10 @@
 # T05 — Comisión de plataforma al 27 % (DT1)
 
+> **Superado por ADR-M5-04 (2026-09-28): la comisión pasó a 21 %.** Con el modelo A
+> (ADR-M5-02), MercadoPago descuenta su comisión de los fondos del Tutor antes del
+> `marketplace_fee`, así que con 27 % el Tutor se quedaba con el 66,96 %. Esta spec queda como
+> registro de lo que se hizo el 2026-09-23 (T-TES-05); la vigente es T-TES-15.
+
 **Branch:** `tesis/comision-27` · **Riesgo:** medio (dinero) · **Bloqueada por:** —
 
 ## 1. Problema (verificado al 2026-09-23)

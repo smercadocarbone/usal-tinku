@@ -75,7 +75,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * El escenario de datos replica el de ReservasFlujosIntegracionTest: tarifa 15000
  * vía la implementación real de M5-H (fallback de dev en application-test.yml).
  * BR-PAG-01 se verifica con
- * ArgumentCaptor sobre la PreferenciaRequest: comisión = 27% del monto congelado.
+ * ArgumentCaptor sobre la PreferenciaRequest: comisión = 21% del monto congelado (BR-PAG-01, ADR-M5-04).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -286,13 +286,13 @@ class PagosFlujosIntegracionTest {
                 .andExpect(jsonPath("$.initPoint").value("https://mercadopago.com/mock"));
 
         // BR-PAG-01: la comisión de la plataforma llega como marketplace_fee sobre
-        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 4050.00 (27%).
+        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 3150.00 (21 %, ADR-M5-04).
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
         PreferenciaRequest pedido = captor.getValue();
         assertThat(pedido.reservaId()).isEqualTo(reservaId);
         assertThat(pedido.montoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
+        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3150.00"));
     }
 
     @Test
@@ -658,11 +658,41 @@ class PagosFlujosIntegracionTest {
         UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
         pedirPreferencia(e.tokenEst(), reservaId);
 
-        // BR-PAG-01 intacta: 27 % solo sobre la sesión (4050); el adicional va entero a la plataforma.
+        // BR-PAG-01 intacta: 21 % solo sobre la sesión (3150); el adicional va entero a la plataforma.
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
-        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4820.00"));
+        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3920.00"));
+    }
+
+    @Autowired com.tinku.pagos.service.ComisionPlataforma comisionPlataforma;
+
+    /**
+     * ADR-M5-04: el {@code marketplace_fee} de la preferencia es el 21 % de la sesión que sale de la
+     * property configurada ({@code application.yml}, no el default del {@code @Value}) más el
+     * adicional del resumen entero (BR-PAG-11, T09): la comisión nunca se calcula sobre los $770.
+     */
+    @Test
+    void adrM504_marketplaceFee_es21PorCientoDeLaSesion_yElAdicionalEntraEntero() throws Exception {
+        assertThat(comisionPlataforma.porcentaje()).isEqualTo(21);
+
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        MvcResult res = reservarConResumen(e.tokenEst(), e.tutorId(), e.horario())
+                .andExpect(status().isCreated())
+                .andReturn();
+        UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
+        pedirPreferencia(e.tokenEst(), reservaId);
+
+        ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
+        verify(mercadopago).crearPreferencia(captor.capture(), any());
+        BigDecimal sesion = new BigDecimal("15000");
+        BigDecimal adicional = new BigDecimal("770");
+        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(sesion.add(adicional));
+        // 21 % de 15.000 = 3.150, más los 770 del adicional sin comisión encima.
+        assertThat(captor.getValue().comisionPlataforma())
+                .isEqualByComparingTo(new BigDecimal("3150.00").add(adicional));
+        assertThat(captor.getValue().comisionPlataforma().subtract(adicional))
+                .isEqualByComparingTo(sesion.multiply(new BigDecimal("0.21")));
     }
 
     @Test
@@ -837,14 +867,18 @@ class PagosFlujosIntegracionTest {
 
     // ------------------------------------------------ v2.5: precio neto y export (FR-PAG-019/020)
 
-    /** FR-PAG-019: el Tutor recibe el porcentaje de comisión para calcular cuánto le queda. */
+    /**
+     * FR-PAG-019 (ADR-M5-04, opción A): el Tutor recibe la comisión de Tinku y la tasa estimada de
+     * MercadoPago (que con el modelo A se descuenta de sus fondos) para ver cuánto le queda.
+     */
     @Test
-    void getTarifa_exponeElPorcentajeDeComision() throws Exception {
+    void getTarifa_exponeLaComisionDeTinkuYLaEstimadaDeMercadoPago() throws Exception {
         String tokenTutor = registrarTutorYToken(dniUnico(), "Pablo", "Sosa");
 
         mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.comisionPorcentaje").value(27));
+                .andExpect(jsonPath("$.comisionPorcentaje").value(21))
+                .andExpect(jsonPath("$.comisionMercadoPagoPorcentaje").value(6.04));
     }
 
     private com.tinku.pagos.model.Transaccion transaccion(UUID reservaId, String mpId, boolean bypass, Instant cobro) {

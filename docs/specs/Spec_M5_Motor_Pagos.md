@@ -9,7 +9,7 @@
 
 _(R4, 2026-09-25)_ El reembolso del adicional es un outbox persistido: queda `PENDIENTE` y lo ejecuta un job Quartz con `X-Idempotency-Key: adicional-{transaccionId}`; si MercadoPago falla reintenta con backoff 5/15/60 min (Tabla de Tiempos) y, agotado, queda `FALLIDO` en la cola "Reembolsos del resumen" de Soporte Financiero (`/api/admin/financiero/reembolsos-adicional`), que puede reintentar o registrar que lo devolvió por fuera (`RESUELTO_MANUAL`, con nota). Se abre un ticket al pagador-reclamante. No se confunde con la cola de parciales por disputa (FR-PAG-010).
 
-**Historial BR-PAG-01:** comisión de plataforma al **27 %** del monto bruto desde el 2026-09-23, calibrada en el Cap. 5 de la tesis (por debajo de 23,4 % el VAN del escenario base es negativo). Antes: **15 %**.
+**Historial BR-PAG-01:** comisión de plataforma al **21 %** del monto bruto desde el 2026-09-28 (ADR-M5-04). Motivo: con el modelo A (ADR-M5-02), MercadoPago descuenta su comisión (6,04 % con IVA) de los fondos del Tutor antes del `marketplace_fee`; con 27 % el Tutor se quedaba con el 66,96 % y al 21 % vuelve al 72,96 %. La tesis (Cap. 5) está recalculada con 21 %: el VAN del escenario base se anula recién con 12,4 %. Antes: **27 %** desde el 2026-09-23 (T-TES-05, cuando la plataforma pagaba la comisión de MercadoPago; por debajo de 23,4 % el VAN del escenario base de entonces era negativo). Antes: **15 %**.
 
 ---
 
@@ -89,7 +89,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 ### US-7 — Transparencia de comisión
 *Como* Estudiante, *quiero* ver un precio final simple, *para* no hacer cuentas de cuánto se lleva la plataforma (Artículo III).
 
-- **Dado** que vea el precio de una sesión, **cuando** lo mire, **entonces** es el precio final — la comisión del 27% se descuenta del lado del Tutor, nunca aparece como línea aparte.
+- **Dado** que vea el precio de una sesión, **cuando** lo mire, **entonces** es el precio final — la comisión de plataforma (BR-PAG-01) se descuenta del lado del Tutor, nunca aparece como línea aparte.
 
 ### US-8 — Resiliencia ante caída de MercadoPago
 *Como* Tutor, *quiero* cobrar aunque MercadoPago tenga una falla momentánea, *para* no perder plata por un problema ajeno.
@@ -107,7 +107,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 |---|---|
 | FR-PAG-001 | Cobro vía MercadoPago en escrow al confirmar la Reserva. |
 | FR-PAG-002 | Liberación automática al Tutor 24hs después de finalizada la Sesión, salvo Denuncia activa. |
-| FR-PAG-003 | Comisión de plataforma del 27%, a cargo del Tutor, no visible como línea aparte. |
+| FR-PAG-003 | Comisión de plataforma del 21% (BR-PAG-01, ADR-M5-04), a cargo del Tutor, no visible como línea aparte. |
 | FR-PAG-004 | Ejecución centralizada de todos los reembolsos automáticos (tabla de eventos, sección 2). |
 | FR-PAG-005 | Precio de referencia regional no vinculante, sugerido una vez. |
 | FR-PAG-006 | El precio de referencia es fijo; solo cambia con recálculo de toda la tabla regional. |
@@ -131,7 +131,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | 1 | Recálculo del precio de referencia | Fijo, solo cambia con recálculo de toda la tabla regional (FR-PAG-006). |
 | 2 | Caída de MercadoPago al liberar fondos | 3 reintentos con backoff + alerta inmediata al Admin de Soporte Financiero en paralelo (FR-PAG-007). |
 | 3 | Notificación de pagos/reembolsos múltiples | Individual, nunca agregada (FR-PAG-008). |
-| 4 | Métrica objetivo para revisar el 27% tras el piloto | **Diferido a propósito** — se define en el momento de esa revisión (BR-PAG-03). No bloquea este Spec. |
+| 4 | Métrica objetivo para revisar la comisión (BR-PAG-01) tras el piloto | **Diferido a propósito** — se define en el momento de esa revisión (BR-PAG-03). No bloquea este Spec. |
 | 5 | Quién absorbe la comisión de gateway en un reembolso | Tinku, siempre — reembolso total vía MP, costo real cero (FR-PAG-009/010). |
 | 6 | Fondos de un Tutor con sanción definitiva | Se libera lo de sesiones ya realizadas, se retiene y reembolsa lo futuro (FR-PAG-011). |
 | 7 _(agregado, auditoría 2026-09-18)_ | Titular de la tarjeta disputa el cargo directamente con su banco (contracargo), en paralelo o en vez de usar la Denuncia de Tinku | Cola de intervención manual de Soporte Financiero; pausa si el escrow sigue retenido, sin reversión automática si ya se liberó (FR-PAG-015/016). |
@@ -161,8 +161,8 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 fijar mi precio sabiendo lo que voy a cobrar.
 
 - **Dado** que fijo mi precio por hora, **cuando** lo veo, **entonces** veo al lado lo que me queda
-  por hora después del 27 %, y una aclaración de que MercadoPago cobra aparte su comisión según mi
-  cuenta (FR-PAG-019). El alumno sigue viendo solo el precio final (Art. III).
+  por hora después de la comisión de Tinku (BR-PAG-01) y de la estimada de MercadoPago, marcado como
+  aproximado porque la de MercadoPago depende del plazo de acreditación de mi cuenta (FR-PAG-019, ADR-M5-04). El alumno sigue viendo solo el precio final (Art. III).
 
 ### US-11 — Exportar mis cobros para facturar
 *Como* Tutor, *quiero* descargar mis cobros de un mes, *para* facturar y declarar en ARCA.
@@ -175,7 +175,7 @@ fijar mi precio sabiendo lo que voy a cobrar.
 *Como* quien reserva un paquete, *quiero* pagarlo en un solo pago, *para* no pagar clase por clase.
 
 - **Dado** un paquete `pendiente_pago`, **cuando** pago, **entonces** una sola preferencia por el
-  total (con `marketplace_fee` = 27 % del total y el token del Tutor) confirma las 4 clases
+  total (con `marketplace_fee` = la suma de la comisión de cada clase y el token del Tutor) confirma las 4 clases
   (FR-PAG-021).
 - **Dado** que una clase del paquete se devuelve por falta del Tutor, **cuando** se ejecuta,
   **entonces** es una devolución parcial por el precio de esa clase, con clave de idempotencia; si
@@ -186,7 +186,7 @@ fijar mi precio sabiendo lo que voy a cobrar.
 
 | ID | Descripción |
 | --- | --- |
-| FR-PAG-019 | `GET /api/pagos/tarifa` expone `comisionPorcentaje`; la pantalla de precio del Tutor muestra el neto por hora. Solo el Tutor lo ve. |
+| FR-PAG-019 | `GET /api/pagos/tarifa` expone `comisionPorcentaje` y `comisionMercadoPagoPorcentaje` (estimada, configurable; ADR-M5-04); la pantalla de precio del Tutor muestra el neto aproximado por hora después de las dos. Solo el Tutor lo ve. |
 | FR-PAG-020 | `GET /api/pagos/cobros/export?mes=AAAA-MM`: CSV (`;`, UTF-8 con BOM) de las transacciones del Tutor creadas en ese mes (hora de Argentina), sin bypass. Incluye nombre y DNI del pagador adulto (receptor de la factura); nunca datos de un Menor más allá del nombre del alumno. |
 | FR-PAG-021 | Preferencia de paquete por el total, con `external_reference` = id de la reserva ancla (la primera clase); el webhook, la vuelta del navegador y la conciliación la reconocen como a una clase suelta. Con el pago aprobado, una `Transaccion` por clase: la ancla con el id de pago de MP y las demás con sufijo `#n`, así la unicidad de V24 da la idempotencia (ADR-M5-03). |
 | FR-PAG-022 | Devolución parcial automática por el `monto_bruto` de la clase cuando M5 devolvería una clase suelta (cancela el Tutor, no-show del Tutor, interrupción, resolución a favor del alumno). La comisión de MP que no se recupere queda del lado del Tutor (ADR-M5-03). Si MP la rechaza, la clase queda retenida sin liberación y va a la cola de Soporte Financiero, que la devuelve con el reembolso parcial manual. |

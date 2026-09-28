@@ -19,7 +19,7 @@ La tesis fijó decisiones que el código todavía no refleja:
 
 | Tema | Hoy en el código | Lo que decidió la tesis |
 |------|------------------|-------------------------|
-| Comisión de plataforma | 15 % (`application.yml`, BR-PAG-01) | **27 %** |
+| Comisión de plataforma | 15 % (`application.yml`, BR-PAG-01) | **27 %** _(superado: 21 % desde el 2026-09-28, ADR-M5-04)_ |
 | Precio de la sesión | Libre, sin piso | **Piso de USD 4 por hora** (en ARS) |
 | Resumen automático | Para toda sesión ≥10 min, sin proveedor | **Adicional opcional pago**, solo entre adultos, con Gemini 3.5 Flash-Lite |
 | Grabación de audio | Prohibida (AGENTS §1.5) | **Solo audio, solo si se contrató el adicional, borrado tras transcribir** |
@@ -65,7 +65,7 @@ la tarea, y se tilda en el commit que la cierra.
 
 | ID | Tema | Decisión |
 |----|------|----------|
-| DT1 | Comisión | **27 %** sobre el monto bruto de la sesión, a cargo del Tutor (BR-PAG-01 actualizada). |
+| DT1 | Comisión | **27 %** sobre el monto bruto de la sesión, a cargo del Tutor (BR-PAG-01 actualizada). _Superado por ADR-M5-04 (2026-09-28): **21 %**, porque con el modelo A MercadoPago descuenta su comisión de los fondos del Tutor (T-TES-15)._ |
 | DT2 | Precio | **Piso de USD 4 por hora**, expresado en ARS en un parámetro configurable. El precio lo sigue fijando el Tutor. |
 | DT3 | Resumen | **Adicional opcional** que se contrata por reserva, a **USD 0,50** (en ARS). **No se ofrece en sesiones con un menor.** |
 | DT4 | Proveedor LLM | **Gemini 3.5 Flash-Lite** (cierra T-FIN-03). Gemini 2.0 Flash fue dado de baja el 01/06/2026. |
