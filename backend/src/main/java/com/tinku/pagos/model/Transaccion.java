@@ -48,7 +48,7 @@ public class Transaccion {
     @Column(name = "monto_bruto", nullable = false, precision = 10, scale = 2)
     private BigDecimal montoBruto;
 
-    /** BR-PAG-01: 27% de {@code montoBruto}, siempre sobre el precio congelado. */
+    /** BR-PAG-01 de {@code montoBruto} ({@code ComisionPlataforma}), congelada al crear la transacción. */
     @Column(name = "comision_plataforma", nullable = false, precision = 10, scale = 2)
     private BigDecimal comisionPlataforma;
 

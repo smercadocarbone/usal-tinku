@@ -75,7 +75,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * El escenario de datos replica el de ReservasFlujosIntegracionTest: tarifa 15000
  * vía la implementación real de M5-H (fallback de dev en application-test.yml).
  * BR-PAG-01 se verifica con
- * ArgumentCaptor sobre la PreferenciaRequest: comisión = 27% del monto congelado.
+ * ArgumentCaptor sobre la PreferenciaRequest: comisión = 21% del monto congelado (BR-PAG-01, ADR-M5-04).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -286,13 +286,13 @@ class PagosFlujosIntegracionTest {
                 .andExpect(jsonPath("$.initPoint").value("https://mercadopago.com/mock"));
 
         // BR-PAG-01: la comisión de la plataforma llega como marketplace_fee sobre
-        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 4050.00 (27%).
+        // el precio congelado de la Reserva (FR-PAG-013): 15000 → 3150.00 (21 %, ADR-M5-04).
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
         PreferenciaRequest pedido = captor.getValue();
         assertThat(pedido.reservaId()).isEqualTo(reservaId);
         assertThat(pedido.montoBruto()).isEqualByComparingTo(new BigDecimal("15000"));
-        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4050.00"));
+        assertThat(pedido.comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3150.00"));
     }
 
     @Test
@@ -658,11 +658,11 @@ class PagosFlujosIntegracionTest {
         UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
         pedirPreferencia(e.tokenEst(), reservaId);
 
-        // BR-PAG-01 intacta: 27 % solo sobre la sesión (4050); el adicional va entero a la plataforma.
+        // BR-PAG-01 intacta: 21 % solo sobre la sesión (3150); el adicional va entero a la plataforma.
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
-        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("4820.00"));
+        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3920.00"));
     }
 
     @Test
@@ -844,7 +844,7 @@ class PagosFlujosIntegracionTest {
 
         mockMvc.perform(get("/api/pagos/tarifa").header("Authorization", "Bearer " + tokenTutor))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.comisionPorcentaje").value(27));
+                .andExpect(jsonPath("$.comisionPorcentaje").value(21));
     }
 
     private com.tinku.pagos.model.Transaccion transaccion(UUID reservaId, String mpId, boolean bypass, Instant cobro) {

@@ -171,7 +171,7 @@ class PaqueteIntegracionTest extends FlujosReservaBase {
         assertThat(scheduler.checkExists(reservaService.triggerTimeoutPago(clases.get(0).getId()))).isTrue();
         assertThat(scheduler.checkExists(reservaService.triggerTimeoutPago(clases.get(1).getId()))).isFalse();
 
-        // La preferencia es por el total, desde la ancla; marketplace_fee = 4 × 27 % de 10.800.
+        // La preferencia es por el total, desde la ancla; marketplace_fee = 4 × 21 % de 10.800.
         mockMvc.perform(post("/api/pagos/preferencia").header("Authorization", "Bearer " + s.e().tokenAlumno())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("reservaId", clases.get(0).getId().toString()))))
@@ -179,7 +179,7 @@ class PaqueteIntegracionTest extends FlujosReservaBase {
         ArgumentCaptor<PreferenciaRequest> pedido = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(pedido.capture(), any());
         assertThat(pedido.getValue().montoBruto()).isEqualByComparingTo("43200");
-        assertThat(pedido.getValue().comisionPlataforma()).isEqualByComparingTo("11664.00");
+        assertThat(pedido.getValue().comisionPlataforma()).isEqualByComparingTo("9072.00");
         // Pagar desde otra clase del paquete no corresponde: ni se ofrece ni se acepta.
         mockMvc.perform(get("/api/reservas/{id}", clases.get(0).getId()).header("Authorization", "Bearer " + s.e().tokenAlumno()))
                 .andExpect(jsonPath("$.puedePagar").value(true));

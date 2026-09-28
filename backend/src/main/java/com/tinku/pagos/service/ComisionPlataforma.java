@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * BR-PAG-01 (FR-PAG-003): comisión de plataforma = 27% del monto bruto, a cargo
- * del Tutor y nunca visible como línea aparte (US-7). Calibrado en el Cap. 5 de
- * la tesis (por debajo de 23,4 % el VAN del escenario base era negativo). Un
+ * BR-PAG-01 (FR-PAG-003): comisión de plataforma = 21% del monto bruto (ADR-M5-04), a
+ * cargo del Tutor y nunca visible como línea aparte (US-7). Con el modelo A (ADR-M5-02)
+ * MercadoPago descuenta además su propia comisión de los fondos del Tutor. Un
  * único cálculo compartido por todo el módulo para que la preferencia de M5-A
  * ({@code marketplace_fee}) y la {@code comision_plataforma} de la
  * {@code Transaccion} que crea el webhook de M5-B produzcan SIEMPRE el mismo
@@ -20,7 +20,7 @@ public class ComisionPlataforma {
 
     private final int percent;
 
-    public ComisionPlataforma(@Value("${tinku.mercadopago.marketplace-fee-percent:27}") int percent) {
+    public ComisionPlataforma(@Value("${tinku.mercadopago.marketplace-fee-percent:21}") int percent) {
         this.percent = percent;
     }
 
