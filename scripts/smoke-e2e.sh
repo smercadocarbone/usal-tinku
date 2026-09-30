@@ -63,7 +63,7 @@ curl -sf -X POST "$BASE/api/tutores/franjas" -H "Authorization: Bearer $TUTOR_TO
     || falla "POST franja"
 
 paso "Registro y login de un estudiante nuevo ($EST_DNI)"
-DATOS="{\"dniDeclarado\":\"$EST_DNI\",\"nombreDeclarado\":\"Smoke\",\"apellidoDeclarado\":\"Test\",\"fechaNacimientoDeclarada\":\"2000-01-01\",\"email\":\"smoke$EST_DNI@tinku.test\",\"password\":\"$EST_PASSWORD\",\"capacidadEstudiante\":true,\"capacidadAdultoResponsable\":false}"
+DATOS="{\"dniDeclarado\":\"$EST_DNI\",\"nombreDeclarado\":\"Smoke\",\"apellidoDeclarado\":\"Test\",\"fechaNacimientoDeclarada\":\"2000-01-01\",\"email\":\"smoke$EST_DNI@tinku.test\",\"password\":\"$EST_PASSWORD\",\"capacidadEstudiante\":true,\"capacidadAdultoResponsable\":false,\"aceptaTerminos\":true}"
 printf 'foto' > /tmp/smoke-dni.png
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/usuarios/registro" \
     -F "datos=$DATOS;type=application/json" -F "fotoDni=@/tmp/smoke-dni.png;type=image/png")
