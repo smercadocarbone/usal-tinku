@@ -148,10 +148,25 @@ Otros targets útiles: `make down`, `make logs`, `make ps`, `make db-reset`
 
 ### Datos de prueba
 
-En perfil `dev` el backend siembra Tutores de ejemplo al arrancar
-(`TutorSeedRunner`) y promueve a Admin a usuarios ya registrados
-(`AdminSeedRunner`, nunca inventa cuentas). Para el resto, con el stack
-arriba, en este orden:
+En perfil `dev` el backend siembra al arrancar (idempotente, password
+`password123` para todos):
+
+| Runner | Qué deja |
+|--------|----------|
+| `TutorSeedRunner` | 37 Tutores (DNI `30xxxxxx` y `31000001`–`31000030`) con varios por materia, tarifa y franjas semanales de 1h (08–23) |
+| `EstudianteSeedRunner` | Estudiantes adultos `40000001`–`40000014` (`40000011` también es AR, `40000012` solo AR) y menores `50000001`–`50000003` con Tutores autorizados |
+| `HistorialSeedRunner` | Clases pasadas finalizadas entre esos Estudiantes y Tutores, con sus calificaciones y comentarios: de ahí sale la reputación |
+
+Los embeddings no los calcula el backend: después del primer arranque,
+`curl -X POST localhost:8000/recompute-embeddings -H "X-Matching-Token: $MATCHING_SERVICE_TOKEN"`
+para que los Tutores nuevos aparezcan en la búsqueda.
+
+Para cargarlos en un despliegue de **pruebas** (nunca con usuarios reales):
+`SPRING_PROFILES_ACTIVE=prod,seed-demo`. Ese perfil activa solo estos tres
+runners; no usar `prod,dev` (el `StubOcrService` hace abortar el arranque).
+
+`AdminSeedRunner` promueve a Admin a usuarios ya registrados (nunca inventa
+cuentas). Para el resto, con el stack arriba, en este orden:
 
 ```bash
 scripts/seed-usuarios.sh    # adultos, un menor con su Adulto Responsable y tutores de prueba
