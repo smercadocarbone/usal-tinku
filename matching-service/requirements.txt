@@ -1,7 +1,7 @@
 # Versiones minimas que soportan Python 3.14 (las fijadas originalmente,
 # fastapi 0.115.0 / pydantic 2.9.2 de fines 2024, no tienen wheels para 3.14
 # y pydantic-core falla al compilarse desde fuente). T-000-08.
-fastapi>=0.141.0
+fastapi>=0.141.1
 uvicorn[standard]>=0.53.0
 pydantic>=2.13.5
 
