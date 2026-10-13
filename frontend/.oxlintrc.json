@@ -8,6 +8,7 @@
     "suspicious": "warn",
     "perf": "warn"
   },
+  "ignorePatterns": ["public/presentacion/**"],
   "plugins": ["react", "jsx-a11y", "typescript"],
   "rules": {
     "react/react-in-jsx-scope": "off",

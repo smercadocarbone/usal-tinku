@@ -14,8 +14,8 @@ type Cliente = {
   enviar: (texto: string) => void;
 };
 
-const g = globalThis as unknown as { __presentacionClientes?: Map<string, Cliente> };
-export const clientes: Map<string, Cliente> = (g.__presentacionClientes ??= new Map());
+const g = globalThis as unknown as { presentacionClientes?: Map<string, Cliente> };
+export const clientes: Map<string, Cliente> = (g.presentacionClientes ??= new Map());
 
 export const MAX_CLIENTES = 40;
 export const MAX_BYTES_PRESENCIA = 4096;
