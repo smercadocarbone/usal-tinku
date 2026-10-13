@@ -29,7 +29,14 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // La presentación de la tesis (/presentacion) es pública pero no debe indexarse.
+      { source: "/presentacion/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+    ];
+  },
+  async rewrites() {
+    return [{ source: "/presentacion", destination: "/presentacion/index.html" }];
   },
 };
 
