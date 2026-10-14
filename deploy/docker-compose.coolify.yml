@@ -91,8 +91,8 @@ services:
     restart: unless-stopped
     environment:
       # `prod` solo. Para una prueba con datos sembrados: `prod,seed-demo` (cuentas con contraseña conocida;
-      # sacarlo al terminar). Se cambia con esta variable en Coolify, sin tocar el repo.
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      # sacarlo al terminar). Se cambia con la variable TINKU_PERFILES en Coolify, sin tocar el repo.
+      SPRING_PROFILES_ACTIVE: ${TINKU_PERFILES:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tinku
       DB_USER: ${SERVICE_USER_POSTGRES}
       DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}

@@ -19,7 +19,7 @@
 En producción registrarse exige la foto de un DNI real (OCR), así que se usan cuentas sembradas. Hay dos caminos:
 
 **A. Perfil `seed-demo` (PR #75, ya integrado en esta rama).** En Coolify → recurso → *Environment Variables*, agregar
-`SPRING_PROFILES_ACTIVE=prod,seed-demo` y redeploy (el compose la lee con `${SPRING_PROFILES_ACTIVE:-prod}`). Crea solo (idempotente, contraseña `password123`):
+`TINKU_PERFILES=prod,seed-demo` y redeploy (el compose la pasa como `SPRING_PROFILES_ACTIVE: ${TINKU_PERFILES:-prod}`; no se usa el nombre `SPRING_PROFILES_ACTIVE` porque Coolify lo marca como gestionado por el compose). Crea solo (idempotente, contraseña `password123`):
 37 Tutores con foto, tarifa y franjas de 1 h (08–23), Estudiantes adultos `40000001`–`40000014`
 (`40000011` también es Adulto Responsable, `40000012` solo AR), 3 menores `50000001`–`50000003` con
 Tutores autorizados e historial calificado. **Es una contraseña conocida: solo mientras dure la
