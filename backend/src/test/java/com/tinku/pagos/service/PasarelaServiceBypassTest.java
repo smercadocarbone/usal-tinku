@@ -54,4 +54,15 @@ class PasarelaServiceBypassTest {
         PasarelaService s = servicio("prod");
         assertThat(s.establecerHabilitada(true, UUID.randomUUID())).isTrue();
     }
+
+    // M3C-08: el entorno de pruebas usa `staging` (sin `prod`) para poder prender el bypass.
+    @Test
+    void bypassPermitido_conPerfilStaging_true() {
+        assertThat(servicio("staging").bypassPermitido()).isTrue();
+    }
+
+    @Test
+    void bypassPermitido_conProdYStaging_false() {
+        assertThat(servicio("prod", "staging").bypassPermitido()).isFalse();
+    }
 }

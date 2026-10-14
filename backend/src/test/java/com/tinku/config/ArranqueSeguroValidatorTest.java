@@ -100,4 +100,23 @@ class ArranqueSeguroValidatorTest {
         runner("dev", new StubOcrService(), ArranqueSeguroValidator.JWT_SECRET_PLACEHOLDER)
                 .run(ctx -> assertThat(ctx).hasNotFailed());
     }
+
+    // M3C-08: `staging` no es dev/test, así que no habilita el OCR falso.
+    @Test
+    void arranque_conStagingYOcrStub_falla() {
+        runner("staging", new StubOcrService(), SECRET_REAL).run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause().hasMessageContaining("StubOcrService");
+        });
+    }
+
+    /** M3C-08: el perfil staging pide exactamente las mismas variables que prod, sin defaults. */
+    @Test
+    void perfilStaging_mismasPropiedadesQueProd() {
+        YamlPropertiesFactoryBean prod = new YamlPropertiesFactoryBean();
+        prod.setResources(new ClassPathResource("application-prod.yml"));
+        YamlPropertiesFactoryBean staging = new YamlPropertiesFactoryBean();
+        staging.setResources(new ClassPathResource("application-staging.yml"));
+        assertThat(staging.getObject()).isEqualTo(prod.getObject());
+    }
 }
