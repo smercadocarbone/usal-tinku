@@ -110,15 +110,15 @@ test.describe("Configuración de Precio del tutor", () => {
           route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: '{"tutorId":"t-1","precioHora":15000,"pisoHora":6140,"comisionPorcentaje":21,"comisionMercadoPagoPorcentaje":6.04}',
+            body: '{"tutorId":"t-1","precioHora":15000,"pisoHora":6140,"comisionPorcentaje":27,"comisionMercadoPagoPorcentaje":6.04}',
           }),
       });
 
       await page.goto("/cuenta/precio");
-      // 15.000 − 3.150 (21 %) − 906 (6,04 %) = 10.944; media hora: 7.500 − 1.575 − 453 = 5.472.
-      await expect(page.getByText(/Te quedan aprox\./)).toContainText("10.944");
-      await expect(page.getByText(/Te quedan aprox\./)).toContainText("5.472");
-      await expect(page.getByText(/comisión de Tinku \(21 %\) y la de MercadoPago \(~6,04 %\)/)).toBeVisible();
+      // 15.000 − 4.050 (27 %) − 906 (6,04 %) = 10.044; media hora: 7.500 − 2.025 − 453 = 5.022.
+      await expect(page.getByText(/Te quedan aprox\./)).toContainText("10.044");
+      await expect(page.getByText(/Te quedan aprox\./)).toContainText("5.022");
+      await expect(page.getByText(/comisión de Tinku \(27 %\) y la de MercadoPago \(~6,04 %\)/)).toBeVisible();
     }
   );
 });

@@ -19,7 +19,7 @@ La tesis fijó decisiones que el código todavía no refleja:
 
 | Tema | Hoy en el código | Lo que decidió la tesis |
 |------|------------------|-------------------------|
-| Comisión de plataforma | 15 % (`application.yml`, BR-PAG-01) | **27 %** _(superado: 21 % desde el 2026-09-28, ADR-M5-04)_ |
+| Comisión de plataforma | 15 % (`application.yml`, BR-PAG-01) | **27 %** _(21 % entre el 2026-09-28 y el 2026-10-14, ADR-M5-04; vuelve a 27 % por T16)_ |
 | Precio de la sesión | Libre, sin piso | **Piso de USD 4 por hora** (en ARS) |
 | Resumen automático | Para toda sesión ≥10 min, sin proveedor | **Adicional opcional pago**, solo entre adultos, con Gemini 3.5 Flash-Lite |
 | Grabación de audio | Prohibida (AGENTS §1.5) | **Solo audio, solo si se contrató el adicional, borrado tras transcribir** |
@@ -65,10 +65,10 @@ la tarea, y se tilda en el commit que la cierra.
 
 | ID | Tema | Decisión |
 |----|------|----------|
-| DT1 | Comisión | **27 %** sobre el monto bruto de la sesión, a cargo del Tutor (BR-PAG-01 actualizada). _Superado por ADR-M5-04 (2026-09-28): **21 %**, porque con el modelo A MercadoPago descuenta su comisión de los fondos del Tutor (T-TES-15)._ |
+| DT1 | Comisión | **27 %** sobre el monto bruto de la sesión, a cargo del Tutor (BR-PAG-01 actualizada). _ADR-M5-04 (2026-09-28) la bajó a 21 % por el modelo A; la tesis vigente vuelve a **27 %** (2026-10-14, T16/ADR-M5-05)._ |
 | DT2 | Precio | **Piso de USD 4 por hora**, expresado en ARS en un parámetro configurable. El precio lo sigue fijando el Tutor. |
-| DT3 | Resumen | **Adicional opcional** que se contrata por reserva, a **USD 0,50** (en ARS). **No se ofrece en sesiones con un menor.** |
-| DT4 | Proveedor LLM | **Gemini 3.5 Flash-Lite** (cierra T-FIN-03). Gemini 2.0 Flash fue dado de baja el 01/06/2026. |
+| DT3 | Resumen | **Adicional opcional** que se contrata por reserva, a **USD 0,50** (en ARS) _(precio superado el 2026-10-14: costo + 50 % por duración, T17)_. **No se ofrece en sesiones con un menor.** |
+| DT4 | Proveedor LLM | **Gemini 3.5 Flash-Lite** (cierra T-FIN-03) _(superado por ADR-M6-03: GPT-4o)_. Gemini 2.0 Flash fue dado de baja el 01/06/2026. |
 | DT5 | Grabación | **Solo audio**, **solo** en sesiones con el adicional contratado, **solo entre adultos**, con **consentimiento** de ambos participantes (aceptado en los Términos y Condiciones: el alumno al contratar el adicional, el Tutor en el onboarding), y se **borra** al obtener el transcript (máx. 24 hs). |
 | DT6 | CAP | **Obligatorio y vigente solo para dictar clases a menores.** Los Tutores que solo enseñan a adultos no lo cargan. Reemplaza a ADR-M1-02. |
 | DT7 | Piloto | **Sin sesiones con menores** hasta que estén cerrados T-M3-06 (kill-switch en cliente) y el CAP (T02). |
@@ -100,3 +100,29 @@ la tarea, y se tilda en el commit que la cierra.
   módulo de chat**. Se corrige la tesis, no el código (el chat no está en ningún Spec — Art. VI).
 - AUD-035 (tablas V6 del CAP huérfanas) deja de ser un problema: las tablas **vuelven a usarse**
   (T02). **Cancelar T-AUD-032** (migración que las dropea) en el commit de T01.
+
+---
+
+## 6. Revisión del 2026-10-14 — la tesis cambió después de estas specs
+
+Se comparó la tesis vigente (`smercadocarbone/usal-tinku-docs`, última integración 2026-10-13)
+contra el repo. **Fuente de verdad: los `.tex` de `capitulos/`.** `tesis.md` de ese repo está
+**desactualizado** (todavía tiene el ticket de USD 7, el margen de USD 1,4417 y el costo de IA por
+sesión); no lo uses para comparar.
+
+| Tema | Repo hoy | Tesis vigente | Spec |
+|------|----------|---------------|------|
+| Comisión | 21 % (ADR-M5-04) | **27 %**; VAN base USD 3.573, equilibrio ≈ 25,3 % | `T16` (+ ADR-M5-05) |
+| Precio del resumen | $770 fijo (BR-PAG-11) | **1,5 × costo de IA, crece con la duración** ($270 a 30 min … $1.490 a 180 min) | `T17` (+ ADR-M5-06) |
+| Ticket promedio | USD 7 | USD 7,42 (414 avisos de Superprof) | sin código: solo modelo financiero |
+| Costo de IA | por sesión | sale de la economía unitaria; se cobra en el adicional | sin código |
+| Proveedor de LLM | GPT-4o + `gpt-4o-mini-transcribe` (ADR-M6-03, ADR-M3-04) | **igual** | sin cambios (DT4 de este archivo está superado) |
+| Piso tarifario, CAP, grabación solo audio, gate de menores, plazos de reserva | implementados | **igual** | sin cambios |
+
+Ejecutar en este orden: `T16` y `T17` son independientes entre sí (el adicional va entero al
+`marketplace_fee`); ambas son *Antes del piloto* porque tocan dinero.
+
+Actualizaciones de este archivo derivadas de la revisión (hechas en el mismo commit que estas
+specs): la fila "Comisión" de §1 y DT1 pasan a **27 %** (con la nota de que ADR-M5-04 queda
+superado); DT3 y PT5 llevan la nota "precio superado por T17"; DT4 lleva la nota "superado por
+ADR-M6-03". Los textos originales no se borran.

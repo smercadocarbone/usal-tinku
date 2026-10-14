@@ -109,7 +109,8 @@ Una cuenta de menor nunca opera el panel.
 | `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_OAUTH_REDIRECT_URI`, `TINKU_CLAVE_CIFRADO` | para el reparto con los Tutores (ADR-M5-02) | App de marketplace de MP. Redirect: `https://api.tinku.site/api/pagos/mp/callback`. Clave: `openssl rand -base64 32` (si se pierde, cada Tutor tiene que reconectar). Sin `MP_CLIENT_ID` se cobra todo en la cuenta de Tinku, sin reparto |
 | `LLM_PROVEEDOR`, `LLM_API_KEY` | para resúmenes | `LLM_PROVEEDOR=gpt-4o` + API key de OpenAI (ADR-M6-03). Vacías = fail-closed |
 | `TINKU_RESUMEN_ADICIONAL_HABILITADO` | no (`false`) | Adicional pago de resumen (T09). **Dejarlo en `false` hasta tener el texto legal de la cláusula de grabación** (ADR-M3-04). Con `true` exige `LLM_PROVEEDOR=gpt-4o` y `LLM_API_KEY` o el backend no arranca |
-| `TINKU_RESUMEN_ADICIONAL_PRECIO_ARS` | no (770) | Precio del adicional (PT5) |
+| `TINKU_RESUMEN_TIPO_CAMBIO_ARS` | no (1535) | Tipo de cambio del precio del adicional (ADR-M5-06); se revisa junto con `TARIFA_PISO_HORA_ARS` |
+| `TINKU_RESUMEN_MARGEN` | no (1.50) | Margen sobre el costo de IA (costo + 50 %). Las tarifas de OpenAI tienen su variable `TINKU_RESUMEN_COSTO_*` (ver `application.yml`) |
 | `TINKU_CLAUSULA_GRABACION_VERSION` | no (`borrador-1`) | Versión vigente de la cláusula. Al cambiar el texto, subila: todos vuelven a aceptar |
 | `TARIFA_PISO_HORA_ARS` | no (6140) | Piso por hora (T06); se revisa una vez por mes |
 | `TINKU_TAG` | no (`latest`) | Versión de las imágenes. Para volver atrás, ver §6 |

@@ -107,7 +107,7 @@ tinku:
     # rechaza TODO (fail-closed, patrón LiveKit) — una notificación sin verificar
     # jamás confirma un pago ni crea un escrow.
     webhook-secret: ${MP_WEBHOOK_SECRET:}
-    marketplace-fee-percent: 21 # BR-PAG-01, ADR-M5-04 (antes 27 %, T-TES-05)
+    marketplace-fee-percent: 27 # BR-PAG-01, ADR-M5-05 (21 % entre ADR-M5-04 y ADR-M5-05)
     # FR-PAG-019 (ADR-M5-04): tasa de MercadoPago con IVA que se le muestra al Tutor para estimar su
     # neto. Solo informativa (la real depende del plazo de acreditación de su cuenta).
     comision-procesamiento-percent: ${MP_COMISION_PROCESAMIENTO_PERCENT:6.04}
@@ -183,7 +183,14 @@ tinku:
     # de grabacion (ADR-M3-04) — no habilitar en prod antes.
     adicional:
       habilitado: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:false}
-      precio-ars: ${TINKU_RESUMEN_ADICIONAL_PRECIO_ARS:770}
+      # ADR-M5-06: precio = margen x costo de IA de la clase (tarifas de lista de OpenAI, tesis Cap. 5).
+      costo-transcripcion-usd-min: ${TINKU_RESUMEN_COSTO_TRANSCRIPCION_USD_MIN:0.0030}
+      costo-entrada-usd-token: ${TINKU_RESUMEN_COSTO_ENTRADA_USD_TOKEN:0.0000025}
+      tokens-por-minuto: ${TINKU_RESUMEN_TOKENS_POR_MINUTO:217}
+      costo-salida-usd-token: ${TINKU_RESUMEN_COSTO_SALIDA_USD_TOKEN:0.00001}
+      tokens-salida: ${TINKU_RESUMEN_TOKENS_SALIDA:840}
+      margen: ${TINKU_RESUMEN_MARGEN:1.50}
+      tipo-cambio-ars: ${TINKU_RESUMEN_TIPO_CAMBIO_ARS:1535}
     llm:
       proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
       api-key: ${LLM_API_KEY:}       # API key de OpenAI

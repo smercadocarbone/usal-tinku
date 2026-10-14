@@ -121,7 +121,9 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       # T09: adicional pago de resumen. false hasta tener el texto legal de la cláusula (ADR-M3-04).
       TINKU_RESUMEN_ADICIONAL_HABILITADO: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:-false}
-      TINKU_RESUMEN_ADICIONAL_PRECIO_ARS: ${TINKU_RESUMEN_ADICIONAL_PRECIO_ARS:-770}
+      # ADR-M5-06: precio = margen x costo de IA por duración. Defaults = tesis Cap. 5 (tarifas de lista de OpenAI).
+      TINKU_RESUMEN_TIPO_CAMBIO_ARS: ${TINKU_RESUMEN_TIPO_CAMBIO_ARS:-1535}
+      TINKU_RESUMEN_MARGEN: ${TINKU_RESUMEN_MARGEN:-1.50}
       TINKU_CLAUSULA_GRABACION_VERSION: ${TINKU_CLAUSULA_GRABACION_VERSION:-borrador-1}
       TARIFA_PISO_HORA_ARS: ${TARIFA_PISO_HORA_ARS:-6140}
       # Detrás del túnel todo llega desde cloudflared: la IP real del cliente viaja en este

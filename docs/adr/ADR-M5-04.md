@@ -1,6 +1,6 @@
 # ADR-M5-04 — Comisión de plataforma al 21 % (modifica BR-PAG-01)
 
-**Estado:** Aceptado (decisión del dueño del producto, 2026-09-28). Implementado en T-TES-15.
+**Estado:** Superado por ADR-M5-05 (2026-10-14: la comisión vuelve a 27 %). Fue aceptado el 2026-09-28 por el dueño del producto e implementado en T-TES-15; el resto del texto queda como historial.
 Modifica BR-PAG-01 de `docs/specs/Spec_M5_Motor_Pagos.md` y deja superado a T-TES-05
 (`docs/superpowers/specs/tesis/T05-comision-27.md`). No cambia la fila "Pagos" del Registro de
 Decisiones Técnicas de la Constitución, porque esa fila no fija el porcentaje.
