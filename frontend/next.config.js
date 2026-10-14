@@ -31,6 +31,11 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      // Pesos de NSFWJS y .wasm de TF.js (kill-switch, ADR-M3-07): no cambian sin cambiar la ruta.
+      {
+        source: "/modelos/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
       // La presentación de la tesis (/presentacion) es pública pero no debe indexarse.
       { source: "/presentacion/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
