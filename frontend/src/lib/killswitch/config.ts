@@ -32,3 +32,12 @@ export const CLIP_MAX_BYTES = 5 * 1024 * 1024;
 export const REINTENTOS_SUBIDA_CLIP = 3;
 /** Tabla de Tiempos: "Reintentos de subida del clip de evidencia" (espera entre intentos). */
 export const ESPERA_SUBIDA_CLIP_MS = 2_000;
+
+/** Tabla de Tiempos: "Reintentos del disparo del kill-switch" (intentos en total). */
+export const REINTENTOS_DISPARO = 3;
+/** Tabla de Tiempos: "Reintentos del disparo del kill-switch" (espera entre intentos). */
+export const ESPERA_ENTRE_DISPAROS_MS = 1_000;
+/** Tabla de Tiempos: "Plazo de respuesta de la rama adultos del kill-switch". */
+export const PLAZO_RAMA_ADULTOS_MS = 300_000;
+/** Canal de datos de LiveKit, separado de "pizarra" y del modo texto. */
+export const TOPIC_KILLSWITCH = "killswitch";
