@@ -18,8 +18,8 @@
 
 En producción registrarse exige la foto de un DNI real (OCR), así que se usan cuentas sembradas. Hay dos caminos:
 
-**A. Perfil `seed-demo` (PR #75, ya integrado en esta rama).** En Coolify, variable
-`SPRING_PROFILES_ACTIVE=prod,seed-demo` y redeploy. Crea solo (idempotente, contraseña `password123`):
+**A. Perfil `seed-demo` (PR #75, ya integrado en esta rama).** En Coolify → recurso → *Environment Variables*, agregar
+`SPRING_PROFILES_ACTIVE=prod,seed-demo` y redeploy (el compose la lee con `${SPRING_PROFILES_ACTIVE:-prod}`). Crea solo (idempotente, contraseña `password123`):
 37 Tutores con foto, tarifa y franjas de 1 h (08–23), Estudiantes adultos `40000001`–`40000014`
 (`40000011` también es Adulto Responsable, `40000012` solo AR), 3 menores `50000001`–`50000003` con
 Tutores autorizados e historial calificado. **Es una contraseña conocida: solo mientras dure la
@@ -29,7 +29,7 @@ prueba; después sacar el perfil.**
 exige subir la foto de cada Tutor a mano.
 
 En ambos casos, después:
-1. **Embeddings** del buscador (`POST /recompute-embeddings` en el contenedor `matching`). Sin esto los Tutores no aparecen.
+1. **Embeddings**: no hay que hacer nada. El backend pide el recompute solo al arrancar (`RecomputeAlArrancar`, ya con los Tutores sembrados), con reintentos mientras el modelo carga (~1 min). Si algún Tutor no aparece en la búsqueda, ahí sí se dispara a mano (RUNBOOK §10.1).
 2. **Admins**: `AdminSeedRunner` solo corre en `dev`. Promover cuentas con el `INSERT INTO admin.admins` del RUNBOOK §2.5 (uno por rol: Moderación y Seguridad, Soporte Financiero).
 
 Decime cuál camino usaste y las credenciales de admin (o dónde están). **No necesito ninguna clave real**: no se usa tarjeta ni dinero.
