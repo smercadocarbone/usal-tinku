@@ -1,0 +1,163 @@
+[
+  {
+    "id": "D-1 los dos en la sala con el clasificador (falso) corriendo",
+    "esperado": "n clasificaciones > 3 en el cliente de Mía y video remoto",
+    "obtenido": "{\"n\":58,\"videos\":2}",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-2 con un menor, \"Sexy\" ≥ 0,85 durante 3 muestras dispara el corte",
+    "esperado": "pantalla de corte de seguridad en Mía",
+    "obtenido": "2.5 s desde que el modelo empezó a detectar",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-3 a la menor NO se le pregunta nada",
+    "esperado": "sin diálogo \"¿Viste algo…\"",
+    "obtenido": "false",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-4 el cartel no revela qué se detectó",
+    "esperado": "sin palabras de contenido",
+    "obtenido": "Saltar al contenido La clase se cortó por seguridad La clase se cortó por seguridad. El equipo de Tinku lo está revisando. Volver a mis clases",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-5 la Tutora detectada también ve el cierre de seguridad (aviso de datos)",
+    "esperado": "pantalla de corte en Lorena",
+    "obtenido": "sí",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-6 el cliente llamó a /killswitch (sin campo rama) y subió el clip",
+    "esperado": "POST killswitch {detectadoId} + POST evidencia",
+    "obtenido": "[\"POST /api/sesiones/{id}/token \",\"POST /api/sesiones/{id}/killswitch {\\\"detectadoId\\\":\\\"f7f5f6f9-7905-41dd-917a-202183ed80ab\\\"}\",\"POST /api/sesiones/{id}/evidencia \"]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-7 alerta rama menor con clip real grabado del track remoto",
+    "esperado": "rama=menor, clip presente",
+    "obtenido": "{\"id\":\"98c2c7ac-4187-42ff-999e-ba3588b907f8\",\"sesionId\":\"d2dd49d3-2850-4100-992a-887a1828812e\",\"rama\":\"menor\",\"detectadoId\":\"f7f5f6f9-7905-41dd-917a-202183ed80ab\",\"estado\":\"pendiente_revision\",\"descargoTexto\":null,\"descargoRecibidoAt\":null,\"clipRetencionHasta\"",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-8 el admin puede descargar el clip",
+    "esperado": "200, WebM, >1 KB, ≤5 MB",
+    "obtenido": "200 280871 bytes, magic=1a45dfa3",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-9 la sesión quedó cerrada y sin confirmación pendiente",
+    "esperado": "pendiente=false",
+    "obtenido": "{\"hayMenor\":true,\"confirmacionPendiente\":false,\"detectadoId\":null,\"venceAt\":null}",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "D-10 no se puede volver a entrar",
+    "esperado": "422",
+    "obtenido": "422",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-1 entre adultos \"Sexy\" NO dispara nada (solo Porn/Hentai cuentan)",
+    "esperado": "sin diálogo ni llamadas",
+    "obtenido": "{\"dialogo\":false,\"llamadas\":1}",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "C-2 \"Porn\" ≥ 0,85 x3 oculta el video y pregunta al detector",
+    "esperado": "diálogo en el cliente que detectó",
+    "obtenido": "1.2 s",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-3 el detectado recibe el aviso de que su video se ocultó (sin decir por qué)",
+    "esperado": "aviso informativo",
+    "obtenido": "sí",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-4 el video del detectado está oculto mientras se espera la respuesta",
+    "esperado": "0 videos remotos visibles",
+    "obtenido": "1",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "C-5 el backend registra la confirmación pendiente con plazo de 5 min",
+    "esperado": "pendiente, vence en ~300 s",
+    "obtenido": "pendiente=true vence en 297 s",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-6 respondiendo \"No\" vuelve el video y sigue la clase",
+    "esperado": "video visible, sin pendiente",
+    "obtenido": "{\"videos\":2,\"pendiente\":false,\"dialogo\":false}",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-7 una segunda detección vuelve a preguntar",
+    "esperado": "diálogo",
+    "obtenido": "sí",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-8 sin respuesta, a los 5 min el diálogo se cierra solo",
+    "esperado": "≈300 s",
+    "obtenido": "300 s",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-9 el backend resolvió la confirmación vencida como \"No\" (sin alerta, clase sigue)",
+    "esperado": "pendiente=false y sin alerta",
+    "obtenido": "{\"pendiente\":false,\"alerta\":false}",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-10 tras vencer vuelve el video del detectado",
+    "esperado": "video visible",
+    "obtenido": "2",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-11 \"Sí\" corta y el que respondió ve el cierre de seguridad",
+    "esperado": "pantalla de corte",
+    "obtenido": "sí",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "C-12 el detectado (adulto) también ve un mensaje claro de cierre",
+    "esperado": "mensaje de corte, no \"Esperando al otro participante\"",
+    "obtenido": "Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante Juan Vos Finalizar clase",
+    "ok": false,
+    "nota": "HALLAZGO si falla"
+  },
+  {
+    "id": "C-13 alerta rama adultos con clip",
+    "esperado": "rama=adultos",
+    "obtenido": "{\"id\":\"dd16c1cf-10d0-4272-a1a5-82d5a7277aca\",\"sesionId\":\"480ec3d4-1d39-475b-b637-81da571cde6d\",\"rama\":\"adultos\",\"detectadoId\":\"c1638007-6696-4605-8fde-9a5e26c2a376\",\"estado\":\"pendiente_revision\",\"desc",
+    "ok": true,
+    "nota": ""
+  }
+]
