@@ -16,9 +16,10 @@
 | Intervalo de clasificación del kill-switch _(ADR-M3-07)_ | 250 ms | Un track remoto por turno, rotando entre cámara y pantalla; si la inferencia anterior no terminó, el turno se saltea | M3 |
 | Confirmación de una detección _(ADR-M3-07)_ | 3 muestras consecutivas del mismo track | ≈0,75 s con un solo track a 250 ms; en gama media sin GPU, ≈1,5–3 s | M3 |
 | Tiempo máximo de carga del clasificador _(ADR-M3-07, propuesto 2026-10-14)_ | 20 seg | Antes de unirse. Con un menor, si no carga no se pide token (US-6bis) | M3 |
-| Tiempo sin respuesta del clasificador _(ADR-M3-07, propuesto 2026-10-14)_ | 3 seg | Sin ninguna clasificación completada en ese lapso = caído | M3 |
-| Reintentos para reactivar el clasificador _(ADR-M3-07)_ | 3 intentos, 3 seg entre intentos (≈10 seg) | Con un menor, el video remoto queda oculto mientras tanto; si no revive, el cliente sale de la sala (corte por conectividad) | M3 |
-| Plazo de respuesta de la rama adultos del kill-switch _(ADR-M3-07)_ | 60 seg | Sin respuesta = "No" (se restaura el video, sin Alerta). Job de Quartz persistido | M3 |
+| Demora que oculta el video con un menor _(ADR-M3-07)_ | 3 seg | Si una clasificación tarda más, el video remoto se oculta hasta que termine; no cuenta como caída | M3 |
+| Tiempo sin respuesta del clasificador _(ADR-M3-07, propuesto 2026-10-14)_ | 10 seg | Sin ninguna clasificación completada en ese lapso = caído; arrancan los reintentos | M3 |
+| Reintentos para reactivar el clasificador _(ADR-M3-07)_ | 5 intentos, 5 seg entre intentos (≈25 seg) | Con un menor, el video remoto queda oculto mientras tanto; si no revive, el cliente sale de la sala (corte por conectividad) | M3 |
+| Plazo de respuesta de la rama adultos del kill-switch _(ADR-M3-07)_ | 5 min | Sin respuesta = "No" (se restaura el video, sin Alerta). Job de Quartz persistido | M3 |
 | Reintentos del disparo del kill-switch _(ADR-M3-07)_ | 3 intentos, 1 seg entre intentos | Con un menor, si fallan los 3 el cliente sale de la sala igual | M3 |
 | Reintentos de subida del clip de evidencia _(ADR-M3-07)_ | 3 intentos, 2 seg entre intentos | El clip vive solo en memoria: si fallan, se pierde | M3 |
 | Retención máxima del audio del resumen _(ADR-M3-04)_ | Hasta obtener el transcript; 24 hs como máximo desde el fin de la sesión | Job de Quartz persistido por Sesión borra el audio aunque el resumen falle | M3, M6 |

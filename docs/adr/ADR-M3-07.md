@@ -2,7 +2,8 @@
 
 ## Estado
 
-Aceptado (2026-10-14, decisiones del dueño del producto en la sesión de cierre de T-M3-06). Completa
+Aceptado (2026-10-14; plazos ajustados por el dueño el mismo día: 5 min de rama adultos, 10 s sin
+respuesta, 5 reintentos cada 5 s; decisiones del dueño del producto en la sesión de cierre de T-M3-06). Completa
 ADR-M3-01 (modelo y framework) sin cambiarlo. Implementa FR-AULA-003, FR-AULA-004 y FR-AULA-010 de
 `Spec_M3` a través de las specs `docs/superpowers/specs/m3c/M3C-02` a `M3C-05`.
 
@@ -86,6 +87,12 @@ clase.
   se pide token y no se entra (fail-closed, US-6bis).
 - **Entre adultos:** se entra igual y se registra.
 
+**Demora de una clasificación con un menor:** si una clasificación tarda más que la `demora que oculta
+el video con un menor` (Tabla de Tiempos), el video remoto se oculta con el cartel "Verificando la
+protección…" hasta que termine. No cuenta como caída: así una demora larga nunca deja al menor viendo
+video sin clasificar, y la caída se declara recién al `tiempo sin respuesta del clasificador`, que es
+más largo para no reintentar por un celular lento.
+
 **Con la clase en curso y un menor:**
 1. **No se corta la llamada.** El audio sigue. El video remoto se oculta de inmediato con el cartel
    "Reactivando la protección…". El menor nunca ve video sin clasificar (Artículo II, `Spec_M3` US-6bis).
@@ -125,8 +132,11 @@ El vencimiento lo ejecuta un job de Quartz persistido (AGENTS §1.3).
   (p50) y 510 ms (p95). Sin GPU, el intervalo efectivo por track queda en 0,5–1 s y la confirmación
   en unos 1,5–3 s. Con `webgl` y GPU real debería ser bastante menos. No hay medición en un dispositivo
   físico.
-- **Hasta unos 10 s sin video** con un menor mientras se reintenta (punto 6). Es la alternativa
-  elegida a cortar la clase al primer tropiezo.
+- **Hasta unos 35 s sin video** con un menor entre que se detecta la caída y se agotan los reintentos
+  (10 s sin respuesta + 5 intentos cada 5 s, punto 6). El audio sigue. Es la alternativa elegida a
+  cortar la clase al primer tropiezo.
+- **Hasta 5 minutos con el video del detectado oculto** en la rama adultos mientras se espera la
+  respuesta (punto 7). Entre adultos se acepta: la clase sigue con audio.
 
 ## Alternativas descartadas
 

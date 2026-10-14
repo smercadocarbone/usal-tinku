@@ -10,9 +10,9 @@ Se dejó escrito:
   - la confirmación con 3 muestras consecutivas;
   - el clip de solo video a 1,2 Mbps;
   - los reintentos con el video oculto si hay un menor;
-  - el plazo de 60 s de la rama adultos.
-- `docs/Tabla_Tiempos_Tinku.md`: 8 filas marcadas `ADR-M3-07`. Dos están como "propuesto 2026-10-14"
-  (carga máxima de 20 s y 3 s sin respuesta) y las puede ajustar el dueño. Si cambian, solo se toca la
+  - el plazo de 5 min de la rama adultos.
+- `docs/Tabla_Tiempos_Tinku.md`: 9 filas marcadas `ADR-M3-07`. Dos están como "propuesto 2026-10-14"
+  (carga máxima de 20 s y 10 s sin respuesta) y las puede ajustar el dueño. Si cambian, solo se toca la
   Tabla y la constante en `frontend/src/lib/killswitch/config.ts`.
 - `docs/Constitucion_Tinku.md`, Registro de Decisiones Técnicas: la fila del clasificador remite a
   ADR-M3-07.

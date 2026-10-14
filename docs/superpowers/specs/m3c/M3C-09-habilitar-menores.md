@@ -23,7 +23,7 @@ que ser verdad antes de encenderla, para que la decisión no dependa de la memor
 - [ ] `Spec_M3`: FR-AULA-003, FR-AULA-004 y FR-AULA-010 y US-6 sin marcas de "NO IMPLEMENTADO".
 - [ ] T-M3-06 tildada en `Tasks_Tinku_Implementacion.md` y el Chunk M3-C en `[x]` en
       `Tasks_Tinku_Chunks.md`, en el mismo commit.
-- [ ] Las dos filas "propuesto 2026-10-14" de la Tabla de Tiempos (carga máxima de 20 s y 3 s sin
+- [ ] Las dos filas "propuesto 2026-10-14" de la Tabla de Tiempos (carga máxima de 20 s y 10 s sin
       respuesta) confirmadas por el dueño, quitando la marca.
 
 ### B. Hallazgos de las pruebas en producción que tocan a menores

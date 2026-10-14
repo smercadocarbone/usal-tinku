@@ -50,10 +50,12 @@ export const MUESTRAS_PARA_CONFIRMAR = 3;
 /** Tabla de Tiempos: "Tiempo máximo de carga del clasificador". */
 export const CARGA_MAXIMA_MS = 20_000;
 /** Tabla de Tiempos: "Tiempo sin respuesta del clasificador". */
-export const SIN_RESPUESTA_MS = 3_000;
+export const SIN_RESPUESTA_MS = 10_000;
+/** Tabla de Tiempos: "Demora que oculta el video con un menor". */
+export const DEMORA_OCULTAR_MS = 3_000;
 /** Tabla de Tiempos: "Reintentos para reactivar el clasificador". */
-export const REINTENTOS_REACTIVAR = 3;
-export const ESPERA_ENTRE_REINTENTOS_MS = 3_000;
+export const REINTENTOS_REACTIVAR = 5;
+export const ESPERA_ENTRE_REINTENTOS_MS = 5_000;
 /** ADR-M3-07 §4. */
 export const UMBRAL_DETECCION = 0.85;
 export const TAMANO_ENTRADA = 224;
@@ -132,6 +134,10 @@ export interface OpcionesClasificador {
   hayMenor: boolean;
   /** Detección confirmada. duenoId = participant.identity (UUID del usuario en Tinku). */
   alDetectar: (d: { trackId: string; duenoId: string }) => void;
+  /** Una clasificación lleva más de DEMORA_OCULTAR_MS: con menor, la UI oculta el video remoto. */
+  alDemorar: () => void;
+  /** Terminó la clasificación demorada: la UI vuelve a mostrar (si no hay caída ni detección). */
+  alNormalizar: () => void;
   /** El clasificador dejó de responder: si hay menor, la UI oculta el video remoto ya. */
   alCaer: () => void;
   /** Revivió: la UI vuelve a mostrar el video. */
@@ -184,6 +190,9 @@ Comportamiento exacto:
    - `modelo.clasificar` rechaza o tira error; o
    - una inferencia lleva más de `SIN_RESPUESTA_MS` sin terminar. Se controla con un `setTimeout`
      armado al empezar cada inferencia y desarmado al terminar.
+   - Antes de eso, a los `DEMORA_OCULTAR_MS` de una inferencia sin terminar, llama a `alDemorar()` una
+     vez; si después termina bien, llama a `alNormalizar()`. Las dos llamadas se hacen siempre: la UI
+     decide si oculta según `hayMenor` (M3C-05). Usá un segundo `setTimeout` armado junto al primero.
 6. **Reactivación**, al detectar la caída:
    1. `alCaer()`.
    2. Para el ciclo y hace `modelo.liberar()` dentro de un `try`.
@@ -225,8 +234,9 @@ Seguí el patrón de `tests/aula/pizarra.spec.ts`: tests de lógica pura importa
 | KS-010 | Modelo falso que devuelve `Porn:0.99` → `alDetectar` una vez con el `duenoId` correcto y el track pausado |
 | KS-011 | Modelo falso que rechaza en la 1ª carga → `crear()` rechaza con `ClasificadorNoDisponible` |
 | KS-012 | Modelo que tira error en una inferencia y carga bien en el 2º intento → `alCaer` y después `alReactivar`, sin `alFallarDefinitivo` |
-| KS-013 | Modelo que tira error y no vuelve a cargar → `alCaer`, 3 intentos con ≈3 s entre cada uno, `alFallarDefinitivo` (usá `page.clock` de Playwright para no esperar 10 s reales) |
-| KS-014 | Modelo cuya inferencia nunca resuelve → caída a los 3 s |
+| KS-013 | Modelo que tira error y no vuelve a cargar → `alCaer`, 5 intentos con ≈5 s entre cada uno, `alFallarDefinitivo` (usá `page.clock` de Playwright para no esperar 10 s reales) |
+| KS-014 | Modelo cuya inferencia nunca resuelve → `alDemorar` a los 3 s y `alCaer` a los 10 s |
+| KS-016 | Inferencia que tarda 5 s y después resuelve → `alDemorar` a los 3 s, `alNormalizar` al terminar, sin `alCaer` |
 | KS-015 | **Modelo real** (sin `__tinkuModeloFalso`): carga desde `/modelos/nsfw/model.json` y clasifica un canvas de color liso con puntaje sin menor < 0,85. Timeout del test 60 s |
 
 Mensaje: `test(aula): RED del clasificador del kill-switch (M3C-03)`.

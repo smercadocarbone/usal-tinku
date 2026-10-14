@@ -22,7 +22,7 @@ testearla sin LiveKit ni cámara. La página solo lo conecta a la sala y a la UI
 export const REINTENTOS_DISPARO = 3;
 export const ESPERA_ENTRE_DISPAROS_MS = 1_000;
 /** Tabla de Tiempos: "Plazo de respuesta de la rama adultos del kill-switch". */
-export const PLAZO_RAMA_ADULTOS_MS = 60_000;
+export const PLAZO_RAMA_ADULTOS_MS = 300_000;
 /** Canal de datos de LiveKit, separado de "pizarra" y del modo texto. */
 export const TOPIC_KILLSWITCH = "killswitch";
 ```
@@ -64,6 +64,8 @@ export function crearOrquestador(deps: DepsOrquestador): {
   alDetectar(d: { trackId: string; duenoId: string }): Promise<void>;
   responder(vio: boolean): Promise<void>;
   vencioPregunta(): void;
+  alDemorar(): void;
+  alNormalizar(): void;
   alCaer(): void;
   alReactivar(): void;
   alFallarDefinitivo(): void;
@@ -118,6 +120,9 @@ y restaura, **sin** llamar a la API: el job del backend (M3C-02) ya la resuelve 
 en `subirEvidencia`. Errores: `console.error` sin datos del clip. Nunca bloquea el cierre.
 
 **Falla del clasificador** (ADR-M3-07 §6):
+- `alDemorar()`: si `hayMenor()`, `sala.ocultarTodoRemoto()` y `ui.aviso("Verificando la protección del aula…")`.
+  Entre adultos, nada. No reporta al backend.
+- `alNormalizar()`: si `hayMenor()` y no hay una caída en curso, `sala.mostrarTodoRemoto()`.
 - `alCaer()`: `api.reportar("CAIDA")`, sin esperar. Si `hayMenor()`, `sala.ocultarTodoRemoto()` y
   `ui.aviso("Reactivando la protección del aula…")`.
 - `alReactivar()`: `api.reportar("REACTIVADO")`. Si `hayMenor()`, `sala.mostrarTodoRemoto()`.
@@ -154,6 +159,9 @@ instante). Tags `@aula` `@KS-03x`.
 | KS-040 | `alFallarDefinitivo` con menor | `cierre("sin-proteccion")`, `salir` |
 | KS-041 | `alFallarDefinitivo` sin menor | Solo `reportar`, sin `salir` |
 | KS-042 | `alReactivar` con menor | `mostrarTodoRemoto` |
+| KS-045 | `alDemorar` con menor y después `alNormalizar` | `ocultarTodoRemoto` y después `mostrarTodoRemoto`; sin `reportar` |
+| KS-046 | `alDemorar` sin menor | Nada |
+| KS-047 | `alDemorar`, `alCaer` y después `alNormalizar` | Sigue oculto (la caída manda) |
 | KS-043 | Aviso `corte-seguridad` y después `alDesconectar` | `cierre("seguridad")` y devuelve `true` |
 | KS-044 | Ningún payload de `disparar` lleva `rama` | Revisar los argumentos |
 

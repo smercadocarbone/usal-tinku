@@ -63,7 +63,7 @@ public void registrarEventoClasificador(Usuario usuario, UUID sesionId, EventoCl
 - Constante nueva junto a las existentes (línea ~84):
   ```java
   /** Tabla de Tiempos: "Plazo de respuesta de la rama adultos del kill-switch" (ADR-M3-07 §7). */
-  private static final Duration PLAZO_CONFIRMACION_ADULTOS = Duration.ofSeconds(60);
+  private static final Duration PLAZO_CONFIRMACION_ADULTOS = Duration.ofMinutes(5);
   ```
 - En `ramaAdultos`, además de lo que ya hace:
   - `confirmacion.setVenceAt(Instant.now().plus(PLAZO_CONFIRMACION_ADULTOS))`;
@@ -190,7 +190,7 @@ En `backend/src/test/java/com/tinku/aula/web/KillswitchIntegracionTest.java`, o 
 | `eventoClasificador_tercero_403` | 403 |
 | `eventoClasificador_eventoInvalido_400` | Body `{"evento":"OTRO"}` → 400. Si hoy devuelve 403 por el hallazgo TRANS-1, documentalo en el test con `// TRANS-1` y aceptá el código real |
 | `estadoKillswitch_sinConfirmacion` | `confirmacionPendiente = false`, `detectadoId` null |
-| `estadoKillswitch_conConfirmacionPendiente` | `true`, `detectadoId` del detectado, `venceAt` ≈ ahora + 60 s |
+| `estadoKillswitch_conConfirmacionPendiente` | `true`, `detectadoId` del detectado, `venceAt` ≈ ahora + 5 min |
 | `estadoKillswitch_tercero_403` | 403 |
 | `ramaAdultos_programaVencimiento` | Tras el disparo, `scheduler.checkExists(new TriggerKey("confirmacion-ks-trigger-" + sesionId, "m3-aula"))` es true |
 | `vencerConfirmacion_sinRespuesta_quedaVencidaComoNo` | Llamando a `vencerConfirmacionRamaAdultos`: `vencida = true`, `vio = false`, sesión `en_curso`, sin Alerta |
