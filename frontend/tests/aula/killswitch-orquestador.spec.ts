@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { crearOrquestador, type AvisoKillswitch, type DepsOrquestador } from "../../src/lib/killswitch/orquestador";
+import { crearOrquestador, decodificarAviso, type AvisoKillswitch, type DepsOrquestador } from "../../src/lib/killswitch/orquestador";
 
 /**
  * M3C-05 (T-M3-06e, ADR-M3-07): decisiones del kill-switch en el aula, puras, con dependencias
@@ -221,5 +221,14 @@ test.describe("Kill-switch — orquestador", () => {
     const { orq, log } = montar();
     expect(orq.alDesconectar()).toBe(false);
     expect(log).toEqual([]);
+  });
+
+  test("decodificarAviso acepta solo los dos avisos y descarta el resto", { tag: ["@aula", "@KS-049"] }, () => {
+    const enc = (o: unknown) => new TextEncoder().encode(JSON.stringify(o));
+    expect(decodificarAviso(enc({ tipo: "video-oculto" }))).toEqual({ tipo: "video-oculto" });
+    expect(decodificarAviso(enc({ tipo: "corte-seguridad", extra: 1 }))).toEqual({ tipo: "corte-seguridad" });
+    expect(decodificarAviso(enc({ tipo: "otro" }))).toBeNull();
+    expect(decodificarAviso(enc("video-oculto"))).toBeNull();
+    expect(decodificarAviso(new TextEncoder().encode("no es json"))).toBeNull();
   });
 });

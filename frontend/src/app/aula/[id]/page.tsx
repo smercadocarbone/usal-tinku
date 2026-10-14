@@ -23,9 +23,24 @@ import {
   VideoQuality,
 } from "livekit-client";
 import { Mic, MicOff, MoreVertical, PenLine, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
-import { api, ApiError, subirAudioResumen } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  confirmarKillswitch,
+  dispararKillswitch,
+  getEstadoKillswitch,
+  reportarClasificador,
+  subirAudioResumen,
+  subirEvidencia,
+} from "@/lib/api";
 import { GrabadorAudioResumen } from "@/lib/grabadorAudioResumen";
 import Logo from "@/components/Logo";
+import AvisoProteccion, { type MotivoAvisoProteccion } from "@/components/aula/AvisoProteccion";
+import DialogoRamaAdultos from "@/components/aula/DialogoRamaAdultos";
+import { BufferEvidencia } from "@/lib/killswitch/bufferEvidencia";
+import { ClasificadorKillswitch } from "@/lib/killswitch/clasificador";
+import { TOPIC_KILLSWITCH } from "@/lib/killswitch/config";
+import { crearOrquestador, decodificarAviso } from "@/lib/killswitch/orquestador";
 import Pizarra from "@/components/aula/Pizarra";
 import { aplicar, codificar, decodificar, mensajesDeSync, type MensajePizarra, type Trazo } from "@/lib/pizarra";
 import { ModalConfirmacion } from "@/components/ui";
@@ -38,6 +53,8 @@ interface TokenResponse {
   grabarAudioResumen?: boolean;
   /** FR-AULA-012 (ADR-M3-06): ningún participante es Menor. Sin esto, no hay pizarra. */
   pizarraHabilitada?: boolean;
+  /** ADR-M3-07: hay un Menor en la clase (umbral del clasificador y fail-closed). */
+  hayMenor?: boolean;
 }
 
 type Estado =
@@ -252,6 +269,26 @@ export default function AulaPage() {
   const grabadorRef = useRef<GrabadorAudioResumen | null>(null);
   const [grabandoResumen, setGrabandoResumen] = useState(false);
 
+  // ADR-M3-07: kill-switch del cliente. Ante la duda, hay un menor (AGENTS §3).
+  const [hayMenor, setHayMenor] = useState<boolean | null>(null);
+  const hayMenorRef = useRef(true);
+  const [proteccion, setProteccion] = useState<"cargando" | "lista" | "no-disponible">("cargando");
+  const proteccionRef = useRef<"cargando" | "lista" | "no-disponible">("cargando");
+  const clasificadorRef = useRef<ClasificadorKillswitch | null>(null);
+  const buffersRef = useRef<Map<string, BufferEvidencia>>(new Map());
+  const orquestadorRef = useRef<ReturnType<typeof crearOrquestador> | null>(null);
+  /** Video remoto pendiente de observar mientras el clasificador todavía carga. */
+  const remotosRef = useRef<Map<string, { duenoId: string; pista: MediaStreamTrack }>>(new Map());
+  /** trackSid de cada tile remoto (el kill-switch habla de tracks; los tiles, de TileId). */
+  const sidPorTileRef = useRef<Partial<Record<TileId, string>>>({});
+  const ocultosRef = useRef<Set<string>>(new Set()); // ocultos por detección
+  const todoOcultoRef = useRef(false); // ocultos por falla/demora del clasificador
+  const [, setVersionOcultos] = useState(0);
+  const [pregunta, setPregunta] = useState<{ trackId: string; detectadoId: string; venceEn: number } | null>(null);
+  const [cierreKillswitch, setCierreKillswitch] = useState<MotivoAvisoProteccion | null>(null);
+  const [avisoKillswitch, setAvisoKillswitch] = useState<string | null>(null);
+  const temporizadorAvisoRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   const [estado, setEstado] = useState<Estado>("previa");
   const [confirmarFin, setConfirmarFin] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -389,6 +426,128 @@ export default function AulaPage() {
     }
   }, []);
 
+  /** Corta el clasificador y descarta todos los buffers de evidencia (Artículo V). Idempotente. */
+  const destruirProteccion = useCallback(() => {
+    clasificadorRef.current?.destruir();
+    clasificadorRef.current = null;
+    for (const b of buffersRef.current.values()) b.descartar();
+    buffersRef.current.clear();
+    remotosRef.current.clear();
+  }, []);
+
+  // ---- Kill-switch (ADR-M3-07): estado, orquestador y clasificador, antes de dejar entrar ----
+  useEffect(() => {
+    let cancelado = false;
+    const REMOTOS: TileId[] = ["camara-remota", "pantalla-remota"];
+    const sidDe = (sid: string) => (REMOTOS.find((t) => sidPorTileRef.current[t] === sid));
+
+    orquestadorRef.current = crearOrquestador({
+      sesionId,
+      hayMenor: () => hayMenorRef.current,
+      api: {
+        disparar: (id) => dispararKillswitch(sesionId, id),
+        confirmar: (vio) => confirmarKillswitch(sesionId, vio),
+        subirEvidencia: (clip, dur) => subirEvidencia(sesionId, clip, dur),
+        reportar: (e) => reportarClasificador(sesionId, e),
+      },
+      congelarClip: (sid) => buffersRef.current.get(sid)?.congelar() ?? null,
+      sala: {
+        ocultarTrack: (sid) => {
+          ocultosRef.current.add(sid);
+          const t = sidDe(sid);
+          if (t) pistasRef.current[t]?.detach();
+          setVersionOcultos((v) => v + 1);
+        },
+        mostrarTrack: (sid) => {
+          ocultosRef.current.delete(sid);
+          setVersionOcultos((v) => v + 1);
+        },
+        ocultarTodoRemoto: () => {
+          todoOcultoRef.current = true;
+          for (const t of REMOTOS) pistasRef.current[t]?.detach();
+          setVersionOcultos((v) => v + 1);
+        },
+        mostrarTodoRemoto: () => {
+          todoOcultoRef.current = false;
+          setVersionOcultos((v) => v + 1);
+        },
+        enviarAviso: (m) => {
+          void roomRef.current?.localParticipant
+            .publishData(new TextEncoder().encode(JSON.stringify(m)), { reliable: true, topic: TOPIC_KILLSWITCH })
+            .catch(() => {});
+        },
+        salir: () => roomRef.current?.disconnect(),
+      },
+      clasificador: {
+        pausar: (sid) => clasificadorRef.current?.pausar(sid),
+        reanudar: (sid) => clasificadorRef.current?.reanudar(sid),
+        destruir: destruirProteccion,
+      },
+      ui: {
+        preguntar: setPregunta,
+        cerrarPregunta: () => setPregunta(null),
+        cierre: setCierreKillswitch,
+        aviso: (texto) => {
+          setAvisoKillswitch(texto);
+          clearTimeout(temporizadorAvisoRef.current);
+          temporizadorAvisoRef.current = setTimeout(() => setAvisoKillswitch(null), 6000);
+        },
+      },
+      esperar: (ms) => new Promise((r) => setTimeout(r, ms)),
+      ahora: () => Date.now(),
+    });
+
+    (async () => {
+      let menor = true;
+      try {
+        menor = (await getEstadoKillswitch(sesionId)).hayMenor;
+      } catch {
+        // Ante la duda, hay un menor.
+      }
+      if (cancelado) return;
+      hayMenorRef.current = menor;
+      setHayMenor(menor);
+      try {
+        const k = await ClasificadorKillswitch.crear({
+          hayMenor: menor,
+          alDetectar: (d) => void orquestadorRef.current?.alDetectar(d),
+          alDemorar: () => orquestadorRef.current?.alDemorar(),
+          alNormalizar: () => orquestadorRef.current?.alNormalizar(),
+          alCaer: () => orquestadorRef.current?.alCaer(),
+          alReactivar: () => orquestadorRef.current?.alReactivar(),
+          alFallarDefinitivo: () => orquestadorRef.current?.alFallarDefinitivo(),
+        });
+        if (cancelado) {
+          k.destruir();
+          return;
+        }
+        clasificadorRef.current = k;
+        for (const [sid, r] of remotosRef.current) k.observar(sid, r.duenoId, r.pista);
+        proteccionRef.current = "lista";
+        setProteccion("lista");
+      } catch {
+        if (cancelado) return;
+        proteccionRef.current = "no-disponible";
+        setProteccion("no-disponible");
+        if (!menor) void reportarClasificador(sesionId, "NO_CARGA").catch(() => {});
+      }
+    })();
+
+    return () => {
+      cancelado = true;
+      clearTimeout(temporizadorAvisoRef.current);
+      destruirProteccion();
+    };
+  }, [sesionId, destruirProteccion]);
+
+  // Con el aula bloqueada, la cámara de la previa no tiene por qué seguir prendida.
+  const bloqueoProteccion = cierreKillswitch !== null || (proteccion === "no-disponible" && hayMenor !== false);
+  useEffect(() => {
+    if (!bloqueoProteccion) return;
+    previaVideoTrackRef.current?.stop();
+    previaAudioTrackRef.current?.stop();
+  }, [bloqueoProteccion]);
+
   // ---- Preview de la pantalla previa: pide permisos ACÁ, antes de que
   // corra ningún reloj de no-show del lado del backend. ----
   useEffect(() => {
@@ -488,6 +647,13 @@ export default function AulaPage() {
     }
   }
 
+  /** Un tile remoto no se conecta si está oculto por una detección o por la falla del clasificador. */
+  function remotoOculto(id: TileId): boolean {
+    if (id !== "camara-remota" && id !== "pantalla-remota") return false;
+    const sid = sidPorTileRef.current[id];
+    return todoOcultoRef.current || (sid !== undefined && ocultosRef.current.has(sid));
+  }
+
   // ---- Conexión real a la sala (recién al confirmar desde la previa) ----
   const conectar = useCallback(async () => {
     // La cámara/mic de la previa quedan libres antes de que la Room adquiera
@@ -503,8 +669,14 @@ export default function AulaPage() {
 
     try {
       const tokenResp = await api.post<TokenResponse>(
-        `/api/sesiones/${sesionId}/token`
+        `/api/sesiones/${sesionId}/token?clasificadorListo=${proteccionRef.current === "lista"}`
       );
+      // El backend es la fuente de verdad de si hay un menor: si difiere, se ajusta el umbral.
+      if (typeof tokenResp.hayMenor === "boolean" && tokenResp.hayMenor !== hayMenorRef.current) {
+        hayMenorRef.current = tokenResp.hayMenor;
+        setHayMenor(tokenResp.hayMenor);
+        clasificadorRef.current?.actualizarHayMenor(tokenResp.hayMenor);
+      }
 
       const room = new Room({
         adaptiveStream: true,
@@ -559,6 +731,16 @@ export default function AulaPage() {
       });
 
       room.on(RoomEvent.TrackSubscribed, (track, pub, participante) => {
+        if (track.kind === Track.Kind.Video) {
+          // Kill-switch (ADR-M3-07): este navegador clasifica y graba el video que RECIBE.
+          const tile: TileId = pub.source === Track.Source.ScreenShare ? "pantalla-remota" : "camara-remota";
+          sidPorTileRef.current[tile] = pub.trackSid;
+          remotosRef.current.set(pub.trackSid, { duenoId: participante.identity, pista: track.mediaStreamTrack });
+          clasificadorRef.current?.observar(pub.trackSid, participante.identity, track.mediaStreamTrack);
+          const buffer = BufferEvidencia.crear(track.mediaStreamTrack);
+          if (buffer) buffersRef.current.set(pub.trackSid, buffer);
+          else console.warn("Sin MediaRecorder de video: el corte funciona, pero no habrá clip de evidencia");
+        }
         if (track.kind === Track.Kind.Video && pub.source === Track.Source.ScreenShare) {
           // El <video> de la pantalla remota recién se crea al marcar que hay pantalla: la pista
           // se conecta cuando aparece (antes se intentaba acá, con el elemento todavía en null, y
@@ -570,7 +752,7 @@ export default function AulaPage() {
           setTileDestacada("pantalla-remota");
         } else if (track.kind === Track.Kind.Video) {
           pistasRef.current["camara-remota"] = track;
-          if (remoteVideoRef.current) track.attach(remoteVideoRef.current);
+          if (remoteVideoRef.current && !remotoOculto("camara-remota")) track.attach(remoteVideoRef.current);
           setRemoteActivo(true);
           setRemoteNombre(participante.name ?? "");
         } else if (track.kind === Track.Kind.Audio && remoteAudioRef.current) {
@@ -585,6 +767,11 @@ export default function AulaPage() {
         track.detach();
         grabadorRef.current?.quitarPista(pub.trackSid);
         if (track.kind === Track.Kind.Video) {
+          clasificadorRef.current?.dejarDeObservar(pub.trackSid);
+          remotosRef.current.delete(pub.trackSid);
+          buffersRef.current.get(pub.trackSid)?.descartar();
+          buffersRef.current.delete(pub.trackSid);
+          ocultosRef.current.delete(pub.trackSid);
           if (pub.source === Track.Source.ScreenShare) {
             delete pistasRef.current["pantalla-remota"];
             setRemoteCompartiendoPantalla(false);
@@ -607,6 +794,12 @@ export default function AulaPage() {
       // activo (conexión `Lost` sostenida) y se ignora cualquier paquete que
       // no tenga el formato esperado (podría venir de otra parte del SDK).
       room.on(RoomEvent.DataReceived, (payload, _participante, _tipo, topic) => {
+        if (topic === TOPIC_KILLSWITCH) {
+          // Solo informa a la UI: el estado de verdad está en el backend.
+          const aviso = decodificarAviso(payload);
+          if (aviso) orquestadorRef.current?.alRecibirAviso(aviso);
+          return;
+        }
         if (topic === "pizarra") {
           // FR-AULA-012: sin habilitación (hay un Menor) todo paquete de pizarra se descarta.
           if (!pizarraHabilitadaRef.current) return;
@@ -647,6 +840,9 @@ export default function AulaPage() {
         // Corte automático de la clase (T-fin+5): se sube lo grabado igual.
         if (estadoRef.current !== "finalizada") void cerrarGrabacion();
         setRemoteActivo(false);
+        destruirProteccion();
+        // Si el orquestador ya mostró un cierre (o llegó el aviso de corte), la página no muestra el suyo.
+        if (orquestadorRef.current?.alDesconectar()) return;
         if (estadoRef.current !== "finalizada") {
           setEstado("esperando");
         }
@@ -677,6 +873,10 @@ export default function AulaPage() {
 
       setEstado("conectado");
     } catch (err) {
+      if (err instanceof ApiError && err.codigo === "CLASIFICADOR_NO_LISTO") {
+        setCierreKillswitch("no-disponible");
+        return;
+      }
       if (err instanceof ApiError) {
         if (err.status === 404) {
           setError("Sesión no encontrada.");
@@ -697,15 +897,16 @@ export default function AulaPage() {
       // estadoRef, que todavía no se había actualizado, y la sala terminaba en "error".
       if (!(err instanceof ApiError && err.status === 422)) setEstado("error");
     }
-  }, [sesionId, camaraId, microfonoId, evaluarDegradacion, cerrarGrabacion]);
+  }, [sesionId, camaraId, microfonoId, evaluarDegradacion, cerrarGrabacion, destruirProteccion]);
 
   useEffect(() => {
     return () => {
       roomConectadoRef.current = false;
       roomRef.current?.disconnect();
       roomRef.current = null;
+      destruirProteccion();
     };
-  }, []);
+  }, [destruirProteccion]);
 
   async function finalizar() {
     setFinalizando(true);
@@ -713,6 +914,7 @@ export default function AulaPage() {
     try {
       await cerrarGrabacion();
       await api.post(`/api/sesiones/${sesionId}/finalizar`);
+      destruirProteccion();
       roomRef.current?.disconnect();
       roomRef.current = null;
       setEstado("finalizada");
@@ -794,9 +996,17 @@ export default function AulaPage() {
     setTextoAEnviar("");
   }
 
+  // ---------------------------------------------------------------- Bloqueos de protección
+  if (cierreKillswitch) return <AvisoProteccion motivo={cierreKillswitch} />;
+  if (estado === "previa" && proteccion === "no-disponible" && hayMenor !== false) {
+    return <AvisoProteccion motivo="no-disponible" />;
+  }
+
   // ---------------------------------------------------------------- Previa
   if (estado === "previa") {
     const bloqueadoTotal = errorCam && errorMic;
+    // Con un menor (o sin saberlo todavía) no se entra hasta que el clasificador esté listo.
+    const activandoProteccion = hayMenor !== false && proteccion === "cargando";
 
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 px-4 py-8 text-gray-50">
@@ -898,9 +1108,13 @@ export default function AulaPage() {
             type="button"
             className="mt-6 min-h-13 w-full cursor-pointer rounded-control bg-marca-600 px-4 py-3 text-base font-bold text-white enabled:hover:bg-marca-500 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={conectar}
-            disabled={!previaLista || Boolean(bloqueadoTotal)}
+            disabled={!previaLista || Boolean(bloqueadoTotal) || activandoProteccion}
           >
-            {bloqueadoTotal ? "Revisá los permisos para continuar" : "Unirme a la clase"}
+            {bloqueadoTotal
+              ? "Revisá los permisos para continuar"
+              : activandoProteccion
+                ? "Activando la protección del aula…"
+                : "Unirme a la clase"}
           </button>
           <p className="mt-4 text-center text-[13px] text-gray-400">
             La clase se hace dentro de Tinku. No compartas teléfonos, emails ni redes.
@@ -1000,13 +1214,23 @@ export default function AulaPage() {
                   ref={(el) => {
                     t.videoRef.current = el;
                     const pista = pistasRef.current[t.id];
-                    if (el && pista) pista.attach(el);
+                    if (el && pista && !remotoOculto(t.id)) pista.attach(el);
                   }}
                   autoPlay
                   playsInline
                   muted={t.id === "camara-local" || t.id === "pantalla-local"}
                   className={`block h-full w-full ${esDestacada ? "object-contain" : "object-cover"} ${t.espejo ? "-scale-x-100" : ""}`}
                 />
+                {remotoOculto(t.id) && (
+                  <div
+                    role="status"
+                    className="absolute inset-0 flex items-center justify-center bg-gray-900 px-3 text-center text-sm text-gray-200"
+                  >
+                    {sidPorTileRef.current[t.id] && ocultosRef.current.has(sidPorTileRef.current[t.id]!)
+                      ? "Video oculto por seguridad"
+                      : "Reactivando la protección…"}
+                  </div>
+                )}
                 {t.contenidoVacio && (
                   <div
                     className={`absolute inset-0 flex items-center justify-center ${esDestacada ? "" : "bg-gray-800/95"}`}
@@ -1090,6 +1314,22 @@ export default function AulaPage() {
             </div>
           )}
         </div>
+
+        {avisoKillswitch && (
+          <div
+            className="mx-4 my-2 self-center rounded-lg border border-amber-700 bg-amber-950/40 px-3.5 py-2 text-sm text-amber-200"
+            role="status"
+          >
+            {avisoKillswitch}
+          </div>
+        )}
+        <DialogoRamaAdultos
+          abierto={pregunta !== null}
+          nombre={remoteNombre}
+          venceEn={pregunta?.venceEn ?? 0}
+          onResponder={(vio) => void orquestadorRef.current?.responder(vio)}
+          onVencio={() => orquestadorRef.current?.vencioPregunta()}
+        />
 
         {error && (
           <div

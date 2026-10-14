@@ -70,8 +70,10 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
   Tutor, el clip ni qué se detectó (datos: sesión y fecha). El clip solo se habilita al resolverse
   `SANCIONAR` (FASE2-09). Si el aviso falla, el corte se persiste igual (Artículo II).
 
-  **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
-  existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
+  **Implementado en M3C-04/M3C-05 (commits `47e0af2` buffer y subida del clip; `feat(aula): kill-switch
+  en el aula…` cableado):** el navegador de cada participante clasifica el video que recibe, congela el
+  buffer de 30 s solo video al confirmar la detección y sube el clip a `POST /api/sesiones/{id}/evidencia`
+  (ADR-M3-07). Falta la prueba de punta a punta con LiveKit real (M3C-06).
 - **Dado** que el participante menor es quien genera la detección, **cuando** eso ocurra, **entonces** se aplica el mismo corte y se notifica al Adulto Responsable — la sesión nunca continúa, sin importar quién disparó la detección (Artículo II).
 
   **A quién se suspende (decisión D2, AUD-006, 2026-09-22):** el corte es incondicional, pero la
@@ -124,7 +126,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
 | FR-AULA-009 | El kill-switch emite `sesion.killswitch_menor` o `sesion.killswitch_adultos` según la rama, eventos que M5 consume para reembolsar (ver tabla de eventos de M5). |
-| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). Puerta del token implementada en M3C-02 (commit `feat(aula): puerta del clasificador…`, `?clasificadorListo=` → 409 `CLASIFICADOR_NO_LISTO` con un Menor); comportamiento del cliente en M3C-05. Reintentos antes del corte, con el video remoto oculto si hay un menor: ADR-M3-07 §6. |
+| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). Puerta del token implementada en M3C-02 (commit `feat(aula): puerta del clasificador…`, `?clasificadorListo=` → 409 `CLASIFICADOR_NO_LISTO` con un Menor); comportamiento del cliente en M3C-05 (`aula/[id]/page.tsx`: sin clasificador listo no se entra con un menor; caída en curso → video remoto oculto, reintentos y salida de la sala). Reintentos antes del corte, con el video remoto oculto si hay un menor: ADR-M3-07 §6. |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 

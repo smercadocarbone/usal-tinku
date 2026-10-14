@@ -149,7 +149,8 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
     - _Hecho 2026-10-14: commits `33af55d` (deps y modelo), `5c64825` (RED: módulo `regla` inexistente) y el GREEN siguiente. `killswitch-clasificador.spec.ts` (14 tests: KS-001..007, 010..016); `npx playwright test tests/aula`: 18 passed (14 nuevos + 4 pizarra). `rg __tinkuModeloFalso .next/static` vacío; TF.js solo en chunks de `/dev/killswitch`. Dependencias con `bun` (único lockfile: `bun.lock`)._
   - [x] T-M3-06d: Buffer de 30 s solo video en memoria + llamadas de API del kill-switch (`M3C-04`).
     - _Hecho 2026-10-14: RED `7d2eaab` (`window.__ksBuffer` inexistente → timeout) → GREEN en el commit siguiente. `killswitch-buffer.spec.ts` (7 tests, KS-020..026; la grabación de 45 s es real). `npx playwright test tests/aula`: 25 passed. `rg "indexedDB|localStorage|caches\." src/lib/killswitch` vacío._
-  - [ ] T-M3-06e: Orquestador + cableado en `aula/[id]/page.tsx` + `AvisoProteccion` y `DialogoRamaAdultos` (`M3C-05`).
+  - [x] T-M3-06e: Orquestador + cableado en `aula/[id]/page.tsx` + `AvisoProteccion` y `DialogoRamaAdultos` (`M3C-05`).
+    - _Hecho 2026-10-14: RED `cc68182` (módulo `orquestador` inexistente), GREEN `orquestador` y cableado en la página. `killswitch-orquestador.spec.ts` (20 tests, KS-030..049) y `killswitch-entrada.spec.ts` (3 tests de la entrada protegida, KS-050..052). Suite completa del frontend (`npx playwright test`): 167 passed. Sin recorrido manual contra backend y LiveKit reales (no hay en este entorno): lo cubre M3C-06._
   - [ ] T-M3-06f: E2E contra backend y LiveKit reales (9 casos) + trazabilidad en Spec_M3 (`M3C-06`).
   - [ ] T-M3-06g: Página de diagnóstico + medición con CPU frenada usando el código real (`M3C-07`).
   - [ ] T-M3-06h: Perfil `staging` + `docker-compose.staging.yml` + `RUNBOOK_staging.md`; el recurso en Coolify lo crea el dueño (`M3C-08`).

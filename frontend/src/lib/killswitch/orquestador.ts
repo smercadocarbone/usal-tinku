@@ -208,3 +208,17 @@ export function crearOrquestador(deps: DepsOrquestador) {
     },
   };
 }
+
+/**
+ * Valida el aviso que llega por el canal de datos (topic `killswitch`): solo dos formas exactas;
+ * todo lo demás se descarta, igual que `decodificar` de la pizarra.
+ */
+export function decodificarAviso(payload: Uint8Array): AvisoKillswitch | null {
+  try {
+    const m = JSON.parse(new TextDecoder().decode(payload)) as { tipo?: unknown };
+    if (m && (m.tipo === "video-oculto" || m.tipo === "corte-seguridad")) return { tipo: m.tipo };
+  } catch {
+    // no es JSON
+  }
+  return null;
+}
