@@ -1,62 +1,134 @@
 # M3C-04 — Buffer rotativo de 30 s y subida del clip de evidencia
 
-**Branch:** `chunk/m3-c` · **Riesgo:** alto (Artículo V) · **Bloqueada por:** M3C-02
+**Tarea:** T-M3-06d · **Riesgo:** alto (Artículo V) · **Depende de:** M3C-03 (solo por la carpeta `src/lib/killswitch/`) · **Commits:** 2 (tests RED, implementación)
 
-## 1. Problema
+## 1. Qué falta hoy
 
-FR-AULA-004 y BR-KS-01 piden un buffer local rotativo de 30 s (Tabla de Tiempos) que se sube solo si
-el kill-switch se dispara. `POST /api/sesiones/{id}/evidencia` existe (multipart, WebM/MP4 por magic
-bytes, ≤30 s, 404 si no hay Alerta), pero **ningún cliente lo llama**: no hay MediaRecorder de video en
-`frontend/` (`Spec_M3` US-6, "NO IMPLEMENTADO").
+`POST /api/sesiones/{id}/evidencia` existe y valida esto (`EvidenciaService.subir`):
+- solo participantes;
+- 404 si no hay Alerta;
+- 422 si `duracionSegundos` no está en 1–30;
+- 422 si el archivo no es WebM o MP4 por magic bytes;
+- 422 si la Alerta ya se resolvió;
+- límite de 5 MB de `spring.servlet.multipart`.
 
-## 2. Implementación
+Ningún cliente lo llama: no hay MediaRecorder de video en `frontend/`.
 
-1. **`src/lib/killswitch/bufferEvidencia.ts`**, mismo estilo que `grabadorAudioResumen.ts`:
-   - `BufferEvidencia.crear(track: MediaStreamTrack)`: un `MediaRecorder` **solo de video** (D6) sobre
-     el track remoto observado, `videoBitsPerSecond` según D7, `mimeType` entre los soportados
-     (`video/webm;codecs=vp8`, `video/webm`, `video/mp4`).
-   - `start(1000)`: partes de 1 s. Se guarda **la primera parte** (trae la cabecera del contenedor) y
-     las últimas 30. Las del medio se descartan al llegar la siguiente.
-   - Salvedad del spike B (ADR-M3-01): si la ventana no arranca en un keyframe, los primeros cuadros
-     pueden verse mal. Se acepta y se documenta; el reproductor del admin salta hasta el primer
-     keyframe.
-   - `congelar(): Blob` toma una foto del buffer en el momento de la detección y para el recorder.
-   - `descartar()` libera todo. Se llama al finalizar la clase, al desconectarse y al pasar a otro track.
-2. **Solo en memoria.** Nunca IndexedDB, `localStorage`, Cache API ni disco. Si la pestaña se cierra,
-   el buffer se pierde: es lo que pide el Artículo V.
-3. **Un buffer por track observado** (cámara y pantalla del otro, D1/D2). Al detectar, se congela el
-   del track que disparó.
-4. **Subida** (`src/lib/api.ts`, `subirEvidencia(sesionId, blob, duracionSegundos)`):
-   - Se llama **después** de que `POST /killswitch` devuelva 200, porque el endpoint de evidencia exige
-     la Alerta.
-   - Rama adultos: la Alerta recién existe si el otro responde "Sí". El clip congelado se guarda en
-     memoria hasta la respuesta o el plazo de D5. Si la respuesta es "No" o vence el plazo, se
-     descarta sin subir.
-   - Hasta 3 reintentos ante un error de red, sin bloquear la pantalla.
-   - Si el blob supera 5 MB (no debería, por D7), se recorta a las partes más recientes antes de subir.
-     Nunca se sube más de 30 s.
+Valores de la Tabla de Tiempos y de ADR-M3-07 §5:
+- buffer de **30 s**;
+- **solo video**;
+- `videoBitsPerSecond = 1_200_000`;
+- tope de **5 MB** (5 × 1024 × 1024 bytes);
+- **3 reintentos de subida, 2 s entre intentos**.
 
-## 3. Tests (RED primero)
+## 2. Constantes nuevas en `frontend/src/lib/killswitch/config.ts`
 
-Frontend (Playwright con dispositivos falsos):
-1. Después de 45 s de grabación, el blob congelado dura ≤30 s y empieza con cabecera WebM válida (magic
-   bytes `1A 45 DF A3`).
-2. Al finalizar la clase sin disparo, no se hace ningún POST a `/evidencia`.
-3. Rama menor: tras el disparo, un único POST multipart a `/evidencia` con `duracionSegundos ≤ 30`.
-4. Rama adultos con "No" → no se sube nada.
-5. El blob de 30 s a 1 Mbps queda por debajo de 5 MB.
+```ts
+/** Tabla de Tiempos: "Buffer rotativo de evidencia (kill-switch)". */
+export const BUFFER_SEGUNDOS = 30;
+/** ADR-M3-07 §5. */
+export const CLIP_BITS_POR_SEGUNDO = 1_200_000;
+export const CLIP_MAX_BYTES = 5 * 1024 * 1024;
+/** Tabla de Tiempos: "Reintentos de subida del clip de evidencia". */
+export const REINTENTOS_SUBIDA_CLIP = 3;
+export const ESPERA_SUBIDA_CLIP_MS = 2_000;
+```
 
-Backend: ya cubierto por `FASE2-09` (evidencia por archivo). Agregar solo un test si cambia algo del
-contrato.
+## 3. `frontend/src/lib/killswitch/bufferEvidencia.ts`
 
-## 4. Criterios de aceptación
+Mismo estilo que `src/lib/grabadorAudioResumen.ts`: constructor privado, `static crear()` que devuelve
+`null` si el navegador no puede grabar.
 
-- `Spec_M3` US-6: se quita la marca "NO IMPLEMENTADO" del endpoint de evidencia, con referencia al
-  commit.
-- Revisión explícita contra el Artículo V en el mensaje del commit: qué se graba, dónde vive y cuándo
-  se borra.
+```ts
+export class BufferEvidencia {
+  /** null si no hay MediaRecorder o ningún mimeType de video está soportado. */
+  static crear(pista: MediaStreamTrack): BufferEvidencia | null;
+  /** Foto del buffer al momento de la detección; para el recorder. null si todavía no hay partes. */
+  congelar(): { blob: Blob; duracionSegundos: number } | null;
+  /** Libera todo. Idempotente. */
+  descartar(): void;
+}
+```
 
-## 5. NO tocar
+Reglas:
+1. `MediaRecorder(new MediaStream([pista]), { mimeType, videoBitsPerSecond: CLIP_BITS_POR_SEGUNDO })`.
+   - `mimeType` es el primero soportado de
+     `["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm", "video/mp4"]`.
+   - **La pista es solo de video** (ADR-M3-07 §5): nunca agregues pistas de audio al `MediaStream`.
+2. `recorder.start(1000)`: una parte por segundo.
+3. Se guarda **la primera parte** (`cabecera`, trae el encabezado del contenedor) y las últimas
+   `BUFFER_SEGUNDOS - 1` partes. Al llegar una parte nueva y superar ese tope, se descarta la más
+   vieja **del medio**, nunca la cabecera. Así el clip dura ≤ 30 s.
+4. `congelar()`:
+   - `recorder.stop()`, esperando el último `dataavailable`;
+   - arma `new Blob([cabecera, ...partes], { type: mimeType })`;
+   - `duracionSegundos = min(BUFFER_SEGUNDOS, 1 + partes.length)`;
+   - si `blob.size > CLIP_MAX_BYTES`, saca partes del principio (después de la cabecera) hasta que
+     entre, y recalcula la duración;
+   - después de congelar, el objeto no graba más.
+5. Salvedad del spike B (ADR-M3-01): al sacar partes del medio, el clip puede arrancar sin keyframe y
+   los primeros cuadros verse mal. Se acepta; documentalo en el javadoc de la clase.
+6. **Solo memoria:** ni IndexedDB, ni `localStorage`, ni Cache API, ni `URL.createObjectURL` persistido.
+7. `descartar()`: `recorder.stop()` si está activo, vacía los arrays y suelta referencias. **No**
+   llama a `pista.stop()`.
 
-- `spring.servlet.multipart.max-file-size` (5 MB): protege las demás subidas (AUD-007).
-- La retención del clip en el servidor (30 días, AUD-021) y la extendida de M9 (FR-SEC-013).
+## 4. Llamadas a la API en `frontend/src/lib/api.ts`
+
+Funciones nuevas al final del bloque de sesiones o del aula. Tipalas con los DTOs de M3C-02.
+
+```ts
+export interface EstadoKillswitch { hayMenor: boolean; confirmacionPendiente: boolean; detectadoId: string | null; venceAt: string | null }
+export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
+export interface SesionKillswitch { id: string; estado: string }
+
+export function getEstadoKillswitch(sesionId: string): Promise<EstadoKillswitch>;      // GET  /api/sesiones/{id}/killswitch
+export function dispararKillswitch(sesionId: string, detectadoId: string): Promise<SesionKillswitch>; // POST /api/sesiones/{id}/killswitch {detectadoId}
+export function confirmarKillswitch(sesionId: string, vio: boolean): Promise<SesionKillswitch>;     // POST /api/sesiones/{id}/killswitch/confirmacion {vio}
+export function reportarClasificador(sesionId: string, evento: EventoClasificador): Promise<void>;  // POST /api/sesiones/{id}/clasificador {evento}
+/** Multipart: parte "clip" + query duracionSegundos. Reintenta REINTENTOS_SUBIDA_CLIP veces. */
+export async function subirEvidencia(sesionId: string, clip: Blob, duracionSegundos: number): Promise<void>;
+```
+
+- `subirEvidencia` arma un `FormData` con `clip` (nombre de archivo `evidencia.webm` o `.mp4` según
+  el tipo) y lo manda a `/api/sesiones/${id}/evidencia?duracionSegundos=${n}` con `api.post`, que ya
+  acepta `FormData`.
+- Reintenta solo ante un error de red o un 5xx, esperando `ESPERA_SUBIDA_CLIP_MS`. Un 4xx no se
+  reintenta: se loguea con `console.error` sin datos del clip.
+- **Nunca** manda la rama.
+
+## 5. Tests (commit 1, RED) — `frontend/tests/aula/killswitch-buffer.spec.ts`
+
+Página de prueba: reusá `src/app/dev/killswitch/page.tsx` de M3C-03. Agregá un botón o una función en
+`window` que cree un `BufferEvidencia` sobre `canvas.captureStream(15)` animado.
+
+| ID | Caso |
+|---|---|
+| KS-020 | Después de 45 s de grabación (con `page.clock` si funciona con MediaRecorder; si no, real y con `test.slow()`), `congelar()` devuelve `duracionSegundos ≤ 30` y el blob empieza con `1A 45 DF A3` (EBML/WebM) |
+| KS-021 | El blob congelado de 30 s es ≤ 5 MB |
+| KS-022 | Tras `congelar()` no llegan más partes (el tamaño no cambia 3 s después) |
+| KS-023 | `descartar()` dos veces no tira error |
+| KS-024 | `subirEvidencia` manda multipart con la parte `clip` y `duracionSegundos` en la query, sin `rama` (interceptar con `page.route`) |
+| KS-025 | `subirEvidencia` ante un 503 reintenta 3 veces y para; ante un 422, no reintenta |
+| KS-026 | `BufferEvidencia.crear` con una pista de audio → no la acepta: devuelve `null` o tira error, según elijas, documentado |
+
+Mensaje: `test(aula): RED del buffer de evidencia y la subida del clip (M3C-04)`.
+
+## 6. Implementación (commit 2, GREEN)
+
+Mensaje: `feat(aula): buffer de 30 s solo video en memoria y subida del clip (M3C-04, ADR-M3-07 §5)`.
+
+El cuerpo del commit lleva una revisión contra el Artículo V, en 3 líneas:
+- qué se graba;
+- dónde vive;
+- cuándo se borra.
+
+## 7. Verificación
+
+- `npm run lint`, `npm run build` y `npx playwright test tests/aula` verdes.
+- `rg -n "indexedDB|localStorage|caches\\." src/lib/killswitch` vacío.
+- Tildá T-M3-06d en las dos listas de tareas.
+
+## 8. NO tocar
+
+- `spring.servlet.multipart.max-file-size` (5 MB, AUD-007).
+- `EvidenciaService` y la retención del clip en el servidor (AUD-021, FR-SEC-013).

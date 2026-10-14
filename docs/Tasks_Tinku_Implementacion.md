@@ -141,16 +141,17 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-M3-05b: Endpoint `POST /api/sesiones/{id}/token` (soporte al aula virtual). — _`chunk/m3-front`: mismo guard que `finalizar` (tutor/beneficiario/pagador → 403 a terceros); sala aún no creada (job T-5) → `SesionSinSalaException` → 422; devuelve `{token, livekitUrl, livekitRoomId}` vía `LiveKitService.getBaseUrl()`. Tests de integración: 3 nuevos (token ok, 403 no participante, 422 sala no creada) — M3 suite 15/15._
 - [x] F-05: Sala virtual del aula (frontend) — consume `POST /api/sesiones/{id}/token` y conecta a LiveKit 1:1. — _`chunk/m3-front`: `src/app/aula/[id]/page.tsx` (`livekit-client`, `adaptiveStream` + `dynacast`), render de video remoto y cámara local, indicador "Esperando al otro participante…" por `RoomEvent.TrackSubscribed/Unsubscribed/ParticipantDisconnected`, botón "Finalizar sesión" (POST `/finalizar` + `room.disconnect` + redirect a `/cuenta`); `middleware.ts` protege `/aula`. Build + lint verdes. Pendiente: E2E manual contra LiveKit real (credenciales en `.env`; requiere 2 participantes)._
 - [ ] T-M3-06 _(depende del spike)_: Integrar el clasificador on-device en el cliente, según el resultado de ADR-M3-01.
-  - _Desglose 2026-10-14 (specs en `docs/superpowers/specs/m3c/`, branch `chunk/m3-c`). T-M3-06 se tilda cuando cierran 01–06; 07 se mide antes de M3C-09._
-  - [ ] T-M3-06a: ADR-M3-07 + tiempos del clasificador en la Tabla (`M3C-01`). **Espera las decisiones D1–D8 de `00-LEEME-m3c.md`.**
-  - [ ] T-M3-06b: Clasificador NSFWJS sobre el video remoto, cámara y pantalla (`M3C-02`).
-  - [ ] T-M3-06c: Fail-closed del clasificador con menor, US-6bis / FR-AULA-010 (`M3C-03`).
-  - [ ] T-M3-06d: Buffer rotativo de 30 s y subida del clip (`M3C-04`).
-  - [ ] T-M3-06e: Disparo y ramas menor/adultos en la UI + plazo de la rama adultos (`M3C-05`).
-  - [ ] T-M3-06f: Tests de punta a punta por historia y caso borde (`M3C-06`).
-  - [ ] T-M3-06g: Latencia en un gama media real (`M3C-07`) — la corre el dueño con un dispositivo físico.
-  - [ ] T-M3-06h: Entorno de pruebas con bypass y menores encendidos (`M3C-08`) — perfil `staging`; el recurso en Coolify lo crea el dueño.
-  - [ ] T-M3-06i: Precondiciones y encendido de `sesiones-habilitadas` en producción (`M3C-09`) — decide el dueño.
+  - _Desglose 2026-10-14 (specs en `docs/superpowers/specs/m3c/`, branch `chunk/m3-c`; empezar por `00-LEEME-m3c.md`). Decisiones en ADR-M3-07. T-M3-06 se tilda cuando cierran b–f; g, h, j e i van antes de encender menores._
+  - [x] T-M3-06a: ADR-M3-07 + 8 filas en la Tabla de Tiempos + anexo de latencia en ADR-M3-01 (`M3C-01`). — _Hecho 2026-10-14._
+  - [ ] T-M3-06b: Backend: `hayMenor`, puerta `clasificadorListo` en `/token` (409 `CLASIFICADOR_NO_LISTO`), `POST /clasificador`, `GET /killswitch`, vencimiento de la rama adultos con Quartz + V47 (`M3C-02`).
+  - [ ] T-M3-06c: Clasificador NSFWJS en el navegador: `config.ts`, `regla.ts`, `modelo.ts`, `clasificador.ts` con reactivación (`M3C-03`).
+  - [ ] T-M3-06d: Buffer de 30 s solo video en memoria + llamadas de API del kill-switch (`M3C-04`).
+  - [ ] T-M3-06e: Orquestador + cableado en `aula/[id]/page.tsx` + `AvisoProteccion` y `DialogoRamaAdultos` (`M3C-05`).
+  - [ ] T-M3-06f: E2E contra backend y LiveKit reales (9 casos) + trazabilidad en Spec_M3 (`M3C-06`).
+  - [ ] T-M3-06g: Página de diagnóstico + medición con CPU frenada usando el código real (`M3C-07`).
+  - [ ] T-M3-06h: Perfil `staging` + `docker-compose.staging.yml` + `RUNBOOK_staging.md`; el recurso en Coolify lo crea el dueño (`M3C-08`).
+  - [ ] T-M3-06j: Hallazgos que bloquean menores: T3-01, T4-H1, TRANS-1, T3-03 (`M3C-10`).
+  - [ ] T-M3-06i: Precondiciones y encendido de `sesiones-habilitadas` en producción (`M3C-09`) — decide y ejecuta el dueño.
 - [x] T-M3-07 _(depende del spike)_: Endpoint `POST /api/sesiones/{id}/killswitch` — el backend decide la rama (menor/adultos) con datos propios de M1, nunca confiando en un flag del cliente. — _`SesionService.ejecutarKillswitch`: rama salida de `beneficiario.tipo` (MENOR → corte directo Artículo II; adulto → blur + confirmación esperando). El request NO acepta `rama`, solo `detectadoId` validado como participante (422 si no). 403 a terceros. Idempotente (alerta/confirmación previa → no corta ni reemite). `detectadoId` = usuario cuyo contenido fue detectado, evaluado contra tutor o beneficiario._
 - [x] T-M3-08: Endpoint de subida de evidencia (clip de 30s) — solo alcanzable tras un killswitch ya registrado. — _`subirEvidencia` guarda solo la referencia (`clip_url`) en `alertas_seguridad` (Artículo V, BR-KS-01: nunca el video), valida http(s) y duración ≤30s (422) y devuelve 404 si no hay Alerta del kill-switch en la sesión._
 - [x] T-M3-09: Endpoint de confirmación de la rama "adultos" (sí/no del otro participante). — _`confirmarRamaAdultos`: responde el participante que NO generó la detección (el propio detectado → 422, US-7/FR-SEC-007). `vio=false` → la sesión continúa (queda el registro); `vio=true` → corte + bloqueo del detectado + Alerta `rama=adultos` + `sesion.killswitch_adultos`._

@@ -38,3 +38,31 @@ M3 (Aula Virtual) necesita detectar contenido inapropiado/ilegal en el video del
 ## Registro de Decisiones Técnicas (constitución)
 
 Se agrega fila: **Capa** = "Clasificador de contenido NSFW on-device (kill-switch)"; **Elección** = "NSFWJS (MobileNetV2 5-clases) sobre TensorFlow.js, model auto-host; NudeNet descartado"; **Estado** = "Decidido (ADR-M3-01)".
+## Anexo — medición aproximada de latencia (2026-10-14)
+
+No hay un dispositivo físico de gama media disponible. Se midió en Chromium headless (servidor de
+4 núcleos, sin GPU), con `nsfwjs@4.3.0` y `@tensorflow/tfjs@4.22.0` sobre el modelo de
+`spikes/nsfw-classifier/models/` (224×224). Para aproximar un celular se frenó la CPU con
+`Emulation.setCPUThrottlingRate`, que es el método de Lighthouse: 4× es su perfil de gama media.
+
+Datos de la tabla: 100 inferencias por fila, en ms.
+
+| Backend TF.js | CPU | Carga del modelo | Calentamiento | p50 | p95 | Máx |
+|---|---|---|---|---|---|---|
+| wasm | 1× | 282 | 91 | 74 | 106 | 145 |
+| wasm | 4× | 1.050 | 438 | 372 | 508 | 589 |
+| wasm | 6× | 1.809 | 914 | 621 | 779 | 824 |
+| webgl (SwiftShader, sin GPU) | 1× | 5.042 | 434 | 307 | 367 | 417 |
+| webgl (SwiftShader, sin GPU) | 4× | 4.609 | 637 | 439 | 538 | 615 |
+
+Lectura:
+- En un gama media **sin GPU útil**, una inferencia tarda 0,4–0,8 s. El intervalo de 250 ms
+  (ADR-M3-07) no se alcanza: el ciclo se saltea turnos y el intervalo efectivo queda en lo que tarde
+  la inferencia.
+- `webgl` acá corre por software (SwiftShader), así que **no representa** un celular con GPU. Ahí se
+  espera algo cercano a la estimación original de 42–60 ms.
+- Los tensores quedaron estables (267, los pesos del modelo) en todas las corridas: sin pérdidas de
+  memoria en `classify`.
+
+Sigue pendiente una medición en un dispositivo físico, cuando haya uno. Se mide con la página de
+diagnóstico de `M3C-07`.

@@ -1,6 +1,6 @@
 # M3C-09 — Precondiciones y encendido de las clases con menores en producción
 
-**Branch:** `chunk/m3-c` (documentación) · **Riesgo:** **el más alto del proyecto** (Artículo II) · **Bloqueada por:** M3C-01 a M3C-08 · **Decide:** el dueño del producto
+**Tarea:** T-M3-06i · **Branch:** `chunk/m3-c` (documentación) · **Riesgo:** **el más alto del proyecto** (Artículo II) · **Depende de:** M3C-02 a M3C-08 y M3C-10 · **Decide:** el dueño del producto
 
 ## 1. Problema
 
@@ -14,18 +14,21 @@ que ser verdad antes de encenderla, para que la decisión no dependa de la memor
 
 ### A. T-M3-06 cerrada
 
-- [ ] M3C-01: ADR-M3-07 aceptado y tiempos en la Tabla.
+- [x] M3C-01: ADR-M3-07 aceptado y tiempos en la Tabla (2026-10-14).
 - [ ] M3C-02 a M3C-05 mergeadas a `main`.
-- [ ] M3C-06: suite del backend verde con JDK 21 (≥ baseline) y E2E del kill-switch corrido en el
-      entorno de pruebas, con la salida adjunta.
-- [ ] M3C-07: latencia medida en al menos un gama media, y el intervalo de D3 confirmado o ajustado.
-- [ ] `Spec_M3`: FR-AULA-003, FR-AULA-004 y FR-AULA-010 sin marcas de "NO IMPLEMENTADO".
-- [ ] T-M3-06 tildada en `Tasks_Tinku_Implementacion.md` y el Chunk M3-C en `Tasks_Tinku_Chunks.md`,
-      en el mismo commit.
+- [ ] M3C-06: E2E del kill-switch verde (los 9 casos), con la salida adjunta, y suite del backend
+      verde con JDK 21 (≥ baseline).
+- [ ] M3C-07: latencia medida con el código real. La latencia estimada de detección con 1 track, a 4×
+      y wasm, es ≤ 3 s, o el dueño aceptó explícitamente el número.
+- [ ] `Spec_M3`: FR-AULA-003, FR-AULA-004 y FR-AULA-010 y US-6 sin marcas de "NO IMPLEMENTADO".
+- [ ] T-M3-06 tildada en `Tasks_Tinku_Implementacion.md` y el Chunk M3-C en `[x]` en
+      `Tasks_Tinku_Chunks.md`, en el mismo commit.
+- [ ] Las dos filas "propuesto 2026-10-14" de la Tabla de Tiempos (carga máxima de 20 s y 3 s sin
+      respuesta) confirmadas por el dueño, quitando la marca.
 
 ### B. Hallazgos de las pruebas en producción que tocan a menores
 
-De `docs/operacion/HALLAZGOS_pruebas.md`:
+De `docs/operacion/HALLAZGOS_pruebas.md`. Los cuatro se arreglan en **M3C-10**:
 
 - [ ] **T3-01 (alta):** un menor puede cambiar sus propias capacidades con
       `PATCH /api/usuarios/me/capacidades`. Arreglo con test de regresión (403 si es menor) y
