@@ -83,9 +83,6 @@ function ReservarFlujo() {
       .then(setFranjas)
       .catch(() => setFranjas([]));
     if (!esMenor) {
-      getAdicionalResumen(tutorId)
-        .then(setAdicional)
-        .catch(() => setAdicional(null));
       getOfertaPaquete(tutorId)
         .then(setOferta)
         .catch(() => setOferta(null));
@@ -123,6 +120,14 @@ function ReservarFlujo() {
         ? 60
         : (duracionesDelDia.at(-1) ?? 30);
   const claveOcupacion = dia ? `${dia}|${duracion}` : "";
+
+  // ADR-M5-06: el precio del resumen depende de la duración elegida; se vuelve a pedir si cambia.
+  useEffect(() => {
+    if (!tutorId || esMenor) return;
+    getAdicionalResumen(tutorId, duracion)
+      .then(setAdicional)
+      .catch(() => setAdicional(null));
+  }, [tutorId, esMenor, duracion]);
 
   // Ocupación real del día para esa duración (reservas existentes + ventana mínima): la calcula el backend.
   useEffect(() => {

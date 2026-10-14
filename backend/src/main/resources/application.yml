@@ -183,7 +183,14 @@ tinku:
     # de grabacion (ADR-M3-04) — no habilitar en prod antes.
     adicional:
       habilitado: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:false}
-      precio-ars: ${TINKU_RESUMEN_ADICIONAL_PRECIO_ARS:770}
+      # ADR-M5-06: precio = margen x costo de IA de la clase (tarifas de lista de OpenAI, tesis Cap. 5).
+      costo-transcripcion-usd-min: ${TINKU_RESUMEN_COSTO_TRANSCRIPCION_USD_MIN:0.0030}
+      costo-entrada-usd-token: ${TINKU_RESUMEN_COSTO_ENTRADA_USD_TOKEN:0.0000025}
+      tokens-por-minuto: ${TINKU_RESUMEN_TOKENS_POR_MINUTO:217}
+      costo-salida-usd-token: ${TINKU_RESUMEN_COSTO_SALIDA_USD_TOKEN:0.00001}
+      tokens-salida: ${TINKU_RESUMEN_TOKENS_SALIDA:840}
+      margen: ${TINKU_RESUMEN_MARGEN:1.50}
+      tipo-cambio-ars: ${TINKU_RESUMEN_TIPO_CAMBIO_ARS:1535}
     llm:
       proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
       api-key: ${LLM_API_KEY:}       # API key de OpenAI

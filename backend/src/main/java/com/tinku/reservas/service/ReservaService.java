@@ -530,7 +530,7 @@ public class ReservaService {
                 precioDe(tutor.getId(), duracionMinutos, 0), null);
         if (conResumen) {
             reserva.setResumenContratado(true);
-            reserva.setPrecioAdicionalResumen(adicionalResumen.precio()); // congelado como el precio
+            reserva.setPrecioAdicionalResumen(adicionalResumen.precio(duracionMinutos)); // congelado como el precio
         }
         Reserva guardada = reservaRepo.save(reserva);
         programarTimeoutPago(guardada);

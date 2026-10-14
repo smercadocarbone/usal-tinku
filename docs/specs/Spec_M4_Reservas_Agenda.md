@@ -146,7 +146,7 @@ _Como_ Estudiante, Tutor, o Adulto Responsable, _quiero_ recibir recordatorios a
 está deshabilitado, si el beneficiario es Menor (Art. II), si el Tutor no aceptó la cláusula de
 grabación o si el pagador no la aceptó. El precio del adicional se congela en la Reserva
 (`precio_adicional_resumen`) y `ReservaResponse` expone `montoTotal`. Las Solicitudes de un Menor
-nunca llevan el adicional. `GET /api/reservas/adicional-resumen?tutorId=` dice si el Tutor lo ofrece.
+nunca llevan el adicional. `GET /api/reservas/adicional-resumen?tutorId=&duracionMinutos=` (60 por defecto; 400 si no es positiva) dice si el Tutor lo ofrece y a qué precio para esa duración (ADR-M5-06).
 
 ---
 

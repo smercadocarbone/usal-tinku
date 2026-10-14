@@ -891,8 +891,11 @@ export interface AdicionalResumen {
   precio: number;
 }
 
-export function getAdicionalResumen(tutorId: string): Promise<AdicionalResumen> {
-  return api.get<AdicionalResumen>(`/api/reservas/adicional-resumen?tutorId=${encodeURIComponent(tutorId)}`);
+/** ADR-M5-06: el precio crece con la duración de la clase, así que se pide para la duración elegida. */
+export function getAdicionalResumen(tutorId: string, duracionMinutos: number): Promise<AdicionalResumen> {
+  return api.get<AdicionalResumen>(
+    `/api/reservas/adicional-resumen?tutorId=${encodeURIComponent(tutorId)}&duracionMinutos=${duracionMinutos}`
+  );
 }
 
 export const CLAUSULA_GRABACION = "GRABACION_AUDIO_RESUMEN";

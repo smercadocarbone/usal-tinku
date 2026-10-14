@@ -83,8 +83,12 @@ public class ReservaController {
 
     /** T09: si este Tutor ofrece el resumen automático y a qué precio (para el checkbox al reservar). */
     @GetMapping("/adicional-resumen")
-    public ResponseEntity<AdicionalResumenResponse> adicionalResumen(@RequestParam UUID tutorId) {
+    public ResponseEntity<AdicionalResumenResponse> adicionalResumen(
+            @RequestParam UUID tutorId, @RequestParam(defaultValue = "60") int duracionMinutos) {
+        if (duracionMinutos <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok(new AdicionalResumenResponse(
-                adicionalResumen.disponibleCon(tutorId), adicionalResumen.precio()));
+                adicionalResumen.disponibleCon(tutorId), adicionalResumen.precio(duracionMinutos)));
     }
 }

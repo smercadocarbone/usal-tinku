@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 
 /**
@@ -18,20 +19,53 @@ import java.util.UUID;
 @Component
 public class AdicionalResumen {
 
+    private static final BigDecimal DECENA = BigDecimal.TEN;
+
     private final boolean habilitado;
-    private final BigDecimal precio;
     private final ConsentimientoService consentimiento;
+    private final BigDecimal costoTranscripcionPorMin;
+    private final BigDecimal costoEntradaPorToken;
+    private final BigDecimal tokensPorMin;
+    private final BigDecimal costoSalidaPorToken;
+    private final BigDecimal tokensSalida;
+    private final BigDecimal margen;
+    private final BigDecimal tipoCambio;
 
     public AdicionalResumen(@Value("${tinku.resumen.adicional.habilitado:false}") boolean habilitado,
-                            @Value("${tinku.resumen.adicional.precio-ars:770}") BigDecimal precio,
-                            ConsentimientoService consentimiento) {
+                            ConsentimientoService consentimiento,
+                            @Value("${tinku.resumen.adicional.costo-transcripcion-usd-min:0.0030}") BigDecimal costoTranscripcionPorMin,
+                            @Value("${tinku.resumen.adicional.costo-entrada-usd-token:0.0000025}") BigDecimal costoEntradaPorToken,
+                            @Value("${tinku.resumen.adicional.tokens-por-minuto:217}") BigDecimal tokensPorMin,
+                            @Value("${tinku.resumen.adicional.costo-salida-usd-token:0.00001}") BigDecimal costoSalidaPorToken,
+                            @Value("${tinku.resumen.adicional.tokens-salida:840}") BigDecimal tokensSalida,
+                            @Value("${tinku.resumen.adicional.margen:1.50}") BigDecimal margen,
+                            @Value("${tinku.resumen.adicional.tipo-cambio-ars:1535}") BigDecimal tipoCambio) {
         this.habilitado = habilitado;
-        this.precio = precio;
         this.consentimiento = consentimiento;
+        this.costoTranscripcionPorMin = costoTranscripcionPorMin;
+        this.costoEntradaPorToken = costoEntradaPorToken;
+        this.tokensPorMin = tokensPorMin;
+        this.costoSalidaPorToken = costoSalidaPorToken;
+        this.tokensSalida = tokensSalida;
+        this.margen = margen;
+        this.tipoCambio = tipoCambio;
     }
 
-    public BigDecimal precio() {
-        return precio;
+    /**
+     * ADR-M5-06 / tesis Cap. 5: precio = margen × costo de IA de la clase, en ARS y redondeado hacia
+     * arriba a la decena. Costo = transcripción por minuto + tokens de entrada por minuto + tokens de
+     * salida fijos. Todo en {@link BigDecimal}: es dinero.
+     */
+    public BigDecimal precio(int duracionMinutos) {
+        if (duracionMinutos <= 0) {
+            throw new IllegalArgumentException("La duración debe ser positiva: " + duracionMinutos);
+        }
+        BigDecimal d = BigDecimal.valueOf(duracionMinutos);
+        BigDecimal costoUsd = costoTranscripcionPorMin.multiply(d)
+                .add(costoEntradaPorToken.multiply(tokensPorMin).multiply(d))
+                .add(costoSalidaPorToken.multiply(tokensSalida));
+        BigDecimal ars = costoUsd.multiply(margen).multiply(tipoCambio);
+        return ars.divide(DECENA, 0, RoundingMode.CEILING).multiply(DECENA).setScale(0);
     }
 
     /** Si el Tutor lo ofrece: adicional habilitado y cláusula aceptada por el Tutor. */

@@ -652,8 +652,8 @@ class PagosFlujosIntegracionTest {
         MvcResult res = reservarConResumen(e.tokenEst(), e.tutorId(), e.horario())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resumenContratado").value(true))
-                .andExpect(jsonPath("$.precioAdicionalResumen").value(770))
-                .andExpect(jsonPath("$.montoTotal").value(15770))
+                .andExpect(jsonPath("$.precioAdicionalResumen").value(510))
+                .andExpect(jsonPath("$.montoTotal").value(15510))
                 .andReturn();
         UUID reservaId = UUID.fromString(objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asText());
         pedirPreferencia(e.tokenEst(), reservaId);
@@ -661,8 +661,8 @@ class PagosFlujosIntegracionTest {
         // BR-PAG-01 intacta: 21 % solo sobre la sesión (3150); el adicional va entero a la plataforma.
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
-        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15770"));
-        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3920.00"));
+        assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(new BigDecimal("15510"));
+        assertThat(captor.getValue().comisionPlataforma()).isEqualByComparingTo(new BigDecimal("3660.00"));
     }
 
     @Autowired com.tinku.pagos.service.ComisionPlataforma comisionPlataforma;
@@ -670,7 +670,7 @@ class PagosFlujosIntegracionTest {
     /**
      * ADR-M5-04: el {@code marketplace_fee} de la preferencia es el 21 % de la sesión que sale de la
      * property configurada ({@code application.yml}, no el default del {@code @Value}) más el
-     * adicional del resumen entero (BR-PAG-11, T09): la comisión nunca se calcula sobre los $770.
+     * adicional del resumen entero (BR-PAG-11, T09): la comisión nunca se calcula sobre los $510.
      */
     @Test
     void adrM504_marketplaceFee_es21PorCientoDeLaSesion_yElAdicionalEntraEntero() throws Exception {
@@ -686,13 +686,66 @@ class PagosFlujosIntegracionTest {
         ArgumentCaptor<PreferenciaRequest> captor = ArgumentCaptor.forClass(PreferenciaRequest.class);
         verify(mercadopago).crearPreferencia(captor.capture(), any());
         BigDecimal sesion = new BigDecimal("15000");
-        BigDecimal adicional = new BigDecimal("770");
+        BigDecimal adicional = new BigDecimal("510"); // 60 min, ADR-M5-06
         assertThat(captor.getValue().montoBruto()).isEqualByComparingTo(sesion.add(adicional));
-        // 21 % de 15.000 = 3.150, más los 770 del adicional sin comisión encima.
+        // 21 % de 15.000 = 3.150, más los 510 del adicional sin comisión encima.
         assertThat(captor.getValue().comisionPlataforma())
                 .isEqualByComparingTo(new BigDecimal("3150.00").add(adicional));
         assertThat(captor.getValue().comisionPlataforma().subtract(adicional))
                 .isEqualByComparingTo(sesion.multiply(new BigDecimal("0.21")));
+    }
+
+    /** ADR-M5-06: el precio que ve el alumno al reservar es el de la duración elegida. */
+    @Test
+    void adicionalResumen_precioDependeDeLaDuracion_yDuracionInvalida400() throws Exception {
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        String url = "/api/reservas/adicional-resumen";
+        mockMvc.perform(get(url).param("tutorId", e.tutorId().toString()).param("duracionMinutos", "30")
+                        .header("Authorization", "Bearer " + e.tokenEst()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.precio").value(270));
+        mockMvc.perform(get(url).param("tutorId", e.tutorId().toString()).param("duracionMinutos", "120")
+                        .header("Authorization", "Bearer " + e.tokenEst()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.precio").value(1000));
+        mockMvc.perform(get(url).param("tutorId", e.tutorId().toString())
+                        .header("Authorization", "Bearer " + e.tokenEst()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.precio").value(510));
+        mockMvc.perform(get(url).param("tutorId", e.tutorId().toString()).param("duracionMinutos", "0")
+                        .header("Authorization", "Bearer " + e.tokenEst()))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** ADR-M5-06: reservar una clase de 30 min congela el precio de 30 min, no el de 60. */
+    @Test
+    void reservaConAdicional_clasede30Min_congelaElPrecioDe30Min() throws Exception {
+        EscenarioAdicional e = escenarioAdicional(true, true);
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenEst())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 30,
+                                "resumenContratado", true))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.precioAdicionalResumen").value(270))
+                .andExpect(jsonPath("$.montoTotal").value(7770));
+    }
+
+    /** Art. II: el adicional nunca se contrata con un Menor, ni siquiera si lo pide su Adulto Responsable. */
+    @Test
+    void reservaConAdicional_paraUnMenor_422_yNoQuedaReserva() throws Exception {
+        EscenarioPago e = escenarioPago();
+        mockMvc.perform(post("/api/reservas")
+                        .header("Authorization", "Bearer " + e.tokenAr())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "tutorId", e.tutorId().toString(),
+                                "beneficiarioId", e.menorId().toString(),
+                                "horario", e.horario().toString(),
+                                "duracionMinutos", 60,
+                                "resumenContratado", true))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("El resumen automático no se ofrece en clases con menores."));
     }
 
     @Test
