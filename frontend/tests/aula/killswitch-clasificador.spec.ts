@@ -146,8 +146,10 @@ test.describe("Kill-switch — clasificador en el navegador", () => {
     await page.clock.runFor(1000);
     await page.clock.runFor(7000);
     const ev = await eventos(page);
-    expect(de(ev, "demorar")).toHaveLength(1);
+    // Con 8 s de ventana puede empezar una segunda inferencia lenta: importa el orden de la primera.
+    expect(de(ev, "demorar").length).toBeGreaterThanOrEqual(1);
     expect(de(ev, "normalizar").length).toBeGreaterThanOrEqual(1);
+    expect(de(ev, "demorar")[0].t).toBeLessThan(de(ev, "normalizar")[0].t);
     expect(de(ev, "caer")).toHaveLength(0);
   });
 

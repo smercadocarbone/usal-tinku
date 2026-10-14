@@ -145,7 +145,8 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
   - [x] T-M3-06a: ADR-M3-07 + 8 filas en la Tabla de Tiempos + anexo de latencia en ADR-M3-01 (`M3C-01`). — _Hecho 2026-10-14._
   - [x] T-M3-06b: Backend: `hayMenor`, puerta `clasificadorListo` en `/token` (409 `CLASIFICADOR_NO_LISTO`), `POST /clasificador`, `GET /killswitch`, vencimiento de la rama adultos con Quartz + V47 (`M3C-02`).
     - _Hecho 2026-10-14: RED `9d17cb5` (compile error: `vencerConfirmacionRamaAdultos` no existe) → GREEN en el commit siguiente. `KillswitchClienteIntegracionTest` (16 tests nuevos). Un test existente de `SesionesIntegracionTest` (token con Menor) ahora manda `clasificadorListo=true`. Backend (JDK 21): `Tests run: 677, Failures: 0, Errors: 0, Skipped: 5` (661 + 16)._
-  - [ ] T-M3-06c: Clasificador NSFWJS en el navegador: `config.ts`, `regla.ts`, `modelo.ts`, `clasificador.ts` con reactivación (`M3C-03`).
+  - [x] T-M3-06c: Clasificador NSFWJS en el navegador: `config.ts`, `regla.ts`, `modelo.ts`, `clasificador.ts` con reactivación (`M3C-03`).
+    - _Hecho 2026-10-14: commits `33af55d` (deps y modelo), `5c64825` (RED: módulo `regla` inexistente) y el GREEN siguiente. `killswitch-clasificador.spec.ts` (14 tests: KS-001..007, 010..016); `npx playwright test tests/aula`: 18 passed (14 nuevos + 4 pizarra). `rg __tinkuModeloFalso .next/static` vacío; TF.js solo en chunks de `/dev/killswitch`. Dependencias con `bun` (único lockfile: `bun.lock`)._
   - [ ] T-M3-06d: Buffer de 30 s solo video en memoria + llamadas de API del kill-switch (`M3C-04`).
   - [ ] T-M3-06e: Orquestador + cableado en `aula/[id]/page.tsx` + `AvisoProteccion` y `DialogoRamaAdultos` (`M3C-05`).
   - [ ] T-M3-06f: E2E contra backend y LiveKit reales (9 casos) + trazabilidad en Spec_M3 (`M3C-06`).
