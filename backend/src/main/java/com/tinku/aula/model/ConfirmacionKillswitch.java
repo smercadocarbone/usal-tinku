@@ -48,4 +48,12 @@ public class ConfirmacionKillswitch {
 
     @Column(name = "responded_at")
     private Instant respondedAt;
+
+    /** ADR-M3-07 §7: instante en que la pregunta vence si nadie responde. */
+    @Column(name = "vence_at")
+    private Instant venceAt;
+
+    /** true si venció sin respuesta (se resolvió como "No"). */
+    @Column(name = "vencida", nullable = false)
+    private boolean vencida = false;
 }

@@ -35,6 +35,8 @@ import java.util.UUID;
  * T-fin+5min lo hace {@link CorteAutomaticoJob}. El kill-switch (T-M3-07), su
  * confirmación en la rama adultos (T-M3-09) y la subida de evidencia (T-M3-08)
  * también viven acá — la rama la decide el backend, el request nunca la trae.
+ * ADR-M3-07 suma {@code GET /{id}/killswitch} (estado) y {@code POST /{id}/clasificador} (eventos
+ * del clasificador del navegador) y la puerta {@code ?clasificadorListo=} del token.
  */
 @RestController
 @RequestMapping("/api/sesiones")
@@ -77,12 +79,15 @@ public class SesionController {
     /** Token de acceso a la sala LiveKit — solo participantes de la reserva. */
     @PostMapping("/{id}/token")
     public ResponseEntity<TokenSesionResponse> token(@PathVariable UUID id,
+                                                     @RequestParam(name = "clasificadorListo", defaultValue = "false")
+                                                     boolean clasificadorListo,
                                                      Authentication authentication) {
         Usuario usuario = usuarioActual.obtener(authentication);
-        String[] resultado = sesionService.obtenerToken(usuario, id);
+        String[] resultado = sesionService.obtenerToken(usuario, id, clasificadorListo);
         return ResponseEntity.ok(new TokenSesionResponse(
                 resultado[0], liveKitService.getBaseUrl(), resultado[1],
-                audioResumenService.debeGrabar(usuario, id), sesionService.pizarraHabilitada(id)));
+                audioResumenService.debeGrabar(usuario, id), sesionService.pizarraHabilitada(id),
+                sesionService.hayMenor(id)));
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */
@@ -105,6 +110,24 @@ public class SesionController {
         Usuario usuario = usuarioActual.obtener(authentication);
         SesionAprendizaje sesion = sesionService.ejecutarKillswitch(usuario, id, request.detectadoId());
         return ResponseEntity.ok(SesionResponse.from(sesion));
+    }
+
+    /** ADR-M3-07 — estado del kill-switch para el cliente: {@code hayMenor} y confirmación pendiente. */
+    @GetMapping("/{id}/killswitch")
+    public ResponseEntity<EstadoKillswitchResponse> estadoKillswitch(@PathVariable UUID id,
+                                                                     Authentication authentication) {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        return ResponseEntity.ok(EstadoKillswitchResponse.from(sesionService.estadoKillswitch(usuario, id)));
+    }
+
+    /** ADR-M3-07 §6 — el cliente avisa que su clasificador no cargó, cayó, revivió o se rindió. Solo log. */
+    @PostMapping("/{id}/clasificador")
+    public ResponseEntity<Void> eventoClasificador(@PathVariable UUID id,
+                                                   @Valid @RequestBody EventoClasificadorRequest request,
+                                                   Authentication authentication) {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        sesionService.registrarEventoClasificador(usuario, id, request.evento());
+        return ResponseEntity.noContent().build();
     }
 
     /** US-7 — confirmación de la rama adultos (T-M3-09): sí/no del OTRO participante. */

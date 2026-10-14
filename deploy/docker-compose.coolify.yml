@@ -93,6 +93,9 @@ services:
       # `prod` solo. Para una prueba con datos sembrados: `prod,seed-demo` (cuentas con contraseña conocida;
       # sacarlo al terminar). Se cambia con la variable TINKU_PERFILES en Coolify, sin tocar el repo.
       SPRING_PROFILES_ACTIVE: ${TINKU_PERFILES:-prod}
+      # T-TES-10 / AGENTS §3: clases con menores. false por defecto; solo se prende en un despliegue de
+      # pruebas cerrado (ver docs/operacion/RUNBOOK_staging.md), nunca con usuarios reales.
+      TINKU_MENORES_SESIONES_HABILITADAS: ${TINKU_MENORES_SESIONES_HABILITADAS:-false}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tinku
       DB_USER: ${SERVICE_USER_POSTGRES}
       DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}

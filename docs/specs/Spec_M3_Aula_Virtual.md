@@ -70,8 +70,10 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
   Tutor, el clip ni qué se detectó (datos: sesión y fecha). El clip solo se habilita al resolverse
   `SANCIONAR` (FASE2-09). Si el aviso falla, el corte se persiste igual (Artículo II).
 
-  **NO IMPLEMENTADO (AUD-014/T-M3-06, 2026-09-21):** el endpoint `POST /api/sesiones/{id}/evidencia`
-  existe pero ningún cliente lo llama — no hay MediaRecorder en `frontend/`.
+  **Implementado en M3C-04/M3C-05 (commits `47e0af2` buffer y subida del clip; `feat(aula): kill-switch
+  en el aula…` cableado):** el navegador de cada participante clasifica el video que recibe, congela el
+  buffer de 30 s solo video al confirmar la detección y sube el clip a `POST /api/sesiones/{id}/evidencia`
+  (ADR-M3-07). Falta la prueba de punta a punta con LiveKit real (M3C-06).
 - **Dado** que el participante menor es quien genera la detección, **cuando** eso ocurra, **entonces** se aplica el mismo corte y se notifica al Adulto Responsable — la sesión nunca continúa, sin importar quién disparó la detección (Artículo II).
 
   **A quién se suspende (decisión D2, AUD-006, 2026-09-22):** el corte es incondicional, pero la
@@ -94,6 +96,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 *Como* Tinku, *quiero* una respuesta proporcionada cuando los dos participantes son adultos, *para* no cortar sesiones legítimas por falsos positivos.
 
 - **Dado** que ambos participantes son adultos y el clasificador detecta contenido en el video de uno, **cuando** la detección se confirme, **entonces** el video del detectado se bluerea (placeholder estático) y la sesión continúa; se pregunta al otro participante si vio algo incorrecto o ilegal.
+- **Dado** que el otro participante no responde dentro del plazo de la rama adultos (Tabla de Tiempos, 5 min), **cuando** venza, **entonces** se resuelve como "No": se restaura el video, no hay Alerta y queda registrado como vencida (ADR-M3-07 §7; job de Quartz persistido, M3C-02).
 - **Dado** que el otro participante responde "No", **cuando** eso ocurra, **entonces** se restaura la cámara y continúa el monitoreo normal (el evento queda logueado internamente).
 - **Dado** que el otro participante responde "Sí", **cuando** eso ocurra, **entonces** se corta la sesión, se bloquea al detectado, M5 reembolsa al Estudiante, y se genera la Alerta de Seguridad para M9.
 
@@ -116,14 +119,14 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 |---|---|
 | FR-AULA-001 | Sala de videollamada LiveKit creada a T-5 minutos (coherente con FR-RES-010 de M4). Sesiones siempre 1 a 1 en el MVP. |
 | FR-AULA-002 | Degradación automática y continua de calidad (video → audio → texto), sin "modo degradado" visible. |
-| FR-AULA-003 | Clasificador de contenido en tiempo real (kill-switch), on-device, según BR-KS-01 a BR-KS-06. Sin botón de pánico manual en el MVP — solo detección automática. |
-| FR-AULA-004 | Buffer local rotativo de 30 segundos de video, no persistente; se sube solo si el kill-switch se dispara. |
+| FR-AULA-003 | Clasificador de contenido en tiempo real (kill-switch), on-device, según BR-KS-01 a BR-KS-06. Sin botón de pánico manual en el MVP — solo detección automática. Detalle de cliente (qué video, umbrales por rama, confirmación): ADR-M3-07. |
+| FR-AULA-004 | Buffer local rotativo de 30 segundos de video, no persistente; se sube solo si el kill-switch se dispara. Solo video, 1,2 Mbps, en memoria: ADR-M3-07. |
 | FR-AULA-005 | Corte total antes del 50% de la duración agendada → evento `sesion.interrumpida` → reembolso automático (vía M5). _(FASE2-01/AUD-020: la duración agendada es la `duracion_minutos` de la Reserva, no la de la franja.)_ |
 | FR-AULA-006 | No-show: timeout automático a T+10 + marcado manual (habilitado también desde T+10). No reversible desde la app; revisión es caso de soporte del Admin. |
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
 | FR-AULA-009 | El kill-switch emite `sesion.killswitch_menor` o `sesion.killswitch_adultos` según la rama, eventos que M5 consume para reembolsar (ver tabla de eventos de M5). |
-| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). **NO IMPLEMENTADO (AUD-001, 2026-09-21):** `SesionService.obtenerToken()` no consulta ningún estado del clasificador; la sala se habilita siempre. |
+| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). Puerta del token implementada en M3C-02 (commit `feat(aula): puerta del clasificador…`, `?clasificadorListo=` → 409 `CLASIFICADOR_NO_LISTO` con un Menor); comportamiento del cliente en M3C-05 (`aula/[id]/page.tsx`: sin clasificador listo no se entra con un menor; caída en curso → video remoto oculto, reintentos y salida de la sala). Reintentos antes del corte, con el video remoto oculto si hay un menor: ADR-M3-07 §6. |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 
