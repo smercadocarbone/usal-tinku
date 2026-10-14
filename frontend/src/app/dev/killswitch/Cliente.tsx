@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { ClasificadorKillswitch } from "@/lib/killswitch/clasificador";
+import { subirEvidencia } from "@/lib/api";
+import { BufferEvidencia } from "@/lib/killswitch/bufferEvidencia";
 import { cargarModelo, type Modelo } from "@/lib/killswitch/modelo";
 import { puntaje, type ClaseNsfw, type Prediccion } from "@/lib/killswitch/regla";
 
@@ -36,14 +38,19 @@ function modeloFalso(inferencia: NonNullable<Carga["inferencia"]>): Modelo {
 }
 
 /** Un track de canvas que se repinta solo, como una cámara remota. */
-function pistaDeCanvas(): MediaStreamTrack {
+function pistaDeCanvas(ancho = 64, alto = 64): MediaStreamTrack {
   const c = document.createElement("canvas");
-  c.width = c.height = 64;
+  c.width = ancho;
+  c.height = alto;
   const g = c.getContext("2d")!;
   let n = 0;
   const pintar = () => {
     g.fillStyle = `hsl(${(n += 7) % 360} 60% 50%)`;
-    g.fillRect(0, 0, 64, 64);
+    g.fillRect(0, 0, ancho, alto);
+    for (let i = 0; i < 20; i++) {
+      g.fillStyle = `hsl(${(n * 3 + i * 17) % 360} 80% 50%)`;
+      g.fillRect(Math.random() * ancho, Math.random() * alto, 40, 40);
+    }
   };
   pintar();
   setInterval(pintar, 100);
@@ -84,6 +91,35 @@ export default function Cliente() {
         return { ok: true };
       } catch (e) {
         return { ok: false, nombre: e instanceof Error ? e.name : "desconocido" };
+      }
+    };
+    // M3C-04: buffer de evidencia y subida del clip.
+    let buffer: BufferEvidencia | null = null;
+    const privado = () => buffer as unknown as { partes: Blob[]; recorder: MediaRecorder };
+    w.__ksBuffer = {
+      iniciar: () => {
+        buffer = BufferEvidencia.crear(pistaDeCanvas(640, 360));
+        return buffer !== null;
+      },
+      crearConAudio: () => {
+        const destino = new AudioContext().createMediaStreamDestination();
+        return BufferEvidencia.crear(destino.stream.getAudioTracks()[0]);
+      },
+      congelar: async () => {
+        const f = await buffer?.congelar();
+        if (!f) return null;
+        const inicio = Array.from(new Uint8Array(await f.blob.slice(0, 4).arrayBuffer()));
+        return { duracionSegundos: f.duracionSegundos, size: f.blob.size, inicio, tipo: f.blob.type };
+      },
+      descartar: () => buffer?.descartar(),
+      estadoInterno: () => ({ partes: privado().partes.length, recorder: privado().recorder.state }),
+    };
+    w.__ksSubir = async (sesionId: string, duracion: number) => {
+      try {
+        await subirEvidencia(sesionId, new Blob([new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3])], { type: "video/webm" }), duracion);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, status: (e as { status?: number }).status ?? 0 };
       }
     };
     /** KS-015: modelo real sobre un canvas de color liso. */

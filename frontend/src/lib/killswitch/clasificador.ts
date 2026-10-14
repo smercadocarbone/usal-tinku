@@ -10,7 +10,7 @@ import { cargarModelo, ClasificadorNoDisponible, type Modelo } from "./modelo";
 import { ContadorDetecciones, puntaje } from "./regla";
 
 /** Qué le avisa el cliente al backend sobre su clasificador (POST /clasificador, ADR-M3-07 §6). */
-export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
+export type { EventoClasificador } from "../api";
 
 export interface OpcionesClasificador {
   hayMenor: boolean;

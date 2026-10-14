@@ -8,6 +8,7 @@
  */
 
 import { clearSession, TOKEN_KEY } from "./auth";
+import { ESPERA_SUBIDA_CLIP_MS, REINTENTOS_SUBIDA_CLIP } from "./killswitch/config";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -930,6 +931,66 @@ export async function subirAudioResumen(sesionId: string, audio: Blob): Promise<
     const [mensaje, detalles] = await leerError(res);
     throw new ApiError(res.status, mensaje, detalles);
   }
+}
+
+// ---------------------------------------------------------------- M3C-04: kill-switch del cliente
+
+export interface EstadoKillswitch {
+  hayMenor: boolean;
+  confirmacionPendiente: boolean;
+  detectadoId: string | null;
+  venceAt: string | null;
+}
+export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
+export interface SesionKillswitch {
+  id: string;
+  estado: string;
+}
+
+/** ADR-M3-07: umbral y pregunta pendiente de la rama adultos (la retoma quien recarga la página). */
+export function getEstadoKillswitch(sesionId: string): Promise<EstadoKillswitch> {
+  return api.get(`/api/sesiones/${sesionId}/killswitch`);
+}
+
+/** US-6/US-7: la rama (menor/adultos) la decide el backend; el cliente solo dice quién fue detectado. */
+export function dispararKillswitch(sesionId: string, detectadoId: string): Promise<SesionKillswitch> {
+  return api.post(`/api/sesiones/${sesionId}/killswitch`, { detectadoId });
+}
+
+/** US-7: "¿viste algo?" del OTRO participante en la rama adultos. */
+export function confirmarKillswitch(sesionId: string, vio: boolean): Promise<SesionKillswitch> {
+  return api.post(`/api/sesiones/${sesionId}/killswitch/confirmacion`, { vio });
+}
+
+/** ADR-M3-07 §6: avisa el estado del clasificador del navegador (solo log en el backend). */
+export function reportarClasificador(sesionId: string, evento: EventoClasificador): Promise<void> {
+  return api.post(`/api/sesiones/${sesionId}/clasificador`, { evento });
+}
+
+/**
+ * Sube el clip de evidencia (multipart: parte "clip" + `duracionSegundos` en la query). Hasta
+ * REINTENTOS_SUBIDA_CLIP intentos, con ESPERA_SUBIDA_CLIP_MS entre ellos, solo ante error de red o
+ * 5xx; un 4xx no se reintenta. Nunca manda la rama. El clip vive solo en memoria: si fallan todos, se pierde.
+ */
+export async function subirEvidencia(sesionId: string, clip: Blob, duracionSegundos: number): Promise<void> {
+  const nombre = clip.type.includes("mp4") ? "evidencia.mp4" : "evidencia.webm";
+  let ultimo: unknown;
+  for (let intento = 1; intento <= REINTENTOS_SUBIDA_CLIP; intento++) {
+    const cuerpo = new FormData();
+    cuerpo.append("clip", clip, nombre);
+    try {
+      await api.post(`/api/sesiones/${sesionId}/evidencia?duracionSegundos=${duracionSegundos}`, cuerpo);
+      return;
+    } catch (e) {
+      ultimo = e;
+      if (e instanceof ApiError && e.status < 500) {
+        console.error(`Evidencia rechazada (${e.status})`);
+        throw e;
+      }
+      if (intento < REINTENTOS_SUBIDA_CLIP) await new Promise((r) => setTimeout(r, ESPERA_SUBIDA_CLIP_MS));
+    }
+  }
+  throw ultimo;
 }
 
 /** R5: Tutores autorizados para un menor (solo su Adulto Responsable). */

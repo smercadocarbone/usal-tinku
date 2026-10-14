@@ -22,3 +22,13 @@ export const UMBRAL_DETECCION = 0.85;
 export const TAMANO_ENTRADA = 224;
 export const URL_MODELO = "/modelos/nsfw/model.json";
 export const URL_WASM = "/modelos/tfjs-wasm/";
+
+/** Tabla de Tiempos: "Buffer rotativo de evidencia (kill-switch)". */
+export const BUFFER_SEGUNDOS = 30;
+/** ADR-M3-07 §5. */
+export const CLIP_BITS_POR_SEGUNDO = 1_200_000;
+export const CLIP_MAX_BYTES = 5 * 1024 * 1024;
+/** Tabla de Tiempos: "Reintentos de subida del clip de evidencia" (intentos en total). */
+export const REINTENTOS_SUBIDA_CLIP = 3;
+/** Tabla de Tiempos: "Reintentos de subida del clip de evidencia" (espera entre intentos). */
+export const ESPERA_SUBIDA_CLIP_MS = 2_000;
