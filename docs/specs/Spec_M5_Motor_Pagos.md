@@ -9,7 +9,7 @@
 
 _(R4, 2026-09-25)_ El reembolso del adicional es un outbox persistido: queda `PENDIENTE` y lo ejecuta un job Quartz con `X-Idempotency-Key: adicional-{transaccionId}`; si MercadoPago falla reintenta con backoff 5/15/60 min (Tabla de Tiempos) y, agotado, queda `FALLIDO` en la cola "Reembolsos del resumen" de Soporte Financiero (`/api/admin/financiero/reembolsos-adicional`), que puede reintentar o registrar que lo devolvió por fuera (`RESUELTO_MANUAL`, con nota). Se abre un ticket al pagador-reclamante. No se confunde con la cola de parciales por disputa (FR-PAG-010).
 
-**Historial BR-PAG-01:** comisión de plataforma al **21 %** del monto bruto desde el 2026-09-28 (ADR-M5-04). Motivo: con el modelo A (ADR-M5-02), MercadoPago descuenta su comisión (6,04 % con IVA) de los fondos del Tutor antes del `marketplace_fee`; con 27 % el Tutor se quedaba con el 66,96 % y al 21 % vuelve al 72,96 %. La tesis (Cap. 5) está recalculada con 21 %: el VAN del escenario base se anula recién con 12,4 %. Antes: **27 %** desde el 2026-09-23 (T-TES-05, cuando la plataforma pagaba la comisión de MercadoPago; por debajo de 23,4 % el VAN del escenario base de entonces era negativo). Antes: **15 %**.
+**Historial BR-PAG-01:** comisión de plataforma al **27 %** del monto bruto desde el 2026-10-14 (ADR-M5-05, T-TES-16): la tesis vigente (Cap. 5) la calibra en 27 % y a 21 % el VAN del escenario base es negativo (USD −9.228; equilibrio ≈ 25,3 %). Con el modelo A el Tutor recibe 1 − 0,27 − 0,0604 = 66,96 %. Antes: **21 %** desde el 2026-09-28 (ADR-M5-04). Motivo de aquel 21 %: con el modelo A (ADR-M5-02), MercadoPago descuenta su comisión (6,04 % con IVA) de los fondos del Tutor antes del `marketplace_fee`; con 27 % el Tutor se quedaba con el 66,96 % y al 21 % vuelve al 72,96 %. Antes: **27 %** desde el 2026-09-23 (T-TES-05, cuando la plataforma pagaba la comisión de MercadoPago; por debajo de 23,4 % el VAN del escenario base de entonces era negativo). Antes: **15 %**.
 
 ---
 
@@ -107,7 +107,7 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 |---|---|
 | FR-PAG-001 | Cobro vía MercadoPago en escrow al confirmar la Reserva. |
 | FR-PAG-002 | Liberación automática al Tutor 24hs después de finalizada la Sesión, salvo Denuncia activa. |
-| FR-PAG-003 | Comisión de plataforma del 21% (BR-PAG-01, ADR-M5-04), a cargo del Tutor, no visible como línea aparte. |
+| FR-PAG-003 | Comisión de plataforma del 27% (BR-PAG-01, ADR-M5-05), a cargo del Tutor, no visible como línea aparte. |
 | FR-PAG-004 | Ejecución centralizada de todos los reembolsos automáticos (tabla de eventos, sección 2). |
 | FR-PAG-005 | Precio de referencia regional no vinculante, sugerido una vez. |
 | FR-PAG-006 | El precio de referencia es fijo; solo cambia con recálculo de toda la tabla regional. |

@@ -29,3 +29,18 @@ jobs:
 
       - name: Build y tests (Testcontainers levanta Postgres solo)
         run: mvn -B verify
+
+      # ADR-000-05: la cobertura se mide y se publica; todavía no corta el build.
+      - name: Cobertura de líneas en el resumen del job
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            awk -F, 'NR>1 {m+=$8; c+=$9} END {printf "### Cobertura de líneas del backend: %.1f %%\n", 100*c/(m+c)}' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Reporte de cobertura (artefacto)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-backend
+          path: backend/target/site/jacoco
