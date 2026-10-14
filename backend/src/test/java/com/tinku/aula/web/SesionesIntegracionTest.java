@@ -778,6 +778,8 @@ class SesionesIntegracionTest {
         sesionRepository.save(sesion);
 
         MvcResult res = mockMvc.perform(post("/api/sesiones/{id}/token", sesion.getId())
+                        // M3C-02: con un Menor el cliente declara que su clasificador cargó
+                        .param("clasificadorListo", "true")
                         .header("Authorization", "Bearer " + e.tokenTutor()))
                 .andExpect(status().isOk())
                 .andReturn();

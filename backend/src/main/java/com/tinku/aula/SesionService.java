@@ -13,6 +13,8 @@ import com.tinku.aula.jobs.CrearSalaJob;
 import com.tinku.aula.jobs.InicioClaseJob;
 import com.tinku.aula.jobs.NoShowJob;
 import com.tinku.aula.jobs.RecordatorioClaseJob;
+import com.tinku.aula.jobs.VencimientoConfirmacionKillswitchJob;
+import com.tinku.aula.web.EventoClasificador;
 import com.tinku.seguridad.model.AlertaSeguridad;
 import com.tinku.aula.model.ConfirmacionKillswitch;
 import com.tinku.aula.model.SesionAprendizaje;
@@ -82,6 +84,9 @@ public class SesionService {
     private static final Duration TIMEOUT_NO_SHOW = Duration.ofMinutes(10);
     /** +5 min tras el fin agendado para el corte automático (Plan M3 §3.5, Tabla_Tiempos). */
     private static final Duration TOLERANCIA_FIN_AUTOMATICO = Duration.ofMinutes(5);
+
+    /** Tabla de Tiempos: "Plazo de respuesta de la rama adultos del kill-switch" (ADR-M3-07 §7). */
+    private static final Duration PLAZO_CONFIRMACION_ADULTOS = Duration.ofMinutes(5);
 
     private final SesionAprendizajeRepository sesionRepo;
     private final ReservaRepository reservaRepo;
@@ -211,6 +216,7 @@ public class SesionService {
             scheduler.unscheduleJob(triggerCorte(sesionId));
             scheduler.unscheduleJob(triggerKey("recordatorio", sesionId));
             scheduler.unscheduleJob(triggerKey("inicio", sesionId));
+            scheduler.unscheduleJob(triggerKey("confirmacion-ks", sesionId));
             // Los jobs son storeDurably (programarSiFalta): hay que borrarlos
             // explícitamente o el re-agendar chocaría con el mismo identity.
             scheduler.deleteJob(new JobKey(prefijoDe(CrearSalaJob.class) + "-job-" + sesionId, GRUPO_JOB));
@@ -218,6 +224,7 @@ public class SesionService {
             scheduler.deleteJob(new JobKey(prefijoDe(CorteAutomaticoJob.class) + "-job-" + sesionId, GRUPO_JOB));
             scheduler.deleteJob(new JobKey(prefijoDe(RecordatorioClaseJob.class) + "-job-" + sesionId, GRUPO_JOB));
             scheduler.deleteJob(new JobKey(prefijoDe(InicioClaseJob.class) + "-job-" + sesionId, GRUPO_JOB));
+            scheduler.deleteJob(new JobKey(prefijoDe(VencimientoConfirmacionKillswitchJob.class) + "-job-" + sesionId, GRUPO_JOB));
         } catch (SchedulerException e) {
             // Fail-closed: la cancelación/reprogramación no puede colarse si no
             // logramos limpiar los jobs viejos.
@@ -367,8 +374,13 @@ public class SesionService {
      * El identity es el UUID y el nombre visible es solo el nombre de pila, sin
      * apellido ni DNI (AUD-003, minimización del Artículo V). Una sesión en estado
      * terminal no recibe tokens nuevos (AUD-001): el corte cerró la sala.
+     *
+     * <p>US-6bis / FR-AULA-010 (ADR-M3-07 §6): con un Menor como beneficiario no se entrega token si
+     * {@code clasificadorListo} es false — el clasificador del navegador no cargó y la clase no
+     * puede empezar sin monitoreo activo (fail-closed). Entre adultos se entra igual.</p>
      */
-    public String[] obtenerToken(Usuario usuario, UUID sesionId) {
+    @Transactional(readOnly = true)
+    public String[] obtenerToken(Usuario usuario, UUID sesionId, boolean clasificadorListo) {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
                 .orElseThrow(SesionNoEncontradaException::new);
         if (sesion.getLivekitRoomId() == null) {
@@ -384,9 +396,59 @@ public class SesionService {
         if (!esParticipante(reserva, usuario)) {
             throw new SoloParticipanteException();
         }
+        if (!clasificadorListo && reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR) {
+            throw new ClasificadorNoListoException();
+        }
         String token = liveKitService.generarTokenParticipante(
                 usuario.getId().toString(), usuario.getNombre(), sesion.getLivekitRoomId());
         return new String[]{token, sesion.getLivekitRoomId()};
+    }
+
+    /**
+     * ADR-M3-07: el cliente usa esto para elegir el umbral del clasificador y para saber si
+     * aplica el fail-closed de US-6bis. Ante la duda (sin sesión o sin reserva) hay menor (AGENTS §3).
+     */
+    @Transactional(readOnly = true)
+    public boolean hayMenor(UUID sesionId) {
+        return sesionRepo.findById(sesionId)
+                .flatMap(s -> reservaRepo.findById(s.getReservaId()))
+                .map(r -> r.getBeneficiario().getTipo() == TipoUsuario.MENOR)
+                .orElse(true);
+    }
+
+    /** ADR-M3-07 §6: solo registro. No corta nada: el corte lo produce el cliente al salir de la sala. */
+    @Transactional(readOnly = true)
+    public void registrarEventoClasificador(Usuario usuario, UUID sesionId, EventoClasificador evento) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        log.warn("Kill-switch en el cliente: evento={} sesion={} usuario={} hayMenor={}",
+                evento, sesionId, usuario.getId(), reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR);
+    }
+
+    /** Estado del kill-switch para el cliente. Nada de la Alerta (BR-KS-03, M9). */
+    public record EstadoKillswitch(boolean hayMenor, boolean confirmacionPendiente,
+                                   UUID detectadoId, Instant venceAt) {
+    }
+
+    @Transactional(readOnly = true)
+    public EstadoKillswitch estadoKillswitch(Usuario usuario, UUID sesionId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!esParticipante(reserva, usuario)) {
+            throw new SoloParticipanteException();
+        }
+        boolean hayMenor = reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR;
+        return confirmacionRepo.findBySesionId(sesionId)
+                .filter(c -> c.getRespondidoId() == null && !c.isVencida())
+                .map(c -> new EstadoKillswitch(hayMenor, true, c.getDetectadoId(), c.getVenceAt()))
+                .orElseGet(() -> new EstadoKillswitch(hayMenor, false, null, null));
     }
 
     /**
@@ -603,7 +665,7 @@ public class SesionService {
         // el monitoreo normal). Una detección real posterior en la misma
         // sesión nunca volvía a generar nada.
         boolean confirmacionPendiente = confirmacionRepo.findBySesionId(sesionId)
-                .map(c -> c.getRespondidoId() == null)
+                .map(c -> c.getRespondidoId() == null && !c.isVencida())
                 .orElse(false);
         if (alertaRepo.findBySesionId(sesionId).isPresent() || confirmacionPendiente) {
             return sesion;
@@ -686,8 +748,58 @@ public class SesionService {
         confirmacion.setRespondidoId(null);
         confirmacion.setVio(null);
         confirmacion.setRespondedAt(null);
+        confirmacion.setVenceAt(Instant.now().plus(PLAZO_CONFIRMACION_ADULTOS));
+        confirmacion.setVencida(false);
         confirmacionRepo.save(confirmacion);
+        reprogramarVencimientoConfirmacion(sesion.getId(), confirmacion.getVenceAt());
         return sesion;
+    }
+
+    /**
+     * ADR-M3-07 §7: sin respuesta en el plazo → se resuelve como "No". Idempotente.
+     * No crea Alerta, no corta y no emite eventos.
+     */
+    @Transactional
+    public void vencerConfirmacionRamaAdultos(UUID sesionId) {
+        confirmacionRepo.findBySesionId(sesionId)
+                .filter(c -> c.getRespondidoId() == null && !c.isVencida())
+                .ifPresent(c -> {
+                    c.setVencida(true);
+                    c.setVio(false);
+                    c.setRespondedAt(Instant.now());
+                    confirmacionRepo.save(c);
+                    log.info("Kill-switch rama adultos de la sesión {} venció sin respuesta: se resuelve como \"No\"",
+                            sesionId);
+                });
+    }
+
+    /** Reemplaza el trigger de vencimiento (un segundo disparo tras un "No" necesita uno nuevo). */
+    private void reprogramarVencimientoConfirmacion(UUID sesionId, Instant vence) {
+        TriggerKey key = triggerKey("confirmacion-ks", sesionId);
+        try {
+            scheduler.unscheduleJob(key);
+        } catch (SchedulerException e) {
+            // se reemplaza igual abajo; un trigger viejo ya disparado es no-op (idempotente)
+        }
+        JobDetail detail = JobBuilder.newJob(VencimientoConfirmacionKillswitchJob.class)
+                .withIdentity("confirmacion-ks-job-" + sesionId, GRUPO_JOB)
+                .usingJobData(SesionJobKeys.PARAM_SESION_ID, sesionId.toString())
+                .storeDurably()
+                .build();
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity(key)
+                .forJob(detail)
+                .startAt(Date.from(vence))
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withMisfireHandlingInstructionIgnoreMisfires())
+                .build();
+        try {
+            scheduler.addJob(detail, true);
+            scheduler.scheduleJob(trigger);
+        } catch (SchedulerException e) {
+            throw new IllegalStateException(
+                    "No se pudo agendar el vencimiento de la confirmación de la sesión " + sesionId, e);
+        }
     }
 
     /**
@@ -708,7 +820,7 @@ public class SesionService {
         }
         ConfirmacionKillswitch confirmacion = confirmacionRepo.findBySesionId(sesionId)
                 .orElseThrow(ConfirmacionNoPendienteException::new);
-        if (confirmacion.getRespondidoId() != null
+        if (confirmacion.getRespondidoId() != null || confirmacion.isVencida()
                 || confirmacion.getDetectadoId().equals(usuario.getId())) {
             throw new ConfirmacionNoPendienteException();
         }
@@ -716,6 +828,11 @@ public class SesionService {
         confirmacion.setVio(vio);
         confirmacion.setRespondedAt(Instant.now());
         confirmacionRepo.save(confirmacion);
+        try {
+            scheduler.unscheduleJob(triggerKey("confirmacion-ks", sesionId));
+        } catch (SchedulerException e) {
+            // si quedó, el job vence una confirmación ya respondida: no-op
+        }
 
         if (!vio) {
             return sesion; // "No": la sesión continúa, el evento queda logueado (fila)
@@ -840,6 +957,7 @@ public class SesionService {
         if (jobClass == CorteAutomaticoJob.class) return "corte";
         if (jobClass == RecordatorioClaseJob.class) return "recordatorio";
         if (jobClass == InicioClaseJob.class) return "inicio";
+        if (jobClass == VencimientoConfirmacionKillswitchJob.class) return "confirmacion-ks";
         throw new IllegalArgumentException("Job de sesión desconocido: " + jobClass);
     }
 

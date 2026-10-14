@@ -94,6 +94,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 *Como* Tinku, *quiero* una respuesta proporcionada cuando los dos participantes son adultos, *para* no cortar sesiones legítimas por falsos positivos.
 
 - **Dado** que ambos participantes son adultos y el clasificador detecta contenido en el video de uno, **cuando** la detección se confirme, **entonces** el video del detectado se bluerea (placeholder estático) y la sesión continúa; se pregunta al otro participante si vio algo incorrecto o ilegal.
+- **Dado** que el otro participante no responde dentro del plazo de la rama adultos (Tabla de Tiempos, 5 min), **cuando** venza, **entonces** se resuelve como "No": se restaura el video, no hay Alerta y queda registrado como vencida (ADR-M3-07 §7; job de Quartz persistido, M3C-02).
 - **Dado** que el otro participante responde "No", **cuando** eso ocurra, **entonces** se restaura la cámara y continúa el monitoreo normal (el evento queda logueado internamente).
 - **Dado** que el otro participante responde "Sí", **cuando** eso ocurra, **entonces** se corta la sesión, se bloquea al detectado, M5 reembolsa al Estudiante, y se genera la Alerta de Seguridad para M9.
 
@@ -123,7 +124,7 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | FR-AULA-007 | Finalización manual o corte automático a fin de horario + 5 min de tolerancia. Ambos caminos emiten `sesion.finalizada`. |
 | FR-AULA-008 | Llegada tardía entre T+0 y T+10 cancela el timeout de no-show. |
 | FR-AULA-009 | El kill-switch emite `sesion.killswitch_menor` o `sesion.killswitch_adultos` según la rama, eventos que M5 consume para reembolsar (ver tabla de eventos de M5). |
-| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). **NO IMPLEMENTADO (AUD-001, 2026-09-21):** `SesionService.obtenerToken()` no consulta ningún estado del clasificador; la sala se habilita siempre. Reintentos antes del corte, con el video remoto oculto si hay un menor: ADR-M3-07 §6. |
+| FR-AULA-010 _(agregado, auditoría 2026-09-18)_ | Falla técnica del clasificador (no detección, sino modelo caído): con un menor presente, fail-closed — no se habilita la sala si no carga, se trata como corte por conectividad si falla ya iniciada la sesión. Sin menor presente, no bloquea (US-6bis). Puerta del token implementada en M3C-02 (commit `feat(aula): puerta del clasificador…`, `?clasificadorListo=` → 409 `CLASIFICADOR_NO_LISTO` con un Menor); comportamiento del cliente en M3C-05. Reintentos antes del corte, con el video remoto oculto si hay un menor: ADR-M3-07 §6. |
 
 ## 4. Reglas de Negocio Aplicadas (referencia)
 

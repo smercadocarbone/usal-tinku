@@ -5,6 +5,7 @@ import com.tinku.aula.ConfirmacionNoPendienteException;
 import com.tinku.aula.DetectadoInvalidoException;
 import com.tinku.aula.EvidenciaInvalidaException;
 import com.tinku.aula.AudioResumenInvalidoException;
+import com.tinku.aula.ClasificadorNoListoException;
 import com.tinku.aula.SesionCerradaException;
 import com.tinku.aula.SesionNoEncontradaException;
 import com.tinku.aula.SesionSinSalaException;
@@ -49,6 +50,13 @@ public class AulaExceptionHandler {
     @ExceptionHandler(SoloParticipanteException.class)
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    /** FR-AULA-010 / US-6bis: mismo formato {error, codigo} que ReservasExceptionHandler. */
+    @ExceptionHandler(ClasificadorNoListoException.class)
+    public ResponseEntity<Map<String, String>> clasificadorNoListo(ClasificadorNoListoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage(), "codigo", "CLASIFICADOR_NO_LISTO"));
     }
 
     @ExceptionHandler({SesionSinSalaException.class, SesionCerradaException.class,

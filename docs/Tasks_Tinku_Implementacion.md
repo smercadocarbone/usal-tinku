@@ -143,7 +143,8 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [ ] T-M3-06 _(depende del spike)_: Integrar el clasificador on-device en el cliente, según el resultado de ADR-M3-01.
   - _Desglose 2026-10-14 (specs en `docs/superpowers/specs/m3c/`, branch `chunk/m3-c`; empezar por `00-LEEME-m3c.md`). Decisiones en ADR-M3-07. T-M3-06 se tilda cuando cierran b–f; g, h, j e i van antes de encender menores._
   - [x] T-M3-06a: ADR-M3-07 + 8 filas en la Tabla de Tiempos + anexo de latencia en ADR-M3-01 (`M3C-01`). — _Hecho 2026-10-14._
-  - [ ] T-M3-06b: Backend: `hayMenor`, puerta `clasificadorListo` en `/token` (409 `CLASIFICADOR_NO_LISTO`), `POST /clasificador`, `GET /killswitch`, vencimiento de la rama adultos con Quartz + V47 (`M3C-02`).
+  - [x] T-M3-06b: Backend: `hayMenor`, puerta `clasificadorListo` en `/token` (409 `CLASIFICADOR_NO_LISTO`), `POST /clasificador`, `GET /killswitch`, vencimiento de la rama adultos con Quartz + V47 (`M3C-02`).
+    - _Hecho 2026-10-14: RED `9d17cb5` (compile error: `vencerConfirmacionRamaAdultos` no existe) → GREEN en el commit siguiente. `KillswitchClienteIntegracionTest` (16 tests nuevos). Un test existente de `SesionesIntegracionTest` (token con Menor) ahora manda `clasificadorListo=true`. Backend (JDK 21): `Tests run: 677, Failures: 0, Errors: 0, Skipped: 5` (661 + 16)._
   - [ ] T-M3-06c: Clasificador NSFWJS en el navegador: `config.ts`, `regla.ts`, `modelo.ts`, `clasificador.ts` con reactivación (`M3C-03`).
   - [ ] T-M3-06d: Buffer de 30 s solo video en memoria + llamadas de API del kill-switch (`M3C-04`).
   - [ ] T-M3-06e: Orquestador + cableado en `aula/[id]/page.tsx` + `AvisoProteccion` y `DialogoRamaAdultos` (`M3C-05`).
