@@ -39,8 +39,10 @@ export default function PedidoPrevioTarjeta({ reservaId, soyPagador, soyTutor, r
   if (pedido === undefined || (!soyPagador && !soyTutor)) return null;
   // El Tutor solo ve la tarjeta si hay algo que leer.
   if (soyTutor && !pedido) return null;
+  // R-D D-6 (T1-9): en una clase cancelada, finalizada o pasada no hay pedido que escribir.
+  if (!pedido && !reservaEditable) return null;
 
-  const puedeEditar = soyPagador && (pedido ? pedido.editable : reservaEditable);
+  const puedeEditar = soyPagador && reservaEditable && (pedido ? pedido.editable : true);
 
   function empezar() {
     setTexto(pedido?.texto ?? "");

@@ -47,6 +47,11 @@ public class AdminExceptionHandler {
         return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(com.tinku.admin.service.RecursoAdminNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> recursoNoEncontrado(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(TicketNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> ticketNoEncontrado(TicketNoEncontradoException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

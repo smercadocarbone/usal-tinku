@@ -9,6 +9,6 @@ import com.tinku.reservas.model.EstadoReserva;
  */
 public class ReservaNoCancelableException extends RuntimeException {
     public ReservaNoCancelableException() {
-        super("La Reserva no está en un estado cancelable (pendiente_pago o confirmada).");
+        super("Esta clase ya no se puede cancelar.");
     }
 }

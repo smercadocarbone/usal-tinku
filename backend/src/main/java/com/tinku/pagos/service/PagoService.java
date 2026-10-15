@@ -78,8 +78,23 @@ public class PagoService {
     @Transactional(readOnly = true)
     public void exigirPagador(Usuario usuario, UUID reservaId) {
         Reserva reserva = reservaRepo.findById(reservaId).orElseThrow(ReservaNoEncontradaException::new);
+        exigirParticipante(reserva, usuario);
         if (reserva.getPagador() == null || !reserva.getPagador().getId().equals(usuario.getId())) {
             throw new SoloPagadorPreferenciaException();
+        }
+    }
+
+    /**
+     * R-B B-4 (T1-10): quien no participa de la reserva recibe 404, no 403 — un 403 le confirmaría
+     * que el id existe. El 403 queda para el participante al que le falta el permiso (el menor).
+     */
+    private static void exigirParticipante(Reserva reserva, Usuario usuario) {
+        UUID id = usuario.getId();
+        boolean participa = (reserva.getPagador() != null && reserva.getPagador().getId().equals(id))
+                || (reserva.getTutor() != null && reserva.getTutor().getId().equals(id))
+                || (reserva.getBeneficiario() != null && reserva.getBeneficiario().getId().equals(id));
+        if (!participa) {
+            throw new ReservaNoEncontradaException();
         }
     }
 
@@ -87,6 +102,7 @@ public class PagoService {
     public PreferenciaPago generarPreferencia(Usuario usuario, UUID reservaId) {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
+        exigirParticipante(reserva, usuario);
         if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
             throw new PreferenciaNoDisponibleException();
         }
@@ -216,6 +232,8 @@ public class PagoService {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new SoloTutorException("Solo las cuentas de Tutor pueden fijar su tarifa por hora.");
         }
+        // R-B B-6 (T2-H8): se redondea antes de validar y de guardar; la respuesta muestra lo guardado.
+        precioHora = precioHora.setScale(2, java.math.RoundingMode.HALF_UP);
         pisoTarifa.exigir(precioHora);
         TarifaTutor tarifa = tarifaTutorRepo.findByTutorId(tutor.getId())
                 .orElseGet(() -> {

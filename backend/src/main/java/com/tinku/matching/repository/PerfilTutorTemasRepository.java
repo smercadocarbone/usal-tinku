@@ -85,7 +85,8 @@ public class PerfilTutorTemasRepository {
             sql.append(" AND tr.nivel = ?");
         }
         if (materia != null) {
-            sql.append(" AND tr.materia = ?");
+            // R-E E-4 (T1-12): "matematica" y "MATEMÁTICA" encuentran "Matemática".
+            sql.append(" AND lower(public.unaccent(tr.materia)) = lower(public.unaccent(?))");
         }
         if (nombre != null) {
             sql.append(" AND public.unaccent(t.nombre) ILIKE public.unaccent('%' || ? || '%')");

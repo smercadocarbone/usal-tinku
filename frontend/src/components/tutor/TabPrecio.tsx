@@ -205,7 +205,8 @@ export default function TabPrecio() {
         )}
       </div>
 
-      {numero !== null && numero > 0 && (
+      {/* R-G G-7 (T2-H6/H7): bajo el piso o inválido solo se ve el aviso del piso. */}
+      {numero !== null && numero > 0 && !bajoPiso && (
         <div className="flex items-start gap-3 rounded-2xl bg-fondo p-4">
           <Eye className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
           <p className="text-[15px]">
@@ -214,7 +215,7 @@ export default function TabPrecio() {
         </div>
       )}
 
-      {numero !== null && numero > 0 && comision !== null && (
+      {numero !== null && numero > 0 && !bajoPiso && comision !== null && (
         <div className="flex items-start gap-3 rounded-2xl bg-marca-50 p-4" aria-live="polite">
           <Wallet className="mt-0.5 size-5 shrink-0 text-marca-700" aria-hidden />
           <div className="text-[15px]">
@@ -296,7 +297,7 @@ function PaqueteDelMes({
         toast.mostrar(habilitado ? "Guardamos tu paquete del mes" : "Ya no ofrecés el paquete del mes");
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError && err.status === 422 ? err.message : "No pudimos guardar el paquete. Probá de nuevo.");
+        setError(err instanceof ApiError && err.status === 422 && err.message ? err.message : "No pudimos guardar el paquete. Probá de nuevo.");
       });
   };
 
@@ -311,7 +312,8 @@ function PaqueteDelMes({
         <input
           type="checkbox"
           aria-label="Ofrecer el paquete del mes"
-          className="mt-1 size-5 accent-marca-700"
+          // R-G G-4 (T7-8): el área de toque llega a 24 px sin cambiar el dibujo.
+          className="mt-1 size-6 shrink-0 accent-marca-700"
           checked={valor.habilitado}
           onChange={(e) => guardar(e.target.checked, fueraDeRango || bajoPiso ? 0 : d)}
         />

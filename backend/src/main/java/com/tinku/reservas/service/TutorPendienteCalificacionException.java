@@ -10,6 +10,6 @@ package com.tinku.reservas.service;
 public class TutorPendienteCalificacionException extends RuntimeException {
 
     public TutorPendienteCalificacionException() {
-        super("El Tutor tiene una calificación de Estudiante pendiente de una sesión anterior (FR-REP-006): se bloquea su próxima reserva.");
+        super("Este tutor tiene que calificar una clase anterior antes de recibir una reserva nueva. Probá más tarde.");
     }
 }

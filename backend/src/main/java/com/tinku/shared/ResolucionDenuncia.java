@@ -30,7 +30,7 @@ public enum ResolucionDenuncia {
     @JsonCreator
     public static ResolucionDenuncia parse(String valor) {
         return Arrays.stream(values())
-                .filter(e -> e.valor.equals(valor))
+                .filter(e -> e.valor.equalsIgnoreCase(valor)) // R-B B-3 (T4-H4)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Resolución de denuncia inválida: " + valor));
     }

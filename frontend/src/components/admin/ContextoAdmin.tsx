@@ -10,7 +10,7 @@ import {
   getTicketsAdmin,
   type RolAdmin,
 } from "@/lib/api";
-import { useRolAdmin } from "@/lib/usePerfil";
+import { useRolAdminResuelto } from "@/lib/usePerfil";
 import { TIEMPOS } from "@/lib/tiempos";
 
 export interface Cola {
@@ -24,13 +24,15 @@ export interface Cola {
 
 interface Estado {
   rol: RolAdmin | null;
+  /** Ya se sabe si el usuario es admin (con `rol` null: no lo es). */
+  rolResuelto: boolean;
   colas: Partial<Record<Cola["clave"], Cola>>;
   /** Pasarela apagada = Modo Bypass (solo lo puede leer Soporte Financiero). */
   bypass: boolean;
   cargando: boolean;
 }
 
-const Contexto = createContext<Estado>({ rol: null, colas: {}, bypass: false, cargando: true });
+const Contexto = createContext<Estado>({ rol: null, rolResuelto: false, colas: {}, bypass: false, cargando: true });
 
 const HORA = 3600000;
 
@@ -52,7 +54,7 @@ function cola(clave: Cola["clave"], plazos: (string | null)[], umbralMs: number)
  * próximo. Una Alerta de kill-switch tiene 12 hs de revisión desde que se creó.
  */
 export function ProveedorAdmin({ children }: { children: ReactNode }) {
-  const rol = useRolAdmin(true);
+  const { rol, resuelto: rolResuelto } = useRolAdminResuelto(true);
   const [colas, setColas] = useState<Estado["colas"]>({});
   const [bypass, setBypass] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -95,7 +97,7 @@ export function ProveedorAdmin({ children }: { children: ReactNode }) {
     };
   }, [rol]);
 
-  const valor = useMemo(() => ({ rol, colas, bypass, cargando }), [rol, colas, bypass, cargando]);
+  const valor = useMemo(() => ({ rol, rolResuelto, colas, bypass, cargando }), [rol, rolResuelto, colas, bypass, cargando]);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
 

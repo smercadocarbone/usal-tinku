@@ -63,8 +63,8 @@ const ADULTO: Punto[] = [
     tono: "ambar",
   },
   {
-    titulo: "Pagás al reservar, el tutor cobra después",
-    texto: `El precio que ves es el total. Tenés ${TIEMPOS.pagoMinutos} minutos para pagar; el dinero queda retenido y se le libera al tutor ${TIEMPOS.liberacionHoras} hs después de la clase. Si cancelás con más de ${TIEMPOS.cancelacionSinPenalidadHoras} hs de anticipación, te lo devolvemos entero.`,
+    titulo: "Pagás al reservar y podés reclamar",
+    texto: `El precio que ves es el total. Tenés ${TIEMPOS.pagoMinutos} minutos para pagar; el pago va a la cuenta de MercadoPago del tutor y, hasta ${TIEMPOS.liberacionHoras} hs después de la clase, Tinku te lo puede devolver si hubo un problema. Si cancelás con más de ${TIEMPOS.cancelacionSinPenalidadHoras} hs de anticipación, te lo devolvemos entero.`,
     icono: Wallet,
     acentos: [Lock, Clock3],
     tono: "marca",
@@ -130,8 +130,8 @@ const TUTOR: Punto[] = [
     tono: "rosa",
   },
   {
-    titulo: "Cobrás después de cada clase",
-    texto: `El alumno paga al reservar y el dinero queda retenido hasta ${TIEMPOS.liberacionHoras} hs después de la clase. Tinku descuenta su comisión y el resto es tuyo. Si el alumno cancela con más de ${TIEMPOS.cancelacionSinPenalidadHoras} hs de anticipación, se le devuelve el pago.`,
+    titulo: "Cobrás en tu cuenta de MercadoPago",
+    texto: `El alumno paga al reservar y el pago entra a tu cuenta de MercadoPago, que descuenta su comisión; Tinku descuenta la suya y el resto es tuyo. Hasta ${TIEMPOS.liberacionHoras} hs después de la clase, Tinku puede devolverle el pago al alumno si hubo un problema. Si el alumno cancela con más de ${TIEMPOS.cancelacionSinPenalidadHoras} hs de anticipación, se le devuelve el pago.`,
     icono: CircleDollarSign,
     acentos: [Wallet, Clock3],
     tono: "marca",

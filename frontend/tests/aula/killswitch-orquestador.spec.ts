@@ -55,6 +55,7 @@ function montar(a: Ajustes = {}) {
       cerrarPregunta: () => void log.push("cerrarPregunta"),
       cierre: (m) => void log.push(`cierre:${m}`),
       aviso: (t) => void log.push(`ui.aviso:${t}`),
+      limpiarAviso: () => void log.push("limpiarAviso"),
     },
     esperar: async () => {},
     ahora: () => 1_000,
@@ -200,7 +201,22 @@ test.describe("Kill-switch — orquestador", () => {
     const { orq, log } = montar();
     orq.alDemorar();
     orq.alNormalizar();
-    expect(log.filter((l) => !l.startsWith("ui.aviso"))).toEqual(["ocultarTodoRemoto", "mostrarTodoRemoto"]);
+    expect(log.filter((l) => !l.startsWith("ui.aviso") && l !== "limpiarAviso")).toEqual(["ocultarTodoRemoto", "mostrarTodoRemoto"]);
+  });
+
+  // R-C C-2 (H-AULA-2): el cartel no se queda 6 s cuando el video ya volvió.
+  test("alDemorar y alNormalizar: el aviso se limpia al volver", { tag: ["@aula", "@KS-050"] }, () => {
+    const { orq, log } = montar();
+    orq.alDemorar();
+    orq.alNormalizar();
+    expect(log).toEqual(["ocultarTodoRemoto", "ui.aviso:Verificando la protección del aula…", "mostrarTodoRemoto", "limpiarAviso"]);
+  });
+
+  test("alCaer y alReactivar: termina limpiando el aviso", { tag: ["@aula", "@KS-051"] }, () => {
+    const { orq, log } = montar();
+    orq.alCaer();
+    orq.alReactivar();
+    expect(log.at(-1)).toBe("limpiarAviso");
   });
 
   test("alDemorar sin menor no hace nada", { tag: ["@aula", "@KS-046"] }, () => {

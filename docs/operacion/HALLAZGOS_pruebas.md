@@ -115,3 +115,53 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 9. **T4-H5/H7/H3, T3-03, T5-1, T7-M3:** correcciones de UI por rol (guard de ruta por rol, no pedir `admin/yo` ni `estado-perfil` a quien no corresponde, `evidenciaUrl` en la cola de denuncias, segundo admin o recusación).
 10. **T7-M1/M2:** corregir el overflow móvil de `/cuenta/horarios` y `/cuenta/materias`.
 11. **Bajas:** acentos del 403 de admin (UTF-8), CSP y HSTS de la API, textos en inglés, PWA (service worker, íconos 192/512, favicon), títulos por pantalla.
+
+## 10. Estado de cierre (remediación, `PLAN_remediacion_hallazgos.md`)
+
+| Hallazgo | Estado | Rama | Test que lo cubre |
+|---|---|---|---|
+| T3-01 | **Cerrado** (falta restaurar a Benjamín en prod: O-6) | `fix/rem-a` | `CapacidadesMenorIntegracionTest` |
+| T4-H1 | **Cerrado** | `fix/rem-a` | `AdminCapColaIntegracionTest` |
+| TRANS-1 (T1-4, T2-H4, T3-04, T4-H4 parte, T5-3, T6-19) | **Cerrado** | `fix/rem-a` | `ErroresHttpIntegracionTest` (servidor real) |
+| T3-03, T5-1, T7-M3 | **Cerrado** | `fix/rem-a` | `frontend/tests/cuenta/menor-rutas.spec.ts` |
+| T2-H1 | **Cerrado** (Spec M4 FR-RES-025) | `fix/rem-d` | `AgendaFranjasIntegracionTest.quitar_*`, `agenda-rem-d.spec.ts` AGENDA-003 |
+| T1-M2, T1-M3 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.horarios_*`, AGENDA-006 |
+| T2-H2, T2-H3 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.publicar_*` |
+| T2-H10, T1-8 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.disponibilidad_*`, AGENDA-004/005/007 |
+| T1-9 | **Cerrado** | `fix/rem-d` | AGENDA-008 |
+| T1-12 (fecha pasada y precio negativo) | **Cerrado** | `fix/rem-d` | `reservar_horarioPasado_422_yaPaso`, AGENDA-009 |
+| T7-3 | **Cerrado** | `fix/rem-d` | AGENDA-001/002 |
+| T1-5, T2-H9 (mensajes en inglés y sin tildes) | **Cerrado** | `fix/rem-b` | `RobustezApiIntegracionTest.validacion_mensajesEnCastellano` |
+| T5-2 (403 de admin sin UTF-8) | **Cerrado** | `fix/rem-b` | `admin403_enUtf8` |
+| T4-H4 (enums) | **Cerrado** | `fix/rem-b` | `enums_sinDistinguirMayusculas` |
+| T1-10 (403/404 y paymentId inexistente) | **Cerrado** | `fix/rem-b` | `reservaAjena_404_enVerCancelarYReprogramar`, `MercadoPagoClientHttpTest.getPago_inexistenteEnMp_noEsMpNoDisponible` |
+| T2-H8 (tarifa) | **Cerrado** | `fix/rem-b` | `tarifa_redondeaYActualizaFecha` |
+| T3-05 (tarifa a un menor) | **Cerrado** | `fix/rem-b` | `tarifa_soloTutor` |
+| T6-4 (mensaje del guard) | **Cerrado** | `fix/rem-b` | `soloParticipante_mensajeSegunLaAccion` |
+| T2-H11 (contacto en la bio) | **Cerrado** (D-7) | `fix/rem-b` | `bio_ocultaDatosDeContacto`, `OcultadorDeContactoTest` |
+| T1-7, T2-H12 (`/api/admin/yo` en cada pantalla) | **Backend cerrado** (`rolAdmin` en `/me`); el front deja de llamarlo en REM-G | `fix/rem-b` | `me_informaElRolDeAdmin` |
+| T4-H13 (404 sin cuerpo en admin) | **Cerrado** | `fix/rem-b` | `admin404_conCuerpo` |
+| T4-H2, T4-H3 (conflicto de interés) | **Cerrado** (D-5; el segundo admin es la acción O-7) | `fix/rem-f` | `AdminModeracionRemIntegracionTest.conflictoDeInteres_*`, ADMIN-F-006 |
+| T4-H5 (salud para Moderación) | **Cerrado** | `fix/rem-f` | ADMIN-F-003 |
+| T4-H6, T4-H10 (secciones por rol, inicio del admin) | **Cerrado** | `fix/rem-f` | ADMIN-F-001/002/004 |
+| T4-H7 (evidencia y denunciado en la cola) | **Cerrado** | `fix/rem-f` | `colaAdmin_traeEvidenciaYDenunciado_sinDenunciante`, ADMIN-F-005 |
+| T4-H8 (descargos) | **Cerrado** (D-6, `V48`) | `fix/rem-f` | `descargos_seConservanEnElHistorial` |
+| T4-H9 (sanción preelegida) | **Cerrado** | `fix/rem-f` | ADMIN-F-007 |
+| T4-H11 (categoría del CAP) | **Cerrado** | `fix/rem-f` | `cap_reRechazarSinCategoria_conservaLaCategoria` |
+| T4-H12 (400 antes que 403) | **Cerrado** | `fix/rem-f` | `rolEquivocado_403AntesQueValidacion` |
+| T5-4 (precios vacíos) | **Cerrado** (cargar los precios es O-8) | `fix/rem-f` | ADMIN-F-008 |
+| T1-M1 (relevancia) | **Cerrado** (D-3; calibrado con el modelo real, `CALIBRACION_busqueda.md`; revisar `MATCHING_SCORE_MINIMO` en Coolify) | `fix/rem-e` | `BusquedaRemIntegracionTest.textoSinLetras*`, `corteRelativo_yAbsolutoCalibrado`, BUSCAR-E-001 |
+| T1-6 (búsquedas guardadas) | **Cerrado** (`V49`) | `fix/rem-e` | `guardada_conservaFiltros_noDuplica_yseBorra`, BUSCAR-E-002 |
+| T1-11 (comentarios en el perfil) | **Cerrado** (D-4) | `fix/rem-e` | `ComentariosTutorIntegracionTest`, BUSCAR-E-003 |
+| T1-12 (filtro de materia) | **Cerrado** | `fix/rem-e` | `filtroMateria_sinDistinguirMayusculasNiTildes` |
+| T7-M1, T7-M2 (móvil) | **Cerrado** | `fix/rem-g` | `remediacion-g.spec.ts` REM-G-001/002 |
+| T7-5 (títulos) | **Cerrado** | `fix/rem-g` | REM-G-003 |
+| T7-7 (PWA) | **Cerrado en el alcance de D-8** (íconos 192/512/maskable, apple-icon, favicon; sin service worker) | `fix/rem-g` | — |
+| T7-8 (objetivos táctiles) | **Cerrado** | `fix/rem-g` | REM-G-004 |
+| T7-9, T7-10 (contraste y foco) | **Cerrado**. El banner de Términos queda primero: es el primero también a la vista (orden de foco = orden visual) y es lo pendiente más importante | `fix/rem-g` | REM-G-005/006 |
+| T7-12 (dos h1) | **Cerrado** | `fix/rem-g` | REM-G-007 |
+| T2-H5, T2-H6, T2-H7 (cobros y precio) | **Cerrado** | `fix/rem-g` | REM-G-008/009 |
+| T6 (CSP) | **En observación**: `Content-Security-Policy-Report-Only`; pasar a aplicar es O-12 | `fix/rem-g` | REM-G-010 |
+| T1-7, T2-H12 (`/api/admin/yo`) | **Cerrado** (front usa `rolAdmin` de `/me`) | `fix/rem-g` | REM-G-011 |
+| T3-06 (Tutores autorizados sin CAP en el seed) | **Cerrado** para bases nuevas; en la base actual, los CAP se crean al próximo arranque con `seed-demo` (el runner es idempotente) | `fix/rem-h` | `SeedDemoIntegracionTest.losTutoresAutorizadosDeLosMenoresTienenCapVigente` |
+| T1-2 (franjas de 1 h del seed) | **Cerrado** para bases nuevas (35 franjas de 3 h); una base con el seed viejo conserva las suyas, que con REM-D ya se unen al reservar | `fix/rem-h` | `lasFranjasDelSeedSonDeTresHoras` |

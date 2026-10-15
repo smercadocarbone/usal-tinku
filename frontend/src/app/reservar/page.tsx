@@ -10,20 +10,21 @@ import { useAhora } from "@/lib/useAhora";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
-import { DURACIONES_CLASE, duracionFranja, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, type Franja } from "@/lib/agenda";
+import { DURACIONES_CLASE, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, unirContiguas, type Franja } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import AppShell from "@/components/shell/AppShell";
 import { Alerta, AreaTexto, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
 import { crearPaquete, fechasDelPaquete, getOfertaPaquete, guardarPedido, type OfertaPaquete } from "@/lib/reservas";
 
 interface Horario {
-  franja: Franja;
   /** "HH:MM" de inicio. */
   hora: string;
   inicio: string;
   fin: string;
   duracion: number;
   disponible: boolean;
+  /** R-D D-5 (T1-8): lo que ya no entra en la ventana mínima no está "ocupado", ya no se puede reservar. */
+  tarde: boolean;
 }
 
 interface TimeSlot {
@@ -109,9 +110,11 @@ function ReservarFlujo() {
     if (!dia && diasConHorario[0]) setDia(diasConHorario[0].fecha);
   }, [dia, diasConHorario]);
 
-  // D6: duraciones que entran en alguna franja del día; si la elegida no entra, 1 h o la mayor posible.
+  // D6: duraciones que entran en algún rango del día (R-D D-2: las franjas contiguas se unen,
+  // igual que en el backend); si la elegida no entra, 1 h o la mayor posible.
   const diaActual = dias.find((x) => x.fecha === dia);
-  const maxDelDia = diaActual ? Math.max(0, ...diaActual.franjas.map(duracionFranja)) : 0;
+  const rangosDelDia = diaActual ? unirContiguas(diaActual.franjas) : [];
+  const maxDelDia = Math.max(0, ...rangosDelDia.map((r) => minutos(r.hasta) - minutos(r.desde)));
   const duracionesDelDia = DURACIONES_CLASE.filter((d) => d <= maxDelDia);
   const duracion =
     duracionElegida !== null && duracionesDelDia.some((d) => d === duracionElegida)
@@ -144,14 +147,14 @@ function ReservarFlujo() {
     if (!diaActual) return [];
     const slots = ocupacion[claveOcupacion];
     const limite = ahora + TIEMPOS.ventanaMinimaReservaMinutos * 60000;
-    return diaActual.franjas.flatMap((f) =>
-      iniciosEnFranja(f, duracion).map((hora) => {
+    return rangosDelDia.flatMap((r) =>
+      iniciosEnFranja({ horaInicio: r.desde, horaFin: r.hasta }, duracion).map((hora) => {
         const inicio = inicioISO(diaActual.fecha, hora);
         const fin = new Date(new Date(inicio).getTime() + duracion * 60000).toISOString();
         const slot = slots?.find((s) => new Date(s.startTime).getTime() === new Date(inicio).getTime());
-        const disponible =
-          new Date(inicio).getTime() > limite && !tomados.has(inicio) && (slot ? slot.isAvailable : true);
-        return { franja: f, hora, inicio, fin, duracion, disponible };
+        const tarde = new Date(inicio).getTime() <= limite;
+        const disponible = !tarde && !tomados.has(inicio) && (slot ? slot.isAvailable : true);
+        return { hora, inicio, fin, duracion, disponible, tarde };
       })
     );
   }
@@ -390,7 +393,7 @@ function ReservarFlujo() {
                           <button
                             type="button"
                             aria-pressed={activo}
-                            aria-label={`${h.hora} a ${hasta}${h.disponible ? "" : ", no disponible"}`}
+                            aria-label={`${h.hora} a ${hasta}${h.disponible ? "" : h.tarde ? ", ya no se puede reservar" : ", no disponible"}`}
                             disabled={!h.disponible}
                             onClick={() => setElegido(h)}
                             className={cn(
@@ -399,8 +402,10 @@ function ReservarFlujo() {
                               !h.disponible && "bg-superficie-hundida text-tinta-tenue"
                             )}
                           >
-                            <span className={cn("tabular text-[17px] font-bold", !h.disponible && "line-through")}>{h.hora}</span>
-                            <span className="text-[12px] text-tinta-tenue">{h.disponible ? `a ${hasta}` : "Ocupado"}</span>
+                            <span className={cn("tabular text-[17px] font-bold", !h.disponible && !h.tarde && "line-through")}>{h.hora}</span>
+                            <span className="text-[12px] text-tinta-tenue">
+                              {h.disponible ? `a ${hasta}` : h.tarde ? "Ya no se puede reservar" : "Ocupado"}
+                            </span>
                           </button>
                         </li>
                       );
@@ -555,7 +560,7 @@ function ReservarFlujo() {
               {!esMenor && (
                 <p className="flex gap-2.5 rounded-2xl bg-fondo p-3.5 text-sm text-tinta-suave">
                   <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
-                  Pagás ahora (tenés {TIEMPOS.pagoMinutos} minutos); el dinero queda retenido y se le libera al tutor {TIEMPOS.liberacionHoras} hs después de la clase.
+                  Pagás ahora (tenés {TIEMPOS.pagoMinutos} minutos); el pago va a la cuenta de MercadoPago del tutor y, hasta {TIEMPOS.liberacionHoras} hs después de la clase, podés reclamar si hubo un problema.
                 </p>
               )}
             </Tarjeta>

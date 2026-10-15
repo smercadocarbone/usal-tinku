@@ -33,13 +33,16 @@ public class AjusteRankingService {
     private final ReputacionSignalProvider reputacion;
     private final double pesoReputacion;
     private final double scoreMinimo;
+    private final double margenRelativo;
 
     public AjusteRankingService(ReputacionSignalProvider reputacion,
                                 @Value("${tinku.matching.peso-reputacion:0.05}") double pesoReputacion,
-                                @Value("${tinku.matching.score-minimo:0.3}") double scoreMinimo) {
+                                @Value("${tinku.matching.score-minimo:0.46}") double scoreMinimo,
+                                @Value("${tinku.matching.margen-relativo:0.25}") double margenRelativo) {
         this.reputacion = reputacion;
         this.pesoReputacion = pesoReputacion;
         this.scoreMinimo = scoreMinimo;
+        this.margenRelativo = margenRelativo;
     }
 
     /** Con texto libre: exige el puntaje mínimo de relevancia. */
@@ -61,12 +64,19 @@ public class AjusteRankingService {
         Set<UUID> sombra = reputacion.tutoresEnSombraBrMatch01(ids);
         var senales = reputacion.senalesImplicitas(ids);
 
+        // R-E E-1 (T1-M1, D-3): además del mínimo absoluto, un corte relativo al mejor resultado.
+        // Calibrado en docs/operacion/CALIBRACION_busqueda.md: con el modelo de embeddings, un texto
+        // sin sentido o una consulta ajena llegan a 0,44-0,46 contra cualquier tutor; los relevantes, a 0,75 de mediana.
+        double mejor = rankingSemantico.stream().filter(r -> !sombra.contains(r.tutorId()))
+                .mapToDouble(ResultadoRanking::score).max().orElse(0.0);
+        double corte = Math.max(scoreMinimo, mejor - margenRelativo);
+
         List<ResultadoRanking> resultado = new ArrayList<>(rankingSemantico.size());
         for (ResultadoRanking item : rankingSemantico) {
             if (sombra.contains(item.tutorId())) {
                 continue; // BR-MATCH-01: excluido mientras dure la sombra.
             }
-            if (exigirRelevancia && item.score() < scoreMinimo) {
+            if (exigirRelevancia && item.score() < corte) {
                 continue; // US-1: no se fuerzan resultados de baja calidad.
             }
             double senal = Math.clamp(senales.getOrDefault(item.tutorId(), 0.0), 0.0, SENAL_MAXIMA);

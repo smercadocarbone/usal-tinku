@@ -161,7 +161,7 @@ export default function Galeria() {
         </Seccion>
 
         <Seccion titulo="Alertas">
-          <Alerta tono="info" titulo="Cómo funciona el pago">El dinero queda retenido hasta después de la clase.</Alerta>
+          <Alerta tono="info" titulo="Cómo funciona el pago">El pago va a la cuenta del tutor; hasta 24 hs después de la clase podés reclamar.</Alerta>
           <Alerta tono="exito">Guardamos tus cambios.</Alerta>
           <Alerta tono="aviso" titulo="Falta tu precio" accion={<Boton tamano="sm" variante="secundario">Definir precio</Boton>}>
             Sin precio no aparecés en las búsquedas.
@@ -229,7 +229,7 @@ export default function Galeria() {
           </div>
           <Acordeon
             items={[
-              { pregunta: "¿Cómo se paga?", respuesta: "Con MercadoPago. El dinero queda retenido hasta después de la clase." },
+              { pregunta: "¿Cómo se paga?", respuesta: "Con MercadoPago. El pago va a la cuenta del tutor; hasta 24 hs después de la clase podés reclamar." },
               { pregunta: "¿Desde qué edad?", respuesta: "Los chicos usan Tinku con su adulto responsable." },
             ]}
           />

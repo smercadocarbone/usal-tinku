@@ -65,7 +65,7 @@ public class AudioResumenService {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId).orElseThrow(SesionNoEncontradaException::new);
         Reserva reserva = reservaRepo.findById(sesion.getReservaId()).orElseThrow(SesionNoEncontradaException::new);
         if (!reserva.getTutor().getId().equals(usuario.getId())) {
-            throw new SoloParticipanteException(); // solo el navegador del Tutor graba
+            throw new SoloParticipanteException("grabar el audio del resumen"); // solo el navegador del Tutor graba
         }
         if (!adicional.permiteGrabar(reserva)) {
             log.error("AUDIO_RESUMEN_RECHAZADO sesionId={} — no se cumplen las condiciones de ADR-M3-04", sesionId);

@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { inicioPorRol, payloadDeToken } from "@/lib/auth";
 import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { Alerta, Boton, Campo } from "@/components/ui";
@@ -35,7 +35,14 @@ export default function LoginPage() {
     setError(null);
     try {
       const token = await iniciarSesion(dni, password);
-      router.replace(siguiente ?? inicioPorRol(payloadDeToken(token)));
+      let rolAdmin: string | null = null;
+      if (!siguiente) {
+        rolAdmin = await api
+          .get<{ rolAdmin?: string | null }>("/api/usuarios/me")
+          .then((me) => me.rolAdmin ?? null)
+          .catch(() => null);
+      }
+      router.replace(siguiente ?? inicioPorRol(payloadDeToken(token), rolAdmin));
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         setError(err.message || "Demasiados intentos. Probá de nuevo en unos minutos.");
@@ -62,7 +69,7 @@ export default function LoginPage() {
     <PantallaAuth
       pie={
         <>
-          ¿No tenés cuenta? <Link href={hrefRegistro} className="font-semibold">Creala en 3 minutos</Link>
+          ¿No tenés cuenta? <Link href={hrefRegistro} className="enlace-tactil font-semibold">Creala en 3 minutos</Link>
         </>
       }
     >
@@ -98,7 +105,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         <div className="-mt-2 text-right">
-          <Link href="/recuperar-password" className="text-sm font-semibold">
+          <Link href="/recuperar-password" className="enlace-tactil text-sm font-semibold">
             ¿Olvidaste tu contraseña?
           </Link>
         </div>

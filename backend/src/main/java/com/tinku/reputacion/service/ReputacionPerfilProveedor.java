@@ -19,7 +19,7 @@ import java.util.UUID;
 public class ReputacionPerfilProveedor implements ReputacionPerfilProvider {
 
     /** FR-REP-007 — umbral minimo para exponer un promedio publico. */
-    private static final long UMBRAL_PUBLICO = 5;
+    static final long UMBRAL_PUBLICO = 5;
 
     private final CalificacionRepository calificacionRepo;
 

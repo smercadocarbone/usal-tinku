@@ -36,7 +36,7 @@ export default function AvisoProteccion({ motivo }: { motivo: MotivoAvisoProtecc
       aria-live="assertive"
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 px-6 text-center text-gray-50"
     >
-      <h1 className="mb-3 max-w-md text-2xl font-extrabold">{t.titulo}</h1>
+      <h1 className="mb-3 max-w-md text-2xl font-extrabold text-white">{t.titulo}</h1>
       <p className="max-w-md text-base text-gray-300">{t.texto}</p>
       {t.volver && (
         <Link

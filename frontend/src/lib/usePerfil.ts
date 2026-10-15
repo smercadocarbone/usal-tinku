@@ -43,42 +43,47 @@ export function usePerfilPropio(): PerfilPropio | null {
  * cambiado); la cabecera usa el valor cacheado.
  */
 export function useRolAdmin(fresco = false): RolAdmin | null {
+  return useRolAdminResuelto(fresco).rol;
+}
+
+/**
+ * Igual que {@link useRolAdmin}, pero dice además si ya se sabe la respuesta. Sin esto, una pantalla
+ * de admin no distingue "todavía no sé" de "no es admin" y queda en "Cargando…" para siempre
+ * (hallazgos T3-03 y T5-1 de las pruebas en producción).
+ */
+export function useRolAdminResuelto(fresco = false): { rol: RolAdmin | null; resuelto: boolean } {
   const sesion = useSesion();
   const [rol, setRol] = useState<RolAdmin | null>(null);
+  const [resuelto, setResuelto] = useState(false);
   useEffect(() => {
     // Un Menor nunca es admin: no hace falta preguntar.
-    if (!sesion || sesion.payload.tipo === "MENOR") return;
-    reiniciarSiCambioElToken(sesion.token);
-    // Cacheado por token en sessionStorage: sin esto, cada navegación de un usuario
-    // que no es admin dejaría un 403 en la consola.
-    const clave = `tinku_rol_admin:${sesion.token.slice(-24)}`;
-    let guardado: string | null = null;
-    try {
-      guardado = window.sessionStorage.getItem(clave);
-    } catch {
-      /* almacenamiento bloqueado: se pregunta al backend */
+    // useSesion devuelve null en el primer render: sin sesión todavía no se sabe nada.
+    if (!sesion) return;
+    if (sesion.payload.tipo === "MENOR") {
+      setRol(null);
+      setResuelto(true);
+      return;
     }
+    reiniciarSiCambioElToken(sesion.token);
+    // R-B B-10 / R-G G-9 (T1-7, T2-H12): fuera del panel el rol sale de /api/usuarios/me
+    // (`rolAdmin`), que la cabecera ya pide; antes cada pantalla de quien no es admin dejaba un
+    // 403 de /api/admin/yo en la consola. Dentro de /admin (`fresco`) se sigue preguntando al panel.
     if (fresco) rolEnVuelo = null;
-    rolEnVuelo ??=
-      guardado !== null && !fresco
-        ? Promise.resolve(guardado === "" ? null : (guardado as RolAdmin))
-        : api
-            .get<{ rol: RolAdmin }>("/api/admin/yo")
-            .then((r) => r.rol)
-            .catch(() => null)
-            .then((r) => {
-              try {
-                window.sessionStorage.setItem(clave, r ?? "");
-              } catch {
-                /* sin cache, no pasa nada */
-              }
-              return r;
-            });
+    rolEnVuelo ??= fresco
+      ? api
+          .get<{ rol: RolAdmin }>("/api/admin/yo")
+          .then((r) => r.rol)
+          .catch(() => null)
+      : (perfilEnVuelo ??= getPerfilPropio().catch(() => null)).then((p) => p?.rolAdmin ?? null);
     let vivo = true;
-    void rolEnVuelo.then((r) => vivo && setRol(r));
+    void rolEnVuelo.then((r) => {
+      if (!vivo) return;
+      setRol(r);
+      setResuelto(true);
+    });
     return () => {
       vivo = false;
     };
   }, [sesion, fresco]);
-  return rol;
+  return { rol, resuelto };
 }

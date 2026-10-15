@@ -43,7 +43,7 @@ const PASOS: { icono: LucideIcon; titulo: string; texto: string }[] = [
   {
     icono: CalendarCheck,
     titulo: "Reservá y pagá",
-    texto: `Elegí el horario y pagá con MercadoPago. El dinero queda retenido hasta ${TIEMPOS.liberacionHoras} hs después de la clase.`,
+    texto: `Elegí el horario y pagá con MercadoPago. Hasta ${TIEMPOS.liberacionHoras} hs después de la clase podés reclamar si hubo un problema.`,
   },
   {
     icono: Video,
@@ -55,7 +55,7 @@ const PASOS: { icono: LucideIcon; titulo: string; texto: string }[] = [
 const PREGUNTAS = [
   {
     pregunta: "¿Cómo se paga?",
-    respuesta: `Con MercadoPago, al reservar. Tenés ${TIEMPOS.pagoMinutos} minutos para completar el pago; si no, el horario se libera. El dinero queda retenido y se le libera al tutor ${TIEMPOS.liberacionHoras} hs después de la clase.`,
+    respuesta: `Con MercadoPago, al reservar. Tenés ${TIEMPOS.pagoMinutos} minutos para completar el pago; si no, el horario se libera. El pago va a la cuenta de MercadoPago del tutor; hasta ${TIEMPOS.liberacionHoras} hs después de la clase, Tinku te lo puede devolver si hubo un problema.`,
   },
   {
     pregunta: "¿Qué pasa si la clase no se da?",
@@ -130,7 +130,7 @@ export default function HomePage() {
                 <div className="mt-5 flex items-center justify-between rounded-2xl bg-fondo p-4">
                   <div className="flex items-center gap-3">
                     <WalletCards className="size-5 text-marca-700" aria-hidden />
-                    <span className="text-sm font-semibold">Pago protegido hasta después de la clase</span>
+                    <span className="text-sm font-semibold">Reclamos hasta {TIEMPOS.liberacionHoras} hs después de la clase</span>
                   </div>
                 </div>
               </div>

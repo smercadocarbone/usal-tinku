@@ -38,11 +38,11 @@ public class EvidenciaService {
     @Transactional
     public AlertaSeguridad subir(Usuario usuario, UUID sesionId, byte[] clip, Integer duracionSegundos) {
         if (!sesionService.participantes(sesionId).contains(usuario.getId())) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("subir evidencia");
         }
         if (duracionSegundos != null && (duracionSegundos <= 0 || duracionSegundos > MAX_SEGUNDOS)) {
             throw new EvidenciaInvalidaException(
-                    "el clip del buffer tiene un máximo de 30 segundos (BR-KS-01).");
+                    "el clip puede durar hasta 30 segundos.");
         }
         if (clip == null || clip.length == 0 || !esVideo(clip)) {
             throw new EvidenciaInvalidaException("el clip tiene que ser un video WebM o MP4.");

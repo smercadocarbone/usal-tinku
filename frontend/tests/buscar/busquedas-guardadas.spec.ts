@@ -73,7 +73,7 @@ test.describe("Búsqueda de tutores — búsquedas guardadas (US-6)", () => {
       const buscar = new BuscarPage(page);
       await buscar.goto();
 
-      await page.getByRole("button", { name: "física para secundario" }).click();
+      await page.getByRole("button", { name: "física para secundario", exact: true }).click();
 
       await expect(buscar.tarjetaTutor("Laura Díaz")).toBeVisible();
     }

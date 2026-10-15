@@ -155,7 +155,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
   - [ ] T-M3-06g: Página de diagnóstico + medición con CPU frenada usando el código real (`M3C-07`).
   - [ ] T-M3-06h: Perfil `staging` + `docker-compose.staging.yml` + `RUNBOOK_staging.md`; el recurso en Coolify lo crea el dueño (`M3C-08`).
     - _Archivos listos 2026-10-14 (perfil `staging` + tests, variable de menores en `docker-compose.coolify.yml` con default `false`, `RUNBOOK_staging.md`); falta el recurso en Coolify y su verificación. Por pedido del dueño se usa el mismo despliegue de `tinku.site` mientras no tenga usuarios reales; `docker-compose.staging.yml` queda para cuando se separe._
-  - [ ] T-M3-06j: Hallazgos que bloquean menores: T3-01, T4-H1, TRANS-1, T3-03 (`M3C-10`).
+  - [x] T-M3-06j: Hallazgos que bloquean menores: T3-01, T4-H1, TRANS-1, T3-03 (`M3C-10`). — _Cerrado 2026-10-15 en `fix/rem-a`: tests `CapacidadesMenorIntegracionTest`, `AdminCapColaIntegracionTest`, `ErroresHttpIntegracionTest` (RED: 422/ERROR/403 → GREEN) y `menor-rutas.spec.ts` (5)._
   - [ ] T-M3-06i: Precondiciones y encendido de `sesiones-habilitadas` en producción (`M3C-09`) — decide y ejecuta el dueño.
 - [x] T-M3-07 _(depende del spike)_: Endpoint `POST /api/sesiones/{id}/killswitch` — el backend decide la rama (menor/adultos) con datos propios de M1, nunca confiando en un flag del cliente. — _`SesionService.ejecutarKillswitch`: rama salida de `beneficiario.tipo` (MENOR → corte directo Artículo II; adulto → blur + confirmación esperando). El request NO acepta `rama`, solo `detectadoId` validado como participante (422 si no). 403 a terceros. Idempotente (alerta/confirmación previa → no corta ni reemite). `detectadoId` = usuario cuyo contenido fue detectado, evaluado contra tutor o beneficiario._
 - [x] T-M3-08: Endpoint de subida de evidencia (clip de 30s) — solo alcanzable tras un killswitch ya registrado. — _`subirEvidencia` guarda solo la referencia (`clip_url`) en `alertas_seguridad` (Artículo V, BR-KS-01: nunca el video), valida http(s) y duración ≤30s (422) y devuelve 404 si no hay Alerta del kill-switch en la sesión._
@@ -340,3 +340,18 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-UX-06: Tutor (`06-tutor.md`) — checklist con `GET /api/tutores/me/estado-perfil`, Mi perfil (U1), precio leído del backend (`GET /api/pagos/tarifa`). _Pendiente:_ vista calendario de la agenda (los bloques de 30 min ya están, FASE2-01), comisión visible (no expuesta por el backend), buscador de temas en materias.
 - [x] T-UX-07: Aula (`07-aula.md`) — solo presentación (lobby, permisos, confirmar fin). _Pendiente:_ datos de la clase en el lobby (no hay GET de sesión por id), indicador de calidad y tiempos; probar con dos usuarios reales.
 - [x] T-UX-08: Admin (`08-admin.md`) — tablero, contadores, Modo Bypass, confirmación al rechazar credencial, moderación U1. _Pendiente:_ motivo de rechazo (el backend no lo recibe), nombres en vez de ids en denuncias/alertas, panel lateral de detalle.
+
+
+## REM — Remediación de las pruebas en producción (plan en `operacion/PLAN_remediacion_hallazgos.md`, specs en `docs/superpowers/specs/remediacion-pruebas/`)
+
+> Fuente: `operacion/HALLAZGOS_pruebas.md` (T1–T7) y `operacion/HALLAZGOS_aula_en_vivo.md`. Orden: ola 1 → ola 2 → ola 3 (ver el plan §5).
+> Ola 0 (operativa, la hace el dueño, **antes del piloto**): O-1 cerrar el bypass de pago, O-3 cambiar la clave de los admins, O-5 decidir la flag de menores.
+
+- [x] T-REM-A: Ola 1 — seguridad del menor y errores 403: T3-01, T4-H1, TRANS-1, T3-03 (es **T-M3-06j**, spec `m3c/M3C-10-hallazgos-menores.md`).
+- [x] T-REM-B: Robustez de la API — mensajes en español, UTF-8 en el 403 de admin, enums, 403/404, `confirmar-retorno`, tarifa, `rolAdmin` en `/me` (`R-B-api-robustez.md`). Depende de A.
+- [x] T-REM-C: Aula — cierre según el estado de la sesión (H-AULA-1), cartel "Verificando", contraste del título, `/dev/*` en 404 (`R-C-aula.md`).
+- [x] T-REM-D: Agenda — baja de franjas (decisión D-1, Spec M4), franjas contiguas, `/horarios` con duraciones largas, perfil público, picker (`R-D-agenda-franjas.md`).
+- [x] T-REM-E: Búsqueda y perfil — calibración de relevancia, búsquedas guardadas con filtros (V48), comentarios públicos (`R-E-busqueda-perfil.md`). Decisiones D-3 y D-4.
+- [x] T-REM-F: Admin y moderación — conflicto de interés, evidencia y denunciado en la cola, descargo con historial (V49), guard por rol (`R-F-admin-moderacion.md`). Depende de A y B.
+- [x] T-REM-G: Frontend — móvil, títulos, objetivos táctiles, contraste y foco, CSP en `Report-Only`, `admin/yo` (`R-G-frontend-a11y.md`). Depende de B.
+- [x] T-REM-H: Seed — CAP aprobado para los Tutores autorizados de menores y franjas de 3 h (`R-H-seed.md`). Depende de D.

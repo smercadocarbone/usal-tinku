@@ -83,7 +83,7 @@ public class AdminModeracionGate {
     public static void exigirNoEsParteDelCaso(UUID adminUsuarioId, UUID... involucrados) {
         for (UUID involucrado : involucrados) {
             if (adminUsuarioId.equals(involucrado)) {
-                throw new AccesoModeracionDenegadoException();
+                throw new com.tinku.shared.ConflictoDeInteresException();
             }
         }
     }

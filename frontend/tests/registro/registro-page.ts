@@ -60,7 +60,7 @@ export class RegistroPage extends BasePage {
   async aceptarCondiciones(): Promise<void> {
     await this.page.getByRole("heading", { name: "Cómo funciona Tinku" }).waitFor();
     // Términos del alumno: no ve los del tutor.
-    await this.page.getByRole("heading", { name: "Pagás al reservar, el tutor cobra después" }).waitFor();
+    await this.page.getByRole("heading", { name: "Pagás al reservar y podés reclamar" }).waitFor();
     if (await this.page.getByRole("heading", { name: "Sos un tutor independiente" }).count()) {
       throw new Error("El alumno no debería ver los términos del tutor");
     }

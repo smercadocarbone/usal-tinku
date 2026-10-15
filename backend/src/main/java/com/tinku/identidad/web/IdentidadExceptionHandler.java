@@ -161,6 +161,11 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(com.tinku.identidad.service.MenorNoModificaCapacidadesException.class)
+    public ResponseEntity<Map<String, String>> menorNoModificaCapacidades(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(MenorNoPerteneceException.class)
     public ResponseEntity<Map<String, String>> handleMenorNoPertenece(MenorNoPerteneceException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));

@@ -102,9 +102,10 @@ Ese dispatch no pasa por el filtro JWT (`OncePerRequestFilter` no corre en `ERRO
   filtren datos internos. Si `include-message` está en `always`, revisá que ningún mensaje de
   excepción tenga datos sensibles; si hay duda, dejalo en `never` y que los 400 lleven el cuerpo por
   `@ExceptionHandler` (punto siguiente).
-- Para que el 400 tenga el formato `{"error": ...}` del resto de la API, agregá en un
-  `@RestControllerAdvice` global nuevo (`config/ErroresHttpHandler.java`, con
-  `@Order(Ordered.LOWEST_PRECEDENCE)` para no pisar los handlers de cada módulo) los handlers de:
+- Para que el 400 tenga el formato `{"error": ...}` del resto de la API, **extendé el `ValidacionErrorHandler`
+  que ya existe** (`backend/src/main/java/com/tinku/config/ValidacionErrorHandler.java`, `@RestControllerAdvice`
+  global con `@Order(LOWEST_PRECEDENCE)`, hoy solo maneja `MethodArgumentNotValidException`) con estos handlers,
+  sin crear una clase nueva:
 
   | Excepción | Status | Mensaje |
   |---|---|---|
@@ -113,7 +114,7 @@ Ese dispatch no pasa por el filtro JWT (`OncePerRequestFilter` no corre en `ERRO
   | `MissingServletRequestParameterException` | 400 | "Falta el parámetro «{nombre}»." |
   | `MaxUploadSizeExceededException` | 413 | "El archivo supera el tamaño máximo permitido." |
 
-**Tests:** `config/ErroresHttpIntegracionTest.java`:
+**Tests:** `config/ErroresHttpIntegracionTest.java` (archivo nuevo):
 - `login_jsonMalFormado_400_conCuerpo`;
 - `reserva_uuidMalFormado_400`;
 - `horarios_sinFecha_400`;

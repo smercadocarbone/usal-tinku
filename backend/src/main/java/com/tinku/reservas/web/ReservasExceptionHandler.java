@@ -7,6 +7,8 @@ import com.tinku.reservas.service.PedidoPrevioVacioException;
 import com.tinku.reservas.service.PedidoReprogramacionException;
 import com.tinku.reservas.service.CapacidadDePagoRequeridaException;
 import com.tinku.reservas.service.DuracionFranjaInvalidaException;
+import com.tinku.reservas.service.FechaFranjaPasadaException;
+import com.tinku.reservas.service.FranjaNoEncontradaException;
 import com.tinku.reservas.service.FranjaSuperpuestaException;
 import com.tinku.reservas.service.TutorSinHabilitacionMenoresException;
 import com.tinku.reservas.service.DuracionMinutosInvalidaException;
@@ -64,14 +66,15 @@ public class ReservasExceptionHandler {
             ReservaNoReprogramableException.class, ReservaNoCancelableException.class,
             AdicionalResumenNoDisponibleException.class, AutoReservaNoPermitidaException.class, TutorSinCobroException.class,
             PedidoPrevioNoEditableException.class, PedidoPrevioVacioException.class,
-            NotaClaseNoPermitidaException.class, PedidoReprogramacionException.class})
+            NotaClaseNoPermitidaException.class, PedidoReprogramacionException.class,
+            FechaFranjaPasadaException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler({SolicitudNoPendienteException.class, ReservaNoEncontradaException.class,
-            TutorNoEncontradoException.class})
+            TutorNoEncontradoException.class, FranjaNoEncontradaException.class})
     public ResponseEntity<Map<String, String>> handleNoEncontrada(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
@@ -103,7 +106,7 @@ public class ReservasExceptionHandler {
     public ResponseEntity<Map<String, String>> handleSuperposicion(DataIntegrityViolationException ex) {
         String constraint = constraintVioladaDe(ex);
         if (constraint != null && constraint.startsWith("ex_reservas_rango_")) {
-            return conflicto("HORARIO_OCUPADO", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007).");
+            return conflicto("HORARIO_OCUPADO", "Ese horario ya está reservado. Elegí otro.");
         }
         if (constraint != null && constraint.startsWith("ex_franjas_")) {
             return conflicto("FRANJA_SUPERPUESTA", new FranjaSuperpuestaException().getMessage());

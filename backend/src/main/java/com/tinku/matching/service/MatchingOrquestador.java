@@ -69,6 +69,11 @@ public class MatchingOrquestador {
         if (textoEfectivo == null || textoEfectivo.isBlank()) {
             throw new BusquedaInvalidaException();
         }
+        // R-E E-1 (T1-M1): "a", "123456" o "!!!!" no dicen qué se busca; el modelo igual les da
+        // puntaje contra cualquier tutor. Sin texto útil, no hay resultados (la UI sugiere filtros).
+        if (texto != null && !tieneTextoUtil(texto)) {
+            return List.of();
+        }
 
         ContextoAutorizacion contexto = contextoService.resolverContexto(buscador);
         // ADR-M1-07: un Tutor que busca clases para sí nunca se encuentra a sí mismo.
@@ -136,6 +141,11 @@ public class MatchingOrquestador {
                         esResultadoNoAutorizado(contexto, id)))
                 .toList();
         return ajusteRanking.ajustar(delAreaRanking, false);
+    }
+
+    /** Al menos 3 letras (de cualquier alfabeto). */
+    static boolean tieneTextoUtil(String texto) {
+        return texto.codePoints().filter(Character::isLetter).count() >= 3;
     }
 
     private static List<BusquedaResponse> respuesta(List<ResultadoRanking> ranking, String area) {

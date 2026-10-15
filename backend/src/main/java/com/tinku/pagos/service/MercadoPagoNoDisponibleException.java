@@ -6,4 +6,8 @@ public class MercadoPagoNoDisponibleException extends RuntimeException {
     public MercadoPagoNoDisponibleException() {
         super("MercadoPago no está disponible en este momento; reintentá más tarde.");
     }
+
+    protected MercadoPagoNoDisponibleException(String mensaje) {
+        super(mensaje);
+    }
 }

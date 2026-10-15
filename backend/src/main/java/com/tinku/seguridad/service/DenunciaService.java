@@ -182,6 +182,10 @@ public class DenunciaService {
 
     // ---------------------------------------------------------- descargo (US-3)
 
+    private static final java.time.format.DateTimeFormatter FORMATO_HISTORIAL =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                    .withZone(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
+
     /**
      * Descargo del DENUNCIADO (FR-SEC-006: solo la parte interesada; el
      * denunciante permanece anónimo). Disponible en cualquier momento, incluso
@@ -206,8 +210,13 @@ public class DenunciaService {
         if (texto == null || texto.length() > 300) {
             throw new DescargoInvalidoException();
         }
+        Instant ahora = Instant.now();
+        // R-F F-4 (T4-H8, D-6): el descargo nuevo no borra el anterior; el admin ve todos.
+        String entrada = "[" + FORMATO_HISTORIAL.format(ahora) + "] " + texto;
+        denuncia.setDescargoHistorial(denuncia.getDescargoHistorial() == null
+                ? entrada : denuncia.getDescargoHistorial() + "\n---\n" + entrada);
         denuncia.setDescargoTexto(texto);
-        denuncia.setDescargoRecibidoAt(Instant.now());
+        denuncia.setDescargoRecibidoAt(ahora);
         return denunciaRepo.save(denuncia);
     }
 
@@ -282,7 +291,7 @@ public class DenunciaService {
     private Sancion registrarSancion(Denuncia denuncia, UUID adminId, TipoSancion tipo,
                                      Integer diasSuspension) {
         if (tipo == null) {
-            throw new SancionInvalidaException("se requiere un tipo de sanción");
+            throw new SancionInvalidaException("Elegí un tipo de sanción.");
         }
         Sancion sancion = new Sancion();
         sancion.setUsuarioSancionadoId(denuncia.getDenunciadoId());
@@ -292,7 +301,7 @@ public class DenunciaService {
         sancion.setTipo(tipo);
         if (tipo == TipoSancion.SUSPENSION_TEMPORAL) {
             if (diasSuspension == null || !DIAS_VALIDOS.contains(diasSuspension)) {
-                throw new SancionInvalidaException("suspensión temporal requiere 7, 15 o 30 días");
+                throw new SancionInvalidaException("La suspensión temporal tiene que ser de 7, 15 o 30 días.");
             }
             sancion.setDiasSuspension(diasSuspension);
             sancion.setVigenteHasta(Instant.now().plus(Duration.ofDays(diasSuspension)));

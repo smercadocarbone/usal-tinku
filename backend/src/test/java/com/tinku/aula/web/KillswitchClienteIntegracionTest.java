@@ -271,6 +271,40 @@ class KillswitchClienteIntegracionTest {
         assertThat(Duration.between(Instant.now(), vence)).isBetween(Duration.ofMinutes(4), Duration.ofMinutes(5).plusSeconds(5));
     }
 
+    // R-C C-1 (H-AULA-1): el cliente decide la pantalla de cierre por el estado del backend.
+
+    @Test
+    void estadoKillswitch_trasCorte_cortePorSeguridadTrue_sesionCerradaTrue() throws Exception {
+        Escenario e = conMenor();
+        mockMvc.perform(post("/api/sesiones/{id}/killswitch", e.sesion().getId())
+                        .header("Authorization", "Bearer " + tokenDe(e.ar()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("detectadoId", e.tutor().getId().toString()))))
+                .andExpect(status().isOk());
+        JsonNode body = estado(e, e.menor(), 200);
+        assertThat(body.get("cortePorSeguridad").asBoolean()).isTrue();
+        assertThat(body.get("sesionCerrada").asBoolean()).isTrue();
+    }
+
+    @Test
+    void estadoKillswitch_sinCorte_ambosFalse() throws Exception {
+        Escenario e = entreAdultos();
+        JsonNode body = estado(e, e.tutor(), 200);
+        assertThat(body.get("cortePorSeguridad").asBoolean()).isFalse();
+        assertThat(body.get("sesionCerrada").asBoolean()).isFalse();
+    }
+
+    @Test
+    void estadoKillswitch_claseFinalizadaSinAlerta_sesionCerradaTrueCorteFalse() throws Exception {
+        Escenario e = entreAdultos();
+        SesionAprendizaje s = sesionRepository.findById(e.sesion().getId()).orElseThrow();
+        s.setEstado(SesionAprendizaje.ESTADO_FINALIZADA);
+        sesionRepository.save(s);
+        JsonNode body = estado(e, e.tutor(), 200);
+        assertThat(body.get("cortePorSeguridad").asBoolean()).isFalse();
+        assertThat(body.get("sesionCerrada").asBoolean()).isTrue();
+    }
+
     @Test
     void estadoKillswitch_tercero_403() throws Exception {
         Escenario e = entreAdultos();

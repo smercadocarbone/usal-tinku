@@ -15,7 +15,7 @@ const GARANTIAS: { icono: LucideIcon; titulo: string; texto: string }[] = [
   {
     icono: WalletCards,
     titulo: "Pagos protegidos",
-    texto: `El pago se procesa con MercadoPago y queda retenido: al tutor se le libera ${TIEMPOS.liberacionHoras} hs después de la clase.`,
+    texto: `El pago se procesa con MercadoPago y va a la cuenta del tutor; hasta ${TIEMPOS.liberacionHoras} hs después de la clase, Tinku lo puede devolver si hubo un problema.`,
   },
   {
     icono: ShieldCheck,

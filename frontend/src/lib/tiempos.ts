@@ -13,7 +13,7 @@ export const TIEMPOS = {
   /** Creación de sala + botón de unirse. */
   salaAbreMinutosAntes: 5,
   /** Ventana mínima para reservar (eran 15 hasta 2026-09-26). */
-  ventanaMinimaReservaMinutos: 30,
+  ventanaMinimaReservaMinutos: 21,
   /** Hasta cuánto antes de la clase se puede cambiar el horario sin perder el pago (FR-RES-016). */
   limiteReprogramacionMinutos: 60,
   /** Plazo de descargo de una Denuncia estándar. */

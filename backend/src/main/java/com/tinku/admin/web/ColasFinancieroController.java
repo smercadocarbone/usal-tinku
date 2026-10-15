@@ -119,7 +119,7 @@ public class ColasFinancieroController {
                                                 java.util.function.Supplier<Transaccion> accion) {
         Transaccion t = transaccionRepo.findById(transaccionId).orElse(null);
         if (t == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         exigirNoEsParteDeLaReserva(adminUsuarioId, t);
         try {
@@ -152,7 +152,7 @@ public class ColasFinancieroController {
         Transaccion transaccion = transaccionRepo.findById(transaccionId)
                 .orElse(null);
         if (transaccion == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         exigirNoEsParteDeLaReserva(adminUsuarioId, transaccion);
         // Solo la cola de intervención manual (estado retenido + reintentos agotados):
@@ -185,7 +185,7 @@ public class ColasFinancieroController {
         Transaccion transaccion = transaccionRepo.findById(transaccionId)
                 .orElse(null);
         if (transaccion == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         exigirNoEsParteDeLaReserva(adminUsuarioId, transaccion);
         // Solo hay algo que parcializar si el dinero sigue en el escrow.

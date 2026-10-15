@@ -185,8 +185,9 @@ class UsuarioServiceTutorCapacidadesUnitTest {
         Usuario menor = adulto(true, false);
         menor.setTipo(TipoUsuario.MENOR);
 
-        assertThrows(IllegalArgumentException.class,
+        // Artículo II + M3C-10 H-1 (T3-01): el menor no cambia ninguna capacidad, ni para ser AR.
+        assertThrows(MenorNoModificaCapacidadesException.class,
                 () -> service.actualizarCapacidades(menor,
-                        new ActualizarCapacidadesRequest(true, true))); // Artículo II
+                        new ActualizarCapacidadesRequest(true, true)));
     }
 }

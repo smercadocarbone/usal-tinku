@@ -22,7 +22,7 @@ import { fechaHoraLarga } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 
 const ESTADOS: Record<EstadoCobro, { texto: string; tono: TonoInsignia }> = {
-  retenido: { texto: "Por cobrar", tono: "info" },
+  retenido: { texto: "En plazo de reclamo", tono: "info" },
   en_revision: { texto: "En revisión", tono: "aviso" },
   liberado: { texto: "Cobrado", tono: "exito" },
   reembolsado: { texto: "Devuelto al alumno", tono: "neutro" },
@@ -147,15 +147,20 @@ function MisCobrosContenido() {
         </div>
       ) : cobros ? (
         <>
+          {/* R-G G-7 (T2-H5): con totales en $0 y filas "Cobrado", que no parezca un error. */}
+          {cobros.cobros.some((c) => c.simulado) && (
+            <p className="mt-6 text-sm text-tinta-suave">Los pagos simulados (pruebas) no suman a los totales.</p>
+          )}
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Total titulo="Por cobrar" valor={cobros.retenido} />
+            <Total titulo="En plazo de reclamo" valor={cobros.retenido} />
             <Total titulo="En revisión" valor={cobros.enRevision} />
             <Total titulo="Cobrado" valor={cobros.liberado} />
             <Total titulo="Devuelto" valor={cobros.reembolsado} />
           </div>
           <ExportarMes />
           <p className="mt-3 text-sm text-tinta-tenue">
-            Cada clase queda &quot;por cobrar&quot; hasta {TIEMPOS.liberacionHoras} hs después de darla. &quot;En revisión&quot; quiere
+            El pago entra a tu cuenta de MercadoPago con los plazos de tu cuenta. Hasta {TIEMPOS.liberacionHoras} hs después de la clase,
+            Tinku todavía puede devolvérselo al alumno; después pasa a &quot;Cobrado&quot;. &quot;En revisión&quot; quiere
             decir que el equipo de Tinku está revisando algo de esa clase.
           </p>
 
@@ -169,7 +174,7 @@ function MisCobrosContenido() {
                 <li key={c.reservaId}>
                   <Tarjeta className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <Link href={`/cuenta/reservas/${c.reservaId}`} className="font-bold">
+                      <Link href={`/cuenta/reservas/${c.reservaId}`} className="enlace-tactil font-bold">
                         Clase con {c.alumnoNombre} {c.alumnoApellido}
                       </Link>
                       <p className="text-sm text-tinta-suave first-letter:uppercase">{fechaHoraLarga(c.horario)}</p>
@@ -177,6 +182,9 @@ function MisCobrosContenido() {
                         Clase <Precio valor={c.precioSesion} tamano="sm" className="font-medium" /> · comisión{" "}
                         <Precio valor={c.comision} tamano="sm" className="font-medium" />
                         {c.simulado && " · pago simulado"}
+                      </p>
+                      <p className="text-[13px] text-tinta-tenue">
+                        Mercado Pago descuenta su comisión aparte (≈6,04 %).
                       </p>
                     </div>
                     <div className="flex items-center gap-3 sm:flex-col sm:items-end">

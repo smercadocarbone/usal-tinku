@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { actualizarPrecioRegional, mensajeDeError, type PrecioRegional } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { actualizarPrecioRegional, getPreciosRegionales, mensajeDeError, type PrecioRegional } from "@/lib/api";
 import { formatearPrecio } from "@/lib/formatos";
 import { Alerta, Boton, Campo, CampoSelect, EstadoVacio } from "@/components/ui";
 
@@ -39,6 +39,14 @@ export default function PreciosRegionales() {
   const [error, setError] = useState<string | null>(null);
   const [ultimaVersion, setUltimaVersion] = useState<PrecioRegional | null>(null);
   const [prohibido, setProhibido] = useState(false);
+  const [vigentes, setVigentes] = useState<PrecioRegional[] | null>(null);
+
+  // R-F F-9 (T5-H4): la tabla vigente; vacía, se explica qué cargar.
+  useEffect(() => {
+    getPreciosRegionales()
+      .then(setVigentes)
+      .catch(() => setVigentes([]));
+  }, [ultimaVersion]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,10 +83,28 @@ export default function PreciosRegionales() {
 
   return (
     <div className="max-w-md">
+      {vigentes !== null &&
+        (vigentes.length === 0 ? (
+          <Alerta tono="info" className="mb-4">
+            Todavía no hay precios cargados. Cargá al menos el de cada provincia donde haya Tutores: es la
+            referencia que ven al ponerse una tarifa.
+          </Alerta>
+        ) : (
+          <ul className="mb-4 list-none p-0 text-sm">
+            {vigentes.map((p) => (
+              <li key={p.provincia} className="flex justify-between border-b border-slate-200 py-2">
+                <span>{p.provincia}</span>
+                <span className="tabular-nums">
+                  {formatearPrecio(p.valorSugerido)} · v{p.version}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ))}
       <p className="mb-4 text-sm text-slate-500">
         Cada envío agrega una versión nueva para la provincia elegida — nunca
         sobreescribe la vigente. Un Tutor que ya fijó su precio contra una
-        versión anterior no se ve afectado (FR-PAG-006).
+        versión anterior no se ve afectado.
       </p>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">

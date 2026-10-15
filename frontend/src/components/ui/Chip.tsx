@@ -20,7 +20,8 @@ export default function Chip({ activo = false, removible, icono, className, chil
       type="button"
       aria-pressed={removible ? undefined : activo}
       className={cn(
-        "inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-pastilla border px-4 text-sm font-semibold transition-colors duration-150",
+        // R-G G-2 (T7-M2): un tema largo corta línea dentro del card en vez de ensanchar la página.
+        "inline-flex min-h-10 max-w-full shrink-0 cursor-pointer items-center gap-1.5 break-words rounded-pastilla border px-4 py-1 text-left text-sm font-semibold transition-colors duration-150",
         activo || removible
           ? "border-tinta bg-tinta text-white hover:bg-black"
           : "border-borde-fuerte bg-superficie text-tinta hover:border-tinta",

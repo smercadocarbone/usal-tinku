@@ -418,7 +418,7 @@ class ReservasFlujosIntegracionTest {
         mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
                         .header("Authorization", "Bearer " + e.tokenAr()))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("30 minutos")));
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("21 minutos")));
     }
 
     @Test
@@ -947,7 +947,7 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
-    void frRes013_directaFueraDeVentana30Min_queda422() throws Exception {
+    void frRes013_directaFueraDeVentana21Min_queda422() throws Exception {
         // La ventana mínima (FR-RES-013) se valida antes que la franja: no hace falta
         // publicar una franja desde now() (cerca de la medianoche no entraba). El
         // mensaje confirma que el rechazo es por la ventana y no por otra regla.
@@ -962,7 +962,7 @@ class ReservasFlujosIntegracionTest {
                                 "horario", pronto.toString(),
                                 "duracionMinutos", 30))))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("30 minutos")));
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("21 minutos")));
     }
 
     @Test
@@ -1154,6 +1154,24 @@ class ReservasFlujosIntegracionTest {
         return reservaId;
     }
 
+    /** FR-RES-013 (21 min desde 2026-10-15): a 25 min ya se puede reservar y pagar; con la
+     *  ventana anterior de 30 min esto se rechazaba. */
+    @Test
+    void frRes013_directaA25Min_seAceptaYQuedaConfirmada() throws Exception {
+        String token = registrarAdultoYToken(dniUnico(), "Lucas", "Diaz", true, false);
+        String dniTutor = dniUnico();
+        String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
+        UUID tutorId = usuarioPorDni(dniTutor).getId();
+        Instant pronto = prontoAlineado(25);
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isBefore(LocalTime.of(21, 30)),
+                "cerca de la medianoche la franja de 2 h no entra en el día");
+
+        UUID reservaId = reservaConfirmadaPronto(token, tokenTutor, tutorId, pronto);
+
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
+    }
+
     /** Un horario a {@code minutos} de ahora, en minuto entero: la franja arranca ahí (D6). */
     private static Instant prontoAlineado(long minutosDesdeAhora) {
         return Instant.now().plus(minutosDesdeAhora, java.time.temporal.ChronoUnit.MINUTES)
@@ -1190,7 +1208,7 @@ class ReservasFlujosIntegracionTest {
         String dniTutor = dniUnico();
         String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
         UUID tutorId = usuarioPorDni(dniTutor).getId();
-        Instant pronto = prontoAlineado(45); // entre 30 y 60 min: se puede reservar, no reprogramar
+        Instant pronto = prontoAlineado(45); // entre 21 y 60 min: se puede reservar, no reprogramar
         org.junit.jupiter.api.Assumptions.assumeTrue(
                 pronto.atZone(ReservasZonaHoraria.ZONA).toLocalTime().isBefore(LocalTime.of(21, 30)),
                 "cerca de la medianoche la franja de 2 h no entra en el día");
@@ -1265,15 +1283,16 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
-    void cancelar_reservaDeOtro_queda403() throws Exception {
+    void cancelar_reservaDeOtro_queda404() throws Exception {
         EscenarioAdulto e = escenarioAdulto();
         UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
         String otroDni = dniUnico();
         String tokenOtro = registrarAdultoYToken(otroDni, "Pepe", "Garcia", true, false);
 
+        // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
         mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
                         .header("Authorization", "Bearer " + tokenOtro))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test

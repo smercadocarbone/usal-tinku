@@ -14,7 +14,7 @@ public record PresentarDenunciaRequest(
 
     public PresentarDenunciaRequest {
         if (evidenciaUrl != null && evidenciaUrl.length() > 500) {
-            throw new IllegalArgumentException("evidencia_url no puede superar los 500 caracteres");
+            throw new IllegalArgumentException("El enlace de la evidencia puede tener hasta 500 caracteres.");
         }
     }
 }

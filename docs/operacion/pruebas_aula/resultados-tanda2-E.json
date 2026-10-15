@@ -1,0 +1,58 @@
+[
+  {
+    "id": "E-1 clase normal con menor: video visible",
+    "esperado": ">0 videos",
+    "obtenido": "2",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "E-2 al caerse el clasificador con un menor, el video del otro se oculta ya",
+    "esperado": "cartel y 0 videos",
+    "obtenido": "{\"cartel\":true,\"videos\":1,\"ms\":315}",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "E-3 revive en el primer reintento (≈5 s) y vuelve el video",
+    "esperado": "video visible en ≲ 15 s",
+    "obtenido": "0.5 s",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "E-4 el cliente reportó CAIDA y REACTIVADO",
+    "esperado": "CAIDA, REACTIVADO",
+    "obtenido": "[\"{\\\"evento\\\":\\\"CAIDA\\\"}\"]",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "E-5 si no revive, tras los 5 reintentos corta (≈10 s + 5×5 s)",
+    "esperado": "cierre \"no se pudo reactivar\" en ≈ 25–50 s",
+    "obtenido": "26 s",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "E-6 el cliente reportó CAIDA y CORTE_SIN_REACTIVAR",
+    "esperado": "CAIDA, CORTE_SIN_REACTIVAR",
+    "obtenido": "[\"{\\\"evento\\\":\\\"CAIDA\\\"}\",\"{\\\"evento\\\":\\\"CORTE_SIN_REACTIVAR\\\"}\"]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "E-7 la otra persona (Tutora) ve un mensaje claro, no queda esperando",
+    "esperado": "mensaje de corte",
+    "obtenido": "Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante Participante Vos Finalizar clase",
+    "ok": false,
+    "nota": "HALLAZGO si falla"
+  },
+  {
+    "id": "E-8 estado de la sesión tras el corte por falta de protección",
+    "esperado": "informativo",
+    "obtenido": "{\"id\":\"d73218d4-f839-4b70-8034-c2acb4689a90\",\"reservaId\":\"0fa87337-cc2b-438a-b55b-f79b744346ce\",\"estado\":\"no_iniciada\",\"livekitRoomId\":\"sesion-d73218d4-f839-4b70-8034-c2acb4689a90\",\"inicioReal\":null,\"",
+    "ok": true,
+    "nota": ""
+  }
+]

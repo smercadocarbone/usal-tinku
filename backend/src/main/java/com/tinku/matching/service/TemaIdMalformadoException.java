@@ -5,6 +5,6 @@ package com.tinku.matching.service;
 public class TemaIdMalformadoException extends RuntimeException {
 
     public TemaIdMalformadoException() {
-        super("El id de tema debe ser un UUID válido.");
+        super("El tema elegido no es válido.");
     }
 }

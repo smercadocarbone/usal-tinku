@@ -38,6 +38,16 @@ public class BusquedaGuardada {
     @Column(name = "texto_busqueda", nullable = false, length = 500)
     private String textoBusqueda;
 
+    /** R-E E-2 (T1-6): filtros con los nombres del API (texto_busqueda, nombre, filtro_materia,
+     *  filtro_nivel, precio_max_hora); solo los que vinieron. */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "filtros", nullable = false)
+    private java.util.Map<String, Object> filtros = new java.util.LinkedHashMap<>();
+
+    /** Identifica "la misma búsqueda" de un usuario: evita duplicados. */
+    @Column(name = "huella", nullable = false, length = 64)
+    private String huella;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

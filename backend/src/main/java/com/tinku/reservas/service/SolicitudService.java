@@ -62,12 +62,12 @@ public class SolicitudService {
     @Transactional
     public SolicitudSesion crear(Usuario menorAutenticado, NuevaSolicitudRequest request) {
         if (menorAutenticado.getTipo() != TipoUsuario.MENOR) {
-            throw new SoloMenorException("Solo la cuenta del menor genera Solicitudes de Sesión.");
+            throw new SoloMenorException("Solo la cuenta de un menor puede pedir una clase para que la apruebe su adulto responsable.");
         }
         Usuario menor = menorAutenticado;
         if (menor.getAdultoResponsable() == null) {
             throw new SoloMenorException(
-                    "La cuenta del menor no tiene Adulto Responsable asociado (FR-ID-020).");
+                    "Tu cuenta todavía no tiene un adulto responsable asociado.");
         }
         // T-TES-10/DT7: piloto sin menores (US-2). Fail-closed (AGENTS §3).
         politicaMenores.validarSesionesHabilitadas();
@@ -98,7 +98,7 @@ public class SolicitudService {
             throw new DuracionMinutosInvalidaException(
                     "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
         }
-        if (franjaService.franjaQueContiene(tutor.getId(), horario, duracion).isEmpty()) {
+        if (!franjaService.cabeEnDisponibilidad(tutor.getId(), horario, duracion)) {
             throw new HorarioFueraDeFranjaException(
                     "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
@@ -164,7 +164,7 @@ public class SolicitudService {
     private void exigirAdultoResponsable(Usuario usuario) {
         if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadAdultoResponsable()) {
             throw new SoloAdultoResponsableException(
-                    "Solo una cuenta con capacidad Adulto Responsable puede revisar Solicitudes.");
+                    "Solo un adulto responsable puede revisar los pedidos de clase.");
         }
     }
 }

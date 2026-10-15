@@ -60,3 +60,66 @@ export function itemActivo(item: ItemNav, pathname: string): boolean {
   if (pathname === item.href) return true;
   return (item.tambien ?? []).some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p));
 }
+
+/** Pantallas de "Mi cuenta" que solo usa un Tutor. */
+const RUTAS_SOLO_TUTOR = [
+  "/cuenta/presentacion",
+  "/cuenta/materias",
+  "/cuenta/precio",
+  "/cuenta/credenciales",
+  "/cuenta/clases-con-menores",
+  "/cuenta/horarios",
+  "/cuenta/cobros",
+  "/cuenta/perfil-tutor",
+];
+
+/** Lo único de "Mi cuenta" que ve un Menor: su perfil, su acceso, sus clases y sus avisos. */
+const RUTAS_DEL_MENOR = ["/cuenta", "/cuenta/perfil", "/cuenta/acceso", "/cuenta/reservas", "/cuenta/notificaciones"];
+
+function coincide(pathname: string, ruta: string): boolean {
+  return pathname === ruta || pathname.startsWith(ruta + "/");
+}
+
+/**
+ * T3-03 / T7-M3 (pruebas en producción): qué pantallas de "Mi cuenta" puede abrir cada perfil.
+ * Es UX y defensa en profundidad: la API ya rechaza lo que no corresponde.
+ */
+export function rutaCuentaPermitida(pathname: string, payload: PayloadSesion | null | undefined): boolean {
+  if (!payload) return true; // sin sesión decide el proxy (redirige al login)
+  if (payload.tipo === "MENOR") {
+    return RUTAS_DEL_MENOR.some((r) => (r === "/cuenta" ? pathname === r : coincide(pathname, r)));
+  }
+  if (payload.tipo !== "TUTOR" && RUTAS_SOLO_TUTOR.some((r) => coincide(pathname, r))) return false;
+  return true;
+}
+
+/** ¿La pantalla depende del perfil? Esas esperan a conocer la sesión antes de montarse (y de pedir datos). */
+export function rutaCuentaRestringida(pathname: string): boolean {
+  return [...RUTAS_SOLO_TUTOR, "/cuenta/menores", "/cuenta/seguridad"].some((r) => coincide(pathname, r));
+}
+
+/**
+ * R-F F-6 (T4-H6): qué secciones del panel abre cada rol de admin. Es UX (el backend valida el
+ * rol en cada endpoint), pero evita pantallas que solo muestran "No autorizado".
+ */
+const RUTAS_ADMIN_POR_ROL: Record<string, "moderacion_seguridad" | "soporte_financiero"> = {
+  "/admin/pagos": "soporte_financiero",
+  "/admin/precios": "soporte_financiero",
+  "/admin/antecedentes": "moderacion_seguridad",
+  "/admin/credenciales": "moderacion_seguridad",
+  "/admin/denuncias": "moderacion_seguridad",
+  "/admin/alertas": "moderacion_seguridad",
+  "/admin/temas-sugeridos": "moderacion_seguridad",
+};
+
+/** El rol que necesita una ruta del panel, o null si es de cualquier admin. */
+export function rolDeRutaAdmin(pathname: string): "moderacion_seguridad" | "soporte_financiero" | null {
+  const base = Object.keys(RUTAS_ADMIN_POR_ROL).find((r) => pathname === r || pathname.startsWith(`${r}/`));
+  return base ? RUTAS_ADMIN_POR_ROL[base] : null;
+}
+
+export function rutaAdminPermitida(pathname: string, rol: "moderacion_seguridad" | "soporte_financiero" | null): boolean {
+  if (!rol) return false;
+  const requerido = rolDeRutaAdmin(pathname);
+  return requerido === null || requerido === rol;
+}

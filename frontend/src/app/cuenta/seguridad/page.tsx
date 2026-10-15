@@ -125,7 +125,8 @@ export default function SeguridadPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl tracking-tight text-slate-800">Denuncias y alertas de seguridad</h1>
+      {/* R-G G-6 (T7-12): el h1 de la pantalla es "Mi cuenta" (layout); esta es una sección. */}
+      <h2 className="text-xl tracking-tight text-slate-800">Denuncias y alertas de seguridad</h2>
       <p className="mt-1 text-sm text-slate-500">
         Acá ves los casos abiertos sobre tu cuenta y podés dar tu versión de los hechos.
       </p>

@@ -112,6 +112,10 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // TRANS-1 (pruebas en producción, 2026-10-14): el dispatch de error del contenedor
+                // (400/413/404 de Spring MVC) no lleva el JWT y caía en anyRequest().authenticated()
+                // → 403 sin cuerpo. /error solo muestra el status: no expone datos ni abre nada.
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                 // Rutas publicas: registro de adulto, registro de tutor
                 // (autorregistro con DNI, FR-ID-007) y login. El alta de
                 // menor NO es pública: la hace el Adulto Responsable
@@ -138,6 +142,10 @@ public class SecurityConfig {
                 // rol — sigue siendo necesario para distinguir Moderación de
                 // Soporte Financiero — pero cierra el filter chain contra un
                 // endpoint admin nuevo que se agregue sin el gate.
+                .requestMatchers("/api/admin/financiero/**")
+                        .access(adminActivoAuthorizationManager.conRol(com.tinku.admin.model.RolAdmin.SOPORTE_FINANCIERO))
+                .requestMatchers("/api/admin/moderacion/**")
+                        .access(adminActivoAuthorizationManager.conRol(com.tinku.admin.model.RolAdmin.MODERACION_SEGURIDAD))
                 .requestMatchers("/api/admin/**").access(adminActivoAuthorizationManager)
                 .anyRequest().authenticated()
             )
@@ -156,7 +164,9 @@ public class SecurityConfig {
     private AccessDeniedHandler adminAccesoDenegadoHandler() {
         return (request, response, accessDeniedException) -> {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json");
+            // R-B B-2 (T5-2): sin charset, "administración" llegaba como "administraci?n".
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"No autorizado para esta acción de administración.\"}");
         };
     }

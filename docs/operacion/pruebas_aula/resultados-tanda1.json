@@ -1,0 +1,261 @@
+[
+  {
+    "id": "PUERTA-1 menor sin clasificador",
+    "esperado": "409 CLASIFICADOR_NO_LISTO",
+    "obtenido": "409 CLASIFICADOR_NO_LISTO",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "PUERTA-2 tercero",
+    "esperado": "403",
+    "obtenido": "403",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "PUERTA-3 adultos sin clasificador",
+    "esperado": "200 hayMenor=false",
+    "obtenido": "200 hayMenor=false",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "PUERTA-4 menor con clasificador",
+    "esperado": "200 hayMenor=true, pizarra apagada",
+    "obtenido": "200 hayMenor=true pizarra=false",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "AULA-1 sesión en curso con dos participantes",
+    "esperado": "en_curso",
+    "obtenido": "no_iniciada",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "AULA-2 cada uno recibe video del otro",
+    "esperado": "video remoto con dimensiones",
+    "obtenido": "[[{\"w\":1280,\"h\":720,\"t\":28.2,\"pausado\":false,\"src\":true},{\"w\":1280,\"h\":720,\"t\":29.9,\"pausado\":false,\"src\":true}],[{\"w\":1280,\"h\":720,\"t\":29,\"pausado\":false,\"src\":true},{\"w\":1280,\"h\":720,\"t\":29.9,\"pausado\":false,\"src\":true}]]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "AULA-3 el modelo del clasificador se descargó",
+    "esperado": ">0 archivos de /modelos/nsfw",
+    "obtenido": "2/2",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "AULA-4 no hay cartel de protección con adultos",
+    "esperado": "sin \"Reactivando\"/\"Verificando\"",
+    "obtenido": "[false,false]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "AULA-5 tiempo hasta poder unirse",
+    "esperado": "informativo",
+    "obtenido": "146 ms / 20 ms",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-1 disparo entre adultos NO corta",
+    "esperado": "200 en_curso",
+    "obtenido": "200 no_iniciada",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-2 confirmación pendiente con plazo de 5 min",
+    "esperado": "pendiente, vence en ~300 s",
+    "obtenido": "pendiente=true vence en 302 s",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-3 el propio detectado no puede responder",
+    "esperado": "4xx",
+    "obtenido": "422",
+    "ok": true,
+    "nota": "{\"error\":\"No hay una confirmación de kill-switch pendiente en esta sesión, o el detectado no puede confirmarse a sí mismo.\"}"
+  },
+  {
+    "id": "RAMA-AD-4 respuesta \"No\" → sigue la clase",
+    "esperado": "200 en_curso",
+    "obtenido": "200 no_iniciada",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-5 los dos navegadores siguen en la sala tras el \"No\"",
+    "esperado": "sin pantalla de cierre",
+    "obtenido": "[\"Saltar al contenido Tinku. Conexión excelente En La Sala María Vos Finalizar cla\",\"Saltar al contenido Tinku. Conexión excelente En La Sala Lautaro Vos Finalizar c\"]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-6 ya no hay pendiente",
+    "esperado": "pendiente=false",
+    "obtenido": "false",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-7 un segundo disparo tras un \"No\" vuelve a preguntar",
+    "esperado": "pendiente=true",
+    "obtenido": "true",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-8 el detectado (estudiante) no puede confirmar su propio caso",
+    "esperado": "4xx",
+    "obtenido": "422",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-9 \"Sí\" corta la sesión",
+    "esperado": "200 finalizada",
+    "obtenido": "200 finalizada",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-AD-10 los dos navegadores salen de la sala",
+    "esperado": "pantalla de cierre o sala cerrada",
+    "obtenido": "[\"Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante María Vos Finalizar clase\",\"Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante Participante Vos Finalizar clas\"]",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "EVID-1 subir clip de evidencia (WebM) tras el corte",
+    "esperado": "200",
+    "obtenido": "200 {\"id\":\"1cc71aa4-4a5a-46db-ab90-e61c85d3afb2\",\"sesionId\":\"4e29e2e9-b01b-433b-aed5-d2bdeea9e408\",\"rama",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "EVID-2 archivo que no es video se rechaza",
+    "esperado": "422",
+    "obtenido": "422",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "ALERTA-A alerta de la rama adultos en la cola de moderación",
+    "esperado": "rama=adultos con clip",
+    "obtenido": "{\"id\":\"1cc71aa4-4a5a-46db-ab90-e61c85d3afb2\",\"sesionId\":\"4e29e2e9-b01b-433b-aed5-d2bdeea9e408\",\"rama\":\"adultos\",\"detectadoId\":\"10803d3c-b9bb-4651-9ecc-88b0fee581b9\",\"estado\":\"pendiente_revision\",\"desc",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "CORTE-A sesión cortada no entrega tokens nuevos",
+    "esperado": "422",
+    "obtenido": "422",
+    "ok": true,
+    "nota": "{\"error\":\"La sesión ya terminó o fue cortada: no admite nuevas conexiones.\"}"
+  },
+  {
+    "id": "MENOR-1 sesión con menor en curso",
+    "esperado": "en_curso",
+    "obtenido": "no_iniciada",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "MENOR-2 cada uno recibe video del otro",
+    "esperado": "video remoto",
+    "obtenido": "[[{\"w\":1280,\"h\":720,\"t\":23.7,\"pausado\":false,\"src\":true},{\"w\":1280,\"h\":720,\"t\":25.2,\"pausado\":false,\"src\":true},{\"w\":1280,\"h\":720,\"t\":23.8,\"pausado\":false,\"src\":true}],[{\"w\":960,\"h\":540,\"t\":24.1,\"pausado\":false,\"src\":true},{\"w\":1280,\"h\":720,\"t\":25.2,\"pausado\":false,\"src\":true},{\"w\":960,\"h\":540,\"t\":24.1,\"pausado\":false,\"src\":true}]]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "MENOR-3 el clasificador cargó antes de entrar (menor)",
+    "esperado": "modelo descargado en los dos",
+    "obtenido": "2/2",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "MENOR-4 sin cartel de pérdida de protección en clase normal",
+    "esperado": "sin \"Reactivando\"",
+    "obtenido": "[false,false]",
+    "ok": true,
+    "nota": "Verificando: [true,false]"
+  },
+  {
+    "id": "MENOR-5 sin pizarra con menor",
+    "esperado": "sin \"Abrir pizarra\"",
+    "obtenido": "[false,false]",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "MENOR-6 tiempo hasta poder unirse",
+    "esperado": "informativo",
+    "obtenido": "28 ms / 20 ms",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-MEN-1 disparo con menor corta directo (aunque el cliente mande rama=adultos)",
+    "esperado": "200 finalizada",
+    "obtenido": "200 finalizada",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-MEN-2 al menor no se le pregunta nada (no hay confirmación)",
+    "esperado": "4xx",
+    "obtenido": "422",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-MEN-3 los dos navegadores salen de la sala",
+    "esperado": "sin \"Esperando…\" ni video",
+    "obtenido": "[\"Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante Lorena Vos Finalizar clase\",\"Saltar al contenido Tinku. Esperando Al Otro Participante Esperando al otro participante Participante Vos Finalizar clase\"]",
+    "ok": false,
+    "nota": ""
+  },
+  {
+    "id": "RAMA-MEN-4 el menor no puede volver a entrar",
+    "esperado": "422",
+    "obtenido": "422",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "ALERTA-B alerta de la rama menor en la cola",
+    "esperado": "rama=menor",
+    "obtenido": "{\"id\":\"b13906b7-fa4b-4046-97e5-b87115a80e28\",\"sesionId\":\"7daf2062-26f7-423f-a313-74fdce1cc340\",\"rama\":\"menor\",\"detectadoId\":\"f7f5f6f9-7905-41dd-917a-202183ed80ab\",\"estado\":\"pendiente_revision\",\"descar",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "EVID-3 subir clip tras el corte con menor",
+    "esperado": "200",
+    "obtenido": "200 {\"id\":\"b13906b7-fa4b-4046-97e5-b87115a80e28\",\"sesionId\":\"7daf2062-26f7-423f-a313-74fdce1cc340\",\"rama",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "AVISO-AR el Adulto Responsable recibe el aviso del corte",
+    "esperado": "notificación KILLSWITCH_MENOR",
+    "obtenido": "{\"id\":\"34644400-a88e-4976-9740-a9dc588ad320\",\"tipo\":\"KILLSWITCH_MENOR\",\"datos\":{\"fecha\":\"2026-10-14T20:57:01.505880285Z\",\"sesionId\":\"7daf2062-26f7-423f-a313-74fdce1cc340\"},\"creadaAt\":\"2026-10-14T20:57:01.506043Z\",\"leida\":false}",
+    "ok": true,
+    "nota": ""
+  },
+  {
+    "id": "PLATA-B estado de la reserva tras el corte",
+    "esperado": "informativo",
+    "obtenido": "finalizada",
+    "ok": true,
+    "nota": ""
+  }
+]

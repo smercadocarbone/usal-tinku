@@ -42,8 +42,7 @@ public class TarifaProveedorTutor implements TarifaProveedor {
                 .orElseGet(() -> {
                     if (tarifaStub == null) {
                         throw new TarifaNoConfiguradaException(
-                                "El Tutor todavía no configuró su tarifa por hora (Spec M5 US-6 / FR-PAG-006). "
-                                        + "Para desarrollo, definí tinku.reservas.tarifa-stub (o RESERVAS_TARIFA_STUB).");
+                                "Este tutor todavía no configuró su precio por hora.");
                     }
                     return tarifaStub;
                 });

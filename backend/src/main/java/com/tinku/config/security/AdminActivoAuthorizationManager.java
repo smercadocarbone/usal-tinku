@@ -48,4 +48,25 @@ public class AdminActivoAuthorizationManager implements AuthorizationManager<Req
         boolean esAdminActivo = usuarioId != null && adminRepository.findByUsuario_IdAndActivoTrue(usuarioId).isPresent();
         return new AuthorizationDecision(esAdminActivo);
     }
+
+    /**
+     * R-F F-8 (T4-H12): admin activo CON ese rol, en el filter chain. Así el rol se evalúa antes que
+     * la validación del cuerpo (antes, un cuerpo vacío con el rol equivocado daba 400 y mostraba el
+     * esquema). El gate de servicio ({@code AdminModeracionGate}) sigue igual: defensa en profundidad.
+     */
+    public AuthorizationManager<RequestAuthorizationContext> conRol(com.tinku.admin.model.RolAdmin rol) {
+        return (authentication, context) -> {
+            Authentication auth = authentication.get();
+            UUID usuarioId = null;
+            if (auth != null && auth.isAuthenticated()) {
+                try {
+                    usuarioId = UUID.fromString(auth.getName());
+                } catch (IllegalArgumentException e) {
+                    usuarioId = null;
+                }
+            }
+            return new AuthorizationDecision(usuarioId != null
+                    && adminRepository.findByUsuario_IdAndRolAndActivoTrue(usuarioId, rol).isPresent());
+        };
+    }
 }

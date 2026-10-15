@@ -75,8 +75,12 @@ export function isAuthenticated(): boolean {
   }
   return true;
 }
-/** Pantalla de inicio de cada rol: el tutor arranca en su agenda; el resto, en sus clases. */
-export function inicioPorRol(payload: PayloadSesion | null | undefined): string {
+/**
+ * Pantalla de inicio de cada rol: el admin, en el panel (R-F F-6, T4-H10: `rolAdmin` viene de
+ * `/api/usuarios/me`); el tutor, en su agenda; el resto, en sus clases.
+ */
+export function inicioPorRol(payload: PayloadSesion | null | undefined, rolAdmin?: string | null): string {
+  if (rolAdmin && payload?.tipo !== "MENOR") return "/admin";
   return payload?.tipo === "TUTOR" ? "/cuenta/horarios" : "/cuenta/reservas";
 }
 

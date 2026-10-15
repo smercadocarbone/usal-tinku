@@ -2,6 +2,6 @@ package com.tinku.reputacion.service;
 
 public class CalificacionOcultaNoEditableException extends RuntimeException {
     public CalificacionOcultaNoEditableException() {
-        super("Solo la calificacion publica (estudiante_a_tutor) es editable o eliminable.");
+        super("Solo se puede cambiar o borrar la calificación pública al tutor.");
     }
 }

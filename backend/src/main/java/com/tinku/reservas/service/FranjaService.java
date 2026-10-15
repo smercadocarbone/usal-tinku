@@ -42,13 +42,18 @@ public class FranjaService {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new SoloTutorException("Solo las cuentas de Tutor pueden publicar disponibilidad.");
         }
+        // R-D D-3 (T2-H2): una franja puntual de un día que ya pasó no se puede reservar nunca.
+        if (request.fechaEspecifica() != null
+                && request.fechaEspecifica().isBefore(LocalDate.now(ReservasZonaHoraria.ZONA))) {
+            throw new FechaFranjaPasadaException();
+        }
         if (!request.horaFin().isAfter(request.horaInicio())) {
-            throw new HorarioFueraDeFranjaException("horaFin debe ser posterior a horaInicio.");
+            throw new HorarioFueraDeFranjaException("La hora de fin tiene que ser posterior a la de inicio.");
         }
         long minutos = Duration.between(request.horaInicio(), request.horaFin()).toMinutes();
         if (minutos < DURACION_MINIMA.toMinutes() || minutos > DURACION_MAXIMA.toMinutes()) {
             throw new DuracionFranjaInvalidaException(
-                    "La duración de la franja debe ser de 30 a 180 minutos (FR-RES-024).");
+                    "El horario tiene que durar de 30 a 180 minutos.");
         }
 
         if (seSuperpone(tutor.getId(), request)) {
@@ -104,23 +109,77 @@ public class FranjaService {
                 && duracionMinutos % 30 == 0;
     }
 
+    /** Rango {@code [desde, hasta)} de un día, en minutos desde la medianoche. */
+    public record RangoMinutos(int desde, int hasta) {
+    }
+
     /**
-     * D6 reglas 2 y 3: franja activa que contiene ENTERO {@code [inicio, inicio+duracion)}
-     * con {@code inicio} alineado a un bloque de 30 minutos desde el comienzo de la franja.
+     * R-D D-2 (T1-M2, T1-M3): rangos del día con las franjas contiguas o superpuestas unidas,
+     * ordenados por {@code desde}. Todo en minutos enteros: no hay aritmética de {@code LocalTime}
+     * que pueda dar la vuelta a la medianoche.
      */
-    public Optional<FranjaDisponibilidad> franjaQueContiene(UUID tutorId, Instant inicio, int duracionMinutos) {
-        if (!duracionValida(duracionMinutos)) {
-            return Optional.empty();
+    public List<RangoMinutos> rangosUnidos(UUID tutorId, LocalDate fecha) {
+        return unir(franjasQueAplicanA(tutorId, fecha));
+    }
+
+    /** Une franjas de un mismo día (ver {@link #rangosUnidos}). */
+    public static List<RangoMinutos> unir(List<FranjaDisponibilidad> franjasDelDia) {
+        List<RangoMinutos> ordenados = franjasDelDia.stream()
+                .map(f -> new RangoMinutos(minutos(f.getHoraInicio()), minutos(f.getHoraFin())))
+                .sorted(java.util.Comparator.comparingInt(RangoMinutos::desde))
+                .toList();
+        List<RangoMinutos> unidos = new java.util.ArrayList<>();
+        for (RangoMinutos r : ordenados) {
+            RangoMinutos ultimo = unidos.isEmpty() ? null : unidos.get(unidos.size() - 1);
+            if (ultimo != null && r.desde() <= ultimo.hasta()) {
+                unidos.set(unidos.size() - 1, new RangoMinutos(ultimo.desde(), Math.max(ultimo.hasta(), r.hasta())));
+            } else {
+                unidos.add(r);
+            }
         }
-        return franjaQueCubre(tutorId, inicio).filter(f -> {
-            LocalTime ini = inicio.atZone(ReservasZonaHoraria.ZONA).toLocalTime();
-            long desdeInicio = Duration.between(f.getHoraInicio(), ini).toMinutes();
-            LocalTime fin = ini.plusMinutes(duracionMinutos);
-            boolean alineado = desdeInicio % 30 == 0;
-            // fin.isAfter(ini): la reserva no cruza la medianoche.
-            boolean cabe = !fin.isAfter(f.getHoraFin()) && fin.isAfter(ini);
-            return alineado && cabe;
-        });
+        return unidos;
+    }
+
+    static int minutos(LocalTime hora) {
+        return hora.toSecondOfDay() / 60;
+    }
+
+    /**
+     * D6 reglas 2 y 3 (con R-D D-2): {@code [inicio, inicio+duracion)} entra entero en un rango
+     * unido de disponibilidad y {@code inicio} está alineado a un bloque de 30 minutos desde el
+     * comienzo de ese rango.
+     */
+    public boolean cabeEnDisponibilidad(UUID tutorId, Instant inicio, int duracionMinutos) {
+        if (!duracionValida(duracionMinutos)) {
+            return false;
+        }
+        LocalDateTime local = inicio.atZone(ReservasZonaHoraria.ZONA).toLocalDateTime();
+        if (local.getSecond() != 0 || local.getNano() != 0) {
+            return false;
+        }
+        int inicioMin = minutos(local.toLocalTime());
+        return rangosUnidos(tutorId, local.toLocalDate()).stream()
+                .anyMatch(r -> inicioMin >= r.desde()
+                        && inicioMin + duracionMinutos <= r.hasta()
+                        && (inicioMin - r.desde()) % 30 == 0);
+    }
+
+    /**
+     * R-D D-1 (T2-H1, FR-RES-025): baja lógica de una franja propia. No toca reservas existentes:
+     * guardan su horario absoluto. 404 si no existe, ya está inactiva o es de otro Tutor (no se
+     * revela la existencia de franjas ajenas).
+     */
+    @Transactional
+    public FranjaDisponibilidad quitar(Usuario tutor, UUID franjaId) {
+        if (tutor.getTipo() != TipoUsuario.TUTOR) {
+            throw new SoloTutorException("Solo las cuentas de Tutor pueden quitar disponibilidad.");
+        }
+        FranjaDisponibilidad franja = franjaRepo.findById(franjaId)
+                .filter(FranjaDisponibilidad::isActiva)
+                .filter(f -> f.getTutor().getId().equals(tutor.getId()))
+                .orElseThrow(FranjaNoEncontradaException::new);
+        franja.setActiva(false);
+        return franjaRepo.save(franja);
     }
 
     /** Franjas activas publicadas por el Tutor (GET /api/tutores/{id}/franjas). */
@@ -129,9 +188,8 @@ public class FranjaService {
     }
 
     /**
-     * Devuelve la franja activa que cubre {@code horario}, si existe. Base de
-     * {@link #franjaQueContiene} (desde AUD-020 la duración sale de la Reserva,
-     * no de la franja).
+     * Devuelve la franja activa que cubre {@code horario}, si existe (desde AUD-020 la
+     * duración sale de la Reserva, no de la franja).
      */
     public Optional<FranjaDisponibilidad> franjaQueCubre(UUID tutorId, Instant horario) {
         LocalDateTime punto = horario.atZone(ReservasZonaHoraria.ZONA).toLocalDateTime();

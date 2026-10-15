@@ -3,6 +3,8 @@ package com.tinku.identidad.repository;
 import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.EstadoCap;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -27,4 +29,13 @@ public interface CertificadoAntecedentesPenalesRepository
     /** Cola de moderacion de M8 (T-M1-16): pendientes + en revisión legal. */
     List<CertificadoAntecedentesPenales> findByEstadoInOrderByCreatedAtAsc(
             Collection<EstadoCap> estados);
+
+    /**
+     * T4-H1: misma cola con el Tutor ya cargado. La respuesta ({@code CapColaResponse}) lee el nombre
+     * del Tutor en el controller, fuera de la transacción ({@code open-in-view: false}); sin el fetch,
+     * la relación LAZY tiraba LazyInitializationException y la cola respondía 403.
+     */
+    @Query("select c from CertificadoAntecedentesPenales c join fetch c.tutor "
+            + "where c.estado in :estados order by c.createdAt asc")
+    List<CertificadoAntecedentesPenales> colaConTutor(@Param("estados") Collection<EstadoCap> estados);
 }

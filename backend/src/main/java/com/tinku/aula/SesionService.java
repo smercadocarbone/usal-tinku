@@ -384,7 +384,7 @@ public class SesionService {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
                 .orElseThrow(SesionNoEncontradaException::new);
         if (sesion.getLivekitRoomId() == null) {
-            throw new SesionSinSalaException("La sala aún no fue creada (T-5 no alcanzado).");
+            throw new SesionSinSalaException("El aula se abre 5 minutos antes de la clase.");
         }
         if (SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
                 || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
@@ -394,7 +394,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("entrar a ella");
         }
         if (!clasificadorListo && reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR) {
             throw new ClasificadorNoListoException();
@@ -424,15 +424,21 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("usar su protección");
         }
         log.warn("Kill-switch en el cliente: evento={} sesion={} usuario={} hayMenor={}",
                 evento, sesionId, usuario.getId(), reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR);
     }
 
-    /** Estado del kill-switch para el cliente. Nada de la Alerta (BR-KS-03, M9). */
+    /**
+     * Estado del kill-switch para el cliente. Nada de la Alerta (BR-KS-03, M9): solo si hubo un
+     * corte por seguridad, que los participantes ya conocen por el aviso. R-C C-1 (H-AULA-1): con
+     * {@code sesionCerrada} y {@code cortePorSeguridad} el cliente elige la pantalla de cierre
+     * cuando la sala se desconecta, en vez de suponer que el otro se fue.
+     */
     public record EstadoKillswitch(boolean hayMenor, boolean confirmacionPendiente,
-                                   UUID detectadoId, Instant venceAt) {
+                                   UUID detectadoId, Instant venceAt,
+                                   boolean sesionCerrada, boolean cortePorSeguridad) {
     }
 
     @Transactional(readOnly = true)
@@ -442,13 +448,17 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("ver su protección");
         }
         boolean hayMenor = reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR;
+        boolean cerrada = SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
+                || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado());
+        boolean corte = alertaRepo.findBySesionId(sesionId).isPresent();
         return confirmacionRepo.findBySesionId(sesionId)
                 .filter(c -> c.getRespondidoId() == null && !c.isVencida())
-                .map(c -> new EstadoKillswitch(hayMenor, true, c.getDetectadoId(), c.getVenceAt()))
-                .orElseGet(() -> new EstadoKillswitch(hayMenor, false, null, null));
+                .map(c -> new EstadoKillswitch(hayMenor, true, c.getDetectadoId(), c.getVenceAt(), cerrada, corte))
+                .orElseGet(() -> new EstadoKillswitch(hayMenor, false, null, null, cerrada, corte));
     }
 
     /**
@@ -482,7 +492,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("verla");
         }
         return sesionRepo.findByReservaId(reservaId)
                 .orElseThrow(SesionNoEncontradaException::new);
@@ -498,7 +508,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("finalizarla");
         }
         return marcarFinalizada(sesion, reserva);
     }
@@ -648,7 +658,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("cortarla");
         }
         if (detectadoId == null
                 || (!reserva.getTutor().getId().equals(detectadoId)
@@ -816,7 +826,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("responder lo que vieron");
         }
         ConfirmacionKillswitch confirmacion = confirmacionRepo.findBySesionId(sesionId)
                 .orElseThrow(ConfirmacionNoPendienteException::new);

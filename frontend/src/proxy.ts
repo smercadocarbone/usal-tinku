@@ -12,6 +12,12 @@ import { COOKIE_NAME } from "@/lib/auth";
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // R-C C-4 (H-AULA-4): las páginas de desarrollo no existen en producción. Sin esto, el shell
+  // salía con 200 antes de que la página llamara a notFound().
+  if (process.env.NODE_ENV === "production" && pathname.startsWith("/dev")) {
+    return new NextResponse(null, { status: 404 });
+  }
+  if (pathname.startsWith("/dev")) return NextResponse.next();
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
@@ -36,5 +42,6 @@ export const config = {
     "/pagar/:path*",
     "/aula/:path*",
     "/admin/:path*",
+    "/dev/:path*",
   ],
 };

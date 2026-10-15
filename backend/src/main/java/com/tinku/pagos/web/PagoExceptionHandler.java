@@ -10,6 +10,8 @@ import com.tinku.pagos.service.SoloPagadorPreferenciaException;
 import com.tinku.pagos.service.TarifaBajoPisoException;
 import com.tinku.reservas.service.ReservaNoEncontradaException;
 import com.tinku.reservas.service.SoloTutorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,6 +22,8 @@ import java.util.Map;
 /** Traduce errores del módulo de pagos a HTTP (mismo estilo que ReservasExceptionHandler). */
 @RestControllerAdvice(basePackages = "com.tinku.pagos")
 public class PagoExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(PagoExceptionHandler.class);
 
     @ExceptionHandler(com.tinku.pagos.service.CuentaMpException.class)
     public ResponseEntity<Map<String, String>> handleCuentaMp(com.tinku.pagos.service.CuentaMpException ex) {
@@ -73,6 +77,11 @@ public class PagoExceptionHandler {
         return ResponseEntity.noContent().build();
     }
 
+    @ExceptionHandler(com.tinku.pagos.service.PagoMpNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> handlePagoMpNoEncontrado(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler({MercadoPagoNoConfiguradoException.class, MercadoPagoNoDisponibleException.class})
     public ResponseEntity<Map<String, String>> handleMercadoPago(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -80,9 +89,10 @@ public class PagoExceptionHandler {
     }
 
     @ExceptionHandler(PagoInconsistenteException.class)
-    public ResponseEntity<Map<String, String>> handlePagoInconsistente(RuntimeException ex) {
+    public ResponseEntity<Map<String, String>> handlePagoInconsistente(PagoInconsistenteException ex) {
         // Fail-closed del webhook: el pago no cierra contra la Reserva. 500 para
         // que MercadoPago reintente y el caso quede visible, nunca confirmado.
+        log.error(ex.getDetalle());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", ex.getMessage()));
     }

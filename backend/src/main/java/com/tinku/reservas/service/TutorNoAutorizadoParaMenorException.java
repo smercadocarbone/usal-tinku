@@ -4,6 +4,6 @@ package com.tinku.reservas.service;
  * no confiable (FR-RES-021, mismo criterio de FR-MATCH-004). */
 public class TutorNoAutorizadoParaMenorException extends RuntimeException {
     public TutorNoAutorizadoParaMenorException() {
-        super("El Tutor no está autorizado por tu Adulto Responsable para este menor.");
+        super("Tu adulto responsable todavía no autorizó a este tutor.");
     }
 }

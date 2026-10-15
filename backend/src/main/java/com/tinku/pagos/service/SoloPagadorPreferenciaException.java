@@ -4,6 +4,6 @@ package com.tinku.pagos.service;
  * de pago — un menor nunca, el Tutor tampoco. */
 public class SoloPagadorPreferenciaException extends RuntimeException {
     public SoloPagadorPreferenciaException() {
-        super("Solo quien paga la Reserva puede generar la preferencia de pago (Artículo II).");
+        super("Solo quien reservó la clase puede pagarla.");
     }
 }

@@ -53,6 +53,10 @@ public class Denuncia {
     @Column(name = "descargo_texto", length = 300)
     private String descargoTexto;
 
+    /** R-F F-4 (T4-H8): todos los descargos con su fecha, separados por "\n---\n". Solo para el admin. */
+    @Column(name = "descargo_historial", columnDefinition = "TEXT")
+    private String descargoHistorial;
+
     @Column(name = "descargo_recibido_at")
     private Instant descargoRecibidoAt;
 

@@ -67,7 +67,7 @@ export default function MisClasesPage() {
       <h1 className="text-[28px] font-extrabold sm:text-[40px]">Mis clases</h1>
       <Tabs etiqueta="Clases" opciones={opciones} activo={pestana} onCambio={setPestana} className="mt-6" />
 
-      <PanelTab id={pestana} className="mt-6 focus-visible:outline-none">
+      <PanelTab id={pestana} className="mt-6">
         {pestana === "pedidos" ? (
           <Pedidos pedidos={pedidos} />
         ) : error ? (

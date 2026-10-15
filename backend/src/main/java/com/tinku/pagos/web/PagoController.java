@@ -8,6 +8,8 @@ import com.tinku.pagos.service.PagoService;
 import com.tinku.pagos.service.ComisionMercadoPagoEstimada;
 import com.tinku.pagos.service.ComisionPlataforma;
 import com.tinku.pagos.service.PisoTarifa;
+import com.tinku.identidad.model.Usuario;
+import com.tinku.reservas.service.SoloTutorException;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -139,7 +141,12 @@ public class PagoController {
 
     @GetMapping("/tarifa")
     public ResponseEntity<TarifaTutorResponse> miTarifa(Authentication authentication) {
-        UUID yo = usuarioActual.obtener(authentication).getId();
+        Usuario usuario = usuarioActual.obtener(authentication);
+        // R-B B-7 (T3-05): la tarifa es del Tutor; un Estudiante o un menor no tiene nada que ver acá.
+        if (usuario.getTipo() != com.tinku.identidad.model.TipoUsuario.TUTOR) {
+            throw new SoloTutorException("Solo las cuentas de Tutor tienen tarifa.");
+        }
+        UUID yo = usuario.getId();
         BigDecimal piso = pisoTarifa.pisoHora();
         return ResponseEntity.ok(tarifaRepo.findByTutorId(yo)
                 .map(t -> TarifaTutorResponse.from(t, piso, comision.porcentaje(), comisionMp.porcentaje()))

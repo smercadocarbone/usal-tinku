@@ -63,7 +63,8 @@ export default function Tabs<T extends string>({
         "no-scrollbar flex overflow-x-auto",
         variante === "subrayado"
           ? "gap-6 border-b border-borde"
-          : "w-fit gap-1 rounded-pastilla bg-superficie-hundida p-1",
+          : // R-G G-1 (T7-M1): en un celular las pestañas cortan línea; antes ensanchaban la página.
+            "w-fit max-w-full flex-wrap gap-1 rounded-[1.25rem] bg-superficie-hundida p-1",
         className
       )}
     >

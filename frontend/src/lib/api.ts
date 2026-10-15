@@ -75,24 +75,31 @@ async function request<T>(
 /** Extrae un mensaje legible y el detalle estructurado del cuerpo de error
  * del backend (contrato M1: `{"error": "...", ...extra}`). */
 async function leerError(res: Response): Promise<[string, Record<string, unknown>?]> {
+  // Si no hay un mensaje pensado para el usuario se devuelve "" y cada pantalla
+  // usa su propio texto de respaldo (mensajeDeError). Nunca se muestra el
+  // statusText en inglés, el cuerpo por defecto de Spring ("Internal Server
+  // Error") ni una página HTML de error de un proxy.
   let texto = "";
   try {
     texto = await res.text();
   } catch {
-    return [res.statusText];
+    return [""];
   }
 
-  if (!texto) return [res.statusText];
+  if (!texto) return [""];
 
   try {
     const json = JSON.parse(texto) as Record<string, unknown>;
-    const mensaje =
-      (typeof json.error === "string" && json.error) ||
-      (typeof json.message === "string" && json.message) ||
-      (typeof json.detail === "string" && json.detail);
-    return [mensaje || res.statusText, json];
+    // Cuerpo por defecto de Spring Boot: {timestamp, status, error: "Not Found", path}.
+    const esErrorPorDefecto = "timestamp" in json && "path" in json;
+    const mensaje = esErrorPorDefecto
+      ? ""
+      : (typeof json.error === "string" && json.error) ||
+        (typeof json.message === "string" && json.message) ||
+        (typeof json.detail === "string" && json.detail);
+    return [mensaje || "", json];
   } catch {
-    return [texto, { body: texto }];
+    return ["", { body: texto }];
   }
 }
 
@@ -248,6 +255,8 @@ export interface BusquedaGuardada {
   id: string;
   textoBusqueda: string;
   createdAt: string;
+  /** R-E E-2: filtros con que se guardó (nombres del API). */
+  filtros?: { texto_busqueda?: string; nombre?: string; filtro_materia?: string; filtro_nivel?: string; precio_max_hora?: number };
 }
 
 export function guardarBusqueda(body: CuerpoBusqueda): Promise<BusquedaGuardada> {
@@ -255,7 +264,25 @@ export function guardarBusqueda(body: CuerpoBusqueda): Promise<BusquedaGuardada>
     texto_busqueda: body.textoBusqueda || undefined,
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
+    filtro_nivel: body.filtroNivel || undefined,
+    precio_max_hora: body.precioMaxHora || undefined,
   });
+}
+
+/** R-E E-2: borra una búsqueda guardada propia. */
+export function borrarBusquedaGuardada(id: string): Promise<void> {
+  return api.delete(`/api/busquedas/guardadas/${id}`);
+}
+
+/** R-E E-3 (FR-REP-001): comentarios públicos del perfil del Tutor, sin datos de quién los escribió. */
+export interface ComentarioPublico {
+  estrellas: number;
+  comentario: string;
+  fecha: string;
+}
+
+export function getComentariosTutor(tutorId: string, limite = 5): Promise<ComentarioPublico[]> {
+  return api.get(`/api/tutores/${tutorId}/calificaciones?limite=${limite}`);
 }
 
 export function getBusquedasGuardadas(): Promise<BusquedaGuardada[]> {
@@ -428,6 +455,14 @@ export interface DenunciaCola {
   prioridadAlta: boolean;
   resueltaAt: string | null;
   createdAt: string;
+  /** R-F F-3: vista del admin. Nunca trae al denunciante (FR-SEC-006). */
+  evidenciaUrl?: string | null;
+  denunciadoNombre?: string | null;
+  denunciadoApellido?: string | null;
+  denunciadoTipo?: string | null;
+  descargoHistorial?: string | null;
+  /** R-F F-1: quien consulta es parte del caso; lo resuelve otro admin. */
+  conflicto?: boolean;
 }
 
 export interface ResolverDenunciaBody {
@@ -477,6 +512,11 @@ export interface PrecioRegional {
   valorSugerido: number;
   version: number;
   vigenteDesde: string;
+}
+
+/** R-F F-9: precios vigentes, una fila por provincia. */
+export function getPreciosRegionales(): Promise<PrecioRegional[]> {
+  return api.get("/api/admin/financiero/precios-regionales");
 }
 
 export function actualizarPrecioRegional(
@@ -722,6 +762,8 @@ export interface PerfilPropio {
   capacidadEstudiante: boolean;
   capacidadAdultoResponsable: boolean;
   email: string | null;
+  /** R-B B-10: rol de admin activo; ausente si no es admin. */
+  rolAdmin?: RolAdmin | null;
 }
 
 /** El JWT no lleva el email en el payload — hace falta este endpoint para
@@ -865,7 +907,8 @@ export function getEstadoPerfilTutor(): Promise<EstadoPerfilTutor> {
   return api.get("/api/tutores/me/estado-perfil");
 }
 
-export function actualizarBioTutor(bio: string): Promise<unknown> {
+/** R-B B-9: `avisos` dice si se taparon datos de contacto de la presentación. */
+export function actualizarBioTutor(bio: string): Promise<{ bio: string | null; avisos?: string[] }> {
   return api.put("/api/tutores/me/perfil", { bio });
 }
 
@@ -940,6 +983,10 @@ export interface EstadoKillswitch {
   confirmacionPendiente: boolean;
   detectadoId: string | null;
   venceAt: string | null;
+  /** R-C C-1: la sesión quedó cerrada en el backend (finalizada o interrumpida). */
+  sesionCerrada?: boolean;
+  /** R-C C-1: hubo un corte por seguridad. Nada más de la alerta (BR-KS-03). */
+  cortePorSeguridad?: boolean;
 }
 export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
 export interface SesionKillswitch {
@@ -1067,4 +1114,30 @@ export function getTemasSugeridos(): Promise<TemaPedido[]> {
 
 export function resolverTemaPedido(id: string): Promise<void> {
   return api.delete(`/api/admin/temas-sugeridos/${id}`);
+}
+
+/* ---- M4 — Agenda del Tutor (R-D, FR-RES-025) ---- */
+export interface FranjaQuitada {
+  id: string;
+  reservasFuturasEnLaFranja: number;
+}
+
+/** Baja lógica de una franja propia: las clases ya reservadas se mantienen. */
+export function quitarFranja(id: string): Promise<FranjaQuitada> {
+  return api.delete(`/api/tutores/franjas/${id}`);
+}
+
+export interface RangoLibre {
+  desde: string;
+  hasta: string;
+}
+
+export interface DiaDisponible {
+  fecha: string;
+  rangos: RangoLibre[];
+}
+
+/** Rangos libres reales del Tutor (sin lo ya reservado ni lo que ya pasó) para el perfil público. */
+export function getDisponibilidadTutor(tutorId: string, dias = 7): Promise<DiaDisponible[]> {
+  return api.get(`/api/tutores/${tutorId}/disponibilidad?dias=${dias}`);
 }
