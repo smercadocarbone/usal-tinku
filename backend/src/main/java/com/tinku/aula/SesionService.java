@@ -384,7 +384,7 @@ public class SesionService {
         SesionAprendizaje sesion = sesionRepo.findById(sesionId)
                 .orElseThrow(SesionNoEncontradaException::new);
         if (sesion.getLivekitRoomId() == null) {
-            throw new SesionSinSalaException("La sala aún no fue creada (T-5 no alcanzado).");
+            throw new SesionSinSalaException("El aula se abre 5 minutos antes de la clase.");
         }
         if (SesionAprendizaje.ESTADO_FINALIZADA.equals(sesion.getEstado())
                 || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())

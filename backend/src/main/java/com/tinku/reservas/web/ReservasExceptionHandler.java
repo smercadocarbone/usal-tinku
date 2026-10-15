@@ -106,7 +106,7 @@ public class ReservasExceptionHandler {
     public ResponseEntity<Map<String, String>> handleSuperposicion(DataIntegrityViolationException ex) {
         String constraint = constraintVioladaDe(ex);
         if (constraint != null && constraint.startsWith("ex_reservas_rango_")) {
-            return conflicto("HORARIO_OCUPADO", "El horario ya está reservado para ese Tutor o beneficiario (FR-RES-007).");
+            return conflicto("HORARIO_OCUPADO", "Ese horario ya está reservado. Elegí otro.");
         }
         if (constraint != null && constraint.startsWith("ex_franjas_")) {
             return conflicto("FRANJA_SUPERPUESTA", new FranjaSuperpuestaException().getMessage());

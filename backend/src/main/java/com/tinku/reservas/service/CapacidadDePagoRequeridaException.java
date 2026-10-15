@@ -8,6 +8,6 @@ package com.tinku.reservas.service;
  */
 public class CapacidadDePagoRequeridaException extends RuntimeException {
     public CapacidadDePagoRequeridaException() {
-        super("Solo quien paga (Estudiante adulto o Adulto Responsable) puede crear una Reserva (Artículo II).");
+        super("Solo un alumno adulto o un adulto responsable puede reservar y pagar una clase.");
     }
 }

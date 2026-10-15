@@ -40,7 +40,7 @@ public class AutorizacionService {
         if (usuario.getTipo() == TipoUsuario.MENOR
                 || !usuario.isCapacidadAdultoResponsable()) {
             throw new TutorNoAutorizadoException(
-                    "Solo la capacidad 'Adulto Responsable' puede autorizar a un Tutor.");
+                    "Solo un adulto responsable puede autorizar a un tutor.");
         }
     }
 

@@ -593,7 +593,7 @@ public class ReservaService {
         }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 30 minutos para el horario — no se puede reservar (FR-RES-013).");
+                    "Faltan menos de 30 minutos para ese horario: ya no se puede reservar.");
         }
         if (!FranjaService.duracionValida(duracionMinutos)) {
             throw new DuracionMinutosInvalidaException(
@@ -678,7 +678,7 @@ public class ReservaService {
     private void exigirCapacidadAdultoResponsable(Usuario usuario) {
         if (usuario.getTipo() == TipoUsuario.MENOR || !usuario.isCapacidadAdultoResponsable()) {
             throw new SoloAdultoResponsableException(
-                    "Solo la capacidad 'Adulto Responsable' puede aprobar y crear Reservas.");
+                    "Solo un adulto responsable puede aprobar y reservar clases para un menor.");
         }
     }
 
@@ -702,7 +702,7 @@ public class ReservaService {
         }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 30 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
+                    "Faltan menos de 30 minutos para el horario nuevo: elegí uno más adelante.");
         }
         if (!franjaService.cabeEnDisponibilidad(reserva.getTutor().getId(), nuevoHorario,
                 reserva.getDuracionMinutos())) {

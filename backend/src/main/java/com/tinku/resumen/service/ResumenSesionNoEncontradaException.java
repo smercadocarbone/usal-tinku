@@ -4,6 +4,6 @@ package com.tinku.resumen.service;
  * {@code CalificacionSesionNoEncontradaException} de M7. */
 public class ResumenSesionNoEncontradaException extends RuntimeException {
     public ResumenSesionNoEncontradaException() {
-        super("Sesión de Aprendizaje no encontrada.");
+        super("No encontramos esa clase.");
     }
 }

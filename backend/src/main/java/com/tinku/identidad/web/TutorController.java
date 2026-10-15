@@ -159,7 +159,7 @@ public class TutorController {
             @RequestBody Map<String, Boolean> cuerpo, Authentication authentication) {
         Boolean acepta = cuerpo == null ? null : cuerpo.get("aceptaMenores");
         if (acepta == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Falta aceptaMenores."));
+            return ResponseEntity.badRequest().body(Map.of("error", "Falta indicar si aceptás dar clases a menores."));
         }
         int canceladas = certificadoService.actualizarAceptaMenores(usuarioActual.obtener(authentication), acepta);
         return ResponseEntity.ok(Map.of("aceptaMenores", acepta, "clasesCanceladas", canceladas));

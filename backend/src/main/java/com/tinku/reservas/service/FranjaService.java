@@ -48,12 +48,12 @@ public class FranjaService {
             throw new FechaFranjaPasadaException();
         }
         if (!request.horaFin().isAfter(request.horaInicio())) {
-            throw new HorarioFueraDeFranjaException("horaFin debe ser posterior a horaInicio.");
+            throw new HorarioFueraDeFranjaException("La hora de fin tiene que ser posterior a la de inicio.");
         }
         long minutos = Duration.between(request.horaInicio(), request.horaFin()).toMinutes();
         if (minutos < DURACION_MINIMA.toMinutes() || minutos > DURACION_MAXIMA.toMinutes()) {
             throw new DuracionFranjaInvalidaException(
-                    "La duración de la franja debe ser de 30 a 180 minutos (FR-RES-024).");
+                    "El horario tiene que durar de 30 a 180 minutos.");
         }
 
         if (seSuperpone(tutor.getId(), request)) {

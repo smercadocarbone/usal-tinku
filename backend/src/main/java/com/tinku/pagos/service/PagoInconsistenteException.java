@@ -11,8 +11,18 @@ import java.util.UUID;
  */
 public class PagoInconsistenteException extends RuntimeException {
 
+    private final String detalle;
+
     public PagoInconsistenteException(UUID reservaId, String mpPaymentId) {
-        super("Pago " + mpPaymentId + " no coincide con el precio congelado de la Reserva "
-                + reservaId + " — no se confirma (fail-closed).");
+        // El mensaje puede llegar a la pantalla (confirmación al volver de MercadoPago):
+        // sin ids ni jerga. Los ids van en getDetalle() para el log.
+        super("El monto pagado no coincide con el precio de la clase, así que no la confirmamos. "
+                + "Escribinos a soporte y lo revisamos.");
+        this.detalle = "Pago " + mpPaymentId + " no coincide con el precio congelado de la Reserva "
+                + reservaId + " — no se confirma (fail-closed).";
+    }
+
+    public String getDetalle() {
+        return detalle;
     }
 }

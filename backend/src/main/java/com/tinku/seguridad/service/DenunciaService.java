@@ -291,7 +291,7 @@ public class DenunciaService {
     private Sancion registrarSancion(Denuncia denuncia, UUID adminId, TipoSancion tipo,
                                      Integer diasSuspension) {
         if (tipo == null) {
-            throw new SancionInvalidaException("se requiere un tipo de sanción");
+            throw new SancionInvalidaException("Elegí un tipo de sanción.");
         }
         Sancion sancion = new Sancion();
         sancion.setUsuarioSancionadoId(denuncia.getDenunciadoId());
@@ -301,7 +301,7 @@ public class DenunciaService {
         sancion.setTipo(tipo);
         if (tipo == TipoSancion.SUSPENSION_TEMPORAL) {
             if (diasSuspension == null || !DIAS_VALIDOS.contains(diasSuspension)) {
-                throw new SancionInvalidaException("suspensión temporal requiere 7, 15 o 30 días");
+                throw new SancionInvalidaException("La suspensión temporal tiene que ser de 7, 15 o 30 días.");
             }
             sancion.setDiasSuspension(diasSuspension);
             sancion.setVigenteHasta(Instant.now().plus(Duration.ofDays(diasSuspension)));
