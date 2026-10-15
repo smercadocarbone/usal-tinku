@@ -141,3 +141,12 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T2-H11 (contacto en la bio) | **Cerrado** (D-7) | `fix/rem-b` | `bio_ocultaDatosDeContacto`, `OcultadorDeContactoTest` |
 | T1-7, T2-H12 (`/api/admin/yo` en cada pantalla) | **Backend cerrado** (`rolAdmin` en `/me`); el front deja de llamarlo en REM-G | `fix/rem-b` | `me_informaElRolDeAdmin` |
 | T4-H13 (404 sin cuerpo en admin) | **Cerrado** | `fix/rem-b` | `admin404_conCuerpo` |
+| T4-H2, T4-H3 (conflicto de interés) | **Cerrado** (D-5; el segundo admin es la acción O-7) | `fix/rem-f` | `AdminModeracionRemIntegracionTest.conflictoDeInteres_*`, ADMIN-F-006 |
+| T4-H5 (salud para Moderación) | **Cerrado** | `fix/rem-f` | ADMIN-F-003 |
+| T4-H6, T4-H10 (secciones por rol, inicio del admin) | **Cerrado** | `fix/rem-f` | ADMIN-F-001/002/004 |
+| T4-H7 (evidencia y denunciado en la cola) | **Cerrado** | `fix/rem-f` | `colaAdmin_traeEvidenciaYDenunciado_sinDenunciante`, ADMIN-F-005 |
+| T4-H8 (descargos) | **Cerrado** (D-6, `V48`) | `fix/rem-f` | `descargos_seConservanEnElHistorial` |
+| T4-H9 (sanción preelegida) | **Cerrado** | `fix/rem-f` | ADMIN-F-007 |
+| T4-H11 (categoría del CAP) | **Cerrado** | `fix/rem-f` | `cap_reRechazarSinCategoria_conservaLaCategoria` |
+| T4-H12 (400 antes que 403) | **Cerrado** | `fix/rem-f` | `rolEquivocado_403AntesQueValidacion` |
+| T5-4 (precios vacíos) | **Cerrado** (cargar los precios es O-8) | `fix/rem-f` | ADMIN-F-008 |

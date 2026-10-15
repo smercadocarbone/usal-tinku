@@ -97,3 +97,29 @@ export function rutaCuentaPermitida(pathname: string, payload: PayloadSesion | n
 export function rutaCuentaRestringida(pathname: string): boolean {
   return [...RUTAS_SOLO_TUTOR, "/cuenta/menores", "/cuenta/seguridad"].some((r) => coincide(pathname, r));
 }
+
+/**
+ * R-F F-6 (T4-H6): qué secciones del panel abre cada rol de admin. Es UX (el backend valida el
+ * rol en cada endpoint), pero evita pantallas que solo muestran "No autorizado".
+ */
+const RUTAS_ADMIN_POR_ROL: Record<string, "moderacion_seguridad" | "soporte_financiero"> = {
+  "/admin/pagos": "soporte_financiero",
+  "/admin/precios": "soporte_financiero",
+  "/admin/antecedentes": "moderacion_seguridad",
+  "/admin/credenciales": "moderacion_seguridad",
+  "/admin/denuncias": "moderacion_seguridad",
+  "/admin/alertas": "moderacion_seguridad",
+  "/admin/temas-sugeridos": "moderacion_seguridad",
+};
+
+/** El rol que necesita una ruta del panel, o null si es de cualquier admin. */
+export function rolDeRutaAdmin(pathname: string): "moderacion_seguridad" | "soporte_financiero" | null {
+  const base = Object.keys(RUTAS_ADMIN_POR_ROL).find((r) => pathname === r || pathname.startsWith(`${r}/`));
+  return base ? RUTAS_ADMIN_POR_ROL[base] : null;
+}
+
+export function rutaAdminPermitida(pathname: string, rol: "moderacion_seguridad" | "soporte_financiero" | null): boolean {
+  if (!rol) return false;
+  const requerido = rolDeRutaAdmin(pathname);
+  return requerido === null || requerido === rol;
+}

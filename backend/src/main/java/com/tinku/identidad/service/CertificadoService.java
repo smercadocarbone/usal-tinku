@@ -139,8 +139,14 @@ public class CertificadoService {
         }
         cap.setAdminRevisorId(adminRevisorId);
         cap.setRevisadoAt(Instant.now());
-        cap.setTieneAntecedentes(categoria != null);
-        cap.setCategoriaAntecedente(categoria == null ? null : categoria.name());
+        // R-F F-7 (T4-H11): re-rechazar o volver a mandar a revisión legal SIN categoría no borra el
+        // antecedente ya informado. Solo se limpia al aprobar sin categoría.
+        boolean conservar = categoria == null && cap.getCategoriaAntecedente() != null
+                && accion != AccionRevisionCap.APROBAR;
+        if (!conservar) {
+            cap.setTieneAntecedentes(categoria != null);
+            cap.setCategoriaAntecedente(categoria == null ? null : categoria.name());
+        }
 
         EstadoCap resultado;
         if (categoria != null && categoria.esRechazoAutomatico()) {

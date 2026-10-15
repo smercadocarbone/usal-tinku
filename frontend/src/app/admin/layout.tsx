@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { rolDeRutaAdmin, rutaAdminPermitida } from "@/lib/navegacion";
 
 import type { ReactNode } from "react";
 import { FlaskConical } from "lucide-react";
@@ -56,6 +58,7 @@ const NOMBRE_ROL: Record<RolAdmin, string> = {
 
 function Contenido({ children }: { children: ReactNode }) {
   const { rol, rolResuelto, colas, bypass } = useAdmin();
+  const pathname = usePathname();
 
   // T3-03 / T5-1: quien no es admin no ve el panel ni queda en "Cargando colas…" para siempre.
   if (rolResuelto && !rol) {
@@ -83,6 +86,10 @@ function Contenido({ children }: { children: ReactNode }) {
       }))
     : [];
 
+  // R-F F-6 (T4-H6): una sección de otro rol no se monta (no pide nada al backend).
+  const requerido = rolDeRutaAdmin(pathname);
+  const permitida = rutaAdminPermitida(pathname, rol);
+
   return (
     <AppShell>
       {bypass && (
@@ -95,7 +102,13 @@ function Contenido({ children }: { children: ReactNode }) {
       <h1 className="text-[28px] font-extrabold sm:text-[40px]">Panel de administración</h1>
       {rol && <p className="mt-1 text-[15px] text-tinta-suave">{NOMBRE_ROL[rol]}</p>}
       <SettingsShell base="/admin" grupos={grupos}>
-        {children}
+        {!rolResuelto ? null : permitida ? (
+          children
+        ) : (
+          <Alerta tono="info" titulo={`Esta sección es de ${requerido ? NOMBRE_ROL[requerido] : "otro rol"}`}>
+            Volvé al <Link href="/admin" className="font-semibold underline">resumen del panel</Link>.
+          </Alerta>
+        )}
       </SettingsShell>
     </AppShell>
   );

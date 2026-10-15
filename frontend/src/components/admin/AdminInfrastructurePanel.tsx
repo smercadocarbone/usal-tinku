@@ -35,6 +35,8 @@ export interface SystemHealthDTO {
 export interface Props {
   healthData: SystemHealthDTO;
   isPaymentGatewayEnabled: boolean;
+  /** R-F F-2: la tarjeta de la pasarela solo para Soporte Financiero. */
+  mostrarPasarela?: boolean;
   /** FASE2-07: false en producción — el Modo Bypass solo se activa fuera de `prod`. */
   bypassPermitido?: boolean;
   onTogglePaymentGateway: (enabled: boolean) => Promise<void>;
@@ -101,6 +103,7 @@ export default function AdminInfrastructurePanel({
   isPaymentGatewayEnabled,
   bypassPermitido = true,
   onTogglePaymentGateway,
+  mostrarPasarela = true,
 }: Props) {
   const [pagosHabilitados, setPagosHabilitados] = useState(isPaymentGatewayEnabled);
   const [togglingPagos, setTogglingPagos] = useState(false);
@@ -153,6 +156,7 @@ export default function AdminInfrastructurePanel({
         )}
       </header>
 
+      {mostrarPasarela && (
       <Tarjeta as="section" className="shadow-none">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -204,6 +208,7 @@ export default function AdminInfrastructurePanel({
           </Alerta>
         )}
       </Tarjeta>
+      )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {SERVICIOS.map(({ campo, Icono }) => (

@@ -10,4 +10,8 @@ public class AccesoModeracionDenegadoException extends RuntimeException {
     public AccesoModeracionDenegadoException() {
         super("No autorizado: esta acción requiere rol de Moderación y Seguridad.");
     }
+
+    protected AccesoModeracionDenegadoException(String mensaje) {
+        super(mensaje);
+    }
 }

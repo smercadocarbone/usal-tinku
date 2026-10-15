@@ -55,7 +55,7 @@ Si no se alcanza con ningún valor, **pará y reportá la distribución al dueñ
 **Qué pasa:** `matching.busquedas_guardadas` solo tiene `texto_busqueda` (V7): los filtros (nivel, materia,
 precio máximo, orden) se pierden, se aceptan duplicados y no existe `DELETE`.
 
-1. Migración **`V48__m2_busquedas_guardadas_filtros.sql`** (la siguiente libre; confirmá con
+1. Migración **`V49__m2_busquedas_guardadas_filtros.sql`** (la siguiente libre; confirmá con
    `ls backend/src/main/resources/db/migration | sort -V | tail -1`):
    ```sql
    ALTER TABLE matching.busquedas_guardadas

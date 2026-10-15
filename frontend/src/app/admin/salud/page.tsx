@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import AdminInfrastructurePanel from "@/components/admin/AdminInfrastructurePanel";
 import { Alerta, Cargando } from "@/components/ui";
+import { useAdmin } from "@/components/admin/ContextoAdmin";
 import {
   getPasarelaEstado,
   getSaludSistema,
@@ -18,15 +19,20 @@ export default function AdminSaludPage() {
   const [bypassPermitido, setBypassPermitido] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { rol, rolResuelto } = useAdmin();
+  // R-F F-2 (T4-H5): la pasarela es de Soporte Financiero; para Moderación no se pide (daba 403
+  // y rompía toda la pantalla).
+  const vePasarela = rol === "soporte_financiero";
 
   useEffect(() => {
+    if (!rolResuelto) return;
     let activo = true;
-    Promise.all([getSaludSistema(), getPasarelaEstado()])
+    Promise.all([getSaludSistema(), vePasarela ? getPasarelaEstado() : Promise.resolve(null)])
       .then(([saludSistema, pasarelaEstado]) => {
         if (!activo) return;
         setSalud(saludSistema);
-        setPasarela(pasarelaEstado.habilitada);
-        setBypassPermitido(pasarelaEstado.bypassPermitido !== false);
+        setPasarela(pasarelaEstado ? pasarelaEstado.habilitada : true);
+        setBypassPermitido(pasarelaEstado ? pasarelaEstado.bypassPermitido !== false : true);
       })
       .catch((err) => {
         if (activo) setError(mensajeDeError(err, "No se pudo consultar el estado de infraestructura."));
@@ -37,7 +43,7 @@ export default function AdminSaludPage() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [rolResuelto, vePasarela]);
 
   async function alternarPasarela(habilitada: boolean) {
     const resultado = await setPasarelaEstado(habilitada);
@@ -62,6 +68,7 @@ export default function AdminSaludPage() {
             healthData={salud}
             isPaymentGatewayEnabled={pasarela}
             bypassPermitido={bypassPermitido}
+            mostrarPasarela={vePasarela}
             onTogglePaymentGateway={alternarPasarela}
           />
         )}

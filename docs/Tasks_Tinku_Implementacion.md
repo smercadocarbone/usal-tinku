@@ -352,6 +352,6 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-REM-C: Aula — cierre según el estado de la sesión (H-AULA-1), cartel "Verificando", contraste del título, `/dev/*` en 404 (`R-C-aula.md`).
 - [x] T-REM-D: Agenda — baja de franjas (decisión D-1, Spec M4), franjas contiguas, `/horarios` con duraciones largas, perfil público, picker (`R-D-agenda-franjas.md`).
 - [ ] T-REM-E: Búsqueda y perfil — calibración de relevancia, búsquedas guardadas con filtros (V48), comentarios públicos (`R-E-busqueda-perfil.md`). Decisiones D-3 y D-4.
-- [ ] T-REM-F: Admin y moderación — conflicto de interés, evidencia y denunciado en la cola, descargo con historial (V49), guard por rol (`R-F-admin-moderacion.md`). Depende de A y B.
+- [x] T-REM-F: Admin y moderación — conflicto de interés, evidencia y denunciado en la cola, descargo con historial (V49), guard por rol (`R-F-admin-moderacion.md`). Depende de A y B.
 - [ ] T-REM-G: Frontend — móvil, títulos, objetivos táctiles, contraste y foco, CSP en `Report-Only`, `admin/yo` (`R-G-frontend-a11y.md`). Depende de B.
 - [ ] T-REM-H: Seed — CAP aprobado para los Tutores autorizados de menores y franjas de 3 h (`R-H-seed.md`). Depende de D.

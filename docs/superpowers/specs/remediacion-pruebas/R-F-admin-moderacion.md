@@ -1,7 +1,7 @@
 # R-F — Admin y moderación
 
 **Tarea:** T-REM-F · **Rama:** `fix/rem-f-admin` · **Depende de:** chunk A (H-2 cola de CAP, H-4 guard de `/admin`) y B (B-10: `rolAdmin` en `/me`) · **Decisiones:** D-5, D-6
-Fuente: `hallazgos_parciales/T4.md` (H2–H13), `T5.md` (1, 3, 4). Migración nueva: **`V49__m9_descargo_historial.sql`**
+Fuente: `hallazgos_parciales/T4.md` (H2–H13), `T5.md` (1, 3, 4). Migración nueva: **`V48__m9_descargo_historial.sql`**
 (si otro chunk ya tomó el 49, usá el siguiente libre: `ls backend/src/main/resources/db/migration | sort -V | tail -1`).
 
 ## F-1 Mensaje falso en el 403 por conflicto de interés (T4-H2) y salida mínima para el admin único (T4-H3) — Dec D-5
@@ -47,7 +47,7 @@ no se muestra y `getSaludSistema()` carga sola. **Test (RED):** Playwright con r
 ## F-4 El segundo descargo pisa al primero (T4-H8) — Dec D-6
 
 `DenunciaService` (método de descargo, línea ~183) reemplaza `descargo_texto`. Con la decisión recomendada se conservan los dos.
-1. `V49__m9_descargo_historial.sql`:
+1. `V48__m9_descargo_historial.sql`:
    ```sql
    ALTER TABLE seguridad.denuncias ADD COLUMN descargo_historial TEXT;
    UPDATE seguridad.denuncias SET descargo_historial = descargo_texto WHERE descargo_texto IS NOT NULL;

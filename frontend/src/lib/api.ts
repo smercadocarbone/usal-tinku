@@ -428,6 +428,14 @@ export interface DenunciaCola {
   prioridadAlta: boolean;
   resueltaAt: string | null;
   createdAt: string;
+  /** R-F F-3: vista del admin. Nunca trae al denunciante (FR-SEC-006). */
+  evidenciaUrl?: string | null;
+  denunciadoNombre?: string | null;
+  denunciadoApellido?: string | null;
+  denunciadoTipo?: string | null;
+  descargoHistorial?: string | null;
+  /** R-F F-1: quien consulta es parte del caso; lo resuelve otro admin. */
+  conflicto?: boolean;
 }
 
 export interface ResolverDenunciaBody {
@@ -477,6 +485,11 @@ export interface PrecioRegional {
   valorSugerido: number;
   version: number;
   vigenteDesde: string;
+}
+
+/** R-F F-9: precios vigentes, una fila por provincia. */
+export function getPreciosRegionales(): Promise<PrecioRegional[]> {
+  return api.get("/api/admin/financiero/precios-regionales");
 }
 
 export function actualizarPrecioRegional(

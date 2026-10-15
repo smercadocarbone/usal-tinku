@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { inicioPorRol, payloadDeToken } from "@/lib/auth";
 import { iniciarSesion, siguienteSeguro } from "@/lib/sesion";
 import { Alerta, Boton, Campo } from "@/components/ui";
@@ -35,7 +35,14 @@ export default function LoginPage() {
     setError(null);
     try {
       const token = await iniciarSesion(dni, password);
-      router.replace(siguiente ?? inicioPorRol(payloadDeToken(token)));
+      let rolAdmin: string | null = null;
+      if (!siguiente) {
+        rolAdmin = await api
+          .get<{ rolAdmin?: string | null }>("/api/usuarios/me")
+          .then((me) => me.rolAdmin ?? null)
+          .catch(() => null);
+      }
+      router.replace(siguiente ?? inicioPorRol(payloadDeToken(token), rolAdmin));
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         setError(err.message || "Demasiados intentos. Probá de nuevo en unos minutos.");

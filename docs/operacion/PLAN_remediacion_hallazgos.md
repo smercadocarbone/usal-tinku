@@ -28,7 +28,7 @@
 3. **No reabras decisiones.** Las decisiones de §4 que figuran como "recomendada" son las que asumen las
    specs. Si el dueño cambió alguna, la spec afectada lo dice al principio.
 4. Los plazos salen de `Tabla_Tiempos_Tinku.md`; migraciones nuevas desde `V48__` (hoy la última es `V47`); no se
-   editan las aplicadas; eventos de dominio: ninguno nuevo (AGENTS §4). Migraciones previstas: R-E `V48`, R-F `V49`.
+   editan las aplicadas; eventos de dominio: ninguno nuevo (AGENTS §4). Migraciones: R-F `V48`, R-E `V49` (se invirtió al implementar: F se mergea antes que E en la cadena de ramas y Flyway aplica en orden de versión).
    Si dos ramas en paralelo toman el mismo número, **la segunda en mergear renumera la suya** antes de mergear.
 5. Verificación antes de cada commit:
    - Backend, desde `backend/`: `JAVA_HOME=<jdk21> ./mvnw -B test`. **Leé la línea `Tests run:`**: nunca

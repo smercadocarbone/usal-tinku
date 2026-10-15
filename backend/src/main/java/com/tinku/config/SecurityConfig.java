@@ -142,6 +142,10 @@ public class SecurityConfig {
                 // rol — sigue siendo necesario para distinguir Moderación de
                 // Soporte Financiero — pero cierra el filter chain contra un
                 // endpoint admin nuevo que se agregue sin el gate.
+                .requestMatchers("/api/admin/financiero/**")
+                        .access(adminActivoAuthorizationManager.conRol(com.tinku.admin.model.RolAdmin.SOPORTE_FINANCIERO))
+                .requestMatchers("/api/admin/moderacion/**")
+                        .access(adminActivoAuthorizationManager.conRol(com.tinku.admin.model.RolAdmin.MODERACION_SEGURIDAD))
                 .requestMatchers("/api/admin/**").access(adminActivoAuthorizationManager)
                 .anyRequest().authenticated()
             )

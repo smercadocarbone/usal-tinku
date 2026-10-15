@@ -50,6 +50,22 @@ function formatFecha(iso: string | null): string {
   });
 }
 
+/** R-F F-3: el enlace solo se muestra si es http(s); cualquier otro esquema se descarta. */
+function urlSegura(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function nombreDenunciado(d: DenunciaCola): string {
+  const nombre = [d.denunciadoNombre, d.denunciadoApellido].filter(Boolean).join(" ");
+  return nombre || `#${d.denunciadoId.slice(0, 8)}`;
+}
+
 function FormularioResolucion({
   denuncia,
   onResuelto,
@@ -58,12 +74,16 @@ function FormularioResolucion({
   onResuelto: (id: string) => void;
 }) {
   const [resolucion, setResolucion] = useState<ResolucionDenuncia>("infundada");
-  const [tipoSancion, setTipoSancion] = useState<TipoSancion>("advertencia");
+  // R-F F-5 (T4-H9): sin sanción preelegida; un clic no compromete una acción irreversible.
+  const [tipoSancion, setTipoSancion] = useState<TipoSancion | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
   const [diasSuspension, setDiasSuspension] = useState("7");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function confirmar() {
+    if (resolucion === "fundada" && !tipoSancion) return;
+    setConfirmando(false);
     setEnviando(true);
     setError(null);
     try {
@@ -73,7 +93,7 @@ function FormularioResolucion({
         // (FR-SEC-009): no hace falta ni se pide tipoSancion acá.
         ...(resolucion === "fundada"
           ? {
-              tipoSancion,
+              tipoSancion: tipoSancion ?? undefined,
               ...(tipoSancion === "suspension_temporal"
                 ? { diasSuspension: Number(diasSuspension) || 1 }
                 : {}),
@@ -119,9 +139,10 @@ function FormularioResolucion({
           <CampoSelect
             id={`sancion-${denuncia.id}`}
             etiqueta="Tipo de sanción"
-            value={tipoSancion}
-            onChange={(e) => setTipoSancion(e.target.value as TipoSancion)}
+            value={tipoSancion ?? ""}
+            onChange={(e) => setTipoSancion((e.target.value || null) as TipoSancion | null)}
           >
+            <option value="">Elegí una sanción</option>
             {(Object.keys(ETIQUETA_SANCION) as TipoSancion[]).map((t) => (
               <option key={t} value={t}>
                 {ETIQUETA_SANCION[t]}
@@ -147,12 +168,27 @@ function FormularioResolucion({
       <Boton
         tamano="sm"
         className="w-fit"
-        onClick={confirmar}
+        onClick={() => (resolucion === "infundada" ? void confirmar() : setConfirmando(true))}
+        disabled={resolucion === "fundada" && !tipoSancion}
         cargando={enviando}
         textoCargando="Resolviendo…"
       >
         Confirmar resolución
       </Boton>
+
+      <ModalConfirmacion
+        abierto={confirmando}
+        onCerrar={() => setConfirmando(false)}
+        onConfirmar={confirmar}
+        titulo="¿Resolver la denuncia?"
+        textoConfirmar="Sí, resolver"
+        textoCancelar="Cancelar"
+        cargando={enviando}
+      >
+        {resolucion === "escalada"
+          ? `¿Escalar el caso de ${nombreDenunciado(denuncia)}? Se aplica la suspensión definitiva. No se puede deshacer.`
+          : `¿Resolver como fundada con ${tipoSancion ? ETIQUETA_SANCION[tipoSancion].toLowerCase() : ""} para ${nombreDenunciado(denuncia)}? No se puede deshacer.`}
+      </ModalConfirmacion>
     </div>
   );
 }
@@ -184,7 +220,7 @@ function FilaDenuncia({
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Denunciado #{denuncia.denunciadoId.slice(0, 8)}
+            Denunciado: {nombreDenunciado(denuncia)}
             {denuncia.sesionId && ` · Sesión #${denuncia.sesionId.slice(0, 8)}`} · Recibida{" "}
             {formatFecha(denuncia.createdAt)}
           </p>
@@ -196,7 +232,20 @@ function FilaDenuncia({
         )}
       </div>
 
-      {denuncia.descargoTexto && (
+      {urlSegura(denuncia.evidenciaUrl) && (
+        <p className="mt-3 text-sm">
+          <a href={urlSegura(denuncia.evidenciaUrl)!} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+            Ver evidencia
+          </a>
+        </p>
+      )}
+
+      {denuncia.descargoHistorial && denuncia.descargoHistorial.includes("\n---\n") ? (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+          <p className="mb-1 text-xs font-semibold text-slate-500">Descargos (del primero al último):</p>
+          <p className="whitespace-pre-line">{denuncia.descargoHistorial.replaceAll("\n---\n", "\n\n")}</p>
+        </div>
+      ) : denuncia.descargoTexto && (
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
           <p className="mb-1 text-xs font-semibold text-slate-500">
             Descargo ({formatFecha(denuncia.descargoVenceAt)} vencimiento):
@@ -206,9 +255,17 @@ function FilaDenuncia({
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Boton variante="secundario" tamano="sm" onClick={() => setAbierta((v) => !v)}>
+        <Boton
+          variante="secundario"
+          tamano="sm"
+          onClick={() => setAbierta((v) => !v)}
+          disabled={denuncia.conflicto === true}
+        >
           {abierta ? "Ocultar resolución" : "Resolver"}
         </Boton>
+        {denuncia.conflicto && (
+          <span className="text-sm text-tinta-suave">Sos parte de este caso: lo tiene que resolver otro admin.</span>
+        )}
         <Menu
           etiqueta="Moderar el perfil del denunciado"
           items={[
