@@ -6,6 +6,13 @@
 > explícita (§6). Las specs que ejecuta el modelo implementador están en
 > `docs/superpowers/specs/remediacion-pruebas/` (más `m3c/M3C-10-hallazgos-menores.md`, que ya existe).
 
+**Versión 2 (2026-10-15).** Cambios respecto de la primera versión:
+- las decisiones de §4 quedan **adoptadas** (el dueño delegó la elección en la recomendación);
+- estrategia de ramas apiladas y orden de ejecución definitivo (§5);
+- registro de riesgos y vuelta atrás por chunk (§5.1);
+- plan B para la calibración de la búsqueda cuando el modelo de embeddings no puede levantarse (§5.2);
+- entorno de verificación: la suite del backend corre con Testcontainers, así que necesita Docker (§2.5).
+
 ## 1. Estado de partida y qué manda
 
 - **0 bloqueantes.** Hay 3 hallazgos altos (T3-01, T4-H1, T2-H1) y un patrón transversal (TRANS-1).
@@ -28,6 +35,8 @@
      afirmes que pasa por el exit code. Baseline al cerrar M3-C: ≥ 661 tests, 0 failures, 0 errors;
      cobertura ≥ 85,6 %.
    - Frontend, desde `frontend/`: `npm run lint`, `npm run build`, `npx playwright test`.
+   - **Docker:** los tests de integración levantan `pgvector/pgvector:pg16` con Testcontainers. En un entorno
+     sin daemon: `dockerd &` y exportar `TESTCONTAINERS_RYUK_DISABLED=true` (evita bajar la imagen de Ryuk).
 6. Al cerrar un chunk: tildá su tarea (`T-REM-*`) en `Tasks_Tinku_Implementacion.md` **y** actualizá
    `Tasks_Tinku_Chunks.md` en el mismo commit (AGENTS §8); marcá los hallazgos cerrados en
    `HALLAZGOS_pruebas.md` / `HALLAZGOS_aula_en_vivo.md` con el commit.
@@ -46,14 +55,17 @@
 | O-7 | **Nombrar un segundo admin de Moderación** (`INSERT INTO admin.admins`, RUNBOOK §2.5) | Con uno solo, una denuncia donde es parte queda sin salida (T4-H3). Mitigación sin código | Un admin distinto puede resolver una denuncia del otro |
 | O-8 | **Cargar los precios regionales** (`/admin/precios`) o confirmar que está vacío a propósito | `precios-regionales` devuelve `[]`: el Tutor no tiene referencia de precio (T5-H4) | `GET /api/pagos/precio-referencia/{provincia}` devuelve un valor |
 | O-9 | HSTS de `api.tinku.site`: en Cloudflare, *SSL/TLS → Edge Certificates → HSTS* sobre la zona (cubre el subdominio) | T6: falta la cabecera en la API. Se arregla en el borde, no en el código | `curl -I https://api.tinku.site/actuator/health` trae `strict-transport-security` |
+| O-11 | Correr la calibración de la búsqueda si E-1 quedó en plan B (§5.2): `matching-service/tests/eval_relevancia/evaluar.py` contra staging o producción | El experimento necesita el modelo real | `CALIBRACION_busqueda.md` con números |
 | O-10 | Medir la latencia del clasificador en un celular real (página `/diagnostico/clasificador`, `M3C-07`) | Los números son de un Chromium con la CPU frenada | Anexo de ADR-M3-01 |
 
-## 4. Decisiones de producto necesarias
+## 4. Decisiones de producto — **adoptadas el 2026-10-15**
 
-Cada una trae la recomendación que asumen las specs. Hasta que respondas, el implementador avanza con la
-recomendada en los chunks que no dependen de la decisión (se indica en §5).
+> El dueño pidió ejecutar sin consultarle: se adopta la recomendación de cada fila. D-8 (PWA) queda en "no"
+> para el piloto; solo se hacen los íconos y el `favicon`, que no tienen riesgo. Cualquier cambio posterior
+> del dueño se hace como un chunk nuevo, no reescribiendo estos.
 
-| # | Decisión | Recomendada | Afecta |
+
+| # | Decisión | Adoptada | Afecta |
 |---|----------|-------------|--------|
 | **D-1** | **Baja de franjas del Tutor** (hueco del Spec M4, T2-H1): ¿qué pasa con las clases ya reservadas dentro de la franja? | Quitar una franja es una **baja lógica** (`activa=false`) que no toca las reservas ya hechas: esas clases se mantienen. La pantalla avisa cuántas hay | R-D |
 | D-2 | **Franjas contiguas** (T1-M2): un Tutor con 15 franjas de 1 h seguidas no puede ofrecer clases de más de 1 h | Unir las franjas contiguas **al calcular horarios y validar reservas**, sin cambiar lo guardado | R-D |
@@ -80,6 +92,36 @@ recomendada en los chunks que no dependen de la decisión (se indica en §5).
 
 Los chunks de una misma ola son independientes entre sí y pueden ir en paralelo (ramas distintas).
 Orden recomendado dentro de la ola 2: **D** (rompe flujos), **B**, **C**, **F**, **E**.
+
+### Estrategia de ramas (definitiva)
+
+Ramas **apiladas**, una por chunk, en el orden de ejecución: `fix/rem-a` sale de `main` con el plan,
+`fix/rem-d` sale de `fix/rem-a`, y así: **A → D → B → C → F → E → G → H**. Cada rama compila y deja la suite
+verde. Para integrar alcanza con mergear la última (`fix/rem-h`), que contiene todo, o ir mergeando en orden.
+El orden pone primero lo que afecta a menores (A) y lo que rompe un flujo (D); B va antes de F y G porque
+estos usan `rolAdmin` de `/api/usuarios/me` (B-10).
+
+### 5.1 Riesgos y vuelta atrás
+
+| Chunk | Riesgo principal | Mitigación | Vuelta atrás |
+|---|---|---|---|
+| A | Permitir el dispatch `ERROR` abre algo que antes negaba | Test `rutaProtegida_sinJwt_sigue403`; `/error` solo muestra status y mensaje | Revertir el commit de `SecurityConfig` |
+| B | Mensajes que el front compara por texto | El front decide por `codigo` (R5); buscar textos con `rg` antes de cambiar | Revertir el commit del ítem |
+| C | Llamar al backend en `Disconnected` agrega latencia al cierre | Hasta 3 reintentos de 1 s; si falla, cae en "esperando" como hoy | Revertir el commit del front |
+| D | Unir franjas cambia qué horarios se ofrecen y validan | Tests de límites y regresión de AUD-025; la base sigue impidiendo superposiciones (V30) | Revertir; los datos no cambian (sin migración) |
+| E | El corte relativo puede ocultar resultados válidos | Criterio medible sobre un set de consultas; valores en variables de entorno | `MATCHING_MARGEN_RELATIVO=1` desactiva el corte relativo sin redeploy de código |
+| F | Guard por rol en la cadena de filtros niega algo legítimo | Regresión sobre todos los IT de admin | Revertir el commit de `SecurityConfig` |
+| G | CSP rompe recursos en silencio | Solo `Report-Only`; nunca se pasa a obligatoria en este chunk | Sacar la cabecera de `next.config.js` |
+| H | El seed nuevo no aplica a bases ya sembradas | Documentado; es idempotente | No aplica |
+
+### 5.2 Plan B de la calibración de la búsqueda (E-1)
+
+El experimento necesita el `matching-service` con el modelo de embeddings real. Si no se puede levantar en el
+entorno de trabajo (sin acceso al modelo, sin memoria), se implementan igual las dos protecciones que **no
+dependen** de calibrar: la validación mínima del texto ("a", "asdkjh qwezxc" → vacío por regla) y el corte
+relativo con un margen conservador por defecto (`0,10` del mejor puntaje). El informe
+`CALIBRACION_busqueda.md` queda con el set de consultas y el script listos, y el dueño corre la calibración
+contra producción o staging (acción O-11).
 
 ## 6. Trazabilidad: cada hallazgo y qué se hace con él
 
