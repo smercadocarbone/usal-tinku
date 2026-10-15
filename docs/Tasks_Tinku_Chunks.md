@@ -261,6 +261,6 @@ sub-ítem 7 de AUD-036 (lock de la carga lazy del embedder). Detalle y tests de 
 - [x] **Chunk REM-E** — Búsqueda y perfil público (`R-E-busqueda-perfil.md`) — _decisiones D-3 y D-4; V48._
 - [x] **Chunk REM-F** — Admin y moderación (`R-F-admin-moderacion.md`) — _depende de REM-A y REM-B; V49._
 - [x] **Chunk REM-G** — Frontend: móvil, accesibilidad y cabeceras (`R-G-frontend-a11y.md`) — _depende de REM-B._
-- [ ] **Chunk REM-H** — Datos del seed (`R-H-seed.md`) — _depende de REM-D._
+- [x] **Chunk REM-H** — Datos del seed (`R-H-seed.md`) — _depende de REM-D._
 
 _Plan, decisiones de producto y trazabilidad de cada hallazgo: `docs/operacion/PLAN_remediacion_hallazgos.md`. Specs: `docs/superpowers/specs/remediacion-pruebas/`._

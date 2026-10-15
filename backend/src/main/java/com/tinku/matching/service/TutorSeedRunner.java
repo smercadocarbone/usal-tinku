@@ -46,9 +46,14 @@ import java.util.UUID;
  * más de un resultado por temática.
  *
  * <p>Además deja a cada Tutor del seed reservable: tarifa (M5, solo si no tiene)
- * y franjas semanales de 1 hora de 08 a 23 todos los días (M4, solo si no tiene
- * ninguna). Las franjas son de 1 hora porque la duración de la Sesión ES la de
- * la franja que cubre el horario (FR-RES-023, {@code duracionFranjaQueCubre}).
+ * y franjas semanales de 3 horas de 08 a 23 todos los días (M4, solo si no tiene
+ * ninguna): 5 por día, 35 por Tutor. Son de 3 horas porque es el máximo de una franja
+ * (FR-RES-024) y la duración de la clase la elige quien reserva (FR-RES-023, D6); las
+ * contiguas se unen al reservar (R-D D-2). Antes eran 105 franjas de 1 hora (R-H H-2).
+ *
+ * <p>R-H H-1 (T3-06): los Tutores que {@code EstudianteSeedRunner} autoriza para los menores
+ * del seed reciben un CAP aprobado y vigente (12 meses, Tabla de Tiempos): sin él, la regla
+ * FR-ID-026 rechaza volver a autorizarlos y reservarles una clase con un menor.
  *
  * <p>Los embeddings NO se calculan acá (los calcula el servicio Python): después
  * del primer arranque hay que llamar a {@code POST /recompute-embeddings}.
@@ -62,6 +67,12 @@ public class TutorSeedRunner implements CommandLineRunner {
 
     private static final LocalTime PRIMERA_FRANJA = LocalTime.of(8, 0);
     private static final LocalTime FIN_ULTIMA_FRANJA = LocalTime.of(23, 0);
+    /** FR-RES-024: la franja más larga que se puede publicar. */
+    private static final int HORAS_POR_FRANJA = 3;
+    /** Tabla de Tiempos: vigencia del CAP. */
+    private static final int MESES_VIGENCIA_CAP = 12;
+    /** Los Tutores autorizados para los menores en {@code EstudianteSeedRunner.MENORES}. */
+    static final List<String> TUTORES_CON_CAP = List.of("30777888", "30111222", "31000005", "31000028", "31000030");
 
     private final UsuarioRepository usuarioRepo;
     private final PasswordEncoder passwordEncoder;
@@ -118,14 +129,42 @@ public class TutorSeedRunner implements CommandLineRunner {
             }
         }
 
-        if (!creados.isEmpty() || reservables > 0) {
-            log.info("Seed de tutores: {} creados, {} con tarifa/franjas nuevas. Login con DNI + '{}' ({}). "
-                            + "Recordá POST /recompute-embeddings en el servicio de matching.",
-                    creados.size(), reservables, PASSWORD_DEV, PORTAL_DEBUG_MENSAJE);
+        int caps = 0;
+        for (String dni : TUTORES_CON_CAP) {
+            UUID tutorId = usuarioRepo.findByDni(dni).map(Usuario::getId).orElse(null);
+            if (tutorId != null && capVigente(tutorId)) {
+                caps++;
+            }
+        }
+
+        if (!creados.isEmpty() || reservables > 0 || caps > 0) {
+            log.info("Seed de tutores: {} creados, {} con tarifa/franjas nuevas, {} CAP aprobados nuevos. "
+                            + "Login con DNI + '{}' ({}). Recordá POST /recompute-embeddings en el servicio de matching.",
+                    creados.size(), reservables, caps, PASSWORD_DEV, PORTAL_DEBUG_MENSAJE);
         }
     }
 
-    /** Tarifa + franjas semanales de 1h; no pisa lo que el Tutor ya haya cargado. */
+    /**
+     * CAP aprobado y vigente sin archivo real (el seed no lleva documento: {@code archivo_url} es un
+     * marcador). Solo si el Tutor no tiene ya uno aprobado y vigente.
+     */
+    private boolean capVigente(UUID tutorId) {
+        LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
+        Integer vigentes = jdbc.queryForObject("""
+                SELECT count(*) FROM identidad.certificados_antecedentes_penales
+                 WHERE tutor_id = ? AND estado = 'APROBADO' AND vence_at >= ?""", Integer.class, tutorId, hoy);
+        if (vigentes != null && vigentes > 0) {
+            return false;
+        }
+        jdbc.update("""
+                INSERT INTO identidad.certificados_antecedentes_penales
+                    (tutor_id, archivo_url, fecha_emision, vence_at, estado, tiene_antecedentes, numero_intento)
+                VALUES (?, 'seed-demo', ?, ?, 'APROBADO', FALSE, 1)""",
+                tutorId, hoy, hoy.plusMonths(MESES_VIGENCIA_CAP));
+        return true;
+    }
+
+    /** Tarifa + franjas semanales de 3 h; no pisa lo que el Tutor ya haya cargado. */
     private boolean dejarReservable(UUID tutorId, BigDecimal tarifa) {
         int tarifas = jdbc.update("""
                         INSERT INTO pagos.tarifas_tutor (tutor_id, precio_hora)
@@ -139,8 +178,8 @@ public class TutorSeedRunner implements CommandLineRunner {
         }
         List<Object[]> filas = new ArrayList<>();
         for (short dia = 0; dia <= 6; dia++) {
-            for (LocalTime h = PRIMERA_FRANJA; h.isBefore(FIN_ULTIMA_FRANJA); h = h.plusHours(1)) {
-                filas.add(new Object[]{tutorId, dia, h, h.plusHours(1)});
+            for (LocalTime h = PRIMERA_FRANJA; h.isBefore(FIN_ULTIMA_FRANJA); h = h.plusHours(HORAS_POR_FRANJA)) {
+                filas.add(new Object[]{tutorId, dia, h, h.plusHours(HORAS_POR_FRANJA)});
             }
         }
         jdbc.batchUpdate("""

@@ -163,3 +163,5 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T2-H5, T2-H6, T2-H7 (cobros y precio) | **Cerrado** | `fix/rem-g` | REM-G-008/009 |
 | T6 (CSP) | **En observación**: `Content-Security-Policy-Report-Only`; pasar a aplicar es O-12 | `fix/rem-g` | REM-G-010 |
 | T1-7, T2-H12 (`/api/admin/yo`) | **Cerrado** (front usa `rolAdmin` de `/me`) | `fix/rem-g` | REM-G-011 |
+| T3-06 (Tutores autorizados sin CAP en el seed) | **Cerrado** para bases nuevas; en la base actual, los CAP se crean al próximo arranque con `seed-demo` (el runner es idempotente) | `fix/rem-h` | `SeedDemoIntegracionTest.losTutoresAutorizadosDeLosMenoresTienenCapVigente` |
+| T1-2 (franjas de 1 h del seed) | **Cerrado** para bases nuevas (35 franjas de 3 h); una base con el seed viejo conserva las suyas, que con REM-D ya se unen al reservar | `fix/rem-h` | `lasFranjasDelSeedSonDeTresHoras` |
