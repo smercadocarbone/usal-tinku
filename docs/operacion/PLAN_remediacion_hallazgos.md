@@ -13,6 +13,34 @@
 - plan B para la calibración de la búsqueda cuando el modelo de embeddings no puede levantarse (§5.2);
 - entorno de verificación: la suite del backend corre con Testcontainers, así que necesita Docker (§2.5).
 
+## 0. Estado de la implementación (2026-10-15)
+
+Los 8 chunks de código están implementados, con test RED antes de cada arreglo, en ramas apiladas
+(cada una parte de la anterior, así que **`fix/rem-h` contiene todo**):
+
+| Orden | Rama | Qué cierra |
+|---|---|---|
+| 1 | `fix/rem-a` | Menor no cambia capacidades (T3-01), cola de CAP (T4-H1), errores 400/413 con cuerpo (TRANS-1), rutas por perfil (T3-03, T5-1, T7-M3) |
+| 2 | `fix/rem-d` | Baja de franjas, franjas contiguas, `/disponibilidad`, validaciones de franjas, picker y pedido previo |
+| 3 | `fix/rem-b` | Mensajes en castellano, UTF-8, enums, 404 para lo ajeno, MP 404, tarifa, guard, contacto en la bio, `rolAdmin` en `/me`, 404 de admin |
+| 4 | `fix/rem-c` | Cierre del aula por estado del backend, aviso, contraste, `/dev` 404 en producción |
+| 5 | `fix/rem-f` | Conflicto de interés, cola de denuncias, historial de descargos (`V48`), CAP, rol antes que validación, panel por rol |
+| 6 | `fix/rem-e` | Relevancia calibrada con el modelo real (`CALIBRACION_busqueda.md`), búsquedas guardadas (`V49`), comentarios del perfil, filtro de materia |
+| 7 | `fix/rem-g` | Móvil, títulos, objetivos táctiles, contraste y foco, un h1, textos de precio y cobros, CSP Report-Only, íconos |
+| 8 | `fix/rem-h` | CAP del seed para los Tutores de menores, franjas del seed de 3 h |
+
+**Verificación sobre `fix/rem-h`:** backend `mvnw verify` (JDK 21) **738 tests, 0 failures, 0 errors, 5 skipped**
+(los de Tesseract), cobertura de líneas **86,2 %**; frontend `next build` OK, `oxlint` sin errores, Playwright
+**220 passed, 3 skipped** (los 3 de `/dev` corren contra `next start`: 3/3 OK); `matching-service` pytest 26/26.
+
+**Desvíos respecto del plan, todos documentados en su spec:** las migraciones quedaron `V48` (F) y `V49` (E),
+invertidas para respetar el orden de merge; el umbral de relevancia salió de una medición real (0,46 y margen
+0,25), no del plan B; la CSP queda en `Report-Only` hasta O-12.
+
+**Pendiente, todo del dueño (Ola 0 y nuevas):** O-1 a O-13 de la tabla de §3, en particular O-1 (reactivar la
+pasarela), O-3 (rotar la clave de los admins), O-6 (script de limpieza), O-7 (segundo admin), O-12 (CSP) y O-13
+(`MATCHING_SCORE_MINIMO` en Coolify). Nada de esto lo hace el agente.
+
 ## 1. Estado de partida y qué manda
 
 - **0 bloqueantes.** Hay 3 hallazgos altos (T3-01, T4-H1, T2-H1) y un patrón transversal (TRANS-1).
