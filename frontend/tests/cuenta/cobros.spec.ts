@@ -40,7 +40,7 @@ test.describe("Mis cobros del tutor", () => {
       await expect(page.getByRole("heading", { name: "Conectá tu MercadoPago" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Conectar MercadoPago" })).toBeVisible();
       await expect(page.getByRole("link", { name: "Clase con Lucas Díaz" })).toBeVisible();
-      await expect(page.getByText("Por cobrar").last()).toBeVisible();
+      await expect(page.getByText("En plazo de reclamo").last()).toBeVisible();
       await expect(page.getByRole("main").getByText(/10\.950/).first()).toBeVisible();
     }
   );

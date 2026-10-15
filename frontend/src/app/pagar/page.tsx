@@ -271,7 +271,7 @@ function PagarFlujo() {
           ) : (
             <p className="flex gap-2.5 text-sm text-tinta-suave">
               <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
-              El dinero queda retenido y se le libera al tutor {TIEMPOS.liberacionHoras} hs después de la clase. Si cancelás con más de {TIEMPOS.cancelacionSinPenalidadHoras} hs, te lo devolvemos entero.
+              El pago va a la cuenta de MercadoPago del tutor; hasta {TIEMPOS.liberacionHoras} hs después de la clase podés reclamar y, si corresponde, te lo devolvemos. Si cancelás con más de {TIEMPOS.cancelacionSinPenalidadHoras} hs, te lo devolvemos entero.
             </p>
           )}
           <Boton

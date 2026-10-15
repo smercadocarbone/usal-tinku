@@ -22,7 +22,7 @@ import { fechaHoraLarga } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 
 const ESTADOS: Record<EstadoCobro, { texto: string; tono: TonoInsignia }> = {
-  retenido: { texto: "Por cobrar", tono: "info" },
+  retenido: { texto: "En plazo de reclamo", tono: "info" },
   en_revision: { texto: "En revisión", tono: "aviso" },
   liberado: { texto: "Cobrado", tono: "exito" },
   reembolsado: { texto: "Devuelto al alumno", tono: "neutro" },
@@ -152,14 +152,15 @@ function MisCobrosContenido() {
             <p className="mt-6 text-sm text-tinta-suave">Los pagos simulados (pruebas) no suman a los totales.</p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Total titulo="Por cobrar" valor={cobros.retenido} />
+            <Total titulo="En plazo de reclamo" valor={cobros.retenido} />
             <Total titulo="En revisión" valor={cobros.enRevision} />
             <Total titulo="Cobrado" valor={cobros.liberado} />
             <Total titulo="Devuelto" valor={cobros.reembolsado} />
           </div>
           <ExportarMes />
           <p className="mt-3 text-sm text-tinta-tenue">
-            Cada clase queda &quot;por cobrar&quot; hasta {TIEMPOS.liberacionHoras} hs después de darla. &quot;En revisión&quot; quiere
+            El pago entra a tu cuenta de MercadoPago con los plazos de tu cuenta. Hasta {TIEMPOS.liberacionHoras} hs después de la clase,
+            Tinku todavía puede devolvérselo al alumno; después pasa a &quot;Cobrado&quot;. &quot;En revisión&quot; quiere
             decir que el equipo de Tinku está revisando algo de esa clase.
           </p>
 

@@ -253,7 +253,7 @@ export default function TutorPerfilPage() {
             <ul className="flex list-none flex-col gap-3 p-0 text-sm text-tinta-suave">
               <li className="flex gap-2.5">
                 <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
-                Pagás al reservar; al tutor se le libera {TIEMPOS.liberacionHoras} hs después de la clase.
+                Pagás al reservar; hasta {TIEMPOS.liberacionHoras} hs después de la clase podés reclamar si hubo un problema.
               </li>
               <li className="flex gap-2.5">
                 <CalendarDays className="size-5 shrink-0 text-marca-700" aria-hidden />

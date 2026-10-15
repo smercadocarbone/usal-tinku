@@ -388,8 +388,8 @@ export default function ReservaDetallePage() {
           </p>
         ) : r.cancelarReembolsaTotal === false ? (
           <p>
-            <strong className="text-tinta">Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} hs:</strong> si cancelás ahora, el pago se le libera
-            al tutor y no hay devolución.
+            <strong className="text-tinta">Faltan menos de {TIEMPOS.cancelacionSinPenalidadHoras} hs:</strong> si cancelás ahora, el tutor
+            cobra la clase y no hay devolución.
           </p>
         ) : esTutor ? (
           <p>Si cancelás, le devolvemos el total a quien pagó la clase.</p>

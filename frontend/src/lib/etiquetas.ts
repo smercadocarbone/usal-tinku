@@ -78,8 +78,8 @@ export const ETIQUETA_ESTADO_TICKET: Record<string, string> = {
 
 // Transacción de pago (escrow) — backend `pagos.model.EstadoTransaccion`.
 export const ETIQUETA_ESTADO_PAGO: Record<string, string> = {
-  retenido_escrow: "Retenido hasta después de la clase",
-  liberado: "Liberado al tutor",
+  retenido_escrow: "Pagado, con plazo de reclamo abierto",
+  liberado: "Plazo de reclamo cerrado",
   reembolsado: "Reembolsado",
   pausado_denuncia: "Pausado por denuncia",
 };

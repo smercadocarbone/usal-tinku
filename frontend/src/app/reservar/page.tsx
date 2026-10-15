@@ -560,7 +560,7 @@ function ReservarFlujo() {
               {!esMenor && (
                 <p className="flex gap-2.5 rounded-2xl bg-fondo p-3.5 text-sm text-tinta-suave">
                   <ShieldCheck className="size-5 shrink-0 text-marca-700" aria-hidden />
-                  Pagás ahora (tenés {TIEMPOS.pagoMinutos} minutos); el dinero queda retenido y se le libera al tutor {TIEMPOS.liberacionHoras} hs después de la clase.
+                  Pagás ahora (tenés {TIEMPOS.pagoMinutos} minutos); el pago va a la cuenta de MercadoPago del tutor y, hasta {TIEMPOS.liberacionHoras} hs después de la clase, podés reclamar si hubo un problema.
                 </p>
               )}
             </Tarjeta>

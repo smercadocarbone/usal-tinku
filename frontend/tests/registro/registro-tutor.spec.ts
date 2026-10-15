@@ -44,7 +44,7 @@ test.describe("Registro de Tutor", () => {
       // Términos propios del tutor, distintos de los del alumno.
       await expect(page.getByRole("heading", { name: "Sos un tutor independiente" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Tu foto es obligatoria" })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Pagás al reservar, el tutor cobra después" })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Pagás al reservar y podés reclamar" })).toHaveCount(0);
       await page.getByLabel("Acepto los Términos y Condiciones").check();
       await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByLabel("Contraseña", { exact: true }).fill("unaClaveSegura1");
