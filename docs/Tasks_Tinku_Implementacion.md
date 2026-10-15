@@ -350,7 +350,7 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-REM-A: Ola 1 — seguridad del menor y errores 403: T3-01, T4-H1, TRANS-1, T3-03 (es **T-M3-06j**, spec `m3c/M3C-10-hallazgos-menores.md`).
 - [ ] T-REM-B: Robustez de la API — mensajes en español, UTF-8 en el 403 de admin, enums, 403/404, `confirmar-retorno`, tarifa, `rolAdmin` en `/me` (`R-B-api-robustez.md`). Depende de A.
 - [ ] T-REM-C: Aula — cierre según el estado de la sesión (H-AULA-1), cartel "Verificando", contraste del título, `/dev/*` en 404 (`R-C-aula.md`).
-- [ ] T-REM-D: Agenda — baja de franjas (decisión D-1, Spec M4), franjas contiguas, `/horarios` con duraciones largas, perfil público, picker (`R-D-agenda-franjas.md`).
+- [x] T-REM-D: Agenda — baja de franjas (decisión D-1, Spec M4), franjas contiguas, `/horarios` con duraciones largas, perfil público, picker (`R-D-agenda-franjas.md`).
 - [ ] T-REM-E: Búsqueda y perfil — calibración de relevancia, búsquedas guardadas con filtros (V48), comentarios públicos (`R-E-busqueda-perfil.md`). Decisiones D-3 y D-4.
 - [ ] T-REM-F: Admin y moderación — conflicto de interés, evidencia y denunciado en la cola, descargo con historial (V49), guard por rol (`R-F-admin-moderacion.md`). Depende de A y B.
 - [ ] T-REM-G: Frontend — móvil, títulos, objetivos táctiles, contraste y foco, CSP en `Report-Only`, `admin/yo` (`R-G-frontend-a11y.md`). Depende de B.

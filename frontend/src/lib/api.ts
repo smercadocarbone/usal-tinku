@@ -1068,3 +1068,29 @@ export function getTemasSugeridos(): Promise<TemaPedido[]> {
 export function resolverTemaPedido(id: string): Promise<void> {
   return api.delete(`/api/admin/temas-sugeridos/${id}`);
 }
+
+/* ---- M4 — Agenda del Tutor (R-D, FR-RES-025) ---- */
+export interface FranjaQuitada {
+  id: string;
+  reservasFuturasEnLaFranja: number;
+}
+
+/** Baja lógica de una franja propia: las clases ya reservadas se mantienen. */
+export function quitarFranja(id: string): Promise<FranjaQuitada> {
+  return api.delete(`/api/tutores/franjas/${id}`);
+}
+
+export interface RangoLibre {
+  desde: string;
+  hasta: string;
+}
+
+export interface DiaDisponible {
+  fecha: string;
+  rangos: RangoLibre[];
+}
+
+/** Rangos libres reales del Tutor (sin lo ya reservado ni lo que ya pasó) para el perfil público. */
+export function getDisponibilidadTutor(tutorId: string, dias = 7): Promise<DiaDisponible[]> {
+  return api.get(`/api/tutores/${tutorId}/disponibilidad?dias=${dias}`);
+}

@@ -98,7 +98,7 @@ public class SolicitudService {
             throw new DuracionMinutosInvalidaException(
                     "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
         }
-        if (franjaService.franjaQueContiene(tutor.getId(), horario, duracion).isEmpty()) {
+        if (!franjaService.cabeEnDisponibilidad(tutor.getId(), horario, duracion)) {
             throw new HorarioFueraDeFranjaException(
                     "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }

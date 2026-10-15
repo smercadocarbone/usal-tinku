@@ -124,3 +124,10 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T4-H1 | **Cerrado** | `fix/rem-a` | `AdminCapColaIntegracionTest` |
 | TRANS-1 (T1-4, T2-H4, T3-04, T4-H4 parte, T5-3, T6-19) | **Cerrado** | `fix/rem-a` | `ErroresHttpIntegracionTest` (servidor real) |
 | T3-03, T5-1, T7-M3 | **Cerrado** | `fix/rem-a` | `frontend/tests/cuenta/menor-rutas.spec.ts` |
+| T2-H1 | **Cerrado** (Spec M4 FR-RES-025) | `fix/rem-d` | `AgendaFranjasIntegracionTest.quitar_*`, `agenda-rem-d.spec.ts` AGENDA-003 |
+| T1-M2, T1-M3 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.horarios_*`, AGENDA-006 |
+| T2-H2, T2-H3 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.publicar_*` |
+| T2-H10, T1-8 | **Cerrado** | `fix/rem-d` | `AgendaFranjasIntegracionTest.disponibilidad_*`, AGENDA-004/005/007 |
+| T1-9 | **Cerrado** | `fix/rem-d` | AGENDA-008 |
+| T1-12 (fecha pasada y precio negativo) | **Cerrado** | `fix/rem-d` | `reservar_horarioPasado_422_yaPaso`, AGENDA-009 |
+| T7-3 | **Cerrado** | `fix/rem-d` | AGENDA-001/002 |

@@ -68,6 +68,8 @@ function resumenResultados(
   );
 }
 
+const AVISO_PRECIO = "Ingresá un precio mayor a cero";
+
 export default function BuscarPage() {
   const toast = useToast();
   const [catalogos, setCatalogos] = useState<NivelCatalogo[] | null>(null);
@@ -79,6 +81,8 @@ export default function BuscarPage() {
   // FR-MATCH-014: lo que se escribe y lo aplicado (se aplica con Enter o al salir del campo).
   const [precioMaxTexto, setPrecioMaxTexto] = useState("");
   const [precioMax, setPrecioMax] = useState<number | null>(null);
+  // R-D D-7 (T1-12): "-5" se convertía en $5 sin avisar.
+  const [avisoPrecio, setAvisoPrecio] = useState("");
   const [orden, setOrden] = useState<Orden>("relevancia");
   const [hojaFiltros, setHojaFiltros] = useState(false);
 
@@ -243,6 +247,7 @@ export default function BuscarPage() {
   function aplicarPrecioMax(textoPrecio: string) {
     const valor = Number(textoPrecio.replace(/\D/g, ""));
     const nuevo = textoPrecio.trim() && valor > 0 ? valor : null;
+    if (textoPrecio.trim() && valor <= 0) setAvisoPrecio(AVISO_PRECIO);
     setPrecioMaxTexto(nuevo === null ? "" : String(nuevo));
     if (nuevo === precioMax) return;
     setPrecioMax(nuevo);
@@ -290,7 +295,13 @@ export default function BuscarPage() {
             inputMode="numeric"
             placeholder="Sin límite"
             value={precioMaxTexto}
-            onChange={(e) => setPrecioMaxTexto(e.target.value.replace(/\D/g, ""))}
+            aria-invalid={avisoPrecio ? true : undefined}
+            aria-describedby={avisoPrecio ? "precio-max-aviso" : undefined}
+            onChange={(e) => {
+              const crudo = e.target.value;
+              setAvisoPrecio(/[^\d\s.]/.test(crudo) ? AVISO_PRECIO : "");
+              setPrecioMaxTexto(crudo.replace(/\D/g, ""));
+            }}
             onBlur={(e) => aplicarPrecioMax(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -301,6 +312,11 @@ export default function BuscarPage() {
             className="min-h-11 w-full bg-transparent px-2 text-[15px] text-tinta focus:outline-none"
           />
         </div>
+        {avisoPrecio && (
+          <p id="precio-max-aviso" role="alert" className="mt-1 text-sm font-semibold text-peligro">
+            {avisoPrecio}
+          </p>
+        )}
       </div>
       <fieldset>
         <legend className="mb-2 text-sm font-bold">Materia</legend>

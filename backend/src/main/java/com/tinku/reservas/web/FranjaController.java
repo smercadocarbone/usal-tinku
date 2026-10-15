@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -48,6 +50,29 @@ public class FranjaController {
         Usuario tutor = usuarioActual.obtener(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(FranjaResponse.from(franjaService.publicar(tutor, request)));
+    }
+
+    /**
+     * R-D D-1 (T2-H1, FR-RES-025): el Tutor quita una franja propia. Baja lógica; las reservas ya
+     * tomadas se mantienen y se informa cuántas hay para la confirmación de la UI.
+     */
+    @DeleteMapping("/franjas/{id}")
+    public ResponseEntity<Map<String, Object>> quitar(@PathVariable UUID id, Authentication authentication) {
+        Usuario tutor = usuarioActual.obtener(authentication);
+        FranjaDisponibilidad franja = franjaService.quitar(tutor, id);
+        return ResponseEntity.ok(Map.of("id", franja.getId(),
+                "reservasFuturasEnLaFranja", horariosService.reservasFuturasEnLaFranja(franja)));
+    }
+
+    /**
+     * R-D D-4 (T2-H10): rangos libres de los próximos {@code dias} (por defecto 7, tope 14 = horizonte
+     * del próximo horario libre, Tabla_Tiempos_Tinku.md) para el perfil público.
+     */
+    @GetMapping("/{tutorId}/disponibilidad")
+    public ResponseEntity<List<HorariosDisponiblesService.DiaDisponible>> disponibilidad(
+            @PathVariable UUID tutorId,
+            @RequestParam(defaultValue = "7") int dias) {
+        return ResponseEntity.ok(horariosService.disponibilidad(tutorId, dias));
     }
 
     /** Franjas activas publicadas por un Tutor (autenticado). Vacía si no tiene. */

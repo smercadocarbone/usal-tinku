@@ -257,7 +257,7 @@ sub-ítem 7 de AUD-036 (lock de la carga lazy del embedder). Detalle y tests de 
 - [x] **Chunk REM-A** — Seguridad del menor y errores 403 (T3-01, T4-H1, TRANS-1, T3-03) — _spec `m3c/M3C-10-hallazgos-menores.md`; es T-M3-06j._
 - [ ] **Chunk REM-B** — Robustez de la API (`R-B-api-robustez.md`) — _depende de REM-A._
 - [ ] **Chunk REM-C** — Aula: cierre y avisos (`R-C-aula.md`).
-- [ ] **Chunk REM-D** — Agenda y franjas (`R-D-agenda-franjas.md`) — _decisiones D-1 y D-2 del plan._
+- [x] **Chunk REM-D** — Agenda y franjas (`R-D-agenda-franjas.md`) — _decisiones D-1 y D-2 del plan._
 - [ ] **Chunk REM-E** — Búsqueda y perfil público (`R-E-busqueda-perfil.md`) — _decisiones D-3 y D-4; V48._
 - [ ] **Chunk REM-F** — Admin y moderación (`R-F-admin-moderacion.md`) — _depende de REM-A y REM-B; V49._
 - [ ] **Chunk REM-G** — Frontend: móvil, accesibilidad y cabeceras (`R-G-frontend-a11y.md`) — _depende de REM-B._

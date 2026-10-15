@@ -82,9 +82,9 @@ export const PASO_AGENDA_MINUTOS = 30;
 /**
  * Inicios posibles de una clase de `duracion` minutos dentro de una franja:
  * cada 30 minutos desde el comienzo, mientras la clase entre entera
- * (misma regla que `FranjaService.franjaQueContiene` en el backend).
+ * (el backend además une franjas contiguas: `FranjaService.cabeEnDisponibilidad`).
  */
-export function iniciosEnFranja(f: Franja, duracion: number): string[] {
+export function iniciosEnFranja(f: Pick<Franja, "horaInicio" | "horaFin">, duracion: number): string[] {
   const desde = minutos(f.horaInicio);
   const hasta = minutos(f.horaFin);
   const inicios: string[] = [];
@@ -96,4 +96,43 @@ export function iniciosEnFranja(f: Franja, duracion: number): string[] {
 export function precioClase(precioHora: number | null, duracion: number): number | null {
   if (precioHora == null) return null;
   return Math.round(((precioHora * duracion) / 60) * 100) / 100;
+}
+
+export interface GrupoFranjas {
+  /** "Lunes" o la fecha corta de una franja puntual. */
+  clave: string;
+  /** Rangos del día con las franjas contiguas unidas ("08:00"–"23:00"). */
+  rangos: { desde: string; hasta: string }[];
+  franjas: Franja[];
+}
+
+/**
+ * R-D D-8 (T7-3): une rangos contiguos o superpuestos de un mismo día, igual que
+ * `FranjaService.unir` en el backend. Entrada en cualquier orden.
+ */
+export function unirContiguas(franjas: Pick<Franja, "horaInicio" | "horaFin">[]): { desde: string; hasta: string }[] {
+  const ordenados = franjas
+    .map((f) => [minutos(f.horaInicio), minutos(f.horaFin)] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+  const unidos: [number, number][] = [];
+  for (const [desde, hasta] of ordenados) {
+    const ultimo = unidos[unidos.length - 1];
+    if (ultimo && desde <= ultimo[1]) ultimo[1] = Math.max(ultimo[1], hasta);
+    else unidos.push([desde, hasta]);
+  }
+  return unidos.map(([d, h]) => ({ desde: horaDesdeMinutos(d), hasta: horaDesdeMinutos(h) }));
+}
+
+/** Clave de agrupación: día de la semana (0=domingo) o fecha puntual. */
+export function agruparPorDia(franjas: Franja[]): { semanal: Map<number, Franja[]>; puntual: Map<string, Franja[]> } {
+  const semanal = new Map<number, Franja[]>();
+  const puntual = new Map<string, Franja[]>();
+  for (const f of franjas) {
+    if (f.diaSemana !== null) semanal.set(f.diaSemana, [...(semanal.get(f.diaSemana) ?? []), f]);
+    else if (f.fechaEspecifica) {
+      const fecha = f.fechaEspecifica.slice(0, 10);
+      puntual.set(fecha, [...(puntual.get(fecha) ?? []), f]);
+    }
+  }
+  return { semanal, puntual };
 }

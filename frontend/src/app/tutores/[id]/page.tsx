@@ -5,12 +5,11 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, ChevronLeft, Flag, IdCard, ShieldCheck, UserX } from "lucide-react";
-import { api, ApiError, autorizarTutor, getMenores, mensajeDeError, type Menor } from "@/lib/api";
+import { api, ApiError, autorizarTutor, getDisponibilidadTutor, getMenores, mensajeDeError, type DiaDisponible, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { diaCorto } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
-import { hhmm, proximosDias, type Franja } from "@/lib/agenda";
 import AppShell from "@/components/shell/AppShell";
 import FormularioDenuncia from "@/components/FormularioDenuncia";
 import {
@@ -49,7 +48,7 @@ export default function TutorPerfilPage() {
   const [perfil, setPerfil] = useState<TutorPerfil | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [franjas, setFranjas] = useState<Franja[] | null>(null);
+  const [dias, setDias] = useState<DiaDisponible[] | null>(null);
   const [reportar, setReportar] = useState(false);
 
   const cargar = useCallback(() => {
@@ -65,10 +64,10 @@ export default function TutorPerfilPage() {
         )
       )
       .finally(() => setCargando(false));
-    api
-      .get<Franja[]>(`/api/tutores/${params.id}/franjas`)
-      .then(setFranjas)
-      .catch(() => setFranjas([]));
+    // R-D D-4 (T2-H10): rangos libres reales (sin lo reservado ni lo que ya pasó), no las franjas crudas.
+    getDisponibilidadTutor(params.id, 7)
+      .then(setDias)
+      .catch(() => setDias([]));
   }, [params.id]);
 
   useEffect(() => {
@@ -79,7 +78,6 @@ export default function TutorPerfilPage() {
   const esMenor = payload?.tipo === "MENOR";
   const esAR = !esMenor && payload?.cap_ar === true;
   const nuevo = !perfil || perfil.calificacionPromedio === null || perfil.cantidadCalificaciones < TIEMPOS.minimoCalificaciones;
-  const dias = franjas ? proximosDias(franjas, 7).filter((d) => d.franjas.length > 0) : null;
   const hrefReservar = `/reservar?tutor=${params.id}`;
 
   if (cargando) {
@@ -202,15 +200,15 @@ export default function TutorPerfilPage() {
               </div>
             ) : dias.length === 0 ? (
               <p className="flex items-center gap-2 text-[15px] text-tinta-suave">
-                <CalendarDays className="size-5" aria-hidden /> No tiene horarios publicados en los próximos 7 días.
+                <CalendarDays className="size-5" aria-hidden /> Todavía no tiene horarios libres esta semana.
               </p>
             ) : (
               <ul className="no-scrollbar -mx-4 flex list-none gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
                 {dias.map((d) => (
                   <li key={d.fecha} className="min-w-28 shrink-0 rounded-2xl border border-borde bg-superficie p-3">
-                    <p className="text-sm font-bold capitalize">{diaCorto(d.referencia)}</p>
+                    <p className="text-sm font-bold capitalize">{diaCorto(new Date(`${d.fecha}T12:00:00-03:00`))}</p>
                     <p className="mt-1 text-[13px] text-tinta-suave">
-                      {d.franjas.map((f) => `${hhmm(f.horaInicio)}–${hhmm(f.horaFin)}`).join(" · ")}
+                      {d.rangos.map((r) => `${r.desde}–${r.hasta}`).join(" · ")}
                     </p>
                   </li>
                 ))}

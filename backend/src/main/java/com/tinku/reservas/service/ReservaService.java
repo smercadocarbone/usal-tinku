@@ -580,6 +580,9 @@ public class ReservaService {
         if (reputacionBloqueo.tutoresConCalificacionPendiente().contains(tutor.getId())) {
             throw new TutorPendienteCalificacionException();
         }
+        if (!horario.isAfter(Instant.now())) {
+            throw new VentanaMinimaException("Ese horario ya pasó.");
+        }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
             throw new VentanaMinimaException(
                     "Faltan menos de 30 minutos para el horario — no se puede reservar (FR-RES-013).");
@@ -588,7 +591,7 @@ public class ReservaService {
             throw new DuracionMinutosInvalidaException(
                     "La duración tiene que ser de 30 a 180 minutos, en bloques de 30.");
         }
-        if (franjaService.franjaQueContiene(tutor.getId(), horario, duracionMinutos).isEmpty()) {
+        if (!franjaService.cabeEnDisponibilidad(tutor.getId(), horario, duracionMinutos)) {
             throw new HorarioFueraDeFranjaException(
                     "El horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }
@@ -686,12 +689,15 @@ public class ReservaService {
                     + java.time.format.DateTimeFormatter.ofPattern("dd/MM").withZone(ReservasZonaHoraria.ZONA)
                     .format(reserva.getPaquete().getVigenteHasta()) + ".");
         }
+        if (!nuevoHorario.isAfter(Instant.now())) {
+            throw new VentanaMinimaException("Ese horario ya pasó.");
+        }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
                     "Faltan menos de 30 minutos para el nuevo horario — no se puede reprogramar (FR-RES-013).");
         }
-        if (franjaService.franjaQueContiene(reserva.getTutor().getId(), nuevoHorario,
-                reserva.getDuracionMinutos()).isEmpty()) {
+        if (!franjaService.cabeEnDisponibilidad(reserva.getTutor().getId(), nuevoHorario,
+                reserva.getDuracionMinutos())) {
             throw new HorarioFueraDeFranjaException(
                     "El nuevo horario no entra entero en una franja del tutor o no empieza en un bloque de 30 minutos.");
         }

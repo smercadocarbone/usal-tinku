@@ -22,6 +22,7 @@ _Como_ Tutor, _quiero_ publicar mis franjas horarias disponibles, _para_ que sol
 
 - **Dado** que configure mi calendario, **cuando** publique una franja, **entonces** solo se puede reservar dentro de franjas publicadas (FR-RES-012).
 - **Dado** que la franja que intento publicar dure menos de 30 minutos o más de 180 minutos, **cuando** intente guardarla, **entonces** el sistema la rechaza con un mensaje claro del rango permitido (FR-RES-024).
+- **Dado** que quiero dejar de ofrecer un horario, **cuando** quito una franja, **entonces** deja de poder reservarse y las clases ya reservadas dentro de ella se mantienen (FR-RES-025).
 
 ### US-2 — Solicitud de Sesión por el menor
 
@@ -121,6 +122,7 @@ _Como_ Estudiante, Tutor, o Adulto Responsable, _quiero_ recibir recordatorios a
 | FR-RES-022              | Solicitud de Sesión no procesada expira a las 48hs sin consecuencias.                                                                                                                                                                                                                               |
 | FR-RES-023 _(enmendado FASE2-01, D6)_ | La duración de la Sesión la elige quien reserva (o el menor en su Solicitud) entre 30 y 180 minutos en bloques de 30, y se congela en la Reserva (`duracion_minutos`, `horario_fin`) — no cambia si el Tutor modifica o borra sus franjas. La franja es un contenedor de bloques: la reserva tiene que entrar entera en una franja activa y empezar alineada a 30 minutos desde su inicio. La reprogramación conserva la duración. |
 | FR-RES-024 _(agregado)_ | Toda franja publicada por un Tutor debe tener una duración de entre 30 y 180 minutos (Tabla_Tiempos_Tinku.md) — el sistema rechaza la publicación de franjas fuera de ese rango.                                                                                                                    |
+| FR-RES-025 _(agregado, remediación R-D 2026-10-15)_ | El Tutor puede quitar una franja propia. La baja es lógica y no cancela ni mueve reservas existentes. Al calcular dónde entra una reserva, las franjas contiguas o superpuestas de un mismo día se toman como un solo rango (una reserva de 3 h entra en tres franjas de 1 h seguidas). |
 | FR-RES-025 _(agregado 2026-09-25, R1)_ | Solo se reserva (directa, por Solicitud o al reprogramar) a un usuario TUTOR con cuenta ACTIVA; si no, 404 sin filtrar el estado. El Tutor no puede ser el pagador ni el beneficiario de su propia Reserva, ni darle clase a un menor del que es Adulto Responsable → 422. La base lo refuerza con `ck_reservas_tutor_no_es_parte` (V37). |
 
 ## 4. Fuera de Alcance de este Spec
