@@ -856,7 +856,22 @@ export interface CapCola {
   categoriaAntecedente: string | null;
   numeroIntento: number;
   createdAt: string;
+  /** ADR-M1-10: verificación de la firma digital con el validador oficial. */
+  firmaEstado: EstadoFirmaCap;
+  firmaDetalle: string | null;
+  firmaFirmante: string | null;
+  firmaSha256: string | null;
+  firmaVerificadaAt: string | null;
 }
+
+export type EstadoFirmaCap =
+  | "NO_VERIFICADA"
+  | "PENDIENTE"
+  | "EN_PROCESO"
+  | "VALIDA"
+  | "INVALIDA"
+  | "FIRMANTE_NO_RECONOCIDO"
+  | "ERROR";
 
 /** BR-CAP-01 (los tres primeros: rechazo automático) y BR-CAP-02 (OTRO: revisión legal). */
 export type CategoriaAntecedenteCap = "INTEGRIDAD_SEXUAL" | "VINCULADO_A_MENORES" | "HOMICIDIO" | "OTRO";
@@ -868,6 +883,11 @@ export function getColaCap(): Promise<CapCola[]> {
 
 export function revisarCap(id: string, accion: AccionRevisionCap, categoria: CategoriaAntecedenteCap | null): Promise<CapPropio> {
   return api.patch(`/api/admin/moderacion/antecedentes-penales/${id}`, { accion, categoria });
+}
+
+/** ADR-M1-10: vuelve a poner el CAP en la cola del validador de firmas. */
+export function verificarFirmaCap(id: string): Promise<CapCola> {
+  return api.post(`/api/admin/moderacion/antecedentes-penales/${id}/verificar-firma`, {});
 }
 
 export async function getArchivoCap(id: string): Promise<Blob> {

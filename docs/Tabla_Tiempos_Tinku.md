@@ -40,6 +40,9 @@
 | Espera tras agotar intentos de OCR                | 24 hs                    | Antes de un nuevo ciclo de 6 fotos (eran 3 hasta 2026-09-26)                                                          | M1     |
 | Espera tras agotar intentos de Credencial         | 24 hs, duplicándose      | 24 → 48 → 96...                                                                                                       | M1     |
 | Vigencia del CAP                                   | 12 meses desde la fecha de emisión | Un Tutor queda habilitado para Menores solo con CAP `aprobado` y vigente (FR-ID-026); vencido, se suspende la habilitación para Menores hasta recargar (FR-ID-025) | M1     |
+| Paso de la cola de firmas del CAP _(ADR-M1-10)_     | cada 30 s | Cada paso consulta el pedido en curso o manda uno nuevo al validador oficial, nunca los dos; no manda si el validador tiene 300 o más pedidos esperando | M1 |
+| Espera del resultado del validador _(ADR-M1-10)_   | 10 min | Si el validador no terminó, el pedido cuenta como fallido y se reintenta | M1 |
+| Reintentos de la verificación de firma _(ADR-M1-10)_ | 1 min, 5 min, 15 min, 1 h, 3 h | Al sexto fallo el CAP queda en `ERROR` hasta que Moderación pida verificarlo de nuevo | M1 |
 | Plazo de descargo (Denuncia estándar)             | 48 hs                    | No aplica al track de kill-switch (ver 12hs abajo)                                                                    | M9     |
 | Plazo de revisión de Credencial por intento       | 48 hs                    | —                                                                                                                     | M1     |
 | Ventana de edición de calificación pública        | 48 hs                    | Luego es definitiva                                                                                                   | M7     |

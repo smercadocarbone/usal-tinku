@@ -44,12 +44,15 @@ public class CertificadoService {
     private final CancelacionReservasConMenores cancelacion;
     private final com.tinku.identidad.repository.UsuarioRepository usuarioRepo;
     private final com.tinku.shared.notificacion.Notificador notificador;
+    private final VerificacionFirmaCapService verificacionFirma;
 
     public CertificadoService(CertificadoAntecedentesPenalesRepository capRepo,
                               CredencialBackoffService backoffService,
                               CancelacionReservasConMenores cancelacion,
                               com.tinku.identidad.repository.UsuarioRepository usuarioRepo,
-                              com.tinku.shared.notificacion.Notificador notificador) {
+                              com.tinku.shared.notificacion.Notificador notificador,
+                              VerificacionFirmaCapService verificacionFirma) {
+        this.verificacionFirma = verificacionFirma;
         this.usuarioRepo = usuarioRepo;
         this.notificador = notificador;
         this.capRepo = capRepo;
@@ -77,6 +80,11 @@ public class CertificadoService {
         u.setAceptaMenores(acepta);
         usuarioRepo.save(u);
         return acepta ? 0 : cancelacion.cancelarFuturasConMenores(u.getId());
+    }
+
+    /** ADR-M1-10: con el validador encendido, el CAP tiene que ser el PDF original firmado. */
+    public boolean exigePdfFirmado() {
+        return verificacionFirma.habilitado();
     }
 
     /** El último CAP del Tutor (su panel muestra el estado), si cargó alguno. */
@@ -107,6 +115,7 @@ public class CertificadoService {
         cap.setVenceAt(fechaEmision.plusMonths(MESES_VIGENCIA)); // FR-ID-025
         cap.setEstado(EstadoCap.PENDIENTE);
         cap.setNumeroIntento(numeroDeIntentoParaCiclo(tutor.getId()));
+        verificacionFirma.encolar(cap); // ADR-M1-10: la firma digital se verifica en la cola
         return capRepo.save(cap);
     }
 
@@ -156,6 +165,7 @@ public class CertificadoService {
         } else if (accion == AccionRevisionCap.RECHAZAR) {
             resultado = EstadoCap.RECHAZADO;                                      // documento inválido
         } else {
+            verificacionFirma.exigirFirmaValida(cap);                             // ADR-M1-10
             resultado = EstadoCap.APROBADO;                                       // FR-ID-022
         }
         cap.setEstado(resultado);
@@ -176,6 +186,20 @@ public class CertificadoService {
     @Transactional(readOnly = true)
     public List<CertificadoAntecedentesPenales> colaModeracion() {
         return capRepo.colaConTutor(List.of(EstadoCap.PENDIENTE, EstadoCap.EN_REVISION_LEGAL));
+    }
+
+    /** ADR-M1-10: Moderación pide verificar la firma de nuevo. */
+    @Transactional
+    public void volverAVerificarFirma(UUID capId) {
+        verificacionFirma.volverAVerificar(capId);
+    }
+
+    /** El CAP con el Tutor cargado, para responder la fila de la cola fuera de la transacción. */
+    @Transactional(readOnly = true)
+    public CertificadoAntecedentesPenales obtenerConTutor(UUID capId) {
+        CertificadoAntecedentesPenales cap = capRepo.findById(capId).orElseThrow(CapNoEncontradoException::new);
+        org.hibernate.Hibernate.initialize(cap.getTutor());
+        return cap;
     }
 
     @Transactional(readOnly = true)

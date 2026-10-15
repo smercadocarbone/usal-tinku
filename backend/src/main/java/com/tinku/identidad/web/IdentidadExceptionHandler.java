@@ -135,8 +135,16 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
-    /** CAP ya revisado (409) o Tutor sin habilitación para menores (FR-ID-026, 409). */
-    @ExceptionHandler({CapNoRevisableException.class, TutorNoHabilitadoParaMenoresException.class})
+    /** ADR-M1-10: el CAP tiene que ser el PDF original con firma digital (422). */
+    @ExceptionHandler(com.tinku.identidad.service.CapDebeSerPdfException.class)
+    public ResponseEntity<Map<String, String>> handleCapDebeSerPdf(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    /** CAP ya revisado (409), Tutor sin habilitación para menores (FR-ID-026, 409) o firma del CAP
+     *  sin verificar (ADR-M1-10, 409). */
+    @ExceptionHandler({CapNoRevisableException.class, TutorNoHabilitadoParaMenoresException.class,
+            com.tinku.identidad.service.CapFirmaNoVerificadaException.class})
     public ResponseEntity<Map<String, String>> handleCapConflicto(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
     }
