@@ -941,6 +941,10 @@ export interface EstadoKillswitch {
   confirmacionPendiente: boolean;
   detectadoId: string | null;
   venceAt: string | null;
+  /** R-C C-1: la sesión quedó cerrada en el backend (finalizada o interrumpida). */
+  sesionCerrada?: boolean;
+  /** R-C C-1: hubo un corte por seguridad. Nada más de la alerta (BR-KS-03). */
+  cortePorSeguridad?: boolean;
 }
 export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
 export interface SesionKillswitch {

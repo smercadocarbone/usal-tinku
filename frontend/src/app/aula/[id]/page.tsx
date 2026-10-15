@@ -1,5 +1,6 @@
 "use client";
 
+import { resolverCierre, type CierreAula } from "@/lib/killswitch/cierre";
 import {
   useCallback,
   useEffect,
@@ -492,6 +493,10 @@ export default function AulaPage() {
           clearTimeout(temporizadorAvisoRef.current);
           temporizadorAvisoRef.current = setTimeout(() => setAvisoKillswitch(null), 6000);
         },
+        limpiarAviso: () => {
+          clearTimeout(temporizadorAvisoRef.current);
+          setAvisoKillswitch(null);
+        },
       },
       esperar: (ms) => new Promise((r) => setTimeout(r, ms)),
       ahora: () => Date.now(),
@@ -843,9 +848,25 @@ export default function AulaPage() {
         destruirProteccion();
         // Si el orquestador ya mostró un cierre (o llegó el aviso de corte), la página no muestra el suyo.
         if (orquestadorRef.current?.alDesconectar()) return;
-        if (estadoRef.current !== "finalizada") {
-          setEstado("esperando");
-        }
+        if (estadoRef.current === "finalizada") return;
+        // R-C C-1 (H-AULA-1): si el aviso entre pares no llegó, el estado de la sesión en el
+        // backend dice si fue un corte por seguridad, el fin de la clase o que el otro se fue.
+        // Hasta 3 intentos: la sala se cierra un instante antes de que el estado se persista.
+        void (async () => {
+          let cierre: CierreAula = "esperando";
+          for (let intento = 0; intento < 3; intento++) {
+            try {
+              cierre = resolverCierre(await getEstadoKillswitch(sesionId));
+            } catch {
+              cierre = "esperando";
+            }
+            if (cierre !== "esperando") break;
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (cierre === "seguridad") setCierreKillswitch("seguridad");
+          else if (cierre === "finalizada") setEstado("finalizada");
+          else setEstado("esperando");
+        })();
       });
 
       roomRef.current = room;

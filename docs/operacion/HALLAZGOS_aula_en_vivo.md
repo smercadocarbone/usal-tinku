@@ -123,6 +123,15 @@ funcionaron.** E-7 es el hallazgo real (H-AULA-1).
 | H-AULA-4 | Baja | `https://tinku.site/dev/killswitch` (y `/dev/componentes`, que ya era así) responde 200 con una pantalla "Cargando…" y el título de la página de desarrollo, en vez de 404. No expone nada: el contenido hace `notFound()` y el hook del modelo falso no está en el JS de producción. A confirmar si el 200 es solo del shell |
 | Confirmado | Media | **TRANS-1** sigue abierto: `POST /clasificador {"evento":"OTRO"}` da **403 sin cuerpo** en vez de 400 (ver `HALLAZGOS_pruebas.md`). M3C-10 todavía no se hizo |
 
+### Estado de cierre (remediación, rama `fix/rem-c`)
+
+| Hallazgo | Estado | Test |
+|---|---|---|
+| H-AULA-1 | **Cerrado en código**: `GET /killswitch` suma `sesionCerrada` y `cortePorSeguridad`; el aula los consulta al desconectarse (`resolverCierre`). Falta repetir C-12/E-7 con `live2.mjs` en un entorno de pruebas | `KillswitchClienteIntegracionTest.estadoKillswitch_*`, `killswitch-cierre.spec.ts` |
+| H-AULA-2 | **Cerrado** (la medición en un celular real sigue en M3C-07 / C-5) | `killswitch-orquestador.spec.ts` KS-050/051 |
+| H-AULA-3 | **Cerrado** | `aviso-proteccion.spec.ts` (axe `color-contrast`) |
+| H-AULA-4 | **Cerrado** (`proxy.ts` da 404 a `/dev/*` en producción) | `tests/dev-rutas.spec.ts` (contra `next start`) |
+
 ## 5. Qué no se probó
 
 - La detección con el clasificador real y contenido explícito de verdad (ver §2).

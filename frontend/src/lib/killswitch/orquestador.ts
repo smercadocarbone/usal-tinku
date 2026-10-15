@@ -36,6 +36,8 @@ export interface DepsOrquestador {
     cerrarPregunta(): void;
     cierre(motivo: "seguridad" | "sin-proteccion"): void;
     aviso(texto: string): void;
+    /** R-C C-2 (H-AULA-2): borra el aviso apenas la protección vuelve. */
+    limpiarAviso(): void;
   };
   esperar: (ms: number) => Promise<void>;
   ahora: () => number;
@@ -167,7 +169,10 @@ export function crearOrquestador(deps: DepsOrquestador) {
     },
 
     alNormalizar(): void {
-      if (deps.hayMenor() && !caido) sala.mostrarTodoRemoto();
+      if (deps.hayMenor() && !caido) {
+        sala.mostrarTodoRemoto();
+        ui.limpiarAviso();
+      }
     },
 
     alCaer(): void {
@@ -182,7 +187,10 @@ export function crearOrquestador(deps: DepsOrquestador) {
     alReactivar(): void {
       caido = false;
       void api.reportar("REACTIVADO").catch(() => {});
-      if (deps.hayMenor()) sala.mostrarTodoRemoto();
+      if (deps.hayMenor()) {
+        sala.mostrarTodoRemoto();
+        ui.limpiarAviso();
+      }
     },
 
     alFallarDefinitivo(): void {

@@ -11,9 +11,11 @@ import java.util.UUID;
  * (BR-KS-03 la deja en M9).
  */
 public record EstadoKillswitchResponse(boolean hayMenor, boolean confirmacionPendiente,
-                                       UUID detectadoId, Instant venceAt) {
+                                       UUID detectadoId, Instant venceAt,
+                                       boolean sesionCerrada, boolean cortePorSeguridad) {
 
     public static EstadoKillswitchResponse from(SesionService.EstadoKillswitch e) {
-        return new EstadoKillswitchResponse(e.hayMenor(), e.confirmacionPendiente(), e.detectadoId(), e.venceAt());
+        return new EstadoKillswitchResponse(e.hayMenor(), e.confirmacionPendiente(), e.detectadoId(), e.venceAt(),
+                e.sesionCerrada(), e.cortePorSeguridad());
     }
 }
