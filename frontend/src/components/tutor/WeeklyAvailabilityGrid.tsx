@@ -190,7 +190,7 @@ export default function WeeklyAvailabilityGrid({
             const hora = horaLabel(fila);
             return (
               <div key={fila} className="contents">
-                <div className="sticky left-0 z-10 flex items-center justify-end border-b border-slate-100 bg-white pr-2 text-xs text-slate-400">
+                <div className="sticky left-0 z-10 flex items-center justify-end border-b border-slate-100 bg-white pr-2 text-xs text-slate-600">
                   {hora}
                 </div>
                 {columnas.map((c) => {

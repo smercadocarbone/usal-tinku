@@ -154,3 +154,12 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T1-6 (búsquedas guardadas) | **Cerrado** (`V49`) | `fix/rem-e` | `guardada_conservaFiltros_noDuplica_yseBorra`, BUSCAR-E-002 |
 | T1-11 (comentarios en el perfil) | **Cerrado** (D-4) | `fix/rem-e` | `ComentariosTutorIntegracionTest`, BUSCAR-E-003 |
 | T1-12 (filtro de materia) | **Cerrado** | `fix/rem-e` | `filtroMateria_sinDistinguirMayusculasNiTildes` |
+| T7-M1, T7-M2 (móvil) | **Cerrado** | `fix/rem-g` | `remediacion-g.spec.ts` REM-G-001/002 |
+| T7-5 (títulos) | **Cerrado** | `fix/rem-g` | REM-G-003 |
+| T7-7 (PWA) | **Cerrado en el alcance de D-8** (íconos 192/512/maskable, apple-icon, favicon; sin service worker) | `fix/rem-g` | — |
+| T7-8 (objetivos táctiles) | **Cerrado** | `fix/rem-g` | REM-G-004 |
+| T7-9, T7-10 (contraste y foco) | **Cerrado**. El banner de Términos queda primero: es el primero también a la vista (orden de foco = orden visual) y es lo pendiente más importante | `fix/rem-g` | REM-G-005/006 |
+| T7-12 (dos h1) | **Cerrado** | `fix/rem-g` | REM-G-007 |
+| T2-H5, T2-H6, T2-H7 (cobros y precio) | **Cerrado** | `fix/rem-g` | REM-G-008/009 |
+| T6 (CSP) | **En observación**: `Content-Security-Policy-Report-Only`; pasar a aplicar es O-12 | `fix/rem-g` | REM-G-010 |
+| T1-7, T2-H12 (`/api/admin/yo`) | **Cerrado** (front usa `rolAdmin` de `/me`) | `fix/rem-g` | REM-G-011 |

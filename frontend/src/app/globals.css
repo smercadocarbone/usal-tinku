@@ -218,6 +218,19 @@
 }
 
 @layer utilities {
+  /* R-G G-4 (T7-8, WCAG 2.2 2.5.8): enlace suelto con área de toque de 24 px (44 px en celular). */
+  .enlace-tactil {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+
+  @media (max-width: 640px) {
+    .enlace-tactil {
+      min-height: 44px;
+    }
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
   }

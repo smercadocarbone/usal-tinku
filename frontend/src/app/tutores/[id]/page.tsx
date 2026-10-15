@@ -198,8 +198,8 @@ export default function TutorPerfilPage() {
           {comentarios.length > 0 && (
             <Seccion titulo="Lo que cuentan las familias">
               <ul className="flex list-none flex-col gap-3 p-0">
-                {comentarios.map((c, i) => (
-                  <li key={`${c.fecha}-${i}`} className="rounded-2xl border border-borde bg-superficie p-4">
+                {comentarios.map((c) => (
+                  <li key={`${c.fecha}-${c.estrellas}-${c.comentario.slice(0, 24)}`} className="rounded-2xl border border-borde bg-superficie p-4">
                     <p className="text-sm font-bold" aria-label={`${c.estrellas} de 5 estrellas`}>
                       {"★".repeat(c.estrellas)}
                       <span className="text-tinta-tenue">{"★".repeat(Math.max(0, 5 - c.estrellas))}</span>

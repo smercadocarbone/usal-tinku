@@ -144,8 +144,8 @@ export default function MisChicosPage() {
                       </Link>
                     )}
                     <div className="mt-auto flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold">
-                      <Link href={`/cuenta/menores/${m.id}`}>Ver clases y tutores</Link>
-                      <Link href="/buscar">Buscar un tutor para {m.nombre}</Link>
+                      <Link href={`/cuenta/menores/${m.id}`} className="enlace-tactil">Ver clases y tutores</Link>
+                      <Link href="/buscar" className="enlace-tactil">Buscar un tutor para {m.nombre}</Link>
                     </div>
                   </Tarjeta>
                 </li>
@@ -321,7 +321,7 @@ function AltaMenor({ abierto, onCerrar, onCreado }: { abierto: boolean; onCerrar
               value={fechaNac}
               onChange={setFechaNac}
               max={hoyIso()}
-              mesInicial={`${new Date().getFullYear() - 10}-01-01`}
+              mesInicial={`${Number(hoyIso().slice(0, 4)) - 10}-01-01`}
               ayuda={`Tiene que tener al menos ${TIEMPOS.edadMinimaMenor} años.`}
               required
             />

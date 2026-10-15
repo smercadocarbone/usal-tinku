@@ -6,11 +6,30 @@
  * Cuidado al tocar esa línea: sacar `self` de camera/microphone rompe la
  * videollamada entera.
  *
- * Falta una `Content-Security-Policy`, a propósito: una CSP mal escrita rompe
- * en silencio (Next inyecta scripts inline que necesitan nonce, y hay que
- * enumerar los orígenes de LiveKit y MercadoPago). Se agrega cuando se pueda
- * verificar contra el backend y LiveKit reales, no a ciegas.
+ * CSP (R-G G-8, decisión D-9): una CSP mal escrita rompe en silencio (Next inyecta
+ * scripts inline, LiveKit y MercadoPago tienen sus orígenes). Por eso va primero como
+ * `Content-Security-Policy-Report-Only`: el navegador avisa en la consola lo que
+ * bloquearía, sin bloquear. Después de una semana en producción sin violaciones se pasa
+ * a `Content-Security-Policy` (acción del dueño, O-12 del plan de remediación).
  */
+const API = process.env.NEXT_PUBLIC_API_URL || "https://api.tinku.site";
+const DEV = process.env.NODE_ENV !== "production";
+const csp = [
+  "default-src 'self'",
+  // 'wasm-unsafe-eval': TF.js corre el clasificador del kill-switch en WebAssembly (ADR-M3-07).
+  // 'unsafe-eval' solo en desarrollo (recarga en caliente de Next).
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${DEV ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${API}`,
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  `connect-src 'self' ${API} wss://*.livekit.cloud https://*.livekit.cloud${DEV ? " ws://localhost:* http://localhost:*" : ""}`,
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://*.mercadopago.com https://*.mercadopago.com.ar",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -23,6 +42,7 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(self), geolocation=(), browsing-topics=()",
   },
+  { key: "Content-Security-Policy-Report-Only", value: csp },
 ];
 
 /** @type {import('next').NextConfig} */

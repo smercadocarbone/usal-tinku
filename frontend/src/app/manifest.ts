@@ -20,7 +20,8 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#f6f8f7",
     theme_color: "#146251",
     lang: "es-AR",
-    orientation: "portrait",
+    // R-G G-10 (T7-7, D-8): sin forzar orientación (el aula se usa también apaisada).
+    orientation: "any",
     icons: [
       {
         src: "/icon.svg",
@@ -28,6 +29,9 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "any",
         purpose: "any",
       },
+      { src: "/iconos/icon-192.png", type: "image/png", sizes: "192x192", purpose: "any" },
+      { src: "/iconos/icon-512.png", type: "image/png", sizes: "512x512", purpose: "any" },
+      { src: "/iconos/icon-maskable-512.png", type: "image/png", sizes: "512x512", purpose: "maskable" },
     ],
   };
 }

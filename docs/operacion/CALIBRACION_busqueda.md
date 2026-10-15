@@ -52,7 +52,7 @@ prueba existentes tienen diferencias de hasta 0,2).
 - `MATCHING_SCORE_MINIMO` = `0.46` (default en `application.yml`; antes `0.3`).
 - `MATCHING_MARGEN_RELATIVO` = `0.25`.
 - **Ojo en producción:** si Coolify define `MATCHING_SCORE_MINIMO`, esa variable manda sobre el default.
-  Hay que borrarla o ponerla en `0.46` (acción del dueño).
+  Hay que borrarla o ponerla en `0.46` (acción del dueño, O-13).
 
 ## Límites y cómo repetirla (O-11)
 

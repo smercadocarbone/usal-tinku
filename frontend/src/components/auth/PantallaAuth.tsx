@@ -23,7 +23,7 @@ export default function PantallaAuth({
       <div className="flex flex-col">
         <header className="flex h-16 items-center justify-between px-4 sm:px-8">
           <Logo />
-          <Link href="/" className="text-sm font-semibold text-tinta-suave no-underline hover:text-tinta">
+          <Link href="/" className="enlace-tactil text-sm font-semibold text-tinta-suave no-underline hover:text-tinta">
             Volver al inicio
           </Link>
         </header>

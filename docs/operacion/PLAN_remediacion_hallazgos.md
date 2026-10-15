@@ -56,6 +56,8 @@
 | O-8 | **Cargar los precios regionales** (`/admin/precios`) o confirmar que está vacío a propósito | `precios-regionales` devuelve `[]`: el Tutor no tiene referencia de precio (T5-H4) | `GET /api/pagos/precio-referencia/{provincia}` devuelve un valor |
 | O-9 | HSTS de `api.tinku.site`: en Cloudflare, *SSL/TLS → Edge Certificates → HSTS* sobre la zona (cubre el subdominio) | T6: falta la cabecera en la API. Se arregla en el borde, no en el código | `curl -I https://api.tinku.site/actuator/health` trae `strict-transport-security` |
 | O-11 | Correr la calibración de la búsqueda si E-1 quedó en plan B (§5.2): `matching-service/tests/eval_relevancia/evaluar.py` contra staging o producción | El experimento necesita el modelo real | `CALIBRACION_busqueda.md` con números |
+| O-12 | Revisar la consola del navegador una semana con la CSP en `Report-Only` (R-G G-8) y, sin violaciones, cambiar la cabecera a `Content-Security-Policy` en `frontend/next.config.js` | Una CSP mal escrita rompe en silencio | Commit que cambia la cabecera |
+| O-13 | Si Coolify define `MATCHING_SCORE_MINIMO`, borrarla o ponerla en `0.46` (R-E E-1) | La variable manda sobre el default calibrado | Búsqueda "clases de tango" sin resultados directos |
 | O-10 | Medir la latencia del clasificador en un celular real (página `/diagnostico/clasificador`, `M3C-07`) | Los números son de un Chromium con la CPU frenada | Anexo de ADR-M3-01 |
 
 ## 4. Decisiones de producto — **adoptadas el 2026-10-15**

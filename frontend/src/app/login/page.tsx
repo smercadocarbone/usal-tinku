@@ -69,7 +69,7 @@ export default function LoginPage() {
     <PantallaAuth
       pie={
         <>
-          ¿No tenés cuenta? <Link href={hrefRegistro} className="font-semibold">Creala en 3 minutos</Link>
+          ¿No tenés cuenta? <Link href={hrefRegistro} className="enlace-tactil font-semibold">Creala en 3 minutos</Link>
         </>
       }
     >
@@ -105,7 +105,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         <div className="-mt-2 text-right">
-          <Link href="/recuperar-password" className="text-sm font-semibold">
+          <Link href="/recuperar-password" className="enlace-tactil text-sm font-semibold">
             ¿Olvidaste tu contraseña?
           </Link>
         </div>

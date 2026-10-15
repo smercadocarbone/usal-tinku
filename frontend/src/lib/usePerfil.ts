@@ -65,31 +65,16 @@ export function useRolAdminResuelto(fresco = false): { rol: RolAdmin | null; res
       return;
     }
     reiniciarSiCambioElToken(sesion.token);
-    // Cacheado por token en sessionStorage: sin esto, cada navegación de un usuario
-    // que no es admin dejaría un 403 en la consola.
-    const clave = `tinku_rol_admin:${sesion.token.slice(-24)}`;
-    let guardado: string | null = null;
-    try {
-      guardado = window.sessionStorage.getItem(clave);
-    } catch {
-      /* almacenamiento bloqueado: se pregunta al backend */
-    }
+    // R-B B-10 / R-G G-9 (T1-7, T2-H12): fuera del panel el rol sale de /api/usuarios/me
+    // (`rolAdmin`), que la cabecera ya pide; antes cada pantalla de quien no es admin dejaba un
+    // 403 de /api/admin/yo en la consola. Dentro de /admin (`fresco`) se sigue preguntando al panel.
     if (fresco) rolEnVuelo = null;
-    rolEnVuelo ??=
-      guardado !== null && !fresco
-        ? Promise.resolve(guardado === "" ? null : (guardado as RolAdmin))
-        : api
-            .get<{ rol: RolAdmin }>("/api/admin/yo")
-            .then((r) => r.rol)
-            .catch(() => null)
-            .then((r) => {
-              try {
-                window.sessionStorage.setItem(clave, r ?? "");
-              } catch {
-                /* sin cache, no pasa nada */
-              }
-              return r;
-            });
+    rolEnVuelo ??= fresco
+      ? api
+          .get<{ rol: RolAdmin }>("/api/admin/yo")
+          .then((r) => r.rol)
+          .catch(() => null)
+      : (perfilEnVuelo ??= getPerfilPropio().catch(() => null)).then((p) => p?.rolAdmin ?? null);
     let vivo = true;
     void rolEnVuelo.then((r) => {
       if (!vivo) return;

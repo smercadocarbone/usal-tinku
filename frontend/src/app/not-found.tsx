@@ -2,6 +2,8 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { Tarjeta, clasesBoton } from "@/components/ui";
 
+export const metadata = { title: "Página no encontrada" };
+
 export default function NotFound() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">

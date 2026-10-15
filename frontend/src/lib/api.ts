@@ -755,6 +755,8 @@ export interface PerfilPropio {
   capacidadEstudiante: boolean;
   capacidadAdultoResponsable: boolean;
   email: string | null;
+  /** R-B B-10: rol de admin activo; ausente si no es admin. */
+  rolAdmin?: RolAdmin | null;
 }
 
 /** El JWT no lleva el email en el payload — hace falta este endpoint para
