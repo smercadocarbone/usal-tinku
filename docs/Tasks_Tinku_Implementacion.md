@@ -340,3 +340,18 @@ _(No arranca la implementación completa hasta que T-SPIKE-04 esté resuelto —
 - [x] T-UX-06: Tutor (`06-tutor.md`) — checklist con `GET /api/tutores/me/estado-perfil`, Mi perfil (U1), precio leído del backend (`GET /api/pagos/tarifa`). _Pendiente:_ vista calendario de la agenda (los bloques de 30 min ya están, FASE2-01), comisión visible (no expuesta por el backend), buscador de temas en materias.
 - [x] T-UX-07: Aula (`07-aula.md`) — solo presentación (lobby, permisos, confirmar fin). _Pendiente:_ datos de la clase en el lobby (no hay GET de sesión por id), indicador de calidad y tiempos; probar con dos usuarios reales.
 - [x] T-UX-08: Admin (`08-admin.md`) — tablero, contadores, Modo Bypass, confirmación al rechazar credencial, moderación U1. _Pendiente:_ motivo de rechazo (el backend no lo recibe), nombres en vez de ids en denuncias/alertas, panel lateral de detalle.
+
+
+## REM — Remediación de las pruebas en producción (plan en `operacion/PLAN_remediacion_hallazgos.md`, specs en `docs/superpowers/specs/remediacion-pruebas/`)
+
+> Fuente: `operacion/HALLAZGOS_pruebas.md` (T1–T7) y `operacion/HALLAZGOS_aula_en_vivo.md`. Orden: ola 1 → ola 2 → ola 3 (ver el plan §5).
+> Ola 0 (operativa, la hace el dueño, **antes del piloto**): O-1 cerrar el bypass de pago, O-3 cambiar la clave de los admins, O-5 decidir la flag de menores.
+
+- [ ] T-REM-A: Ola 1 — seguridad del menor y errores 403: T3-01, T4-H1, TRANS-1, T3-03 (es **T-M3-06j**, spec `m3c/M3C-10-hallazgos-menores.md`).
+- [ ] T-REM-B: Robustez de la API — mensajes en español, UTF-8 en el 403 de admin, enums, 403/404, `confirmar-retorno`, tarifa, `rolAdmin` en `/me` (`R-B-api-robustez.md`). Depende de A.
+- [ ] T-REM-C: Aula — cierre según el estado de la sesión (H-AULA-1), cartel "Verificando", contraste del título, `/dev/*` en 404 (`R-C-aula.md`).
+- [ ] T-REM-D: Agenda — baja de franjas (decisión D-1, Spec M4), franjas contiguas, `/horarios` con duraciones largas, perfil público, picker (`R-D-agenda-franjas.md`).
+- [ ] T-REM-E: Búsqueda y perfil — calibración de relevancia, búsquedas guardadas con filtros (V48), comentarios públicos (`R-E-busqueda-perfil.md`). Decisiones D-3 y D-4.
+- [ ] T-REM-F: Admin y moderación — conflicto de interés, evidencia y denunciado en la cola, descargo con historial (V49), guard por rol (`R-F-admin-moderacion.md`). Depende de A y B.
+- [ ] T-REM-G: Frontend — móvil, títulos, objetivos táctiles, contraste y foco, CSP en `Report-Only`, `admin/yo` (`R-G-frontend-a11y.md`). Depende de B.
+- [ ] T-REM-H: Seed — CAP aprobado para los Tutores autorizados de menores y franjas de 3 h (`R-H-seed.md`). Depende de D.
