@@ -127,6 +127,7 @@ public abstract class IntegracionBase {
         Usuario u = base(TipoUsuario.TUTOR, "Juan", LocalDate.of(1985, 1, 1));
         u.setEmail(u.getDni() + "@test.tinku");
         u.setActivoParaMatching(true);
+        u.setFotoRef("foto-test.jpg"); // FR-ID-028: sin foto no aparece en búsquedas
         u = usuarioRepo.saveAndFlush(u);
         jdbc.update("INSERT INTO pagos.tarifas_tutor (tutor_id, precio_hora) VALUES (?, ?)",
                 u.getId(), new BigDecimal("15000"));
