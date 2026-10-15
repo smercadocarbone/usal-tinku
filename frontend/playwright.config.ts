@@ -20,7 +20,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // Entornos con un Chromium preinstalado de otra versión (p. ej. CI efímero o contenedores de agentes).
+        ...(process.env.CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.CHROMIUM_PATH } } : {}),
+      },
     },
   ],
   webServer: {
