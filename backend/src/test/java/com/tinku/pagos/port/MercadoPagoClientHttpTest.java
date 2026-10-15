@@ -61,6 +61,7 @@ class MercadoPagoClientHttpTest {
         int code = switch (status) {
             case "201" -> 201;
             case "500" -> 500;
+            case "404" -> 404;
             default -> 200;
         };
         if (body != null && !body.isBlank()) {
@@ -265,6 +266,21 @@ class MercadoPagoClientHttpTest {
             assertThat(pago.aprobado()).isTrue();
             assertThat(pago.externalReference()).isEqualTo(reservaId.toString());
             assertThat(pago.monto()).isEqualByComparingTo(new BigDecimal("150.00"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** R-B B-5 (T1-10): un paymentId que MP no conoce no es "MP no disponible". */
+    @Test
+    void getPago_inexistenteEnMp_noEsMpNoDisponible() throws Exception {
+        HttpServer server = serverPagos("/v1/payments/no-existe", "404", "{\"message\":\"Payment not found\"}");
+        try {
+            String baseUrl = "http://localhost:" + server.getAddress().getPort();
+            MercadoPagoClientHttp cliente = new MercadoPagoClientHttp(baseUrl, "mp-token", null);
+
+            assertThatThrownBy(() -> cliente.getPago("no-existe", null))
+                    .isInstanceOf(com.tinku.pagos.service.PagoMpNoEncontradoException.class);
         } finally {
             server.stop(0);
         }
