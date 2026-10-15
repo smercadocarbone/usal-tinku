@@ -7,7 +7,10 @@ import { jsonRoute, mockApi, setFakeSession } from "../helpers";
  */
 test.use({
   permissions: ["camera", "microphone"],
-  launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
+  launchOptions: {
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+    args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+  },
 });
 
 const SESION = "11111111-1111-4111-8111-111111111111";
