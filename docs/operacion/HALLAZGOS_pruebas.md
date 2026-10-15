@@ -115,3 +115,12 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 9. **T4-H5/H7/H3, T3-03, T5-1, T7-M3:** correcciones de UI por rol (guard de ruta por rol, no pedir `admin/yo` ni `estado-perfil` a quien no corresponde, `evidenciaUrl` en la cola de denuncias, segundo admin o recusación).
 10. **T7-M1/M2:** corregir el overflow móvil de `/cuenta/horarios` y `/cuenta/materias`.
 11. **Bajas:** acentos del 403 de admin (UTF-8), CSP y HSTS de la API, textos en inglés, PWA (service worker, íconos 192/512, favicon), títulos por pantalla.
+
+## 10. Estado de cierre (remediación, `PLAN_remediacion_hallazgos.md`)
+
+| Hallazgo | Estado | Rama | Test que lo cubre |
+|---|---|---|---|
+| T3-01 | **Cerrado** (falta restaurar a Benjamín en prod: O-6) | `fix/rem-a` | `CapacidadesMenorIntegracionTest` |
+| T4-H1 | **Cerrado** | `fix/rem-a` | `AdminCapColaIntegracionTest` |
+| TRANS-1 (T1-4, T2-H4, T3-04, T4-H4 parte, T5-3, T6-19) | **Cerrado** | `fix/rem-a` | `ErroresHttpIntegracionTest` (servidor real) |
+| T3-03, T5-1, T7-M3 | **Cerrado** | `fix/rem-a` | `frontend/tests/cuenta/menor-rutas.spec.ts` |

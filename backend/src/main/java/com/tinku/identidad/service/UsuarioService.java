@@ -229,6 +229,10 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario actualizarCapacidades(Usuario usuario, ActualizarCapacidadesRequest request) {
+        // T3-01 (Art. II): el Menor no administra sus capacidades. Va antes de cualquier otra regla.
+        if (usuario.getTipo() == TipoUsuario.MENOR) {
+            throw new MenorNoModificaCapacidadesException();
+        }
         boolean estudiante = request.capacidadEstudiante();
         boolean adultoResp = request.capacidadAdultoResponsable();
 
@@ -239,7 +243,8 @@ public class UsuarioService {
         }
 
         // Artículo II: un menor nunca puede ser Adulto Responsable (no paga,
-        // no autoriza Tutores) — solo tiene capacidad estudiante.
+        // no autoriza Tutores) — solo tiene capacidad estudiante. Inalcanzable desde T3-01
+        // (el Menor ya no llega acá); se deja como defensa en profundidad.
         if (usuario.getTipo() == TipoUsuario.MENOR && adultoResp) {
             throw new IllegalArgumentException("Un perfil de menor no puede ser Adulto Responsable.");
         }

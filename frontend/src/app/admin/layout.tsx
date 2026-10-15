@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { ReactNode } from "react";
 import { FlaskConical } from "lucide-react";
 import type { RolAdmin } from "@/lib/api";
@@ -53,7 +55,19 @@ const NOMBRE_ROL: Record<RolAdmin, string> = {
 };
 
 function Contenido({ children }: { children: ReactNode }) {
-  const { rol, colas, bypass } = useAdmin();
+  const { rol, rolResuelto, colas, bypass } = useAdmin();
+
+  // T3-03 / T5-1: quien no es admin no ve el panel ni queda en "Cargando colas…" para siempre.
+  if (rolResuelto && !rol) {
+    return (
+      <AppShell>
+        <h1 className="text-[28px] font-extrabold sm:text-[40px]">Panel de administración</h1>
+        <Alerta tono="info" className="mt-6" titulo="Esta sección es solo para el equipo de Tinku">
+          Desde <Link href="/cuenta" className="font-semibold underline">Mi cuenta</Link> tenés todo lo tuyo.
+        </Alerta>
+      </AppShell>
+    );
+  }
 
   // Ocultar del menú lo que el rol no puede usar es UX, no seguridad: el backend
   // valida el rol en cada cola igual (B10). Sin rol conocido, no hay menú.

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { rutaCuentaPermitida, rutaCuentaRestringida } from "@/lib/navegacion";
 import { getAlertasMias, getDenunciasRecibidas } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import AppShell from "@/components/shell/AppShell";
@@ -24,8 +25,15 @@ const RUTAS_AJUSTES = [
 
 export default function CuentaLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const sesion = useSesion();
   const [tieneCasos, setTieneCasos] = useState(false);
+  const permitida = rutaCuentaPermitida(pathname, sesion?.payload);
+
+  // T3-03 / T7-M3: una pantalla de otro perfil se reemplaza por el inicio de "Mi cuenta".
+  useEffect(() => {
+    if (sesion && !permitida) router.replace("/cuenta");
+  }, [sesion, permitida, router]);
 
   // "Casos y reportes" solo aparece si hay alguno (UX-05 §1): a quien no tiene
   // ninguno, "Denuncias y alertas" en el menú le suena alarmante.
@@ -39,6 +47,10 @@ export default function CuentaLayout({ children }: { children: ReactNode }) {
       vivo = false;
     };
   }, [sesion]);
+
+  // Una pantalla que depende del perfil no se monta hasta saber quién es: si se montara antes,
+  // pediría datos de otro rol (p. ej. estado-perfil del Tutor) y recién después redirigiría.
+  if ((sesion && !permitida) || (!sesion && rutaCuentaRestringida(pathname))) return <AppShell>{null}</AppShell>;
 
   if (!RUTAS_AJUSTES.includes(pathname)) {
     return <AppShell>{children}</AppShell>;

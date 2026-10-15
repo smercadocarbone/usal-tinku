@@ -112,6 +112,10 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // TRANS-1 (pruebas en producción, 2026-10-14): el dispatch de error del contenedor
+                // (400/413/404 de Spring MVC) no lleva el JWT y caía en anyRequest().authenticated()
+                // → 403 sin cuerpo. /error solo muestra el status: no expone datos ni abre nada.
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                 // Rutas publicas: registro de adulto, registro de tutor
                 // (autorregistro con DNI, FR-ID-007) y login. El alta de
                 // menor NO es pública: la hace el Adulto Responsable

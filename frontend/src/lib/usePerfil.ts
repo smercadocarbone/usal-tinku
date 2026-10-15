@@ -43,11 +43,27 @@ export function usePerfilPropio(): PerfilPropio | null {
  * cambiado); la cabecera usa el valor cacheado.
  */
 export function useRolAdmin(fresco = false): RolAdmin | null {
+  return useRolAdminResuelto(fresco).rol;
+}
+
+/**
+ * Igual que {@link useRolAdmin}, pero dice además si ya se sabe la respuesta. Sin esto, una pantalla
+ * de admin no distingue "todavía no sé" de "no es admin" y queda en "Cargando…" para siempre
+ * (hallazgos T3-03 y T5-1 de las pruebas en producción).
+ */
+export function useRolAdminResuelto(fresco = false): { rol: RolAdmin | null; resuelto: boolean } {
   const sesion = useSesion();
   const [rol, setRol] = useState<RolAdmin | null>(null);
+  const [resuelto, setResuelto] = useState(false);
   useEffect(() => {
     // Un Menor nunca es admin: no hace falta preguntar.
-    if (!sesion || sesion.payload.tipo === "MENOR") return;
+    // useSesion devuelve null en el primer render: sin sesión todavía no se sabe nada.
+    if (!sesion) return;
+    if (sesion.payload.tipo === "MENOR") {
+      setRol(null);
+      setResuelto(true);
+      return;
+    }
     reiniciarSiCambioElToken(sesion.token);
     // Cacheado por token en sessionStorage: sin esto, cada navegación de un usuario
     // que no es admin dejaría un 403 en la consola.
@@ -75,10 +91,14 @@ export function useRolAdmin(fresco = false): RolAdmin | null {
               return r;
             });
     let vivo = true;
-    void rolEnVuelo.then((r) => vivo && setRol(r));
+    void rolEnVuelo.then((r) => {
+      if (!vivo) return;
+      setRol(r);
+      setResuelto(true);
+    });
     return () => {
       vivo = false;
     };
   }, [sesion, fresco]);
-  return rol;
+  return { rol, resuelto };
 }

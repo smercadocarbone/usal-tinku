@@ -254,7 +254,7 @@ sub-ítem 7 de AUD-036 (lock de la carga lazy del embedder). Detalle y tests de 
 
 ## REM — Remediación de las pruebas en producción (2026-10-14)
 
-- [ ] **Chunk REM-A** — Seguridad del menor y errores 403 (T3-01, T4-H1, TRANS-1, T3-03) — _spec `m3c/M3C-10-hallazgos-menores.md`; es T-M3-06j._
+- [x] **Chunk REM-A** — Seguridad del menor y errores 403 (T3-01, T4-H1, TRANS-1, T3-03) — _spec `m3c/M3C-10-hallazgos-menores.md`; es T-M3-06j._
 - [ ] **Chunk REM-B** — Robustez de la API (`R-B-api-robustez.md`) — _depende de REM-A._
 - [ ] **Chunk REM-C** — Aula: cierre y avisos (`R-C-aula.md`).
 - [ ] **Chunk REM-D** — Agenda y franjas (`R-D-agenda-franjas.md`) — _decisiones D-1 y D-2 del plan._

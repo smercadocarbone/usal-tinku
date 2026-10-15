@@ -169,8 +169,7 @@ public class CertificadoService {
     /** Cola de moderación: pendientes + en revisión legal. */
     @Transactional(readOnly = true)
     public List<CertificadoAntecedentesPenales> colaModeracion() {
-        return capRepo.findByEstadoInOrderByCreatedAtAsc(
-                List.of(EstadoCap.PENDIENTE, EstadoCap.EN_REVISION_LEGAL));
+        return capRepo.colaConTutor(List.of(EstadoCap.PENDIENTE, EstadoCap.EN_REVISION_LEGAL));
     }
 
     @Transactional(readOnly = true)
