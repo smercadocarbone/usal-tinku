@@ -131,3 +131,13 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T1-9 | **Cerrado** | `fix/rem-d` | AGENDA-008 |
 | T1-12 (fecha pasada y precio negativo) | **Cerrado** | `fix/rem-d` | `reservar_horarioPasado_422_yaPaso`, AGENDA-009 |
 | T7-3 | **Cerrado** | `fix/rem-d` | AGENDA-001/002 |
+| T1-5, T2-H9 (mensajes en inglés y sin tildes) | **Cerrado** | `fix/rem-b` | `RobustezApiIntegracionTest.validacion_mensajesEnCastellano` |
+| T5-2 (403 de admin sin UTF-8) | **Cerrado** | `fix/rem-b` | `admin403_enUtf8` |
+| T4-H4 (enums) | **Cerrado** | `fix/rem-b` | `enums_sinDistinguirMayusculas` |
+| T1-10 (403/404 y paymentId inexistente) | **Cerrado** | `fix/rem-b` | `reservaAjena_404_enVerCancelarYReprogramar`, `MercadoPagoClientHttpTest.getPago_inexistenteEnMp_noEsMpNoDisponible` |
+| T2-H8 (tarifa) | **Cerrado** | `fix/rem-b` | `tarifa_redondeaYActualizaFecha` |
+| T3-05 (tarifa a un menor) | **Cerrado** | `fix/rem-b` | `tarifa_soloTutor` |
+| T6-4 (mensaje del guard) | **Cerrado** | `fix/rem-b` | `soloParticipante_mensajeSegunLaAccion` |
+| T2-H11 (contacto en la bio) | **Cerrado** (D-7) | `fix/rem-b` | `bio_ocultaDatosDeContacto`, `OcultadorDeContactoTest` |
+| T1-7, T2-H12 (`/api/admin/yo` en cada pantalla) | **Backend cerrado** (`rolAdmin` en `/me`); el front deja de llamarlo en REM-G | `fix/rem-b` | `me_informaElRolDeAdmin` |
+| T4-H13 (404 sin cuerpo en admin) | **Cerrado** | `fix/rem-b` | `admin404_conCuerpo` |

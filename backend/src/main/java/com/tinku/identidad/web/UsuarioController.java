@@ -37,11 +37,14 @@ public class UsuarioController {
     private final UsuarioActual usuarioActual;
     private final PasswordResetService passwordResetService;
     private final com.tinku.identidad.service.ConsentimientoService consentimiento;
+    private final com.tinku.admin.repository.AdminRepository adminRepo;
 
     public UsuarioController(UsuarioService usuarioService, UsuarioActual usuarioActual,
                              PasswordResetService passwordResetService,
-                             com.tinku.identidad.service.ConsentimientoService consentimiento) {
+                             com.tinku.identidad.service.ConsentimientoService consentimiento,
+                             com.tinku.admin.repository.AdminRepository adminRepo) {
         this.consentimiento = consentimiento;
+        this.adminRepo = adminRepo;
         this.usuarioService = usuarioService;
         this.usuarioActual = usuarioActual;
         this.passwordResetService = passwordResetService;
@@ -115,7 +118,11 @@ public class UsuarioController {
      * cuenta necesita un endpoint aparte para mostrarlo. */
     @GetMapping("/me")
     public ResponseEntity<UsuarioResponse> obtenerPropio(Authentication authentication) {
-        return ResponseEntity.ok(UsuarioResponse.from(usuarioActual.obtener(authentication)));
+        Usuario yo = usuarioActual.obtener(authentication);
+        // R-B B-10: Art. II — una cuenta de menor nunca opera el panel, aunque tenga fila en admins.
+        String rolAdmin = yo.getTipo() == com.tinku.identidad.model.TipoUsuario.MENOR ? null
+                : adminRepo.findByUsuario_IdAndActivoTrue(yo.getId()).map(a -> a.getRol().getValor()).orElse(null);
+        return ResponseEntity.ok(UsuarioResponse.from(yo, rolAdmin));
     }
 
     @PatchMapping("/me/email")

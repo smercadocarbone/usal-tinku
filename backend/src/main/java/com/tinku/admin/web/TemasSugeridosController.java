@@ -38,8 +38,9 @@ public class TemasSugeridosController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> resolver(@PathVariable UUID id, Authentication authentication) {
         gate.requiereModeracion(authentication);
-        return temasSugeridos.descartar(id)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+        if (!temasSugeridos.descartar(id)) {
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese tema.");
+        }
+        return ResponseEntity.noContent().build();
     }
 }

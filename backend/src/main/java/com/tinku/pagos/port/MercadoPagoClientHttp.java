@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tinku.pagos.service.MercadoPagoNoConfiguradoException;
 import com.tinku.pagos.service.MercadoPagoNoDisponibleException;
+import com.tinku.pagos.service.PagoMpNoEncontradoException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -105,6 +106,10 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
                     .uri(PATH_PAGOS + mpPaymentId)
                     .header("Authorization", "Bearer " + token(tokenVendedor))
                     .retrieve()
+                    // R-B B-5 (T1-10): 404 = ese pago no existe en MP, no que MP esté caído.
+                    .onStatus(status -> status.value() == 404, (req, res) -> {
+                        throw new PagoMpNoEncontradoException();
+                    })
                     .onStatus(status -> status.isError(), (req, res) -> {
                         throw new MercadoPagoNoDisponibleException();
                     })

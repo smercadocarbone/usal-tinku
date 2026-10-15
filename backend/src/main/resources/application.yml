@@ -13,6 +13,16 @@ spring:
     username: ${DB_USER:}
     password: ${DB_PASSWORD:}
 
+  # R-B B-1 (T1-5): idioma fijo; no depende de lo que mande el navegador ni del contenedor.
+  web:
+    locale: es_AR
+    locale-resolver: fixed
+
+  # R-B B-3 (T4-H4): "ACOSO", "acoso" y "Acoso" son el mismo valor de un enum en el cuerpo.
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+
   servlet:
     multipart:
       # AUD-007: límite explícito de la subida de credenciales (antes, el default

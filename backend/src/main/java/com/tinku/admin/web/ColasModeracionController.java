@@ -101,7 +101,7 @@ public class ColasModeracionController {
         try {
             perfilPublicoService.moderar(tutorId, bio, foto);
         } catch (TutorNoEncontradoException e) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         return ResponseEntity.noContent().build();
     }
@@ -131,13 +131,13 @@ public class ColasModeracionController {
         gate.requiereModeracion(authentication);
         CredencialAcademica credencial = credencialRepo.findById(credencialId).orElse(null);
         if (credencial == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         byte[] contenido;
         try {
             contenido = almacenamiento.leer(credencial.getArchivoUrl());
         } catch (ArchivoNoDisponibleException e) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         var tipo = TipoArchivoCredencial.detectar(contenido);
         ContentDisposition disposicion = tipo.isPresent()
@@ -160,13 +160,13 @@ public class ColasModeracionController {
         gate.requiereModeracion(authentication);
         AlertaSeguridad alerta = alertaRepo.findById(alertaId).orElse(null);
         if (alerta == null || alerta.getClipUrl() == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         byte[] contenido;
         try {
             contenido = almacenamiento.leer(alerta.getClipUrl());
         } catch (ArchivoNoDisponibleException e) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         boolean webm = contenido.length >= 4 && (contenido[0] & 0xFF) == 0x1A;
         return ResponseEntity.ok()
@@ -185,7 +185,7 @@ public class ColasModeracionController {
         UUID adminId = gate.requiereModeracion(authentication);
         CredencialAcademica credencial = credencialRepo.findById(credencialId).orElse(null);
         if (credencial == null) {
-            return ResponseEntity.notFound().build();
+            throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         AdminModeracionGate.exigirNoEsParteDelCaso(adminId, credencial.getTutor().getId());
         // Solo una credencial PENDIENTE se resuelve (una ya resuelta no se re-toca).

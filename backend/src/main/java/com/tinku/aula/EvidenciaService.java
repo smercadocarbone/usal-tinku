@@ -38,7 +38,7 @@ public class EvidenciaService {
     @Transactional
     public AlertaSeguridad subir(Usuario usuario, UUID sesionId, byte[] clip, Integer duracionSegundos) {
         if (!sesionService.participantes(sesionId).contains(usuario.getId())) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("subir evidencia");
         }
         if (duracionSegundos != null && (duracionSegundos <= 0 || duracionSegundos > MAX_SEGUNDOS)) {
             throw new EvidenciaInvalidaException(

@@ -394,7 +394,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("entrar a ella");
         }
         if (!clasificadorListo && reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR) {
             throw new ClasificadorNoListoException();
@@ -424,7 +424,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("usar su protección");
         }
         log.warn("Kill-switch en el cliente: evento={} sesion={} usuario={} hayMenor={}",
                 evento, sesionId, usuario.getId(), reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR);
@@ -442,7 +442,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("ver su protección");
         }
         boolean hayMenor = reserva.getBeneficiario().getTipo() == TipoUsuario.MENOR;
         return confirmacionRepo.findBySesionId(sesionId)
@@ -482,7 +482,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("verla");
         }
         return sesionRepo.findByReservaId(reservaId)
                 .orElseThrow(SesionNoEncontradaException::new);
@@ -498,7 +498,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("finalizarla");
         }
         return marcarFinalizada(sesion, reserva);
     }
@@ -648,7 +648,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("cortarla");
         }
         if (detectadoId == null
                 || (!reserva.getTutor().getId().equals(detectadoId)
@@ -816,7 +816,7 @@ public class SesionService {
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
         if (!esParticipante(reserva, usuario)) {
-            throw new SoloParticipanteException();
+            throw new SoloParticipanteException("responder lo que vieron");
         }
         ConfirmacionKillswitch confirmacion = confirmacionRepo.findBySesionId(sesionId)
                 .orElseThrow(ConfirmacionNoPendienteException::new);

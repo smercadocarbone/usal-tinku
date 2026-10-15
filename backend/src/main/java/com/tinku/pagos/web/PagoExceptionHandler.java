@@ -73,6 +73,11 @@ public class PagoExceptionHandler {
         return ResponseEntity.noContent().build();
     }
 
+    @ExceptionHandler(com.tinku.pagos.service.PagoMpNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> handlePagoMpNoEncontrado(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler({MercadoPagoNoConfiguradoException.class, MercadoPagoNoDisponibleException.class})
     public ResponseEntity<Map<String, String>> handleMercadoPago(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

@@ -865,7 +865,8 @@ export function getEstadoPerfilTutor(): Promise<EstadoPerfilTutor> {
   return api.get("/api/tutores/me/estado-perfil");
 }
 
-export function actualizarBioTutor(bio: string): Promise<unknown> {
+/** R-B B-9: `avisos` dice si se taparon datos de contacto de la presentación. */
+export function actualizarBioTutor(bio: string): Promise<{ bio: string | null; avisos?: string[] }> {
   return api.put("/api/tutores/me/perfil", { bio });
 }
 

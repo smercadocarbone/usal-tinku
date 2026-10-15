@@ -33,7 +33,8 @@ public class TarifaTutor {
     @Column(name = "precio_hora", nullable = false, precision = 10, scale = 2)
     private BigDecimal precioHora;
 
-    @Column(name = "updated_at", nullable = false, updatable = false)
+    // R-B B-6 (T2-H8): se actualiza en cada cambio de precio (antes, updatable = false la congelaba).
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
     /** v2.5 (ADR-M5-03): ofrece el paquete mensual. */

@@ -160,7 +160,9 @@ public class SecurityConfig {
     private AccessDeniedHandler adminAccesoDenegadoHandler() {
         return (request, response, accessDeniedException) -> {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json");
+            // R-B B-2 (T5-2): sin charset, "administración" llegaba como "administraci?n".
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"No autorizado para esta acción de administración.\"}");
         };
     }

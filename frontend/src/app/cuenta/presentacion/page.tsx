@@ -45,8 +45,9 @@ export default function PresentacionPage() {
   async function guardarBio() {
     setGuardandoBio(true);
     try {
-      await actualizarBioTutor(bio);
-      toast.mostrar("Guardamos tu presentación");
+      const { avisos } = await actualizarBioTutor(bio);
+      if (avisos?.length) toast.mostrar(avisos.join(" "));
+      else toast.mostrar("Guardamos tu presentación");
       cargar();
     } catch (err) {
       toast.mostrar(mensajeDeError(err, "No pudimos guardar tu presentación."), { tono: "error" });

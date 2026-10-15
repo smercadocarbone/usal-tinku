@@ -232,6 +232,10 @@ public class ReservaService {
     public Reserva reprogramar(Usuario usuario, UUID reservaId, Instant nuevoHorario) {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
+        // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
+        if (!esParticipante(reserva, usuario)) {
+            throw new ReservaNoEncontradaException();
+        }
         if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
             throw new ReservaNoReprogramableException();
         }
@@ -309,6 +313,10 @@ public class ReservaService {
     public Reserva cancelar(Usuario usuario, UUID reservaId) {
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(ReservaNoEncontradaException::new);
+        // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
+        if (!esParticipante(reserva, usuario)) {
+            throw new ReservaNoEncontradaException();
+        }
         if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO
                 && reserva.getEstado() != EstadoReserva.CONFIRMADA) {
             throw new ReservaNoCancelableException();

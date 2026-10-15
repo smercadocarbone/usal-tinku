@@ -17,6 +17,7 @@ import com.tinku.identidad.dto.VerificarDniRequest;
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.TipoArchivoCredencial;
 import com.tinku.identidad.model.Usuario;
+import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.tinku.identidad.port.Almacenamiento;
@@ -26,6 +27,7 @@ import com.tinku.identidad.port.TarifaPerfilProvider;
 import com.tinku.identidad.service.ArchivoCredencialDemasiadoGrandeException;
 import com.tinku.identidad.service.ArchivoCredencialInvalidoException;
 import com.tinku.identidad.service.CredencialService;
+import com.tinku.identidad.service.OcultadorDeContacto;
 import com.tinku.identidad.service.PerfilPublicoTutorService;
 import com.tinku.identidad.service.UsuarioService;
 import com.tinku.shared.UsuarioActual;
@@ -189,10 +191,21 @@ public class TutorController {
 
     /** U1: el Tutor autenticado actualiza la bio de su perfil público (≤ 500 caracteres). */
     @PutMapping("/me/perfil")
-    public ResponseEntity<TutorPerfilResponse> actualizarPerfilPublico(
+    public ResponseEntity<PerfilConAvisos> actualizarPerfilPublico(
             @RequestBody ActualizarPerfilPublicoRequest request, Authentication authentication) {
         Usuario tutor = perfilPublicoService.actualizarBio(usuarioActual.obtener(authentication), request.bio());
-        return ResponseEntity.ok(perfil(tutor));
+        // R-B B-9 (T2-H11): si se taparon datos de contacto, se le avisa al Tutor por qué.
+        String pedida = request.bio() == null ? null : request.bio().strip();
+        boolean oculto = pedida != null && !pedida.equals(OcultadorDeContacto.ocultar(pedida));
+        return ResponseEntity.ok(new PerfilConAvisos(perfil(tutor), oculto
+                ? List.of("Quitamos datos de contacto de tu presentación: las clases se coordinan dentro de Tinku.")
+                : List.of()));
+    }
+
+    /** El perfil más los avisos de lo que se cambió al guardar (R-B B-9). */
+    public record PerfilConAvisos(
+            @com.fasterxml.jackson.annotation.JsonUnwrapped TutorPerfilResponse perfil,
+            List<String> avisos) {
     }
 
     /** U1: foto del perfil público. PNG o JPEG por magic bytes; mismo tope de tamaño que las credenciales. */

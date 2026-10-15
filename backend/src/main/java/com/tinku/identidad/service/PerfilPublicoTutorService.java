@@ -44,7 +44,7 @@ public class PerfilPublicoTutorService {
         if (limpia != null && limpia.length() > MAX_BIO) {
             throw new IllegalArgumentException("La presentación puede tener hasta " + MAX_BIO + " caracteres.");
         }
-        tutor.setBio(limpia == null || limpia.isEmpty() ? null : limpia);
+        tutor.setBio(limpia == null || limpia.isEmpty() ? null : OcultadorDeContacto.ocultar(limpia));
         return usuarioRepository.save(tutor);
     }
 
