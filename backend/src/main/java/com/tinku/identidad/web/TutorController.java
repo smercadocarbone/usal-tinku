@@ -181,8 +181,12 @@ public class TutorController {
         if (archivo.getSize() > maxArchivoCredencial.toBytes()) {
             throw new ArchivoCredencialDemasiadoGrandeException(maxArchivoCredencial);
         }
-        if (TipoArchivoCredencial.detectar(contenido).isEmpty()) {
+        var tipoArchivo = TipoArchivoCredencial.detectar(contenido);
+        if (tipoArchivo.isEmpty()) {
             throw new ArchivoCredencialInvalidoException();
+        }
+        if (certificadoService.exigePdfFirmado() && tipoArchivo.get() != TipoArchivoCredencial.PDF) {
+            throw new com.tinku.identidad.service.CapDebeSerPdfException(); // ADR-M1-10
         }
         String archivoUrl = almacenamiento.guardar(contenido, "cap-" + archivo.getOriginalFilename());
         CertificadoAntecedentesPenales cap = certificadoService.cargarCap(tutor, archivoUrl, request.fechaEmision());

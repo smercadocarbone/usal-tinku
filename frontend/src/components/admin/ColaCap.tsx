@@ -6,11 +6,29 @@ import {
   getColaCap,
   mensajeDeError,
   revisarCap,
+  verificarFirmaCap,
   type AccionRevisionCap,
   type CapCola,
   type CategoriaAntecedenteCap,
+  type EstadoFirmaCap,
 } from "@/lib/api";
-import { Alerta, Boton, CampoSelect, Cargando, Insignia, Tarjeta } from "@/components/ui";
+import { Alerta, Boton, CampoSelect, Cargando, Insignia, Tarjeta, type TonoInsignia } from "@/components/ui";
+
+/** ADR-M1-10: estado de la firma digital según el validador oficial. */
+const FIRMA: Record<EstadoFirmaCap, { texto: string; tono: TonoInsignia }> = {
+  NO_VERIFICADA: { texto: "Firma sin verificar", tono: "neutro" },
+  PENDIENTE: { texto: "Firma: en cola del validador", tono: "info" },
+  EN_PROCESO: { texto: "Firma: verificando", tono: "info" },
+  VALIDA: { texto: "Firma digital válida", tono: "exito" },
+  INVALIDA: { texto: "Firma inválida", tono: "peligro" },
+  FIRMANTE_NO_RECONOCIDO: { texto: "Firmante no reconocido", tono: "peligro" },
+  ERROR: { texto: "No se pudo verificar la firma", tono: "aviso" },
+};
+
+/** Con el validador encendido, solo se aprueba con la firma válida (el backend lo exige igual). */
+function firmaBloqueaAprobar(estado: EstadoFirmaCap): boolean {
+  return estado !== undefined && estado !== "VALIDA" && estado !== "NO_VERIFICADA";
+}
 
 /** Qué informa el certificado (BR-CAP-01 y BR-CAP-02, Spec_M1). */
 const CATEGORIAS: { value: "" | CategoriaAntecedenteCap; label: string }[] = [
@@ -68,6 +86,19 @@ export default function ColaCap() {
     }
   }
 
+  async function volverAVerificar(c: CapCola) {
+    setProcesando(c.id);
+    setError(null);
+    try {
+      const actualizado = await verificarFirmaCap(c.id);
+      setCola((prev) => (prev ? prev.map((x) => (x.id === c.id ? actualizado : x)) : prev));
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo pedir la verificación de la firma."));
+    } finally {
+      setProcesando(null);
+    }
+  }
+
   async function revisar(c: CapCola, accion: AccionRevisionCap) {
     setProcesando(c.id);
     setError(null);
@@ -100,8 +131,27 @@ export default function ColaCap() {
                     Emitido {fecha(c.fechaEmision)} · vence {fecha(c.venceAt)} · intento {c.numeroIntento} · enviado {fecha(c.createdAt)}
                   </p>
                 </div>
-                {c.estado === "EN_REVISION_LEGAL" && <Insignia tono="aviso">En revisión legal</Insignia>}
+                <div className="flex flex-wrap gap-2">
+                  <Insignia tono={(FIRMA[c.firmaEstado] ?? FIRMA.NO_VERIFICADA).tono}>{(FIRMA[c.firmaEstado] ?? FIRMA.NO_VERIFICADA).texto}</Insignia>
+                  {c.estado === "EN_REVISION_LEGAL" && <Insignia tono="aviso">En revisión legal</Insignia>}
+                </div>
               </div>
+              {c.firmaEstado && c.firmaEstado !== "NO_VERIFICADA" && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  <p className="min-w-0">
+                    {c.firmaFirmante && <span className="block font-medium text-slate-700">Firmante: {c.firmaFirmante}</span>}
+                    {c.firmaDetalle && <span className="block">{c.firmaDetalle}</span>}
+                    {c.firmaSha256 && (
+                      <span className="block break-all font-mono" title="Hash del archivo que se verificó">SHA-256: {c.firmaSha256}</span>
+                    )}
+                  </p>
+                  {(c.firmaEstado === "ERROR" || c.firmaEstado === "INVALIDA" || c.firmaEstado === "FIRMANTE_NO_RECONOCIDO") && (
+                    <Boton variante="secundario" tamano="sm" disabled={procesando === c.id} onClick={() => void volverAVerificar(c)}>
+                      Volver a verificar
+                    </Boton>
+                  )}
+                </div>
+              )}
               <div className="flex flex-wrap items-end gap-2">
                 <Boton variante="secundario" tamano="sm" onClick={() => void verDocumento(c.id)}>
                   {documento?.id === c.id ? "Ocultar certificado" : "Ver certificado"}
@@ -118,7 +168,12 @@ export default function ColaCap() {
                     ))}
                   </CampoSelect>
                 </div>
-                <Boton tamano="sm" disabled={procesando === c.id} onClick={() => void revisar(c, "APROBAR")}>
+                <Boton
+                  tamano="sm"
+                  disabled={procesando === c.id || (!categorias[c.id] && firmaBloqueaAprobar(c.firmaEstado))}
+                  title={!categorias[c.id] && firmaBloqueaAprobar(c.firmaEstado) ? "Para aprobar, la firma digital tiene que estar verificada." : undefined}
+                  onClick={() => void revisar(c, "APROBAR")}
+                >
                   Registrar revisión
                 </Boton>
                 <Boton variante="peligro" tamano="sm" disabled={procesando === c.id} onClick={() => void revisar(c, "RECHAZAR")}>

@@ -90,7 +90,8 @@ export default function SeccionCap() {
           <form className="flex max-w-md flex-col gap-4" onSubmit={enviar}>
             <p className="text-sm text-tinta-suave">
               Pedí el <strong>Certificado de Antecedentes Penales</strong> en argentina.gob.ar o en Mi Argentina y subí el PDF tal
-              como lo descargaste. Lo revisa una persona del equipo de Tinku y vale 12 meses desde que se emite.
+              como lo descargaste: verificamos su firma digital con el validador oficial, así que una foto o captura no sirve.
+              Después lo revisa una persona del equipo de Tinku y vale 12 meses desde que se emite.
             </p>
             <SubidaArchivo
               id="archivoCap"

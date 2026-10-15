@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,6 +63,15 @@ public class AdminCapController {
         CertificadoAntecedentesPenales cap = certificadoService.revisar(
                 id, adminId, request.accion(), request.categoria());
         return ResponseEntity.ok(CapResponse.from(cap));
+    }
+
+    /** ADR-M1-10: vuelve a poner el CAP en la cola del validador (por ejemplo, después de un error). */
+    @PostMapping("/{id}/verificar-firma")
+    public ResponseEntity<CapColaResponse> verificarFirma(@PathVariable UUID id, Authentication authentication) {
+        UUID adminId = gate.requiereModeracion(authentication);
+        AdminModeracionGate.exigirNoEsParteDelCaso(adminId, certificadoService.tutorDelCap(id));
+        certificadoService.volverAVerificarFirma(id);
+        return ResponseEntity.ok(CapColaResponse.from(certificadoService.obtenerConTutor(id)));
     }
 
     /** Visor del PDF, mismo patrón y headers que el de credenciales (AUD-007). */

@@ -76,4 +76,35 @@ public class CertificadoAntecedentesPenales {
 
     @Column(name = "revisado_at")
     private Instant revisadoAt;
+
+    // ---- ADR-M1-10: verificación de la firma digital con el validador oficial ----
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "firma_estado", nullable = false, length = 30)
+    private EstadoFirmaCap firmaEstado = EstadoFirmaCap.NO_VERIFICADA;
+
+    @Column(name = "firma_detalle", length = 500)
+    private String firmaDetalle;
+
+    @Column(name = "firma_firmante", length = 300)
+    private String firmaFirmante;
+
+    /** Hash del archivo enviado: el resultado solo vale si el validador informa el mismo. */
+    @Column(name = "firma_sha256", length = 64)
+    private String firmaSha256;
+
+    @Column(name = "firma_solicitud_id", length = 120)
+    private String firmaSolicitudId;
+
+    @Column(name = "firma_intentos", nullable = false)
+    private int firmaIntentos = 0;
+
+    @Column(name = "firma_proximo_intento_at")
+    private Instant firmaProximoIntentoAt;
+
+    @Column(name = "firma_enviada_at")
+    private Instant firmaEnviadaAt;
+
+    @Column(name = "firma_verificada_at")
+    private Instant firmaVerificadaAt;
 }

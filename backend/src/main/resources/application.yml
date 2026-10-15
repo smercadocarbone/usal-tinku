@@ -139,6 +139,19 @@ tinku:
     backoff-horas: ${OCR_BACKOFF_HORAS:24} # FR-ID-011: espera tras agotar los intentos de foto (Tabla_Tiempos)
   credencial:
     backoff-horas: ${CREDENCIAL_BACKOFF_HORAS:24} # FR-ID-012: 24hs * 2^n (24→48→96…) tras agotar ciclo de credencial (Tabla_Tiempos)
+  cap:
+    # ADR-M1-10: la firma digital del CAP se verifica con el validador oficial, por una cola
+    # que manda un pedido a la vez y espaciado (Tabla de Tiempos). Con el validador encendido,
+    # el CAP tiene que ser el PDF original y solo se aprueba con la firma válida.
+    validador:
+      habilitado: ${CAP_VALIDADOR_HABILITADO:true}
+      base-url: ${CAP_VALIDADOR_URL:https://validadordefirmas.gob.ar}
+      intervalo-segundos: ${CAP_VALIDADOR_INTERVALO_SEGUNDOS:30} # un paso de la cola cada 30 s
+      cola-maxima: 300 # no se manda si el validador tiene 300 o más pedidos esperando (la cota de su página)
+      max-intentos: 6
+      espera-resultado-minutos: 10
+      # Texto que tiene que aparecer en el firmante (nombre, organización o unidad), sin tildes.
+      firmante-esperado: ${CAP_VALIDADOR_FIRMANTE:REINCIDENCIA}
   almacenamiento:
     # Directorio local para credenciales de Tutor (AlmacenamientoLocal). Cuando
     # haya storage real (ADR), se reemplaza el bean sin tocar el puerto.

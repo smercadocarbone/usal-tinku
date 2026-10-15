@@ -2,6 +2,7 @@ package com.tinku.identidad.dto;
 
 import com.tinku.identidad.model.CertificadoAntecedentesPenales;
 import com.tinku.identidad.model.EstadoCap;
+import com.tinku.identidad.model.EstadoFirmaCap;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,11 +19,19 @@ public record CapColaResponse(
         LocalDate venceAt,
         String categoriaAntecedente,
         int numeroIntento,
-        Instant createdAt
+        Instant createdAt,
+        // ADR-M1-10: verificación de la firma digital con el validador oficial
+        EstadoFirmaCap firmaEstado,
+        String firmaDetalle,
+        String firmaFirmante,
+        String firmaSha256,
+        Instant firmaVerificadaAt
 ) {
     public static CapColaResponse from(CertificadoAntecedentesPenales c) {
         return new CapColaResponse(c.getId(), c.getTutor().getId(), c.getTutor().getNombre(),
                 c.getTutor().getApellido(), c.getEstado(), c.getFechaEmision(), c.getVenceAt(),
-                c.getCategoriaAntecedente(), c.getNumeroIntento(), c.getCreatedAt());
+                c.getCategoriaAntecedente(), c.getNumeroIntento(), c.getCreatedAt(),
+                c.getFirmaEstado(), c.getFirmaDetalle(), c.getFirmaFirmante(), c.getFirmaSha256(),
+                c.getFirmaVerificadaAt());
     }
 }

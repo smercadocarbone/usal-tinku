@@ -16,6 +16,11 @@ spring:
             idleWaitTime: 1000
 
 tinku:
+  # ADR-M1-10: la suite no llama al validador oficial; CapFirmaValidadorIntegracionTest lo
+  # enciende con un validador simulado.
+  cap:
+    validador:
+      habilitado: false
   # T09: la suite prueba el adicional de resumen (en prod queda apagado hasta el texto legal).
   resumen:
     adicional:

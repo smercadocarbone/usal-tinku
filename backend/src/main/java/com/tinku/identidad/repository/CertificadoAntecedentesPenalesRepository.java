@@ -38,4 +38,13 @@ public interface CertificadoAntecedentesPenalesRepository
     @Query("select c from CertificadoAntecedentesPenales c join fetch c.tutor "
             + "where c.estado in :estados order by c.createdAt asc")
     List<CertificadoAntecedentesPenales> colaConTutor(@Param("estados") Collection<EstadoCap> estados);
+
+    /** ADR-M1-10: el pedido en curso más viejo (se consulta antes de mandar otro). */
+    Optional<CertificadoAntecedentesPenales> findFirstByFirmaEstadoOrderByFirmaEnviadaAtAsc(
+            com.tinku.identidad.model.EstadoFirmaCap estado);
+
+    /** ADR-M1-10: el próximo de la cola al que ya le toca. */
+    Optional<CertificadoAntecedentesPenales>
+            findFirstByFirmaEstadoAndFirmaProximoIntentoAtLessThanEqualOrderByFirmaProximoIntentoAtAsc(
+                    com.tinku.identidad.model.EstadoFirmaCap estado, java.time.Instant ahora);
 }
