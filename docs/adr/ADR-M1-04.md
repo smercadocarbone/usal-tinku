@@ -48,6 +48,8 @@ Artículo II no cambia.
   con antecedentes. Se mitiga con la revisión manual del Admin de Moderación y Seguridad sobre el
   documento original (visor del PDF, T02) y, opcionalmente, con la verificación automática de la
   firma digital del CAP (T04, diferida a futuro por PT2: manual en el MVP).
+  _Actualización 2026-10-15:_ la firma ya se verifica con el validador oficial antes de poder
+  aprobar (ADR-M1-10).
 - No es una garantía absoluta de idoneidad de trato con menores; sigue siendo un control
   documental complementario a la Credencial Académica, la calificación explícita y el kill-switch.
 
