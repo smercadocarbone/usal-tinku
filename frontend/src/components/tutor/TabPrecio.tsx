@@ -297,7 +297,7 @@ function PaqueteDelMes({
         toast.mostrar(habilitado ? "Guardamos tu paquete del mes" : "Ya no ofrecés el paquete del mes");
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError && err.status === 422 ? err.message : "No pudimos guardar el paquete. Probá de nuevo.");
+        setError(err instanceof ApiError && err.status === 422 && err.message ? err.message : "No pudimos guardar el paquete. Probá de nuevo.");
       });
   };
 

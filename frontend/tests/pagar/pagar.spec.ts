@@ -121,3 +121,38 @@ test.describe("Pago de una reserva", () => {
     }
   );
 });
+
+test.describe("Errores crudos del servidor", () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await setFakeSession(context, baseURL!);
+  });
+
+  for (const [nombre, cuerpo, tipo] of [
+    [
+      "el cuerpo por defecto de Spring",
+      JSON.stringify({ timestamp: "2026-10-15T12:00:00Z", status: 500, error: "Internal Server Error", path: "/api/pagos/preferencia" }),
+      "application/json",
+    ],
+    ["una página HTML de un proxy", "<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1></body></html>", "text/html"],
+  ] as const) {
+    test(
+      `no muestra ${nombre}: usa el texto propio de la pantalla`,
+      { tag: ["@e2e", "@pago", "@ERRORES-CRUDOS-001"] },
+      async ({ page }) => {
+        await mockApi(page, {
+          [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, { id: RESERVA_ID, precio: 5000 }),
+          "POST /api/pagos/preferencia": async (route) => {
+            await route.fulfill({ status: 500, contentType: tipo, body: cuerpo });
+          },
+        });
+
+        const pagar = new PagarPage(page);
+        await pagar.goto(RESERVA_ID);
+
+        await expect(page.getByText("No pudimos generar el pago. Probá de nuevo.")).toBeVisible();
+        await expect(page.getByText("Internal Server Error")).toHaveCount(0);
+        await expect(page.getByText("Bad Gateway")).toHaveCount(0);
+      }
+    );
+  }
+});

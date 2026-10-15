@@ -104,7 +104,7 @@ export default function PreciosRegionales() {
       <p className="mb-4 text-sm text-slate-500">
         Cada envío agrega una versión nueva para la provincia elegida — nunca
         sobreescribe la vigente. Un Tutor que ya fijó su precio contra una
-        versión anterior no se ve afectado (FR-PAG-006).
+        versión anterior no se ve afectado.
       </p>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">

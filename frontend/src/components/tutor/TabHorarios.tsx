@@ -180,7 +180,7 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
     const resultados = peticiones.map((p) =>
       api.post("/api/tutores/franjas", p).then(
         () => ({ ok: true as const }),
-        (err: unknown) => ({ ok: false as const, msj: err instanceof ApiError ? err.message : "Error inesperado." })
+        (err: unknown) => ({ ok: false as const, msj: err instanceof ApiError && err.message ? err.message : "No pudimos publicar ese horario. Probá de nuevo." })
       )
     );
     Promise.all(resultados)

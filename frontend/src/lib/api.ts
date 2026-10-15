@@ -75,24 +75,31 @@ async function request<T>(
 /** Extrae un mensaje legible y el detalle estructurado del cuerpo de error
  * del backend (contrato M1: `{"error": "...", ...extra}`). */
 async function leerError(res: Response): Promise<[string, Record<string, unknown>?]> {
+  // Si no hay un mensaje pensado para el usuario se devuelve "" y cada pantalla
+  // usa su propio texto de respaldo (mensajeDeError). Nunca se muestra el
+  // statusText en inglés, el cuerpo por defecto de Spring ("Internal Server
+  // Error") ni una página HTML de error de un proxy.
   let texto = "";
   try {
     texto = await res.text();
   } catch {
-    return [res.statusText];
+    return [""];
   }
 
-  if (!texto) return [res.statusText];
+  if (!texto) return [""];
 
   try {
     const json = JSON.parse(texto) as Record<string, unknown>;
-    const mensaje =
-      (typeof json.error === "string" && json.error) ||
-      (typeof json.message === "string" && json.message) ||
-      (typeof json.detail === "string" && json.detail);
-    return [mensaje || res.statusText, json];
+    // Cuerpo por defecto de Spring Boot: {timestamp, status, error: "Not Found", path}.
+    const esErrorPorDefecto = "timestamp" in json && "path" in json;
+    const mensaje = esErrorPorDefecto
+      ? ""
+      : (typeof json.error === "string" && json.error) ||
+        (typeof json.message === "string" && json.message) ||
+        (typeof json.detail === "string" && json.detail);
+    return [mensaje || "", json];
   } catch {
-    return [texto, { body: texto }];
+    return ["", { body: texto }];
   }
 }
 

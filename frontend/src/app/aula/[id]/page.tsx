@@ -941,10 +941,10 @@ export default function AulaPage() {
       setEstado("finalizada");
       router.replace("/cuenta/reservas");
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (err instanceof ApiError && err.message) {
         setError(err.message);
       } else {
-        setError("No se pudo finalizar la sesión.");
+        setError("No se pudo finalizar la clase.");
       }
       setFinalizando(false);
     }
@@ -1207,7 +1207,7 @@ export default function AulaPage() {
               <span className="text-xs text-amber-400">Priorizando el audio por tu conexión</span>
             )}
             {grabandoResumen && (
-              <span className="flex items-center gap-1.5 text-xs text-red-300" title="Se graba solo el audio para el resumen automático (ADR-M3-04)">
+              <span className="flex items-center gap-1.5 text-xs text-red-300" title="Se graba solo el audio, para el resumen automático. Se borra al transcribirlo.">
                 <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
                 Grabando solo audio para el resumen
               </span>
