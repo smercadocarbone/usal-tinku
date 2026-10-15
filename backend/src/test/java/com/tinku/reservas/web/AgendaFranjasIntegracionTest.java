@@ -233,7 +233,7 @@ class AgendaFranjasIntegracionTest extends IntegracionBase {
                 .andExpect(jsonPath("$.error").value("Ese horario ya pasó."));
         reservar(t, tutor, Instant.now().plusSeconds(20 * 60), 60)
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("menos de 30 minutos")));
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("menos de 21 minutos")));
     }
 
     // ---- D-4 disponibilidad del perfil público ----
