@@ -64,19 +64,20 @@ import java.util.UUID;
 public class ReservaService {
 
     /**
-     * FR-RES-013 — no se reserva a menos de 30 min del inicio (Tabla_Tiempos_Tinku.md; eran 15
-     * hasta 2026-09-26): el pago tiene hasta 15 min para confirmarse (FR-RES-020) y el Tutor
-     * tiene que enterarse con margen para prepararse.
+     * FR-RES-013 — no se reserva a menos de 21 min del inicio (Tabla_Tiempos_Tinku.md; eran 30
+     * hasta 2026-10-15 y 15 hasta 2026-09-26): el pago tiene hasta 15 min para confirmarse
+     * (FR-RES-020) y la sala se abre a T-5, así que una reserva hecha en el límite y pagada al
+     * final del plazo todavía llega a abrir la sala (15 + 5 + 1 de margen).
      */
-    public static final Duration VENTANA_MINIMA = Duration.ofMinutes(30);
+    public static final Duration VENTANA_MINIMA = Duration.ofMinutes(21);
 
     /**
      * FR-RES-016 (enmendado 2026-09-26): con menos de 24 hs se puede cambiar de horario, sin
-     * perder el pago, hasta el doble de la ventana mínima antes de la clase (1 h). El horario
-     * que se libera queda abierto a que otra persona lo reserve durante al menos una ventana
-     * mínima más. Sin límite de cambios.
+     * perder el pago, hasta 1 h antes de la clase. Es un valor propio desde 2026-10-15 (antes
+     * era el doble de la ventana mínima; al bajarla a 21 min el plazo de cambio se mantuvo en
+     * 1 h). El horario que se libera queda abierto a otra reserva. Sin límite de cambios.
      */
-    public static final Duration LIMITE_REPROGRAMACION = VENTANA_MINIMA.multipliedBy(2);
+    public static final Duration LIMITE_REPROGRAMACION = Duration.ofMinutes(60);
 
     /** FR-RES-020 — timeout de pendiente_pago a 15 min (Tabla_Tiempos_Tinku.md). */
     public static final Duration TIMEOUT_PENDIENTE_PAGO = Duration.ofMinutes(15);
@@ -593,7 +594,7 @@ public class ReservaService {
         }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(horario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 30 minutos para ese horario: ya no se puede reservar.");
+                    "Faltan menos de 21 minutos para ese horario: ya no se puede reservar.");
         }
         if (!FranjaService.duracionValida(duracionMinutos)) {
             throw new DuracionMinutosInvalidaException(
@@ -702,7 +703,7 @@ public class ReservaService {
         }
         if (Instant.now().plus(VENTANA_MINIMA).isAfter(nuevoHorario)) {
             throw new VentanaMinimaException(
-                    "Faltan menos de 30 minutos para el horario nuevo: elegí uno más adelante.");
+                    "Faltan menos de 21 minutos para el horario nuevo: elegí uno más adelante.");
         }
         if (!franjaService.cabeEnDisponibilidad(reserva.getTutor().getId(), nuevoHorario,
                 reserva.getDuracionMinutos())) {

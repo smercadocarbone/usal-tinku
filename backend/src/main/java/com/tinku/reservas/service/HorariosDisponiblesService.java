@@ -24,7 +24,7 @@ import java.util.UUID;
  * Tasks_Tinku_Implementacion.md). No define reglas de negocio nuevas — solo
  * orquesta franjas ya publicadas (FR-RES-012), reservas no canceladas
  * existentes (mismo criterio que la EXCLUDE de FR-RES-007) y la ventana
- * mínima de 30 min (FR-RES-013), todas ya vigentes en {@link FranjaService}/
+ * mínima de 21 min (FR-RES-013), todas ya vigentes en {@link FranjaService}/
  * {@link ReservaService}.
  */
 @Service
