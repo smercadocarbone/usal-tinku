@@ -397,7 +397,8 @@ class PagosFlujosIntegracionTest {
                         .content(objectMapper.writeValueAsString(Map.of("precioHora", 22000))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tutorId").value(tutorId.toString()))
-                .andExpect(jsonPath("$.precioHora").value(new BigDecimal("22000")));
+                // R-B B-6 (T2-H8): la respuesta muestra lo guardado, con 2 decimales como el GET.
+                .andExpect(jsonPath("$.precioHora").value(22000.0));
         assertThat(tarifaTutorRepository.findByTutorId(tutorId).orElseThrow().getPrecioHora())
                 .isEqualByComparingTo(new BigDecimal("22000"));
 
@@ -409,7 +410,7 @@ class PagosFlujosIntegracionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("precioHora", 23000))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.precioHora").value(new BigDecimal("23000")));
+                .andExpect(jsonPath("$.precioHora").value(23000.0));
         assertThat(tarifaTutorRepository.count()).isEqualTo(filasAntes);
 
         // La Reserva congela ESE precio (FR-PAG-013): 22000+, no el stub de dev.

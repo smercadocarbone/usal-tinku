@@ -1265,15 +1265,16 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
-    void cancelar_reservaDeOtro_queda403() throws Exception {
+    void cancelar_reservaDeOtro_queda404() throws Exception {
         EscenarioAdulto e = escenarioAdulto();
         UUID reservaId = crearReservaDirecta(e.tokenEstudiante(), e.tutorId(), null, e.horario());
         String otroDni = dniUnico();
         String tokenOtro = registrarAdultoYToken(otroDni, "Pepe", "Garcia", true, false);
 
+        // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
         mockMvc.perform(post("/api/reservas/{id}/cancelar", reservaId)
                         .header("Authorization", "Bearer " + tokenOtro))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test
