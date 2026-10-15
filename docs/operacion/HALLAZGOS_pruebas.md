@@ -150,3 +150,7 @@ Según `AGENTS.md` §9, cada arreglo va con un test de regresión que falle ante
 | T4-H11 (categoría del CAP) | **Cerrado** | `fix/rem-f` | `cap_reRechazarSinCategoria_conservaLaCategoria` |
 | T4-H12 (400 antes que 403) | **Cerrado** | `fix/rem-f` | `rolEquivocado_403AntesQueValidacion` |
 | T5-4 (precios vacíos) | **Cerrado** (cargar los precios es O-8) | `fix/rem-f` | ADMIN-F-008 |
+| T1-M1 (relevancia) | **Cerrado** (D-3; calibrado con el modelo real, `CALIBRACION_busqueda.md`; revisar `MATCHING_SCORE_MINIMO` en Coolify) | `fix/rem-e` | `BusquedaRemIntegracionTest.textoSinLetras*`, `corteRelativo_yAbsolutoCalibrado`, BUSCAR-E-001 |
+| T1-6 (búsquedas guardadas) | **Cerrado** (`V49`) | `fix/rem-e` | `guardada_conservaFiltros_noDuplica_yseBorra`, BUSCAR-E-002 |
+| T1-11 (comentarios en el perfil) | **Cerrado** (D-4) | `fix/rem-e` | `ComentariosTutorIntegracionTest`, BUSCAR-E-003 |
+| T1-12 (filtro de materia) | **Cerrado** | `fix/rem-e` | `filtroMateria_sinDistinguirMayusculasNiTildes` |

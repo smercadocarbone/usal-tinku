@@ -248,6 +248,8 @@ export interface BusquedaGuardada {
   id: string;
   textoBusqueda: string;
   createdAt: string;
+  /** R-E E-2: filtros con que se guardó (nombres del API). */
+  filtros?: { texto_busqueda?: string; nombre?: string; filtro_materia?: string; filtro_nivel?: string; precio_max_hora?: number };
 }
 
 export function guardarBusqueda(body: CuerpoBusqueda): Promise<BusquedaGuardada> {
@@ -255,7 +257,25 @@ export function guardarBusqueda(body: CuerpoBusqueda): Promise<BusquedaGuardada>
     texto_busqueda: body.textoBusqueda || undefined,
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
+    filtro_nivel: body.filtroNivel || undefined,
+    precio_max_hora: body.precioMaxHora || undefined,
   });
+}
+
+/** R-E E-2: borra una búsqueda guardada propia. */
+export function borrarBusquedaGuardada(id: string): Promise<void> {
+  return api.delete(`/api/busquedas/guardadas/${id}`);
+}
+
+/** R-E E-3 (FR-REP-001): comentarios públicos del perfil del Tutor, sin datos de quién los escribió. */
+export interface ComentarioPublico {
+  estrellas: number;
+  comentario: string;
+  fecha: string;
+}
+
+export function getComentariosTutor(tutorId: string, limite = 5): Promise<ComentarioPublico[]> {
+  return api.get(`/api/tutores/${tutorId}/calificaciones?limite=${limite}`);
 }
 
 export function getBusquedasGuardadas(): Promise<BusquedaGuardada[]> {

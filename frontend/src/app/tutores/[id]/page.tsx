@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, ChevronLeft, Flag, IdCard, ShieldCheck, UserX } from "lucide-react";
-import { api, ApiError, autorizarTutor, getDisponibilidadTutor, getMenores, mensajeDeError, type DiaDisponible, type Menor } from "@/lib/api";
+import { api, ApiError, autorizarTutor, getComentariosTutor, getDisponibilidadTutor, getMenores, mensajeDeError, type ComentarioPublico, type DiaDisponible, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { diaCorto } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
@@ -49,6 +49,7 @@ export default function TutorPerfilPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dias, setDias] = useState<DiaDisponible[] | null>(null);
+  const [comentarios, setComentarios] = useState<ComentarioPublico[]>([]);
   const [reportar, setReportar] = useState(false);
 
   const cargar = useCallback(() => {
@@ -68,6 +69,10 @@ export default function TutorPerfilPage() {
     getDisponibilidadTutor(params.id, 7)
       .then(setDias)
       .catch(() => setDias([]));
+    // R-E E-3 (FR-REP-001): comentarios públicos, sin quién los escribió.
+    getComentariosTutor(params.id, 5)
+      .then(setComentarios)
+      .catch(() => setComentarios([]));
   }, [params.id]);
 
   useEffect(() => {
@@ -184,6 +189,22 @@ export default function TutorPerfilPage() {
                 {perfil.materias.map((m) => (
                   <li key={m}>
                     <Insignia className="px-3 py-1.5 text-sm">{m}</Insignia>
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
+
+          {comentarios.length > 0 && (
+            <Seccion titulo="Lo que cuentan las familias">
+              <ul className="flex list-none flex-col gap-3 p-0">
+                {comentarios.map((c, i) => (
+                  <li key={`${c.fecha}-${i}`} className="rounded-2xl border border-borde bg-superficie p-4">
+                    <p className="text-sm font-bold" aria-label={`${c.estrellas} de 5 estrellas`}>
+                      {"★".repeat(c.estrellas)}
+                      <span className="text-tinta-tenue">{"★".repeat(Math.max(0, 5 - c.estrellas))}</span>
+                    </p>
+                    <p className="mt-1 whitespace-pre-line text-[15px] text-tinta-suave">{c.comentario}</p>
                   </li>
                 ))}
               </ul>

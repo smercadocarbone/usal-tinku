@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface BusquedaGuardadaRepository extends JpaRepository<BusquedaGuardada, UUID> {
 
     List<BusquedaGuardada> findByUsuarioIdOrderByCreatedAtDesc(UUID usuarioId);
+
+    java.util.Optional<BusquedaGuardada> findByUsuarioIdAndHuella(UUID usuarioId, String huella);
 }

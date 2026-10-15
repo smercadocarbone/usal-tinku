@@ -6,6 +6,7 @@ import AppShell from "@/components/shell/AppShell";
 import TarjetaTutor from "@/components/tutores/TarjetaTutor";
 import {
   buscarTutores,
+  borrarBusquedaGuardada,
   ejecutarBusquedaGuardada,
   getBusquedasGuardadas,
   getCatalogos,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/api";
 import { getTutor, normalizarTutor, type TutorPerfil } from "@/lib/tutores";
 import { useToast } from "@/components/ui";
-import { Alerta, Boton, Chip, EstadoVacio, Modal, SkeletonTarjetas } from "@/components/ui";
+import { Alerta, Boton, Chip, EstadoVacio, Insignia, Modal, SkeletonTarjetas } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatearPesos } from "@/lib/formatos";
 
@@ -179,8 +180,10 @@ export default function BuscarPage() {
     setBuscando(true);
     setError(null);
     setResultados(null);
-    setTexto(g.textoBusqueda);
-    setConsulta({ texto: g.textoBusqueda, materia: "" });
+    // R-E E-2: si se guardó con filtros, la pantalla los muestra igual que la búsqueda original.
+    const textoGuardado = g.filtros && Object.keys(g.filtros).length > 0 ? (g.filtros.texto_busqueda ?? "") : g.textoBusqueda;
+    setTexto(textoGuardado);
+    setConsulta({ texto: textoGuardado, materia: g.filtros?.filtro_materia ?? "" });
     setYaGuardada(true);
     try {
       await hidratar(await ejecutarBusquedaGuardada(g.id));
@@ -191,6 +194,15 @@ export default function BuscarPage() {
     }
   }
 
+  async function borrarGuardada(g: BusquedaGuardada) {
+    try {
+      await borrarBusquedaGuardada(g.id);
+      setGuardadas((prev) => (prev ?? []).filter((x) => x.id !== g.id));
+    } catch (err) {
+      toast.mostrar(mensajeDeError(err, "No pudimos borrar la búsqueda."), { tono: "error" });
+    }
+  }
+
   async function guardarActual() {
     if (!consulta) return;
     setGuardando(true);
@@ -198,8 +210,11 @@ export default function BuscarPage() {
       const nueva = await guardarBusqueda({
         textoBusqueda: consulta.texto || undefined,
         filtroMateria: consulta.materia || undefined,
+        filtroNivel: nivel || undefined,
+        precioMaxHora: precioMax ?? undefined,
       });
-      setGuardadas((prev) => [nueva, ...(prev ?? [])]);
+      // R-E E-2: si ya estaba guardada, el backend devuelve la misma (no se duplica en la lista).
+      setGuardadas((prev) => [nueva, ...(prev ?? []).filter((g) => g.id !== nueva.id)]);
       setYaGuardada(true);
       toast.mostrar("Guardamos la búsqueda");
     } catch (err) {
@@ -430,13 +445,26 @@ export default function BuscarPage() {
                 <h2 className="flex items-center gap-2 text-lg font-bold">
                   <History className="size-5 text-tinta-tenue" aria-hidden /> Tus búsquedas guardadas
                 </h2>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <ul className="mt-3 flex list-none flex-col gap-2 p-0">
                   {guardadas.map((g) => (
-                    <Boton key={g.id} variante="secundario" tamano="sm" className="rounded-pastilla" onClick={() => void ejecutarGuardada(g)}>
-                      {g.textoBusqueda}
-                    </Boton>
+                    <li key={g.id} className="flex flex-wrap items-center gap-2">
+                      <Boton variante="secundario" tamano="sm" className="rounded-pastilla" onClick={() => void ejecutarGuardada(g)}>
+                        {g.filtros?.texto_busqueda ?? g.textoBusqueda}
+                      </Boton>
+                      {g.filtros?.filtro_materia && <Insignia>{g.filtros.filtro_materia}</Insignia>}
+                      {g.filtros?.filtro_nivel && <Insignia>{rotuloNivel(g.filtros.filtro_nivel)}</Insignia>}
+                      {g.filtros?.precio_max_hora && <Insignia>Hasta ${g.filtros.precio_max_hora}</Insignia>}
+                      <Boton
+                        variante="fantasma"
+                        tamano="sm"
+                        aria-label={`Borrar la búsqueda «${g.textoBusqueda}»`}
+                        onClick={() => void borrarGuardada(g)}
+                      >
+                        Borrar
+                      </Boton>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
             <EstadoVacio icono={<Search />} titulo="Empezá por lo que necesitás" className="py-8">

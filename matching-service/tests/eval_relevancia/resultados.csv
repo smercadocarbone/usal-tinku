@@ -1,0 +1,41 @@
+texto,esperado,score_top1,score_top5,n_sobre_absoluto
+ayuda con funciones cuadráticas,relevante,0.7566,0.3296,5
+necesito aprender a resolver sistemas de ecuaciones,relevante,0.7021,0.2351,4
+clases de matemática para secundario,relevante,0.4774,0.2769,4
+mi hijo no entiende las fracciones,relevante,0.5639,0.2169,2
+cómo hacer divisiones de dos cifras,relevante,0.6248,0.2757,4
+tablas de multiplicar para primaria,relevante,0.7454,0.3738,5
+inglés para chicos de primer grado,relevante,0.3845,0.1885,2
+voz pasiva en inglés,relevante,0.6865,0.1805,2
+past simple y present perfect,relevante,0.8493,0.2128,1
+física: cinemática y movimiento,relevante,0.6864,0.2424,2
+problemas de dinámica y fuerzas,relevante,0.6632,0.3114,5
+trabajo y energía física,relevante,0.8948,0.1707,1
+química la tabla periódica,relevante,0.8073,0.2304,1
+estructura del átomo,relevante,0.7203,0.1501,1
+historia revolución francesa,relevante,0.8577,0.1034,1
+la revolución industrial,relevante,0.8619,0.1685,3
+programación recursividad,relevante,0.7811,0.2140,3
+algoritmos de búsqueda y ordenamiento,relevante,0.8358,0.1742,4
+anatomía sistema nervioso,relevante,0.7500,0.1692,2
+comprensión lectora para primaria,relevante,0.7657,0.2391,2
+clases de tango bailarín,irrelevante,0.4435,0.2161,3
+cómo cocinar milanesas,irrelevante,0.2296,0.1602,0
+jardinería y huerta en casa,irrelevante,0.2728,0.1718,0
+aprender a manejar un auto,irrelevante,0.4047,0.2031,1
+reparación de celulares,irrelevante,0.2588,0.1683,0
+clases de guitarra eléctrica,irrelevante,0.2341,0.1836,0
+yoga y meditación,irrelevante,0.3647,0.1815,1
+maquillaje profesional,irrelevante,0.3685,0.2108,1
+entrenamiento de perros,irrelevante,0.2615,0.1646,0
+tejido al crochet,irrelevante,0.3150,0.1910,1
+asdkjh qwezxc,sin_sentido,0.2754,0.2315,0
+a,sin_sentido,0.3573,0.2592,4
+zzzz,sin_sentido,0.2573,0.1868,0
+!!!!,sin_sentido,0.3062,0.1971,1
+qwerty uiop,sin_sentido,0.3579,0.2979,4
+lkjh gfds,sin_sentido,0.3976,0.2196,2
+xyz,sin_sentido,0.3139,0.2313,1
+123456,sin_sentido,0.4584,0.2041,3
+ñññ ñññ,sin_sentido,0.3190,0.1979,1
+bla bla bla,sin_sentido,0.3696,0.1971,1

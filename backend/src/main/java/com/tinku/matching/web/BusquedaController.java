@@ -80,10 +80,11 @@ public class BusquedaController {
         if (textoEfectivo == null) {
             throw new BusquedaInvalidaException();
         }
-        BusquedaGuardada guardada = guardadasService.guardar(usuario.getId(), textoEfectivo);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new GuardadaResponse(guardada.getId(),
-                        guardada.getTextoBusqueda(), guardada.getCreatedAt()));
+        BusquedasGuardadasService.Guardado guardado =
+                guardadasService.guardar(usuario.getId(), textoEfectivo, filtros(request));
+        // R-E E-2 (T1-6): guardar lo mismo dos veces devuelve la que ya estaba (200), sin duplicar.
+        return ResponseEntity.status(guardado.nueva() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(GuardadaResponse.from(guardado.guardada()));
     }
 
     /** US-6: lista las búsquedas guardadas del usuario autenticado. */
@@ -92,7 +93,7 @@ public class BusquedaController {
         Usuario usuario = usuarioActual.obtener(authentication);
         List<GuardadaResponse> guardadas = guardadasService.listar(usuario.getId())
                 .stream()
-                .map(g -> new GuardadaResponse(g.getId(), g.getTextoBusqueda(), g.getCreatedAt()))
+                .map(GuardadaResponse::from)
                 .toList();
         return ResponseEntity.ok(guardadas);
     }
@@ -105,8 +106,40 @@ public class BusquedaController {
     ) {
         Usuario usuario = usuarioActual.obtener(authentication);
         BusquedaGuardada guardada = guardadasService.propia(usuario.getId(), id);
-        List<BusquedaResponse> resultados = orquestador.buscar(usuario, guardada.getTextoBusqueda());
-        return ResponseEntity.ok(datosDeReserva.completar(resultados, null));
+        java.util.Map<String, Object> f = guardada.getFiltros() == null ? java.util.Map.of() : guardada.getFiltros();
+        if (f.isEmpty()) {
+            List<BusquedaResponse> resultados = orquestador.buscar(usuario, guardada.getTextoBusqueda());
+            return ResponseEntity.ok(datosDeReserva.completar(resultados, null));
+        }
+        // R-E E-2 (T1-6): se re-ejecuta con los mismos filtros con que se guardó.
+        List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto(f, "texto_busqueda"),
+                texto(f, "nombre"), texto(f, "filtro_materia"), texto(f, "filtro_nivel"));
+        Object precio = f.get("precio_max_hora");
+        return ResponseEntity.ok(datosDeReserva.completar(resultados,
+                precio == null ? null : new java.math.BigDecimal(precio.toString())));
+    }
+
+    /** R-E E-2: borra una búsqueda guardada propia (204); ajena o inexistente, 404. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/guardadas/{id}")
+    public ResponseEntity<Void> borrar(@PathVariable UUID id, Authentication authentication) {
+        guardadasService.borrar(usuarioActual.obtener(authentication).getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    private static java.util.Map<String, Object> filtros(BusquedaRequest request) {
+        java.util.Map<String, Object> f = new java.util.LinkedHashMap<>();
+        if (trimToNull(request.textoBusqueda()) != null) f.put("texto_busqueda", request.textoBusqueda().trim());
+        if (trimToNull(request.nombre()) != null) f.put("nombre", request.nombre().trim());
+        if (trimToNull(request.filtroMateria()) != null) f.put("filtro_materia", request.filtroMateria().trim());
+        if (trimToNull(request.filtroNivel()) != null) f.put("filtro_nivel", request.filtroNivel().trim());
+        if (request.precioMaxHora() != null) f.put("precio_max_hora", request.precioMaxHora());
+        // Solo texto libre: es la búsqueda de siempre, sin filtros que guardar.
+        return f.size() == 1 && f.containsKey("texto_busqueda") ? java.util.Map.of() : f;
+    }
+
+    private static String texto(java.util.Map<String, Object> f, String clave) {
+        Object v = f.get(clave);
+        return v == null ? null : trimToNull(v.toString());
     }
 
     /** Primer campo no vacío siguiendo el orden del contrato 2b: texto_busqueda

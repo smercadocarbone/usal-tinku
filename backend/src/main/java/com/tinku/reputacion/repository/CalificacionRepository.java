@@ -18,6 +18,14 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, UUID
             + "WHERE r.tutor.id = :tutorId))")
     long countPublicasPorTutor(UUID tutorId);
 
+    /** R-E E-3 (FR-REP-001): calificaciones públicas con comentario del Tutor, más nuevas primero. */
+    @Query("SELECT c FROM Calificacion c WHERE c.direccion = 'estudiante_a_tutor' "
+            + "AND c.comentario IS NOT NULL AND TRIM(c.comentario) <> '' "
+            + "AND c.sesionId IN (SELECT s.id FROM com.tinku.aula.model.SesionAprendizaje s "
+            + "WHERE s.reservaId IN (SELECT r.id FROM com.tinku.reservas.model.Reserva r "
+            + "WHERE r.tutor.id = :tutorId)) ORDER BY c.createdAt DESC")
+    List<Calificacion> comentariosPublicosPorTutor(UUID tutorId, org.springframework.data.domain.Pageable pagina);
+
     /** FR-REP-007: promedio de calificaciones publicas del Tutor. */
     @Query("SELECT AVG(c.estrellas) FROM Calificacion c WHERE c.direccion = 'estudiante_a_tutor' "
             + "AND c.sesionId IN (SELECT s.id FROM com.tinku.aula.model.SesionAprendizaje s "

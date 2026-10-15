@@ -208,8 +208,10 @@ tinku:
     # ADR-M2-02: la reputación (M7) solo desempata: suma como mucho este valor al score semántico.
     peso-reputacion: ${MATCHING_PESO_REPUTACION:0.05}
     # ADR-M2-02 / US-1: con texto libre, debajo de esta similitud el Tutor no se muestra.
-    # Punto de partida; se calibra con las búsquedas reales del piloto.
-    score-minimo: ${MATCHING_SCORE_MINIMO:0.3}
+    # R-E E-1: calibrado con el modelo real (docs/operacion/CALIBRACION_busqueda.md); antes 0,3.
+    score-minimo: ${MATCHING_SCORE_MINIMO:0.46}
+    # R-E E-1 (D-3): tampoco se muestra lo que queda a más de este margen del mejor resultado.
+    margen-relativo: ${MATCHING_MARGEN_RELATIVO:0.25}
     # FR-MATCH-011: similitud mínima con un tema del catálogo para reconocer el área (materia
     # y nivel) de una búsqueda sin tutor directo y recomendar tutores de esa área.
     score-minimo-area: ${MATCHING_SCORE_MINIMO_AREA:0.25}
