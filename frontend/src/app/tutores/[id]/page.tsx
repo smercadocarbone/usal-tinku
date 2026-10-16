@@ -29,6 +29,7 @@ import {
   clasesBoton,
   useToast,
 } from "@/components/ui";
+import InsigniasEspecialidad from "@/components/tutores/InsigniasEspecialidad";
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -153,7 +154,7 @@ export default function TutorPerfilPage() {
                 <li className="flex items-center gap-1.5 text-exito">
                   <IdCard className="size-4" aria-hidden /> Identidad verificada
                 </li>
-                {perfil.verificado ? (
+                {perfil.especialidades ? null : perfil.verificado ? (
                   <li className="flex items-center gap-1.5 text-exito">
                     <BadgeCheck className="size-4" aria-hidden /> Título verificado
                   </li>
@@ -168,6 +169,10 @@ export default function TutorPerfilPage() {
                   </li>
                 )}
               </ul>
+              {/* ADR-M1-06: insignias por especialidad (solo con el flag encendido en el backend). */}
+              {perfil.especialidades && (
+                <InsigniasEspecialidad especialidades={perfil.especialidades} className="mt-3" />
+              )}
             </div>
           </header>
 

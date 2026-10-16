@@ -1,8 +1,10 @@
 # ADR-M1-06 — Especialidades del Tutor y verificación de credenciales por registro oficial
 
-**Estado:** Aceptado (decisiones del dueño del producto, 2026-09-25). Implementación pendiente
-(chunks E1–E4 de `docs/spikes/SPIKE-M1-M2-especialidad-y-credenciales.md`). Cambia BR-ID-01 y
-el significado de la insignia "verificado".
+**Estado:** Aceptado (decisiones del dueño del producto, 2026-09-25). **Implementado detrás del
+flag `tinku.especialidades.habilitado`, apagado** (2026-10-16, rama `feat/especialidades`, chunks
+E1–E4 de `docs/spikes/SPIKE-M1-M2-especialidad-y-credenciales.md`, migración V56). Se enciende
+cuando exista el texto legal de la cláusula (ver Pendiente). Cambia BR-ID-01 y el significado de la
+insignia "verificado".
 
 ## Contexto
 Hoy la credencial académica es un archivo que el Admin aprueba a ojo (US-4, BR-ID-01), y

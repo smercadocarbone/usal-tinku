@@ -19,21 +19,37 @@ public class ConsentimientoService {
     public static final String GRABACION_AUDIO_RESUMEN = "GRABACION_AUDIO_RESUMEN";
     /** ADR-M3-05: Términos y Condiciones, aceptados en el registro (incluyen la grabación). */
     public static final String TERMINOS = "TERMINOS_Y_CONDICIONES";
+    /**
+     * ADR-M1-06 / Pendiente: el Tutor consiente que se consulten registros oficiales con su DNI al
+     * cargar una credencial (Ley 25.326). Solo existe con {@code tinku.especialidades.habilitado}.
+     * PENDIENTE DEL DUEÑO: el texto legal; la versión por defecto es un marcador.
+     */
+    public static final String CONSULTA_REGISTROS = "CONSULTA_REGISTROS_TITULOS";
 
     private final AceptacionClausulaRepository repo;
     private final String versionGrabacion;
     private final String versionTerminos;
+    private final String versionConsultaRegistros;
+    private final EspecialidadesFlag especialidades;
 
     public ConsentimientoService(AceptacionClausulaRepository repo,
                                  @Value("${tinku.clausulas.grabacion-audio.version}") String versionGrabacion,
-                                 @Value("${tinku.clausulas.terminos.version:2026-09-26}") String versionTerminos) {
+                                 @Value("${tinku.clausulas.terminos.version:2026-09-26}") String versionTerminos,
+                                 @Value("${tinku.clausulas.consulta-registros.version:"
+                                         + EspecialidadesFlag.VERSION_PENDIENTE + "}") String versionConsultaRegistros,
+                                 EspecialidadesFlag especialidades) {
         this.repo = repo;
         this.versionGrabacion = versionGrabacion;
         this.versionTerminos = versionTerminos;
+        this.versionConsultaRegistros = versionConsultaRegistros;
+        this.especialidades = especialidades;
     }
 
     public String versionVigente(String clausula) {
         exigirConocida(clausula);
+        if (CONSULTA_REGISTROS.equals(clausula)) {
+            return versionConsultaRegistros;
+        }
         return TERMINOS.equals(clausula) ? versionTerminos : versionGrabacion;
     }
 
@@ -67,7 +83,10 @@ public class ConsentimientoService {
         return repo.existsByUsuarioIdAndClausulaAndVersion(usuarioId, clausula, versionVigente(clausula));
     }
 
-    private static void exigirConocida(String clausula) {
+    private void exigirConocida(String clausula) {
+        if (CONSULTA_REGISTROS.equals(clausula) && especialidades.habilitado()) {
+            return;
+        }
         if (!GRABACION_AUDIO_RESUMEN.equals(clausula) && !TERMINOS.equals(clausula)) {
             throw new ClausulaDesconocidaException();
         }

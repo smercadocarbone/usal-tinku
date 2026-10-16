@@ -85,6 +85,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 - **BR-REP-01:** las señales implícitas influyen solo en el orden, nunca se exponen ni se fusionan con la calificación explícita.
 - **BR-AUTH-01:** la lista de Tutores autorizados es persistente, no vence salvo revocación.
 - **BR-MATCH-01 (nueva):** un Tutor calificado con 1-2 estrellas no se expone ni se sugiere durante las 24hs siguientes. Efecto automático, temporal, no es sanción.
+- **BR-MATCH-02 (ADR-M1-06, detrás de `tinku.especialidades.habilitado`, apagado):** los resultados muestran las especialidades del Tutor con su estado (verificada / con respaldo documental / declarada) en lugar del "título verificado" genérico. Un Tutor con especialidades solo declaradas aparece igual, marcado como tal: las puntuaciones son un sistema de recomendación, no un aval. El ranking no cambia.
 
 ## 5. Fuera de Alcance de este Spec
 

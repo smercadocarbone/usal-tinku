@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
  */
 @Service
 @Profile("!dev & !test")
-public class TesseractOcrService implements OcrService {
+public class TesseractOcrService implements OcrService, LectorTextoDocumento {
 
     private static final Logger log = LoggerFactory.getLogger(TesseractOcrService.class);
     private static final Pattern ROTACION_OSD = Pattern.compile("Rotate:\\s*(\\d+)");
@@ -104,6 +104,30 @@ public class TesseractOcrService implements OcrService {
         // Sin datos personales en el log: solo qué faltó en cada variante.
         log.info("OCR DNI ilegible (orientación detectada {}°): {}", rotacion, intentos);
         return ResultadoOcr.ilegible();
+    }
+
+    /** Por debajo de esta cantidad de letras, la imagen "no tiene texto legible" (ADR-M1-06). */
+    private static final int MIN_LETRAS_TEXTO = 12;
+
+    /**
+     * ADR-M1-06: texto de un título o certificado, para el triaje (¿es un título?, ¿el nombre
+     * coincide?) y el prellenado. Una sola lectura, enderezada por OSD. Un PDF o un formato que no
+     * se puede abrir como imagen, o el lector caído, es "no procesable": no rechaza nada.
+     */
+    @Override
+    public TextoDocumento leer(byte[] contenido) {
+        BufferedImage base = preprocesador.cargar(contenido);
+        if (base == null) {
+            return TextoDocumento.noProcesable();
+        }
+        try {
+            String texto = ejecutar(preprocesador.rotar90(base, rotacionDetectada(base)), "3", null, null, idioma);
+            long letras = texto.chars().filter(Character::isLetter).count();
+            return letras < MIN_LETRAS_TEXTO ? TextoDocumento.sinTexto() : TextoDocumento.leido(texto);
+        } catch (RuntimeException e) {
+            log.info("OCR título: no se pudo leer ({})", e.getClass().getSimpleName());
+            return TextoDocumento.noProcesable();
+        }
     }
 
     /**

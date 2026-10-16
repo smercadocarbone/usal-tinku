@@ -1,5 +1,6 @@
 package com.tinku.identidad.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
 
@@ -33,8 +34,16 @@ public record TutorPerfilResponse(
         boolean verificado,
         BigDecimal precioHora,
         /** FR-ID-026 / T03 §2.2: CAP aprobado y vigente. Nada más del CAP se expone a terceros. */
-        boolean habilitadoParaMenores
+        boolean habilitadoParaMenores,
+        /** ADR-M1-06: insignias por especialidad. Solo con el flag encendido; si no, no se serializa. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        List<EspecialidadResponse> especialidades
 ) {
+    public TutorPerfilResponse conEspecialidades(List<EspecialidadResponse> lista) {
+        return new TutorPerfilResponse(id, nombre, apellido, tipo, materias, nivel, calificacionPromedio,
+                cantidadCalificaciones, bio, tieneFoto, verificado, precioHora, habilitadoParaMenores, lista);
+    }
+
     public static TutorPerfilResponse of(Usuario tutor, MateriasNivel materiasNivel, ReputacionTutor reputacion,
                                          boolean verificado, BigDecimal precioHora,
                                          boolean habilitadoParaMenores) {
@@ -51,7 +60,8 @@ public record TutorPerfilResponse(
                 tutor.getFotoRef() != null,
                 verificado,
                 precioHora,
-                habilitadoParaMenores
+                habilitadoParaMenores,
+                null
         );
     }
 }

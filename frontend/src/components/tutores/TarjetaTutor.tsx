@@ -5,6 +5,7 @@ import { BadgeCheck, CalendarClock, ChevronRight, Lock } from "lucide-react";
 import { fechaHoraCorta } from "@/lib/formatos";
 import { Avatar, Boton, Estrellas, Insignia, Precio, Tarjeta, enlaceTarjeta } from "@/components/ui";
 import { TIEMPOS } from "@/lib/tiempos";
+import InsigniasEspecialidad from "@/components/tutores/InsigniasEspecialidad";
 import { nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
 
 export interface TarjetaTutorProps {
@@ -45,7 +46,7 @@ export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, o
               ) : (
                 <Estrellas valor={tutor.calificacionPromedio!} cantidad={tutor.cantidadCalificaciones} />
               )}
-              {tutor.verificado && (
+              {!tutor.especialidades && tutor.verificado && (
                 <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-exito">
                   <BadgeCheck className="size-4" aria-hidden /> Título verificado
                 </span>
@@ -53,6 +54,9 @@ export default function TarjetaTutor({ tutor, noAutorizado, avisoAutorizacion, o
             </div>
           </div>
         </div>
+
+        {/* ADR-M1-06: con el flag encendido, una insignia por especialidad en lugar de la genérica. */}
+        {tutor.especialidades && <InsigniasEspecialidad especialidades={tutor.especialidades} />}
 
         {materias.length > 0 && (
           <p className="text-[15px] leading-relaxed text-tinta-suave">
