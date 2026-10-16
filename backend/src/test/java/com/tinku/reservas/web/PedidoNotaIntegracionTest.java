@@ -123,6 +123,23 @@ class PedidoNotaIntegracionTest extends FlujosReservaBase {
                 .andExpect(jsonPath("$.texto").value("divisiones de dos cifras"));
     }
 
+    /** Entradas de texto: el tope de 1000 caracteres (FR-RES-027) rechaza lo que se pasa en vez de
+     *  guardarlo cortado sin avisar, y no parte un emoji justo en el límite. */
+    @Test
+    void us11_textoLargo_seRechaza_yElEmojiEnElLimiteQuedaEntero() throws Exception {
+        ConMenor e = arConMenor();
+        UUID reservaId = reservar(e.tokenAr(), e.tutorId(), e.menorId(), a(e.fecha(), 15, 0), 30);
+
+        pedido(e.tokenAr(), reservaId, "a".repeat(1_000_000)).andExpect(status().isUnprocessableEntity());
+        pedido(e.tokenAr(), reservaId, "a".repeat(1001)).andExpect(status().isUnprocessableEntity());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reservas.pedidos_previos WHERE reserva_id = ?",
+                Integer.class, reservaId)).isZero();
+
+        String conEmoji = "a".repeat(999) + "\uD83D\uDE00"; // 1000 caracteres; el último, un emoji
+        pedido(e.tokenAr(), reservaId, conEmoji).andExpect(status().isOk())
+                .andExpect(jsonPath("$.texto").value(conEmoji));
+    }
+
     // ------------------------------------------------ US-12: nota del Tutor al AR
 
     private ResultActions nota(String token, UUID reservaId, String texto) throws Exception {
@@ -164,6 +181,22 @@ class PedidoNotaIntegracionTest extends FlujosReservaBase {
         assertThat(avisosDe(e.arId()).stream().filter(t -> t == TipoNotificacion.NOTA_CLASE)).hasSize(1);
         jdbc.update("UPDATE reservas.notas_clase SET created_at = now() - interval '49 hours' WHERE reserva_id = ?", reservaId);
         nota(e.tokenTutor(), reservaId, "otra").andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void us12_notaLarga_seRechaza_yElEmojiEnElLimiteQuedaEntero() throws Exception {
+        ConMenor e = arConMenor();
+        UUID reservaId = reservar(e.tokenAr(), e.tutorId(), e.menorId(), a(e.fecha(), 15, 0), 30);
+        confirmarPago(reservaId);
+        finalizar(reservaId);
+
+        nota(e.tokenTutor(), reservaId, "a".repeat(1_000_000)).andExpect(status().isUnprocessableEntity());
+        nota(e.tokenTutor(), reservaId, "a".repeat(1001)).andExpect(status().isUnprocessableEntity());
+        assertThat(avisosDe(e.arId())).doesNotContain(TipoNotificacion.NOTA_CLASE);
+
+        String conEmoji = "a".repeat(999) + "\uD83D\uDE00";
+        nota(e.tokenTutor(), reservaId, conEmoji).andExpect(status().isOk())
+                .andExpect(jsonPath("$.texto").value(conEmoji));
     }
 
     @Test
