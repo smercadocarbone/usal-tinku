@@ -149,7 +149,7 @@ public class CredencialService {
 
     /** AUD-033: solo PENDIENTE → APROBADO/RECHAZADO; nunca se re-resuelve una credencial. */
     private CredencialAcademica pendienteO(UUID credencialId) {
-        CredencialAcademica c = credencialRepo.findById(credencialId)
+        CredencialAcademica c = credencialRepo.findByIdParaActualizar(credencialId)
                 .orElseThrow(CredencialNoEncontradaException::new);
         if (c.getEstado() != EstadoCredencial.PENDIENTE) {
             throw new CredencialNoPendienteException();
