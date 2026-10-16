@@ -565,7 +565,7 @@ class AdminPanelIntegracionTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value(EstadoTransaccion.RETENIDO_ESCROW.getValor()))
                 .andExpect(jsonPath("$.montoBruto").value(new BigDecimal("15000.0")));
-        verify(reembolsoParcial).reembolsarParcial(mpPaymentId, new BigDecimal("6000"));
+        verify(reembolsoParcial).reembolsarParcial(mpPaymentId, new BigDecimal("6000"), "parcial-" + enEscrow.getId());
         assertThat(transaccionRepository.findById(enEscrow.getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
 

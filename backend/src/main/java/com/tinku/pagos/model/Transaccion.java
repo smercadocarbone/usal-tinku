@@ -95,6 +95,13 @@ public class Transaccion {
     @Column(name = "adicional_reembolso_nota", length = 300)
     private String adicionalReembolsoNota;
 
+    /** FR-PAG-010 (V54): reembolso parcial manual de Soporte, uno por transacción (null = ninguno). */
+    @Column(name = "reembolso_parcial_monto", precision = 10, scale = 2)
+    private BigDecimal reembolsoParcialMonto;
+
+    @Column(name = "reembolso_parcial_at")
+    private Instant reembolsoParcialAt;
+
     /**
      * v2.5 (ADR-M5-03): el id del pago en MercadoPago. Las clases de un paquete comparten un solo
      * pago; la ancla guarda el id tal cual y las demás {@code id#n} (la unicidad de
