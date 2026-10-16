@@ -66,6 +66,8 @@ class DecisionesAdminCarrerasIntegracionTest extends IntegracionBase {
     @Autowired CertificadoAntecedentesPenalesRepository capRepo;
     @Autowired com.tinku.reservas.repository.ReservaRepository reservaRepo;
     @MockitoSpyBean Notificador notificador;
+    @MockitoSpyBean com.tinku.identidad.port.Almacenamiento almacenamiento;
+    @Autowired com.tinku.aula.EvidenciaService evidenciaService;
 
     /** Frena al primer hilo que pasa por el punto marcado, hasta que el test lo suelta. */
     static final class Freno {
@@ -237,5 +239,50 @@ class DecisionesAdminCarrerasIntegracionTest extends IntegracionBase {
         // Si alguien llegó a rechazar por antecedentes, el CAP no puede terminar aprobado.
         EstadoCap fin = capRepo.findById(capId).orElseThrow().getEstado();
         assertThat(fin).isIn(EstadoCap.APROBADO, EstadoCap.RECHAZADO);
+    }
+
+    /**
+     * El alumno sube el clip de la alerta mientras Moderación la resuelve. La subida leía la
+     * alerta pendiente, guardaba el archivo y la volvía a guardar entera: si la resolución
+     * commiteaba en el medio, la alerta volvía a "pendiente" con la sanción y el reembolso ya
+     * hechos.
+     */
+    @Test
+    void subirEvidenciaMientrasSeResuelveLaAlerta_laResolucionNoSeDeshace() throws Exception {
+        Usuario tutor = tutor(null, null);
+        Usuario alumno = adulto(false);
+        Usuario admin = adulto(false);
+        com.tinku.reservas.model.Reserva reserva = new com.tinku.reservas.model.Reserva();
+        reserva.setPagador(alumno);
+        reserva.setBeneficiario(alumno);
+        reserva.setTutor(tutor);
+        reserva.setHorario(Instant.now().minusSeconds(3600));
+        reserva.setPrecio(java.math.BigDecimal.valueOf(15000));
+        reserva.setEstado(com.tinku.reservas.model.EstadoReserva.FINALIZADA);
+        reservaRepo.saveAndFlush(reserva);
+        UUID sesionId = jdbc.queryForObject(
+                "INSERT INTO aula.sesiones_aprendizaje (reserva_id) VALUES (?) RETURNING id",
+                UUID.class, reserva.getId());
+        AlertaSeguridad alerta = new AlertaSeguridad();
+        alerta.setSesionId(sesionId);
+        alerta.setRama("adultos");
+        alerta.setDetectadoId(tutor.getId());
+        alertaRepo.saveAndFlush(alerta);
+        // La subida se frena al guardar el archivo, ya leída la alerta pendiente.
+        doAnswer(inv -> {
+            Freno f = freno;
+            if (f != null) {
+                f.frenarAlPrimero();
+            }
+            return inv.callRealMethod();
+        }).when(almacenamiento).guardar(any(byte[].class), org.mockito.ArgumentMatchers.startsWith("evidencia-"));
+        byte[] webm = {0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 0, 0, 0, 0};
+
+        carrera(() -> evidenciaService.subir(alumno, sesionId, webm, 10),
+                () -> alertaService.resolver(alerta.getId(), admin.getId(), DecisionAlerta.SANCIONAR,
+                        TipoSancion.SUSPENSION_DEFINITIVA, null));
+
+        assertThat(alertaRepo.findById(alerta.getId()).orElseThrow().getEstado())
+                .isEqualTo(AlertaSeguridad.ESTADO_RESUELTA_BAJA);
     }
 }
