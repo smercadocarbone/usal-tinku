@@ -46,7 +46,8 @@ public class PagoExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(com.tinku.pagos.service.PaqueteConfigInvalidaException.class)
+    @ExceptionHandler({com.tinku.pagos.service.PaqueteConfigInvalidaException.class,
+            com.tinku.pagos.service.TarifaSobreTopeException.class})
     public ResponseEntity<Map<String, String>> handlePaqueteConfig(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }

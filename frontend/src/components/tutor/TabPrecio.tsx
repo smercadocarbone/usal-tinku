@@ -151,6 +151,7 @@ export default function TabPrecio() {
         .catch((err: unknown) => {
           const pisoDelError = err instanceof ApiError ? err.detalles?.pisoHora : undefined;
           if (err instanceof ApiError && err.status === 422 && pisoDelError != null) setPiso(Number(pisoDelError));
+          else if (err instanceof ApiError && err.status === 422 && err.message) setError(err.message);
           else setError("No pudimos guardar el precio. Probá cambiando el valor de nuevo.");
         });
     }, 700);
