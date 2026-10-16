@@ -13,6 +13,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
+
+    /**
+     * Toma el lock de fila del usuario ({@code SELECT ... FOR UPDATE}) y devuelve su id. Sirve de
+     * mutex por usuario para los chequeos "leer y después insertar" (una carga pendiente por
+     * Tutor): un doble envío espera al primero y ve su fila.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT CAST(id AS varchar) FROM identidad.usuarios WHERE id = :id FOR UPDATE", nativeQuery = true)
+    java.util.Optional<String> bloquearPorId(@org.springframework.data.repository.query.Param("id") UUID id);
     boolean existsByDni(String dni);
 
     /** V41: el Tutor acepta dar clases a menores. */

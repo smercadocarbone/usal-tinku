@@ -64,13 +64,16 @@ public class LiberacionEscrowService {
     private final Scheduler scheduler;
     private final com.tinku.reservas.repository.ReservaRepository reservaRepo;
     private final com.tinku.shared.notificacion.Notificador notificador;
+    private final BloqueoTransaccion bloqueo;
 
     public LiberacionEscrowService(TransaccionRepository transaccionRepo,
                                    LiberacionProveedor liberacion,
                                    AlertaSoporteProveedor alerta,
                                    Scheduler scheduler,
                                    com.tinku.reservas.repository.ReservaRepository reservaRepo,
-                                   com.tinku.shared.notificacion.Notificador notificador) {
+                                   com.tinku.shared.notificacion.Notificador notificador,
+                                   BloqueoTransaccion bloqueo) {
+        this.bloqueo = bloqueo;
         this.transaccionRepo = transaccionRepo;
         this.liberacion = liberacion;
         this.alerta = alerta;
@@ -139,7 +142,8 @@ public class LiberacionEscrowService {
      */
     @Transactional
     public void ejecutarLiberacion(UUID transaccionId) {
-        Transaccion transaccion = transaccionRepo.findById(transaccionId).orElse(null);
+        // Lock de fila: una denuncia o un reembolso a la vez espera a que esto termine.
+        Transaccion transaccion = bloqueo.porId(transaccionId).orElse(null);
         if (transaccion == null || transaccion.getEstado() != EstadoTransaccion.RETENIDO_ESCROW) {
             return; // pausado_denuncia / liberado / reembolsado o inexistente → no-op
         }

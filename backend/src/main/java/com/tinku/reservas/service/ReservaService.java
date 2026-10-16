@@ -101,6 +101,20 @@ public class ReservaService {
     private final AdicionalResumen adicionalResumen;
     private final VerificadorCobroTutor verificadorCobro;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
+
+    /**
+     * Relee la Reserva con lock de fila ({@code SELECT ... FOR UPDATE}), igual que el webhook de
+     * MercadoPago ({@code findByIdParaActualizar}). Sin esto, cancelar o vencer una reserva
+     * mientras llega su pago pisaba la confirmación: cancelada sin evento y el escrow retenido.
+     */
+    private Reserva bloquear(Reserva reserva) {
+        em.flush();
+        em.refresh(reserva, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return reserva;
+    }
+
     public ReservaService(SolicitudSesionRepository solicitudRepo,
                           UsuarioRepository usuarioRepo,
                           AutorizacionTutorRepository autorizacionRepo,
@@ -141,6 +155,10 @@ public class ReservaService {
         SolicitudSesion solicitud = solicitudRepo.findByIdAndEstado(
                 solicitudId, EstadoSolicitud.PENDIENTE)
                 .orElseThrow(SolicitudNoPendienteException::new);
+        // FR-RES-022: vencida es vencida aunque el job de expiración todavía no la haya marcado.
+        if (!solicitud.getExpiraAt().isAfter(Instant.now())) {
+            throw new SolicitudNoPendienteException();
+        }
 
         // FR-ID-020: solo puede operar menores a su cargo.
         Usuario menor = solicitud.getMenor();
@@ -231,8 +249,9 @@ public class ReservaService {
      */
     @Transactional
     public Reserva reprogramar(Usuario usuario, UUID reservaId, Instant nuevoHorario) {
-        Reserva reserva = reservaRepo.findById(reservaId)
-                .orElseThrow(ReservaNoEncontradaException::new);
+        // Lock de fila: una cancelación simultánea no queda pisada por el horario nuevo.
+        Reserva reserva = bloquear(reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new));
         // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
         if (!esParticipante(reserva, usuario)) {
             throw new ReservaNoEncontradaException();
@@ -270,6 +289,10 @@ public class ReservaService {
      */
     @Transactional
     public void aplicarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
+        bloquear(reserva);
+        if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            throw new ReservaNoReprogramableException(); // se canceló mientras tanto
+        }
         validarNuevoHorario(reserva, nuevoHorario);
         reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
         reservaRepo.saveAndFlush(reserva); // flush: la EXCLUDE (horario ocupado) salta acá, no en el commit
@@ -312,8 +335,8 @@ public class ReservaService {
      */
     @Transactional
     public Reserva cancelar(Usuario usuario, UUID reservaId) {
-        Reserva reserva = reservaRepo.findById(reservaId)
-                .orElseThrow(ReservaNoEncontradaException::new);
+        Reserva reserva = bloquear(reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new));
         // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
         if (!esParticipante(reserva, usuario)) {
             throw new ReservaNoEncontradaException();
@@ -520,6 +543,11 @@ public class ReservaService {
 
     private Reserva cancelarPorSistema(Reserva reserva, MotivoCancelacion motivo,
                                        UUID canceladaPorUsuarioId) {
+        bloquear(reserva);
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO
+                && reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            return reserva; // ya cambió (pagada y cancelada, vencida...) mientras se decidía
+        }
         boolean estabaConfirmada = reserva.getEstado() == EstadoReserva.CONFIRMADA;
         reserva.setEstado(EstadoReserva.CANCELADA);
         reserva.setMotivoCancelacion(motivo);
@@ -651,6 +679,11 @@ public class ReservaService {
     }
 
     private void expirarSiSiguePendiente(Reserva reserva) {
+        // Mismo orden de locks que el webhook: primero la clase ancla del paquete (la que paga).
+        if (reserva.getPaquete() != null && !reserva.getId().equals(reserva.getPaquete().getReservaAnclaId())) {
+            reservaRepo.findById(reserva.getPaquete().getReservaAnclaId()).ifPresent(this::bloquear);
+        }
+        bloquear(reserva);
         if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
             return;
         }

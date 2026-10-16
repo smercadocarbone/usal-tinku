@@ -12,6 +12,13 @@ import java.util.UUID;
 
 public interface CredencialAcademicaRepository extends JpaRepository<CredencialAcademica, UUID> {
 
+    /** Con lock de fila: dos admins que revisan la misma credencial se serializan. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select c from CredencialAcademica c where c.id = :id")
+    java.util.Optional<com.tinku.identidad.model.CredencialAcademica> findByIdParaActualizar(
+            @org.springframework.data.repository.query.Param("id") java.util.UUID id);
+
+
     Optional<CredencialAcademica> findByTutorIdAndEstado(UUID tutorId, EstadoCredencial estado);
 
     /** Última credencial cargada por un Tutor (para saber el intento y el ciclo). */

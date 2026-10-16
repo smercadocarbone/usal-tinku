@@ -10,6 +10,13 @@ import java.util.UUID;
 
 public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
 
+    /** Lectura con lock de fila ({@code SELECT ... FOR UPDATE}): dos admins que deciden el mismo
+     *  caso a la vez se serializan y el segundo ve la decisión del primero. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select x from Denuncia x where x.id = :id")
+    java.util.Optional<Denuncia> findByIdParaActualizar(@org.springframework.data.repository.query.Param("id") UUID id);
+
+
     /** Cola de moderación (M8): pendientes de resolver, las de prioridad alta primero. */
     List<Denuncia> findAllByEstadoInOrderByPrioridadAltaDescCreatedAtAsc(
             List<EstadoDenuncia> estados);
@@ -22,6 +29,13 @@ public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
 /** Denuncia ACTIVA sobre una sesión puntual (T-M6-03): M6 pausa la generación
      *  del resumen si existe {@code registrada}/{@code en_revision} (FR-SUM-008). */
     boolean existsBySesionIdAndEstadoIn(UUID sesionId, Collection<EstadoDenuncia> estados);
+
+    /** Doble envío: ¿ya hay una igual en revisión? (con clase / de perfil). */
+    boolean existsByDenuncianteIdAndDenunciadoIdAndSesionIdAndEstado(
+            UUID denuncianteId, UUID denunciadoId, UUID sesionId, EstadoDenuncia estado);
+
+    boolean existsByDenuncianteIdAndDenunciadoIdAndSesionIdIsNullAndEstado(
+            UUID denuncianteId, UUID denunciadoId, EstadoDenuncia estado);
 
     /**
      * Cola de revisión del Admin (US-3, T-M8-04): denuncias {@code en_revision}

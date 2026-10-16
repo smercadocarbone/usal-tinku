@@ -82,6 +82,7 @@ public class EscrowService {
     private final CuentasMpService cuentasMp;
     private final com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial;
     private final com.tinku.pagos.port.AlertaSoporteProveedor alertaSoporte;
+    private final BloqueoTransaccion bloqueo;
 
     public EscrowService(TransaccionRepository transaccionRepo,
                          ReservaRepository reservaRepo,
@@ -92,7 +93,9 @@ public class EscrowService {
                          ComisionPlataforma comision,
                          CuentasMpService cuentasMp,
                          com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial,
-                         com.tinku.pagos.port.AlertaSoporteProveedor alertaSoporte) {
+                         com.tinku.pagos.port.AlertaSoporteProveedor alertaSoporte,
+                         BloqueoTransaccion bloqueo) {
+        this.bloqueo = bloqueo;
         this.reembolsoParcial = reembolsoParcial;
         this.alertaSoporte = alertaSoporte;
         this.transaccionRepo = transaccionRepo;
@@ -277,7 +280,7 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onSesionFinalizada(SesionFinalizadaEvent evento) {
-        transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
+        bloqueo.porReserva(evento.getReservaId()).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 Instant liberarAt = evento.getTimestampFin().plus(VENTANA_LIBERACION);
                 t.setLiberarAt(liberarAt);
@@ -301,7 +304,7 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onSesionNoShowEstudiante(SesionNoShowEstudianteEvent evento) {
-        transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
+        bloqueo.porReserva(evento.getReservaId()).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 liberacionEscrow.ejecutarLiberacion(t.getId());
             }
@@ -349,7 +352,7 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onAlertaResuelta(AlertaResueltaEvent evento) {
-        transaccionRepo.findByReservaId(evento.getReservaId()).ifPresent(t -> {
+        bloqueo.porReserva(evento.getReservaId()).ifPresent(t -> {
             if (t.getEstado() != EstadoTransaccion.PAUSADO_ALERTA) {
                 return;
             }
@@ -369,7 +372,7 @@ public class EscrowService {
     }
 
     private void pausarSiRetenida(UUID reservaId) {
-        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+        bloqueo.porReserva(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW) {
                 t.setEstado(EstadoTransaccion.PAUSADO_DENUNCIA);
                 t.setLiberarAt(null);
@@ -387,7 +390,7 @@ public class EscrowService {
      * posterior ni lo re-baja ni una resolución de Denuncia lo destraba
      * ({@link #onDenunciaResuelta}). */
     private void pausarPorAlerta(UUID reservaId) {
-        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+        bloqueo.porReserva(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
                     || t.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA) {
                 t.setEstado(EstadoTransaccion.PAUSADO_ALERTA);
@@ -418,7 +421,7 @@ public class EscrowService {
         if (reservaId == null || resolucion == null) {
             return;
         }
-        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+        bloqueo.porReserva(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.PAUSADO_ALERTA) {
                 LOG.info("Denuncia {} resuelta como {} sin tocar el escrow: la reserva {} sigue "
                         + "pausada por Alerta de seguridad (FASE2-10)", evento.getDenunciaId(),
@@ -443,7 +446,7 @@ public class EscrowService {
     }
 
     private void reembolsarSiRetenida(UUID reservaId) {
-        transaccionRepo.findByReservaId(reservaId).ifPresent(t -> {
+        bloqueo.porReserva(reservaId).ifPresent(t -> {
             if (t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
                     && reservaRepo.findById(reservaId).map(r -> r.getPaquete() != null).orElse(false)) {
                 reembolsarClaseDePaquete(t);
@@ -504,7 +507,7 @@ public class EscrowService {
     public void onPaqueteCancelado(com.tinku.reservas.evento.PaqueteCanceladoEvent evento) {
         java.util.List<Transaccion> transacciones = reservaRepo.findByPaquete_IdOrderByHorario(evento.getPaqueteId())
                 .stream()
-                .map(r -> transaccionRepo.findByReservaId(r.getId()).orElse(null))
+                .map(r -> bloqueo.porReserva(r.getId()).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .filter(t -> t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW)
                 .toList();
@@ -532,7 +535,7 @@ public class EscrowService {
     @EventListener
     @Transactional
     public void onReservaCancelada(ReservaCanceladaEvent evento) {
-        transaccionRepo.findByReservaId(evento.getReservaId())
+        bloqueo.porReserva(evento.getReservaId())
                 .filter(t -> t.getEstado() == EstadoTransaccion.RETENIDO_ESCROW)
                 .ifPresent(t -> {
                     Reserva reserva = reservaRepo.findById(evento.getReservaId()).orElse(null);

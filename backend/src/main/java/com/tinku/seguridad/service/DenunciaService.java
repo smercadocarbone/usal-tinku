@@ -140,6 +140,18 @@ public class DenunciaService {
             }
         }
 
+        // Doble envío: lock del denunciante (el segundo POST espera al primero) y una sola
+        // denuncia igual en revisión a la vez.
+        usuarioRepo.bloquearPorId(denunciante.getId());
+        boolean repetida = sesionId == null
+                ? denunciaRepo.existsByDenuncianteIdAndDenunciadoIdAndSesionIdIsNullAndEstado(
+                        denunciante.getId(), denunciado.getId(), EstadoDenuncia.EN_REVISION)
+                : denunciaRepo.existsByDenuncianteIdAndDenunciadoIdAndSesionIdAndEstado(
+                        denunciante.getId(), denunciado.getId(), sesionId, EstadoDenuncia.EN_REVISION);
+        if (repetida) {
+            throw new com.tinku.seguridad.DenunciaDuplicadaException();
+        }
+
         Denuncia denuncia = new Denuncia();
         denuncia.setDenuncianteId(denunciante.getId());
         denuncia.setDenunciadoId(denunciado.getId());
@@ -260,7 +272,9 @@ public class DenunciaService {
     @Transactional
     public Denuncia resolver(UUID denunciaId, UUID adminId, ResolucionDenuncia resolucion,
                              TipoSancion tipoSancion, Integer diasSuspension) {
-        Denuncia denuncia = buscar(denunciaId);
+        // Lock de fila: dos admins a la vez no resuelven (ni sancionan) dos veces.
+        Denuncia denuncia = denunciaRepo.findByIdParaActualizar(denunciaId)
+                .orElseThrow(() -> new DenunciaNoEncontradaException(denunciaId));
         AdminModeracionGate.exigirNoEsParteDelCaso(adminId,
                 denuncia.getDenuncianteId(), denuncia.getDenunciadoId());
         if (denuncia.getEstado() != EstadoDenuncia.EN_REVISION) {

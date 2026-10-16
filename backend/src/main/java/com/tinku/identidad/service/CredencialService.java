@@ -71,6 +71,8 @@ public class CredencialService {
 
         backoffService.chequearPuedeIntentar(tutor.getId()); // FR-ID-012
 
+        // Doble envío: el segundo espera al primero (lock del Tutor) y ve su pendiente.
+        usuarioRepo.bloquearPorId(tutor.getId());
         credencialRepo.findByTutorIdAndEstado(tutor.getId(), EstadoCredencial.PENDIENTE)
                 .ifPresent(c -> { throw new YaExisteCredencialPendienteException(); });
 
@@ -149,7 +151,7 @@ public class CredencialService {
 
     /** AUD-033: solo PENDIENTE → APROBADO/RECHAZADO; nunca se re-resuelve una credencial. */
     private CredencialAcademica pendienteO(UUID credencialId) {
-        CredencialAcademica c = credencialRepo.findById(credencialId)
+        CredencialAcademica c = credencialRepo.findByIdParaActualizar(credencialId)
                 .orElseThrow(CredencialNoEncontradaException::new);
         if (c.getEstado() != EstadoCredencial.PENDIENTE) {
             throw new CredencialNoPendienteException();

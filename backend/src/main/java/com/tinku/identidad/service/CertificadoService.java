@@ -110,6 +110,8 @@ public class CertificadoService {
         }
         backoffService.chequearPuedeIntentar(tutor.getId()); // FR-ID-021 reutiliza FR-ID-012
 
+        // Doble envío: el segundo espera al primero (lock del Tutor) y ve su pendiente.
+        usuarioRepo.bloquearPorId(tutor.getId());
         capRepo.findByTutorIdAndEstado(tutor.getId(), EstadoCap.PENDIENTE)
                 .ifPresent(c -> { throw new YaExisteCredencialPendienteException(); });
 
@@ -146,7 +148,9 @@ public class CertificadoService {
     @Transactional
     public CertificadoAntecedentesPenales revisar(UUID capId, UUID adminRevisorId,
                                                   AccionRevisionCap accion, CategoriaAntecedenteCap categoria) {
-        CertificadoAntecedentesPenales cap = capRepo.findById(capId)
+        // Lock de fila: si dos admins revisan a la vez, el segundo ve la decisión del primero
+        // (una aprobación no puede pisar un rechazo por antecedentes).
+        CertificadoAntecedentesPenales cap = capRepo.findByIdParaActualizar(capId)
                 .orElseThrow(CapNoEncontradoException::new);
         if (cap.getEstado() != EstadoCap.PENDIENTE && cap.getEstado() != EstadoCap.EN_REVISION_LEGAL) {
             throw new CapNoRevisableException();
