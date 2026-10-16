@@ -43,6 +43,7 @@ class EscrowCarrerasIntegracionTest extends IntegracionBase {
     @MockitoBean LiberacionProveedor liberacion;
     @MockitoBean ReembolsoProveedor reembolso;
     @MockitoBean AlertaSoporteProveedor alerta;
+    @MockitoBean com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial;
 
     private Transaccion escrowRetenido() {
         Usuario alumno = adulto(false);
@@ -111,5 +112,36 @@ class EscrowCarrerasIntegracionTest extends IntegracionBase {
             seguir.countDown();
             pool.shutdownNow();
         }
+    }
+
+    /**
+     * Doble envío del reembolso parcial de Soporte Financiero (FR-PAG-010): el endpoint no
+     * registraba nada ni pasaba una clave de idempotencia, así que dos POST iguales seguidos
+     * devolvían dos veces la misma plata al alumno.
+     */
+    @Test
+    void reembolsoParcialDelAdmin_dosVecesSeguidas_devuelveUnaSolaVez() throws Exception {
+        Transaccion t = escrowRetenido();
+        Usuario soporte = adulto(false);
+        hacerAdmin(soporte, "SOPORTE_FINANCIERO");
+        String tk = token(soporte);
+        String cuerpo = objectMapper.writeValueAsString(java.util.Map.of("monto", 6000));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/api/admin/financiero/transacciones/" + t.getId() + "/reembolso-parcial")
+                        .header("Authorization", bearer(tk))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/api/admin/financiero/transacciones/" + t.getId() + "/reembolso-parcial")
+                        .header("Authorization", bearer(tk))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isUnprocessableEntity());
+
+        org.mockito.Mockito.verify(reembolsoParcial, org.mockito.Mockito.times(1))
+                .reembolsarParcial(org.mockito.ArgumentMatchers.anyString(), any(), org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(reembolsoParcial, org.mockito.Mockito.never())
+                .reembolsarParcial(org.mockito.ArgumentMatchers.anyString(), any());
     }
 }
