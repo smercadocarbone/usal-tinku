@@ -192,6 +192,21 @@ class IdentidadFlujosIntegracionTest {
         registroCon("1".repeat(100)).andExpect(status().isBadRequest());
     }
 
+    /** FR-ID-011: la foto ilegible cuenta también si se llama al alta directo, sin el paso de
+     *  verificación del wizard. El contador se guardaba dentro de la transacción del alta y la
+     *  excepción de "ilegible" lo deshacía: el backoff nunca llegaba. */
+    @Test
+    void fotosIlegibles_enElAltaDirecta_tambienCuentanYLlegaLaEspera() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        registroCon("31234570").andExpect(status().isUnprocessableEntity());
+        assertThat(intentoOcrRepository.findByDni("31234570").orElseThrow().getIntentosConsumidos()).isEqualTo(1);
+        for (int i = 1; i < 6; i++) {
+            registroCon("31234570").andExpect(status().isUnprocessableEntity());
+        }
+        registroCon("31234570").andExpect(status().isTooManyRequests());
+    }
+
     private org.springframework.test.web.servlet.ResultActions verificarDni(String dniDeclarado) throws Exception {
         return mockMvc.perform(multipart("/api/usuarios/verificar-dni")
                 .file(jsonPart("datos", new com.tinku.identidad.dto.VerificarDniRequest(
