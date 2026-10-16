@@ -670,6 +670,45 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isConflict());
     }
 
+    private org.springframework.test.web.servlet.ResultActions registroConEmail(String dni, String email) throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado(dni, "Juan", "Perez", LocalDate.of(1990, 5, 15)));
+        return mockMvc.perform(multipart("/api/usuarios/registro")
+                .file(jsonPart("datos", new RegistroAdultoRequest(
+                        dni, "Juan", "Perez", LocalDate.of(1990, 5, 15), email, PASSWORD, true, false)))
+                .file(foto()));
+    }
+
+    /** Entradas de texto: el email es uno solo sin importar mayúsculas, el alta con un email ya
+     *  usado es 409 (no un 500 del índice único) y uno de más de 254 caracteres es 400. */
+    @Test
+    void email_mayusculasDuplicadoYLargo() throws Exception {
+        registroConEmail("23230001", "Ana.Dup@Tinku.test").andExpect(status().isCreated());
+        assertThat(usuarioPorDni("23230001").getEmail()).isEqualTo("ana.dup@tinku.test");
+
+        registroConEmail("23230006", "Ana.Dup@Tinku.test").andExpect(status().isConflict());
+        registroConEmail("23230002", "ana.dup@tinku.test").andExpect(status().isConflict());
+        registroConEmail("23230003", "ANA.DUP@TINKU.TEST").andExpect(status().isConflict());
+        assertThat(usuarioRepository.findByDni("23230002")).isEmpty();
+
+        String largo = "a".repeat(250) + "@tinku.test";
+        registroConEmail("23230004", largo).andExpect(status().isBadRequest());
+
+        String token = registrarAdultoYToken("23230005", "Juan", "Perez", false);
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest(largo))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest("ANA.dup@tinku.test"))))
+                .andExpect(status().isConflict());
+    }
+
     @Test
     void editarCuenta_cambiaPassword_conActualCorrecta_yRechazaConIncorrecta() throws Exception {
         String token = registrarAdultoYToken("22222299", "Sol", "Aguirre", false);
