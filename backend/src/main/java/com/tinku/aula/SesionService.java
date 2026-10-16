@@ -659,7 +659,8 @@ public class SesionService {
      */
     @Transactional
     public SesionAprendizaje ejecutarKillswitch(Usuario usuario, UUID sesionId, UUID detectadoId) {
-        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+        // Lock de fila: los dos clientes pueden disparar a la vez; el segundo ve la Alerta del primero.
+        SesionAprendizaje sesion = sesionRepo.findByIdParaActualizar(sesionId)
                 .orElseThrow(SesionNoEncontradaException::new);
         Reserva reserva = reservaRepo.findById(sesion.getReservaId())
                 .orElseThrow(ReservaNoEncontradaException::new);
