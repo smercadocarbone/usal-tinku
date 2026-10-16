@@ -720,6 +720,27 @@ class SesionesIntegracionTest {
                 .isEqualTo("finalizada");
     }
 
+    /**
+     * Saltar el paso "la clase se dio": el Tutor llama a «Finalizar» antes de que nadie entre
+     * a la sala. Antes quedaba finalizada y M5 le liberaba el cobro a las 24 hs, en lugar de
+     * que el no-show decidiera (y devolviera la plata si el que faltó es él).
+     */
+    @Test
+    void finalizar_claseQueNadieEmpezo_422YSigueNoIniciada() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        mockMvc.perform(post("/api/sesiones/{id}/finalizar", sesion.getId())
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("no_iniciada");
+        assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(EVENTOS).isEmpty();
+    }
+
     @Test
     void tM305_finalizarEndPoint_terceroNoParticipante_403() throws Exception {
         Escenario e = escenarioBase();
