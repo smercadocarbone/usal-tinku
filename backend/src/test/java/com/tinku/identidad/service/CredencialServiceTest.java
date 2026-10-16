@@ -132,7 +132,7 @@ class CredencialServiceTest {
     void marcarAprobada() {
         Usuario tutor = tutor();
         CredencialAcademica pendiente = credencial(tutor, 1, EstadoCredencial.PENDIENTE);
-        when(credencialRepo.findById(pendiente.getId())).thenReturn(Optional.of(pendiente));
+        when(credencialRepo.findByIdParaActualizar(pendiente.getId())).thenReturn(Optional.of(pendiente));
         when(credencialRepo.save(any(CredencialAcademica.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -148,7 +148,7 @@ class CredencialServiceTest {
     void marcarRechazadaTercerIntentoDisparaBackoff() {
         Usuario tutor = tutor();
         CredencialAcademica intento3 = credencial(tutor, 3, EstadoCredencial.PENDIENTE);
-        when(credencialRepo.findById(intento3.getId())).thenReturn(Optional.of(intento3));
+        when(credencialRepo.findByIdParaActualizar(intento3.getId())).thenReturn(Optional.of(intento3));
         when(credencialRepo.save(any(CredencialAcademica.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -161,7 +161,7 @@ class CredencialServiceTest {
     void marcarRechazadaPrimerIntentoNoDisparaBackoff() {
         Usuario tutor = tutor();
         CredencialAcademica intento1 = credencial(tutor, 1, EstadoCredencial.PENDIENTE);
-        when(credencialRepo.findById(intento1.getId())).thenReturn(Optional.of(intento1));
+        when(credencialRepo.findByIdParaActualizar(intento1.getId())).thenReturn(Optional.of(intento1));
         when(credencialRepo.save(any(CredencialAcademica.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
