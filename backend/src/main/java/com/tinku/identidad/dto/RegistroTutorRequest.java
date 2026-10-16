@@ -18,7 +18,7 @@ public record RegistroTutorRequest(
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
-        @NotBlank(message = "es obligatorio") @Email(regexp = com.tinku.identidad.dto.FormatoEmail.REGEX, message = "debe ser un email válido, por ejemplo nombre@gmail.com") String email,
+        @NotBlank(message = "es obligatorio") @Email(regexp = com.tinku.identidad.dto.FormatoEmail.REGEX, message = "debe ser un email válido, por ejemplo nombre@gmail.com") @jakarta.validation.constraints.Size(max = com.tinku.identidad.dto.FormatoEmail.MAX, message = "puede tener hasta 254 caracteres") String email,
         @NotBlank @PasswordSegura String password,
         /** FR-ID-031 / ADR-M3-05: sin aceptar los Términos no se crea la cuenta (400). */
         @NotNull @AssertTrue(message = "Tenés que aceptar los Términos y Condiciones.") Boolean aceptaTerminos
