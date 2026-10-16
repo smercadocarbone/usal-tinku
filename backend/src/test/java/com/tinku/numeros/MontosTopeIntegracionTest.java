@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,5 +41,23 @@ class MontosTopeIntegracionTest extends IntegracionBase {
         assertThat(ponerTarifa(t, "9000000")).isEqualTo(422);
         // El tope mismo vale: 4 × 3 h × 8.333.333,33 = 99.999.999,96.
         assertThat(ponerTarifa(t, "8333333.33")).isEqualTo(200);
+    }
+
+    @Test
+    void precioRegionalQueNoEntraEnLaColumna_es400_no500() throws Exception {
+        var soporte = adulto(false);
+        hacerAdmin(soporte, "SOPORTE_FINANCIERO");
+        mockMvc.perform(post("/api/admin/financiero/precios-regionales").header("Authorization", bearer(token(soporte)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provincia\":\"Salta\",\"valorSugerido\":100000000}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** PageRequest calcula el offset en long, pero JPA lo pide en int: página × 30 > 2^31 era un 500. */
+    @Test
+    void paginaDeNotificacionesEnorme_daListaVacia_no500() throws Exception {
+        mockMvc.perform(get("/api/notificaciones").param("pagina", "100000000")
+                        .header("Authorization", bearer(token(adulto(false)))))
+                .andExpect(status().isOk());
     }
 }
