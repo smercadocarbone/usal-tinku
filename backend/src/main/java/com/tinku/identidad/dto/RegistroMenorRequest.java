@@ -15,7 +15,7 @@ import java.time.LocalDate;
  * (BR-CONSENT-01), obligatorio en la misma transacción.
  */
 public record RegistroMenorRequest(
-        @NotBlank String dniDeclarado,
+        @NotBlank @jakarta.validation.constraints.Pattern(regexp = FormatoDni.REGEX, message = FormatoDni.MENSAJE) String dniDeclarado,
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,

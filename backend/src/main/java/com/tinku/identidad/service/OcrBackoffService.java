@@ -66,7 +66,7 @@ public class OcrBackoffService {
      */
     @Transactional
     public void chequearPuedeIntentar(String dniDeclarado) {
-        intentoRepo.findByDni(dniDeclarado).ifPresent(intento -> {
+        intentoRepo.findByDni(com.tinku.identidad.dto.FormatoDni.soloDigitos(dniDeclarado)).ifPresent(intento -> {
             Instant hasta = intento.getProximoIntentoPermitido();
             if (hasta != null && hasta.isAfter(Instant.now())) {
                 throw new DocumentoEnBackoffException(
@@ -81,9 +81,11 @@ public class OcrBackoffService {
      */
     @Transactional
     public int registrarIntentoFallido(String dniDeclarado) {
-        IntentoOcr intento = intentoRepo.findByDni(dniDeclarado)
+        // El contador es del número, no de cómo se escribió ("12.345.678" = "12345678").
+        String dni = com.tinku.identidad.dto.FormatoDni.soloDigitos(dniDeclarado);
+        IntentoOcr intento = intentoRepo.findByDni(dni)
                 .orElseGet(IntentoOcr::new);
-        intento.setDni(dniDeclarado);
+        intento.setDni(dni);
 
         int consumidos = intento.getIntentosConsumidos() + 1;
         if (consumidos >= maxIntentosCiclo) {

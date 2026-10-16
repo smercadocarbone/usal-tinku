@@ -14,7 +14,7 @@ import java.time.LocalDate;
  * excepciones para menores. La foto del DNI viaja aparte (multipart).
  */
 public record RegistroTutorRequest(
-        @NotBlank String dniDeclarado,
+        @NotBlank @jakarta.validation.constraints.Pattern(regexp = FormatoDni.REGEX, message = FormatoDni.MENSAJE) String dniDeclarado,
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,

@@ -13,7 +13,7 @@ import java.time.LocalDate;
  * (multipart), no en este JSON — ver UsuarioController.
  */
 public record RegistroAdultoRequest(
-        @NotBlank String dniDeclarado,
+        @NotBlank @jakarta.validation.constraints.Pattern(regexp = FormatoDni.REGEX, message = FormatoDni.MENSAJE) String dniDeclarado,
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
