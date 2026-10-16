@@ -126,9 +126,13 @@ class CapIntegracionTest {
     }
 
     private ResultActions subir(Usuario tutor, byte[] archivo) throws Exception {
+        return subir(tutor, archivo, LocalDate.now().minusDays(10));
+    }
+
+    private ResultActions subir(Usuario tutor, byte[] archivo, LocalDate fechaEmision) throws Exception {
         return mvc.perform(multipart("/api/tutores/antecedentes-penales")
                 .file(new MockMultipartFile("datos", "", MediaType.APPLICATION_JSON_VALUE,
-                        objectMapper.writeValueAsBytes(Map.of("fechaEmision", LocalDate.now().minusDays(10).toString()))))
+                        objectMapper.writeValueAsBytes(Map.of("fechaEmision", fechaEmision.toString()))))
                 .file(new MockMultipartFile("archivo", "cap.pdf", "application/pdf", archivo))
                 .header("Authorization", "Bearer " + token(tutor)));
     }
@@ -162,6 +166,23 @@ class CapIntegracionTest {
         subir(tutor, PDF).andExpect(status().isCreated()).andExpect(jsonPath("$.estado").value("PENDIENTE"));
         subir(usuario(TipoUsuario.TUTOR), "<html>no soy un pdf</html>".getBytes())
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    /**
+     * FR-ID-025: un CAP emitido hace más de 12 meses ya está vencido al cargarlo. Antes quedaba
+     * PENDIENTE, ocupaba la cola de Moderación y, aprobado, no habilitaba nada y esa misma noche
+     * pasaba a VENCIDO. El borde (emitido hace exactamente 12 meses, vence hoy) todavía entra.
+     */
+    @Test
+    void subida_capYaVencido422() throws Exception {
+        java.time.LocalDate hoyAr = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        subir(tutor, PDF, hoyAr.minusMonths(12).minusDays(1))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("El certificado ya venció: tiene que estar emitido en los últimos 12 meses."));
+        subir(tutor, PDF, LocalDate.of(1800, 1, 1)).andExpect(status().isUnprocessableEntity());
+        assertThat(certificadoService.ultimo(tutor.getId())).isEmpty();
+        subir(tutor, PDF, hoyAr.minusMonths(12)).andExpect(status().isCreated());
     }
 
     /** TR3: la versión retirada dejaba a cualquiera aprobar su propio CAP. */
