@@ -40,7 +40,7 @@ public class LiveKitWebhookService {
         if (livekitRoomId == null || identity == null || identity.isBlank()) {
             return;
         }
-        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomIdParaActualizar(livekitRoomId).orElse(null);
         if (sesion == null) {
             return; // sala no registrada todavía (o de otro entorno): no es nuestro join
         }
@@ -98,7 +98,7 @@ public class LiveKitWebhookService {
         if (livekitRoomId == null || identity == null || identity.isBlank()) {
             return;
         }
-        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomIdParaActualizar(livekitRoomId).orElse(null);
         if (sesion == null) {
             return;
         }
@@ -133,7 +133,7 @@ public class LiveKitWebhookService {
         if (livekitRoomId == null) {
             return;
         }
-        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomId(livekitRoomId).orElse(null);
+        SesionAprendizaje sesion = sesionRepo.findByLivekitRoomIdParaActualizar(livekitRoomId).orElse(null);
         if (sesion == null || yaCerrada(sesion)) {
             return;
         }

@@ -38,6 +38,16 @@ class LiveKitWebhookVerificadorTest {
         assertThat(verificador.esFirmaValida("Bearer " + firmar(BODY), BODY)).isTrue();
     }
 
+    /**
+     * M3C-06 (E2E contra LiveKit real, livekit-server v1.13.10): el servidor manda
+     * {@code Authorization: <JWT>} SIN el prefijo {@code Bearer} (capturado en la corrida del
+     * E2E). Antes se rechazaba con 401 y ningún join llegaba: la sesión quedaba no_iniciada.
+     */
+    @Test
+    void firmaSinPrefijoBearer_comoLaMandaLiveKit_acepta() {
+        assertThat(verificador.esFirmaValida(firmar(BODY), BODY)).isTrue();
+    }
+
     @Test
     void bodyAlterado_rechaza() {
         String firma = firmar(BODY);

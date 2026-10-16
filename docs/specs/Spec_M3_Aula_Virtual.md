@@ -147,6 +147,23 @@ Este módulo gobierna el ciclo de vida de la Sesión de Aprendizaje: creación d
 | 7 | Caída de LiveKit (falla del proveedor, no del usuario) | Se comunica a ambas partes, nunca falla en silencio (NFR-DISP-02). El outcome monetario sigue la regla de corte <50%. |
 | 8 _(agregado, auditoría 2026-09-18)_ | El clasificador on-device del kill-switch no carga o deja de responder | Con menor presente: fail-closed, no se habilita la sala o se trata como corte de conectividad si ya estaba en curso (FR-AULA-010). Sin menor: no bloquea, solo se loguea. |
 
+### Tests del kill-switch (M3C)
+
+Historia o caso borde → test de backend (M3C-02 y anteriores, `backend/src/test/java/com/tinku/aula/web/`) → test del orquestador / cliente (M3C-03 a M3C-05, `frontend/tests/aula/`) → E2E contra backend y LiveKit reales (M3C-06, `frontend/tests/aula/killswitch.e2e.spec.ts`, `docker-compose.e2e.yml`).
+
+| Historia / caso borde | Backend | Orquestador / cliente | E2E real |
+|---|---|---|---|
+| US-6, Tutor detectado | `KillswitchIntegracionTest.tM311_menor_killswitchForzandoRamaAdultos_ejecutaRamaMenor`, `killswitchMenor_notificaAlAdultoResponsable_sinDatosDelContenido`, `tM308_evidencia_trasKillswitch_guardaElClipComoArchivo`, `aud001_menor_killswitch_cierraLaSalaDeLiveKit` | `killswitch-orquestador.spec.ts` @KS-030, @KS-031, @KS-043, @KS-044 | E2E-KS-01 |
+| US-6 / caso borde 4, menor detectado | `KillswitchIntegracionTest.aud006_menor_detectadoEsElMenor_noSuspendeAlTutorYLaResolucionRevierte` | @KS-030 | E2E-KS-02 |
+| US-7 "No" | `KillswitchIntegracionTest.tM309_dosAdultos_confirmacionNo_noCorta`, `KillswitchClienteIntegracionTest.confirmar_cancelaElTriggerDeVencimiento` | @KS-032, @KS-035 | E2E-KS-03 |
+| US-7 "Sí" | `KillswitchIntegracionTest.tM309_dosAdultos_confirmacionSi_cortaBloqueaDetectadoYEmiteEvento` | @KS-033, @KS-036 | E2E-KS-04 |
+| US-7 vence (plazo de la Tabla) | `KillswitchClienteIntegracionTest.vencerConfirmacion_sinRespuesta_quedaVencidaComoNo`, `disparo_trasConfirmacionVencida_creaConfirmacionNueva` | @KS-034 | E2E-KS-05 (`@lento`) |
+| US-6bis / caso borde 8, no carga con menor | `KillswitchClienteIntegracionTest.token_conMenor_sinClasificadorListo_409` | `killswitch-entrada.spec.ts` @KS-050, @KS-051 | E2E-KS-06 |
+| US-6bis / caso borde 8, cae y no revive | `KillswitchClienteIntegracionTest.eventoClasificador_participante_204` | @KS-038, @KS-040; `killswitch-clasificador.spec.ts` | E2E-KS-07 |
+| US-6bis / caso borde 8, cae y revive | `KillswitchClienteIntegracionTest.eventoClasificador_participante_204` | @KS-042, @KS-047, @KS-051 (orquestador) | E2E-KS-08 |
+| Caso borde 8 entre adultos, no carga | `KillswitchClienteIntegracionTest.token_sinMenor_sinClasificadorListo_200_hayMenorFalse` | `killswitch-entrada.spec.ts` @KS-052; @KS-039, @KS-041 | E2E-KS-09 |
+| Corte con webhooks reales de LiveKit (hallado por el E2E) | `LiveKitWebhookVerificadorTest.firmaSinPrefijoBearer_comoLaMandaLiveKit_acepta`, `LiveKitWebhookIntegracionTest.salidaDuranteElCorte_noPisaLaSesionFinalizada` | — | E2E-KS-01, 02 y 04 (estado `finalizada` y sin token después del corte) |
+
 ## 6. Fuera de Alcance de este Spec
 
 - La creación de la reserva y del botón de unirse desde la UI (ver Spec de M4).

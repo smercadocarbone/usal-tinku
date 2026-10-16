@@ -54,6 +54,8 @@ export class ClasificadorKillswitch {
   private readonly ctx: CanvasRenderingContext2D | null;
   private readonly duraciones: number[] = [];
   private cursor = 0;
+  /** Turnos que no clasificaron nada (sin frame o inferencia en curso). Solo diagnóstico (M3C-07). */
+  private salteados = 0;
   private temporizador: ReturnType<typeof setTimeout> | undefined;
   private enCurso = false;
   private reactivando = false;
@@ -143,7 +145,7 @@ export class ClasificadorKillswitch {
   }
 
   /** Para el diagnóstico (M3C-07): latencias de las últimas 200 inferencias. */
-  estadisticas(): { muestras: number; p50: number; p95: number; max: number; backend: string } {
+  estadisticas(): { muestras: number; p50: number; p95: number; max: number; backend: string; salteados: number } {
     const orden = [...this.duraciones].sort((a, b) => a - b);
     const en = (q: number) => (orden.length ? orden[Math.min(orden.length - 1, Math.floor(q * orden.length))] : 0);
     return {
@@ -152,6 +154,7 @@ export class ClasificadorKillswitch {
       p95: en(0.95),
       max: orden.length ? orden[orden.length - 1] : 0,
       backend: this.modelo.backend ?? "desconocido",
+      salteados: this.salteados,
     };
   }
 
@@ -188,6 +191,7 @@ export class ClasificadorKillswitch {
     const elegido = this.enCurso ? null : this.siguiente();
     // Sin track, sin frame todavía (cámara remota apagada) o inferencia anterior en curso: se saltea.
     if (!elegido || elegido[1].video.readyState < 2 || !elegido[1].video.videoWidth) {
+      this.salteados++;
       this.programar();
       return;
     }

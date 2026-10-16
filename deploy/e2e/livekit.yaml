@@ -1,0 +1,19 @@
+# LiveKit para el E2E del kill-switch (M3C-06, T-M3-06f). Solo local: credenciales de `--dev`.
+# Se monta en docker-compose.e2e.yml. El webhook hace falta para `joined_at` y el no-show
+# (LiveKitWebhookController); se firma con la misma key que usa el backend.
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: false
+  # El navegador corre en el mismo host: alcanza con anunciar la IP local.
+  node_ip: 127.0.0.1
+keys:
+  # El backend (jjwt) exige una clave HMAC de 256 bits o más: el `secret` de --dev no alcanza.
+  devkey: e2e-local-solo-dev-tinku-0123456789abcdef
+webhook:
+  api_key: devkey
+  urls:
+    - http://localhost:8080/api/webhooks/livekit

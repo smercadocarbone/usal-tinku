@@ -66,3 +66,44 @@ Lectura:
 
 Sigue pendiente una medición en un dispositivo físico, cuando haya uno. Se mide con la página de
 diagnóstico de `M3C-07`.
+
+## Anexo — latencia con el código del aula (2026-10-16, M3C-07)
+
+Misma idea que el anexo anterior, pero midiendo el **ciclo real del aula** (`ClasificadorKillswitch`
+de M3C-03, `hayMenor: true`) y no el modelo suelto. Página `/diagnostico/clasificador` sobre la cámara
+falsa de Chromium, 60 s por fila; script `frontend/scripts/medir-clasificador.mjs` (CPU frenada con
+`Emulation.setCPUThrottlingRate` por CDP).
+
+- Máquina: servidor de 4 núcleos (Intel Xeon 2,80 GHz), **sin GPU** (`webgl` corre por SwiftShader).
+  Compartida con otro proceso de pruebas durante la corrida (load average ~5): los números pueden
+  estar algo inflados respecto de una máquina libre.
+- Versiones: Chromium headless 141, `@tensorflow/tfjs@4.22.0`, `nsfwjs@4.3.0`, Next 16.3.6 en
+  `next dev`, Playwright 1.64.1.
+- Detección estimada = `MUESTRAS_PARA_CONFIRMAR × max(INTERVALO_CLASIFICACION_MS, p95)` = `3 × max(250, p95)`;
+  con 2 tracks cada track se clasifica cada dos turnos (ADR-M3-07 §3), así que se duplica.
+
+| Backend | CPU | Carga (ms) | Muestras | p50 | p95 | Máx | Salteados | Tensores inicio → final | Detección estimada 1 / 2 tracks (ms) |
+|---|---|---|---|---|---|---|---|---|---|
+| webgl (SwiftShader) | 1× | 5.242 | 77 | 447 | 871 | 952 | 0 | 267 → 267 | 2.613 / 5.227 |
+| webgl (SwiftShader) | 4× | 7.829 | 61 | 619 | 1.062 | 1.343 | 0 | 267 → 267 | 3.185 / 6.370 |
+| webgl (SwiftShader) | 6× | 8.427 | 56 | 816 | 1.183 | 1.411 | 0 | 267 → 267 | 3.548 / 7.096 |
+| wasm | 1× | 752 | 177 | 95 | 131 | 157 | 0 | 267 → 267 | 750 / 1.500 |
+| wasm | 4× | 2.110 | 107 | 451 | 609 | 674 | 0 | 267 → 267 | 1.828 / 3.656 |
+| wasm | 6× | 3.150 | 67 | 735 | 962 | 1.084 | 0 | 267 → 267 | 2.885 / 5.770 |
+
+Lectura:
+- **Criterio de M3C-07:** con `wasm` a 4× la detección estimada con 1 track es **1,8 s ≤ 3 s**. No se
+  cambia nada (ni el intervalo, ni el umbral, ni la Tabla de Tiempos).
+- Con 2 tracks (cámara + pantalla) a 4× queda en ~3,7 s, y a 6× en ~2,9 s (1 track) / ~5,8 s (2 tracks).
+  Es el costo ya aceptado en ADR-M3-07 ("Latencia en gama media"); se anota para la revisión del piloto.
+- El ciclo **no se traba**: 0 turnos salteados en todas las filas (el ciclo programa el próximo turno
+  al terminar la inferencia, así que una inferencia lenta alarga el intervalo efectivo en vez de
+  saltear) y ningún evento de demora, caída ni detección en los 60 s.
+- **Sin pérdida de memoria:** `numTensors` 267 al inicio y 267 al final (diferencia 0, contado con el
+  ciclo quieto) en las 6 filas, y 0 después de `destruir()`.
+- `webgl` acá es software y no representa un celular con GPU; con GPU real se espera bastante menos.
+- La carga en `webgl` (5–8 s) queda debajo del tope de 20 s ("Tiempo máximo de carga del clasificador").
+
+Sigue pendiente la fila de un dispositivo físico: abrir `https://<entorno>/diagnostico/clasificador` en
+un Android de gama media con Chrome, tocar "Empezar medición" y después "Copiar resultados", y agregar
+la fila acá.
