@@ -68,6 +68,7 @@ class DecisionesAdminCarrerasIntegracionTest extends IntegracionBase {
     @MockitoSpyBean Notificador notificador;
     @MockitoSpyBean com.tinku.identidad.port.Almacenamiento almacenamiento;
     @Autowired com.tinku.aula.EvidenciaService evidenciaService;
+    @Autowired com.tinku.identidad.service.CredencialService credencialService;
 
     /** Frena al primer hilo que pasa por el punto marcado, hasta que el test lo suelta. */
     static final class Freno {
@@ -284,5 +285,30 @@ class DecisionesAdminCarrerasIntegracionTest extends IntegracionBase {
 
         assertThat(alertaRepo.findById(alerta.getId()).orElseThrow().getEstado())
                 .isEqualTo(AlertaSeguridad.ESTADO_RESUELTA_BAJA);
+    }
+
+    @Test
+    void dosAdminsRevisanLaMismaCredencial_unoSoloDecide() throws Exception {
+        Usuario tutor = tutor(null, null);
+        Usuario admin1 = adulto(false);
+        Usuario admin2 = adulto(false);
+        UUID credId = jdbc.queryForObject("""
+                INSERT INTO identidad.credenciales_academicas (tutor_id, tipo_documento, archivo_url)
+                VALUES (?, 'TITULO', 'test/titulo.pdf') RETURNING id""", UUID.class, tutor.getId());
+        doAnswer(inv -> {
+            Freno f = freno;
+            if (f != null) {
+                f.frenarAlPrimero();
+            }
+            return inv.callRealMethod();
+        }).when(notificador).notificar(any(), eq(TipoNotificacion.CREDENCIAL_REVISADA), anyMap());
+
+        List<Throwable> errores = carrera(
+                () -> credencialService.marcarAprobada(credId, admin1.getId()),
+                () -> credencialService.marcarRechazada(credId, admin2.getId()));
+
+        assertThat(errores).hasSize(1);
+        assertThat(errores.get(0))
+                .isInstanceOf(com.tinku.identidad.service.CredencialNoPendienteException.class);
     }
 }
