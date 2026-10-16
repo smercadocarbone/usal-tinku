@@ -213,6 +213,18 @@ class IdentidadFlujosIntegracionTest {
         assertThat(intentoOcrRepository.findByDni("31234568").orElseThrow().getIntentosConsumidos()).isEqualTo(2);
     }
 
+    /** FR-ID-011: 6 fotos ilegibles por ciclo (tinku.ocr.max-intentos) y después la espera. La
+     *  columna de V4 solo admitía 0 a 3: la cuarta foto ilegible daba 500 y la espera nunca llegaba. */
+    @Test
+    void fotosIlegibles_seisPorCiclo_yDespuesLaEspera() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        for (int i = 0; i < 6; i++) {
+            verificarDni("31234569").andExpect(status().isUnprocessableEntity());
+        }
+        verificarDni("31234569").andExpect(status().isTooManyRequests());
+    }
+
     // ------------------------------------------------ US-1: adulto
 
     @Test
