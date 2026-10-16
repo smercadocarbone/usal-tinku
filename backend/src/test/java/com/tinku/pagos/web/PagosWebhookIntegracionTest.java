@@ -232,11 +232,15 @@ class PagosWebhookIntegracionTest {
         return login(dni);
     }
 
+    /** Token del Adulto Responsable (el pagador) de la última reserva creada. */
+    private String ultimoTokenAr;
+
     private UUID crearReservaEnPendiente() throws Exception {
         String dniAr = dniUnico();
         String dniTutor = dniUnico();
         String dniMenor = dniUnico();
         String tokenAr = registrarAdultoYToken(dniAr, "Ana", "Lopez");
+        ultimoTokenAr = tokenAr;
         String tokenTutor = registrarTutorYToken(dniTutor, "Pablo", "Sosa");
         UUID tutorId = usuarioPorDni(dniTutor).getId();
         registrarMenor(dniMenor, tokenAr);
@@ -617,5 +621,38 @@ class PagosWebhookIntegracionTest {
         assertThat(transaccionRepository.findAll().stream()
                 .filter(t -> t.getReservaId().equals(reservaId)).toList()).hasSize(1);
         verify(mercadopago, times(1)).reembolsarPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any());
+    }
+    /** Entradas de texto (plata): el id de pago que manda el navegador al volver de MP es un número.
+     *  Con "123?x=1" la consulta a MP devuelve el mismo pago, pero el chequeo de "ya procesado" mira
+     *  el texto tal cual: el pago ya confirmado se tomaba como tardío y se devolvía entero, con la
+     *  reserva confirmada. */
+    @Test
+    void confirmarRetorno_idDePagoQueNoEsUnNumero_400_yNoReembolsa() throws Exception {
+        UUID reservaId = crearReservaEnPendiente();
+        String tokenPagador = ultimoTokenAr;
+        String real = "1234567890";
+        pagoAprobado(real, reservaId, new BigDecimal("15000"));
+        when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(real + "?x=1"), any())).thenReturn(
+                new PagoMercadoPago(real, "approved", reservaId.toString(), new BigDecimal("15000")));
+
+        mockMvc.perform(post("/api/pagos/confirmar-retorno")
+                        .header("Authorization", "Bearer " + tokenPagador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "reservaId", reservaId.toString(), "paymentId", real))))
+                .andExpect(status().is2xxSuccessful());
+        assertThat(reservaRepository.findById(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CONFIRMADA);
+
+        mockMvc.perform(post("/api/pagos/confirmar-retorno")
+                        .header("Authorization", "Bearer " + tokenPagador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "reservaId", reservaId.toString(), "paymentId", real + "?x=1"))))
+                .andExpect(status().isBadRequest());
+
+        verify(mercadopago, times(0)).reembolsarPago(any(), any());
+        assertThat(transaccionRepository.findByReservaId(reservaId).orElseThrow().getEstado())
+                .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
     }
 }
