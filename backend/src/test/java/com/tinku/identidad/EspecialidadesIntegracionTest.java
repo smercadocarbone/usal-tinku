@@ -21,6 +21,8 @@ import com.tinku.identidad.repository.AceptacionClausulaRepository;
 import com.tinku.identidad.service.ConsentimientoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -594,5 +596,62 @@ class EspecialidadesIntegracionTest {
         // Sube a universitario: el profesorado no lo respalda, vuelve a declarada.
         guardarEspecialidades(t, List.of(esp("Matemática", "UNIVERSITARIO")))
                 .andExpect(jsonPath("$[0].estado").value("DECLARADA"));
+    }
+
+    // ------------------------------------------------------------------ E4: por tipo (SPIKE §4.3)
+
+    /**
+     * Cada tipo nuevo se carga, llega a la cola con su paso a seguir y respalda hasta el nivel de la
+     * tabla: cubrir una especialidad en ese nivel la verifica; por encima, 422. Los tipos que la
+     * tabla no menciona no respaldan ninguna (se aprueban sin cobertura).
+     */
+    @ParameterizedTest(name = "{0}: respalda hasta {1}")
+    @CsvSource({
+            "SECUNDARIO,PRIMARIO,SECUNDARIO",
+            "ALUMNO_UNIVERSITARIO,SECUNDARIO,UNIVERSITARIO",
+            "PROFESORADO,SECUNDARIO,UNIVERSITARIO",
+            "UNIVERSITARIO,UNIVERSITARIO,",
+            "MATRICULA_PROFESIONAL,UNIVERSITARIO,",
+            "TERCIARIO_NO_DOCENTE,,PRIMARIO",
+            "OTRO,,PRIMARIO"
+    })
+    void e4_porTipo_cargaColaYCoberturaSegunLaTabla(String tipo, String tope, String porEncima) throws Exception {
+        Usuario t = tutor();
+        List<Map<String, Object>> esps = new java.util.ArrayList<>();
+        if (tope != null) esps.add(esp("Matemática", tope));
+        if (porEncima != null) esps.add(esp("Física", porEncima));
+        guardarEspecialidades(t, esps).andExpect(status().isOk());
+
+        Map<String, Object> d = datos(tipo);
+        if (tipo.equals("ALUMNO_UNIVERSITARIO")) d.put("enlaceVerificacion", "SIU-ABC123");
+        UUID id = cargarOk(t, d);
+        Usuario adm = admin();
+
+        String cola = mvc.perform(get("/api/admin/moderacion/credenciales").header("Authorization", "Bearer " + token(adm)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode fila = objectMapper.readTree(cola).valueStream()
+                .filter(n -> n.get("id").asText().equals(id.toString())).findFirst().orElseThrow();
+        assertThat(fila.get("pasoASeguir").asText()).isNotBlank();
+        if (tope == null) {
+            assertThat(fila.has("nivelMaximoQueRespalda")).isFalse();
+        } else {
+            assertThat(fila.get("nivelMaximoQueRespalda").asText()).isEqualTo(tope);
+        }
+
+        if (porEncima != null) {
+            resolver(adm, id, Map.of("decision", "APROBAR", "metodoVerificacion", "REGISTRO_OFICIAL",
+                    "especialidadesCubiertas", List.of(idEspecialidad(t, "Física"))))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        List<UUID> cubre = tope == null ? List.of() : List.of(idEspecialidad(t, "Matemática"));
+        resolver(adm, id, Map.of("decision", "APROBAR", "metodoVerificacion", "REGISTRO_OFICIAL",
+                "especialidadesCubiertas", cubre))
+                .andExpect(status().isOk());
+
+        Map<String, String> estados = new HashMap<>();
+        perfilPublico(t).get("especialidades")
+                .forEach(e -> estados.put(e.get("materia").asText(), e.get("estado").asText()));
+        if (tope != null) assertThat(estados).containsEntry("Matemática", "VERIFICADA");
+        if (porEncima != null) assertThat(estados).containsEntry("Física", "DECLARADA");
     }
 }
