@@ -78,6 +78,24 @@ class BusquedaRemIntegracionTest extends IntegracionBase {
                 .isEmpty();
     }
 
+    // ---- Auditoría de acceso: listados sin límite ----
+
+    @Test
+    void busqueda_devuelveComoMaximo50Resultados() throws Exception {
+        List<ResultadoMatch> todos = new ArrayList<>();
+        for (int i = 0; i < 55; i++) {
+            todos.add(new ResultadoMatch(tutor(null, null).getId(), 0.9));
+        }
+        when(matchingClient.match(anyList(), eq("geometría analítica")))
+                .thenReturn(todos);
+        String t = token(adulto(false));
+        JsonNode r = json(buscar(t, Map.of("texto_busqueda", "geometría analítica")).andExpect(status().isOk()).andReturn());
+        // El frontend pide el perfil de cada resultado: sin tope, una búsqueda amplia dispara cientos.
+        assertThat(r).hasSize(50);
+        assertThat(directos(r)).containsExactlyElementsOf(
+                todos.subList(0, 50).stream().map(m -> m.tutorId().toString()).toList());
+    }
+
     // ---- E-4 ----
 
     @Test
