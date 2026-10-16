@@ -114,7 +114,7 @@ public class UsuarioService {
         usuario.setCapacidadEstudiante(request.capacidadEstudiante());
         usuario.setCapacidadAdultoResponsable(request.capacidadAdultoResponsable());
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setEmail(request.email());
+        usuario.setEmail(emailNuevo(request.email()));
         usuario.setEstadoCuenta(EstadoCuenta.ACTIVA);
 
         return usuarioRepository.save(usuario);
@@ -216,7 +216,7 @@ public class UsuarioService {
         tutor.setCapacidadEstudiante(false);
         tutor.setCapacidadAdultoResponsable(false);
         tutor.setPasswordHash(passwordEncoder.encode(request.password()));
-        tutor.setEmail(request.email());
+        tutor.setEmail(emailNuevo(request.email()));
         tutor.setEstadoCuenta(EstadoCuenta.ACTIVA);
 
         return usuarioRepository.save(tutor);
@@ -275,7 +275,8 @@ public class UsuarioService {
      */
     @Transactional
     public Usuario actualizarEmail(Usuario usuario, String email) {
-        if (usuarioRepository.existsByEmailAndIdNot(email, usuario.getId())) {
+        email = com.tinku.identidad.dto.FormatoEmail.normalizar(email);
+        if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(email, usuario.getId())) {
             throw new EmailYaRegistradoException();
         }
         usuario.setEmail(email);
@@ -490,6 +491,15 @@ public class UsuarioService {
                 && coincideAproximado(apellidoDeclarado, ocr.apellidoExtraido())
                 && fechaNacimientoDeclarada != null
                 && fechaNacimientoDeclarada.equals(ocr.fechaNacimientoExtraida());
+    }
+
+    /** Email del alta: en minúsculas y sin repetir (FR-ID-018: 409, nunca el 500 del índice único). */
+    private String emailNuevo(String email) {
+        String normalizado = com.tinku.identidad.dto.FormatoEmail.normalizar(email);
+        if (normalizado != null && usuarioRepository.existsByEmailIgnoreCase(normalizado)) {
+            throw new EmailYaRegistradoException();
+        }
+        return normalizado;
     }
 
     private String soloDigitos(String s) {

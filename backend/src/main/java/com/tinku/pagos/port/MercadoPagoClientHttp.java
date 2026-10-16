@@ -103,7 +103,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         MpPagoRespuesta respuesta;
         try {
             respuesta = restClient.get()
-                    .uri(PATH_PAGOS + mpPaymentId)
+                    .uri(PATH_PAGOS + "{id}", mpPaymentId)
                     .header("Authorization", "Bearer " + token(tokenVendedor))
                     .retrieve()
                     // R-B B-5 (T1-10): 404 = ese pago no existe en MP, no que MP esté caído.
@@ -163,7 +163,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
-                    .uri(PATH_PAGOS + mpPaymentId + "/refunds")
+                    .uri(PATH_PAGOS + "{id}/refunds", mpPaymentId)
                     .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new MpReembolsoRequest(null))
@@ -185,7 +185,7 @@ public class MercadoPagoClientHttp implements MercadoPagoClient {
         exigirTokenConfigurado(tokenVendedor);
         try {
             restClient.post()
-                    .uri(PATH_PAGOS + mpPaymentId + "/refunds")
+                    .uri(PATH_PAGOS + "{id}/refunds", mpPaymentId)
                     .header("Authorization", "Bearer " + token(tokenVendedor))
                     .contentType(MediaType.APPLICATION_JSON)
                     .headers(h -> {

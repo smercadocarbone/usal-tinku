@@ -35,6 +35,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      * el cambio). */
     boolean existsByEmailAndIdNot(String email, UUID id);
 
+    /** Unicidad de email sin distinguir mayúsculas (filas viejas pueden tenerlas). */
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, UUID id);
+
     /** FR-ID-013: perfiles de menor a cargo de un Adulto Responsable. */
     long countByAdultoResponsableIdAndTipo(UUID adultoResponsableId, TipoUsuario tipo);
 

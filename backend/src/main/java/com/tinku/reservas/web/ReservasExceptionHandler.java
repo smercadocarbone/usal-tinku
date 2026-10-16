@@ -67,6 +67,7 @@ public class ReservasExceptionHandler {
             AdicionalResumenNoDisponibleException.class, AutoReservaNoPermitidaException.class, TutorSinCobroException.class,
             PedidoPrevioNoEditableException.class, PedidoPrevioVacioException.class,
             NotaClaseNoPermitidaException.class, PedidoReprogramacionException.class,
+            com.tinku.reservas.service.TextoDemasiadoLargoException.class,
             FechaFranjaPasadaException.class})
     public ResponseEntity<Map<String, String>> handleRegla(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
