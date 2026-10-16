@@ -92,6 +92,7 @@ class IdentidadFlujosIntegracionTest {
     @Autowired CredencialService credencialService;
 
     @MockitoBean OcrService ocrService;
+    @Autowired com.tinku.identidad.repository.IntentoOcrRepository intentoOcrRepository;
     @MockitoBean NotificadorResetPassword notificadorResetPassword;
     @org.springframework.beans.factory.annotation.Value("${tinku.jwt.secret}") String jwtSecret;
 
@@ -165,6 +166,51 @@ class IdentidadFlujosIntegracionTest {
 
     private Usuario usuarioPorDni(String dni) {
         return usuarioRepository.findByDni(dni).orElseThrow();
+    }
+
+    // ------------------------------------------------ Entradas de texto: DNI declarado
+
+    private org.springframework.test.web.servlet.ResultActions registroCon(String dniDeclarado) throws Exception {
+        return mockMvc.perform(multipart("/api/usuarios/registro")
+                .file(jsonPart("datos", new RegistroAdultoRequest(
+                        dniDeclarado, "Juan", "Perez", LocalDate.of(1990, 5, 15),
+                        "dni" + Math.abs(dniDeclarado.hashCode()) + "@tinku.test", PASSWORD, true, false)))
+                .file(foto()));
+    }
+
+    /** El DNI declarado son 6 a 8 dígitos (con o sin puntos): con letras o más largo es 400, no se
+     *  "limpia" a otro número ni rompe la base (intentos_ocr.dni es VARCHAR(20)). */
+    @Test
+    void dniDeclarado_conLetrasOLargo_400() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("31234567", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
+        registroCon("3a1b2c3d4e5f6g7").andExpect(status().isBadRequest());
+        assertThat(usuarioRepository.findByDni("31234567")).isEmpty();
+
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        registroCon("1".repeat(100)).andExpect(status().isBadRequest());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions verificarDni(String dniDeclarado) throws Exception {
+        return mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                .file(jsonPart("datos", new com.tinku.identidad.dto.VerificarDniRequest(
+                        dniDeclarado, "Juan", "Perez", LocalDate.of(1990, 5, 15))))
+                .file(foto()));
+    }
+
+    /** FR-ID-011: el contador de fotos ilegibles es del número, no de cómo se escribió
+     *  ("31.234.568" y "31234568" son el mismo DNI). Por el paso de verificación del wizard,
+     *  que es el que deja el contador guardado. */
+    @Test
+    void dniDeclarado_conPuntos_comparteElContadorDeIntentos() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        verificarDni("31234568").andExpect(status().isUnprocessableEntity());
+        verificarDni("31.234.568").andExpect(status().isUnprocessableEntity());
+
+        assertThat(intentoOcrRepository.findByDni("31.234.568")).isEmpty();
+        assertThat(intentoOcrRepository.findByDni("31234568").orElseThrow().getIntentosConsumidos()).isEqualTo(2);
     }
 
     // ------------------------------------------------ US-1: adulto
