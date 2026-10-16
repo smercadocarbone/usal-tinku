@@ -44,6 +44,9 @@ class EscrowCarrerasIntegracionTest extends IntegracionBase {
     @MockitoBean ReembolsoProveedor reembolso;
     @MockitoBean AlertaSoporteProveedor alerta;
     @MockitoBean com.tinku.pagos.port.ReembolsoParcialProveedor reembolsoParcial;
+    @MockitoBean com.tinku.pagos.port.MercadoPagoClient mercadopago;
+    @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
+    @Autowired com.tinku.reservas.service.ReservaService reservaService;
 
     private Transaccion escrowRetenido() {
         Usuario alumno = adulto(false);
@@ -143,5 +146,89 @@ class EscrowCarrerasIntegracionTest extends IntegracionBase {
                 .reembolsarParcial(org.mockito.ArgumentMatchers.anyString(), any(), org.mockito.ArgumentMatchers.any());
         org.mockito.Mockito.verify(reembolsoParcial, org.mockito.Mockito.never())
                 .reembolsarParcial(org.mockito.ArgumentMatchers.anyString(), any());
+    }
+
+    private Reserva pendienteDePago(Usuario alumno) {
+        Reserva reserva = new Reserva();
+        reserva.setPagador(alumno);
+        reserva.setBeneficiario(alumno);
+        reserva.setTutor(tutor(null, null));
+        reserva.setHorario(Instant.now().plusSeconds(3 * 24 * 3600));
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        return reservaRepo.saveAndFlush(reserva);
+    }
+
+    /**
+     * Corre {@code cancelacion} y la frena antes del commit (ya leyó pendiente_pago) y,
+     * mientras tanto, llega el webhook del pago aprobado. Sin lock de la
+     * Reserva, el webhook confirma y crea el escrow, y la cancelación lo pisa: la Reserva queda
+     * cancelada sin evento y la plata del alumno retenida para siempre.
+     */
+    private void cancelacionYPagoALaVez(UUID reservaId, java.util.concurrent.Callable<?> cancelacion)
+            throws Exception {
+        String mpPaymentId = "pago-carrera-" + UUID.randomUUID();
+        org.mockito.Mockito.when(mercadopago.getPago(org.mockito.ArgumentMatchers.eq(mpPaymentId), any()))
+                .thenReturn(new com.tinku.pagos.port.MercadoPagoClient.PagoMercadoPago(
+                        mpPaymentId, "approved", reservaId.toString(), new BigDecimal("15000")));
+        CountDownLatch enFreno = new CountDownLatch(1);
+        CountDownLatch webhookTermino = new CountDownLatch(1);
+        org.springframework.transaction.support.TransactionTemplate tx =
+                new org.springframework.transaction.support.TransactionTemplate(txManager);
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            // La cancelación corre en una transacción que se frena antes del commit.
+            Future<?> cancela = pool.submit(() -> tx.execute(st -> {
+                try {
+                    cancelacion.call();
+                    enFreno.countDown();
+                    webhookTermino.await(3, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+                return null;
+            }));
+            assertThat(enFreno.await(20, TimeUnit.SECONDS)).isTrue();
+            Future<?> webhook = pool.submit(() -> {
+                try {
+                    escrowService.procesarPagoAprobado(mpPaymentId);
+                } finally {
+                    webhookTermino.countDown();
+                }
+                return null;
+            });
+            cancela.get(30, TimeUnit.SECONDS);
+            webhook.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        EstadoReserva estado = reservaRepo.findById(reservaId).orElseThrow().getEstado();
+        java.util.Optional<Transaccion> escrow = transaccionRepo.findByReservaId(reservaId);
+        if (estado == EstadoReserva.CANCELADA) {
+            // Cancelada: si se cobró, se devolvió. Nunca plata retenida de una clase que no existe.
+            assertThat(escrow.map(Transaccion::getEstado).orElse(EstadoTransaccion.REEMBOLSADO))
+                    .isEqualTo(EstadoTransaccion.REEMBOLSADO);
+        } else {
+            assertThat(estado).isEqualTo(EstadoReserva.CONFIRMADA);
+            assertThat(escrow).isPresent();
+        }
+    }
+
+    @Test
+    void cancelarMientrasLlegaElPago_laPlataNoQuedaRetenida() throws Exception {
+        Usuario alumno = adulto(false);
+        Reserva reserva = pendienteDePago(alumno);
+        cancelacionYPagoALaVez(reserva.getId(), () -> reservaService.cancelar(alumno, reserva.getId()));
+    }
+
+    @Test
+    void vencerPorTimeoutMientrasLlegaElPago_laPlataNoQuedaRetenida() throws Exception {
+        Reserva reserva = pendienteDePago(adulto(false));
+        cancelacionYPagoALaVez(reserva.getId(), () -> {
+            reservaService.expirarPorTimeoutPago(reserva.getId());
+            return null;
+        });
     }
 }
