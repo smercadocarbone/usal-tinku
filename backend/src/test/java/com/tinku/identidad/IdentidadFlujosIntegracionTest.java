@@ -701,6 +701,36 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ------------------------------------------------ Auditoría de acceso: cerrar sesión
+
+    @Test
+    void cerrarSesion_elTokenDejaDeServirEnElServidor() throws Exception {
+        String token = registrarAdultoYToken("55556610", "Ana", "Test", false);
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/usuarios/logout").header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        // Copiado antes de "Cerrar sesión", el token ya no abre la cuenta.
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        // Volver a entrar da un token nuevo que sí sirve.
+        String nuevo = login("55556610");
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + nuevo))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void cuentaSuspendida_elTokenYaEmitidoDejaDeServir() throws Exception {
+        String token = registrarAdultoYToken("55556611", "Ana", "Test", false);
+        Usuario u = usuarioPorDni("55556611");
+        u.setEstadoCuenta(EstadoCuenta.SUSPENDIDA);
+        usuarioRepository.save(u);
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
     // ------------------------------------------------ "Olvidé mi contraseña"
 
     @Test

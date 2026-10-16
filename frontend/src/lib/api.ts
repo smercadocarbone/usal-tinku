@@ -776,6 +776,16 @@ export function actualizarEmail(email: string): Promise<PerfilPropio> {
   return api.patch("/api/usuarios/me/email", { email });
 }
 
+/** "Cerrar sesión": invalida el token en el servidor. Si falla (sin red, token ya vencido),
+ *  no se insiste: la sesión local se borra igual. */
+export async function cerrarSesionEnServidor(): Promise<void> {
+  try {
+    await request<void>("/api/usuarios/logout", { method: "POST" });
+  } catch {
+    /* el token igual se descarta en el navegador */
+  }
+}
+
 export function cambiarPassword(passwordActual: string, passwordNueva: string): Promise<void> {
   return api.patch("/api/usuarios/me/password", { passwordActual, passwordNueva });
 }

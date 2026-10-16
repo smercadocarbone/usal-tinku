@@ -49,9 +49,18 @@ public class TicketSoporteService {
         return ticketRepo.save(ticket);
     }
 
-    /** Cola de un rol (FR-ADM-008): un Admin solo ve los tickets de su rol. */
+    /** Cuántos tickets ya terminados (resueltos o cerrados) muestra la cola, los más nuevos. */
+    public static final int MAX_TERMINADOS = 100;
+
+    /** Cola de un rol (FR-ADM-008): un Admin solo ve los tickets de su rol. Primero todos los
+     *  abiertos o en proceso; después, solo los {@link #MAX_TERMINADOS} terminados más nuevos. */
     public List<TicketSoporte> listarPorRol(RolAdmin rol) {
-        return ticketRepo.findByRolAsignadoOrderByCreadoEnDesc(rol);
+        List<TicketSoporte> cola = new java.util.ArrayList<>(ticketRepo.findByRolAsignadoAndEstadoInOrderByCreadoEnDescIdDesc(
+                rol, List.of(EstadoTicket.ABIERTO, EstadoTicket.EN_PROCESO), org.springframework.data.domain.Pageable.unpaged()));
+        cola.addAll(ticketRepo.findByRolAsignadoAndEstadoInOrderByCreadoEnDescIdDesc(
+                rol, List.of(EstadoTicket.RESUELTO, EstadoTicket.CERRADO),
+                org.springframework.data.domain.PageRequest.of(0, MAX_TERMINADOS)));
+        return cola;
     }
 
     /**

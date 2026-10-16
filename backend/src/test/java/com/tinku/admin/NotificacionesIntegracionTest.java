@@ -148,6 +148,33 @@ class NotificacionesIntegracionTest {
                 .andExpect(jsonPath("$.cantidad").value(0));
     }
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    /**
+     * Auditoría de acceso (paginación): con avisos creados en el mismo instante, recorrer las
+     * páginas trae cada aviso una sola vez — el orden tiene un desempate estable.
+     */
+    @Test
+    void bandeja_paginasConLaMismaFecha_noRepitenNiSaltean() throws Exception {
+        Usuario duenio = adulto();
+        int total = 400;
+        for (int i = 0; i < total; i++) {
+            aviso(duenio);
+        }
+        jdbc.update("UPDATE admin.notificaciones SET creada_at = TIMESTAMPTZ '2026-10-01 12:00:00+00'"
+                + " WHERE destinatario_id = ?", duenio.getId());
+
+        java.util.List<String> vistos = new java.util.ArrayList<>();
+        for (int pagina = 0; pagina < 14; pagina++) {
+            String json = mvc.perform(get("/api/notificaciones").param("pagina", String.valueOf(pagina))
+                            .header("Authorization", token(duenio)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            objectMapper.readTree(json).forEach(n -> vistos.add(n.get("id").asText()));
+        }
+        assertThat(vistos).hasSize(total).doesNotHaveDuplicates();
+    }
+
     /** Outbox: si el hecho falla después de escribir el aviso, el aviso no existe. */
     @Test
     void notificacion_seRevierteConLaTransaccion() throws Exception {
