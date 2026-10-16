@@ -9,9 +9,9 @@ import { precioClase } from "../../src/lib/agenda";
  */
 function esperadoBackend(precioHora: string, minutos: number, descuento: number): number {
   const [entero, dec = ""] = precioHora.split(".");
-  const centavos = BigInt(entero) * 100n + BigInt((dec + "00").slice(0, 2));
+  const centavos = BigInt(entero) * BigInt(100) + BigInt((dec + "00").slice(0, 2));
   const n = centavos * BigInt(minutos) * BigInt(100 - descuento);
-  return Number((n * 2n + 6000n) / 12000n) / 100;
+  return Number((n * BigInt(2) + BigInt(6000)) / BigInt(12000)) / 100;
 }
 
 test.describe("precio de una clase — mismo redondeo que el backend", () => {
