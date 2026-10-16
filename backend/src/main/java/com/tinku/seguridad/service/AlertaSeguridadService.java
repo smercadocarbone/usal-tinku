@@ -113,7 +113,9 @@ public class AlertaSeguridadService {
     @Transactional
     public AlertaSeguridad resolver(UUID alertaId, UUID adminId, DecisionAlerta decision,
                                     TipoSancion tipoSancion, Integer diasSuspension) {
-        AlertaSeguridad alerta = buscar(alertaId);
+        // Lock de fila: dos admins a la vez no deciden dos veces (reactivar no pisa una baja).
+        AlertaSeguridad alerta = alertaRepo.findByIdParaActualizar(alertaId)
+                .orElseThrow(() -> new AlertaSeguridadNoEncontradaException(alertaId));
         AdminModeracionGate.exigirNoEsParteDelCaso(adminId, alerta.getDetectadoId());
         if (!AlertaSeguridad.ESTADO_PENDIENTE_REVISION.equals(alerta.getEstado())) {
             throw new AlertaYaResueltaException(alertaId);

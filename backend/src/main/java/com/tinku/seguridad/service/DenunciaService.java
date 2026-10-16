@@ -260,7 +260,9 @@ public class DenunciaService {
     @Transactional
     public Denuncia resolver(UUID denunciaId, UUID adminId, ResolucionDenuncia resolucion,
                              TipoSancion tipoSancion, Integer diasSuspension) {
-        Denuncia denuncia = buscar(denunciaId);
+        // Lock de fila: dos admins a la vez no resuelven (ni sancionan) dos veces.
+        Denuncia denuncia = denunciaRepo.findByIdParaActualizar(denunciaId)
+                .orElseThrow(() -> new DenunciaNoEncontradaException(denunciaId));
         AdminModeracionGate.exigirNoEsParteDelCaso(adminId,
                 denuncia.getDenuncianteId(), denuncia.getDenunciadoId());
         if (denuncia.getEstado() != EstadoDenuncia.EN_REVISION) {

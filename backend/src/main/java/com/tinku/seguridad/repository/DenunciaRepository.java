@@ -10,6 +10,13 @@ import java.util.UUID;
 
 public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
 
+    /** Lectura con lock de fila ({@code SELECT ... FOR UPDATE}): dos admins que deciden el mismo
+     *  caso a la vez se serializan y el segundo ve la decisión del primero. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select x from Denuncia x where x.id = :id")
+    java.util.Optional<Denuncia> findByIdParaActualizar(@org.springframework.data.repository.query.Param("id") UUID id);
+
+
     /** Cola de moderación (M8): pendientes de resolver, las de prioridad alta primero. */
     List<Denuncia> findAllByEstadoInOrderByPrioridadAltaDescCreatedAtAsc(
             List<EstadoDenuncia> estados);

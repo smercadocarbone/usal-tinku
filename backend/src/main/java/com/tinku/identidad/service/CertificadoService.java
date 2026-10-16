@@ -141,7 +141,9 @@ public class CertificadoService {
     @Transactional
     public CertificadoAntecedentesPenales revisar(UUID capId, UUID adminRevisorId,
                                                   AccionRevisionCap accion, CategoriaAntecedenteCap categoria) {
-        CertificadoAntecedentesPenales cap = capRepo.findById(capId)
+        // Lock de fila: si dos admins revisan a la vez, el segundo ve la decisión del primero
+        // (una aprobación no puede pisar un rechazo por antecedentes).
+        CertificadoAntecedentesPenales cap = capRepo.findByIdParaActualizar(capId)
                 .orElseThrow(CapNoEncontradoException::new);
         if (cap.getEstado() != EstadoCap.PENDIENTE && cap.getEstado() != EstadoCap.EN_REVISION_LEGAL) {
             throw new CapNoRevisableException();
