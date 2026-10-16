@@ -105,6 +105,8 @@ public class CertificadoService {
         }
         backoffService.chequearPuedeIntentar(tutor.getId()); // FR-ID-021 reutiliza FR-ID-012
 
+        // Doble envío: el segundo espera al primero (lock del Tutor) y ve su pendiente.
+        usuarioRepo.bloquearPorId(tutor.getId());
         capRepo.findByTutorIdAndEstado(tutor.getId(), EstadoCap.PENDIENTE)
                 .ifPresent(c -> { throw new YaExisteCredencialPendienteException(); });
 
