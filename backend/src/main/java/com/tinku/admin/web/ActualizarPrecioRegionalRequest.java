@@ -1,5 +1,6 @@
 package com.tinku.admin.web;
 
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,5 +15,7 @@ import java.math.BigDecimal;
  */
 public record ActualizarPrecioRegionalRequest(
         @NotBlank @Size(max = 50) String provincia,
-        @NotNull @DecimalMin("0.0") BigDecimal valorSugerido) {
+        @NotNull @DecimalMin("0.0")
+        @DecimalMax(value = "99999999.99", message = "El valor sugerido no puede superar $99.999.999,99.")
+        BigDecimal valorSugerido) {
 }

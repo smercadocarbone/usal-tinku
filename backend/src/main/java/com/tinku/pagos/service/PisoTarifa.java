@@ -15,6 +15,13 @@ import java.math.BigDecimal;
 @Component
 public class PisoTarifa {
 
+    /**
+     * Tope técnico de la tarifa por hora: los montos se guardan en NUMERIC(10, 2) (hasta
+     * $99.999.999,99) y el más grande que sale de una tarifa es el paquete de 4 clases de 180
+     * minutos sin descuento (× 12). Sin tope, guardar la tarifa o reservar terminaba en un 500.
+     */
+    public static final BigDecimal TOPE_HORA = new BigDecimal("8333333.33");
+
     private final BigDecimal pisoHora;
 
     public PisoTarifa(@Value("${tinku.tarifa.piso-hora-ars}") BigDecimal pisoHora) {
@@ -25,10 +32,16 @@ public class PisoTarifa {
         return pisoHora;
     }
 
-    /** @throws TarifaBajoPisoException si {@code precioHora} está por debajo del piso (el piso mismo vale). */
+    /**
+     * @throws TarifaBajoPisoException si {@code precioHora} está por debajo del piso (el piso mismo vale).
+     * @throws TarifaSobreTopeException si supera {@link #TOPE_HORA} (el tope mismo vale).
+     */
     public void exigir(BigDecimal precioHora) {
         if (precioHora.compareTo(pisoHora) < 0) {
             throw new TarifaBajoPisoException(pisoHora);
+        }
+        if (precioHora.compareTo(TOPE_HORA) > 0) {
+            throw new TarifaSobreTopeException();
         }
     }
 }

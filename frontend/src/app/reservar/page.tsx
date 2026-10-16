@@ -162,7 +162,7 @@ function ReservarFlujo() {
   const precioElegido = precioClase(tutor?.precioHora ?? null, elegido?.duracion ?? duracion);
   const precioPaquete =
     tutor?.precioHora != null && oferta?.disponible
-      ? (Math.round((tutor.precioHora * (elegido?.duracion ?? duracion) * (100 - oferta.descuentoPorcentaje)) / 60) / 100) * oferta.clases
+      ? (Math.round(precioClase(tutor.precioHora, elegido?.duracion ?? duracion, oferta.descuentoPorcentaje) * 100) * oferta.clases) / 100
       : null;
 
   const pasos = esMenor ? ["Cuándo", "Pedido"] : esAR ? ["Cuándo", "Para quién", "Confirmar"] : ["Cuándo", "Confirmar"];

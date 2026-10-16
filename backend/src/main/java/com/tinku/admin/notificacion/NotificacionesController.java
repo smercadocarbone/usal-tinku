@@ -28,6 +28,8 @@ import java.util.UUID;
 public class NotificacionesController {
 
     private static final int TAMANIO_PAGINA = 30;
+    /** JPA pide el offset en int: página × 30 no puede pasar de Integer.MAX_VALUE (si no, 500). */
+    private static final int PAGINA_MAXIMA = Integer.MAX_VALUE / TAMANIO_PAGINA - 1;
 
     private final NotificacionRepository repo;
     private final UsuarioActual usuarioActual;
@@ -41,7 +43,7 @@ public class NotificacionesController {
     @GetMapping
     public List<NotificacionResponse> mias(@RequestParam(defaultValue = "0") int pagina, Authentication authentication) {
         UUID yo = usuarioActual.obtener(authentication).getId();
-        return repo.findByDestinatarioIdOrderByCreadaAtDescIdDesc(yo, PageRequest.of(Math.max(pagina, 0), TAMANIO_PAGINA))
+        return repo.findByDestinatarioIdOrderByCreadaAtDescIdDesc(yo, PageRequest.of(Math.clamp(pagina, 0, PAGINA_MAXIMA), TAMANIO_PAGINA))
                 .map(NotificacionResponse::from)
                 .getContent();
     }
