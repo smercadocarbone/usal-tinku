@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { hoyIso } from "@/lib/formatos";
 import { clasesControl } from "./Campo";
 
 /**
@@ -140,9 +141,9 @@ function sumarMeses(f: Fecha, n: number): Fecha {
   return { a, m, d: Math.min(f.d, diasDelMes(a, m)) };
 }
 
+/** Hoy en Argentina (no el del navegador: desde otro país puede ser otro día). */
 function hoy(): Fecha {
-  const dt = new Date();
-  return { a: dt.getFullYear(), m: dt.getMonth(), d: dt.getDate() };
+  return deIso(hoyIso())!;
 }
 
 /** Lunes = 0 … domingo = 6 (en Argentina la semana arranca el lunes). */

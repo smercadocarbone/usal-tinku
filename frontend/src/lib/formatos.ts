@@ -7,7 +7,7 @@
  * mismatch de hidratación. Fixar `timeZone` en el formatter hace que ambos
  * lados produzcan el mismo string siempre.
  */
-const ZONA_ARGENTINA = "America/Argentina/Buenos_Aires";
+export const ZONA_ARGENTINA = "America/Argentina/Buenos_Aires";
 
 export function formatearFecha(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", {
@@ -126,8 +126,10 @@ export function tiempoRelativo(iso: string | Date, ahora: Date = new Date()): st
   return rtf.format(Math.round(ms / 86400000), "day");
 }
 
-/** Hoy en hora local como `YYYY-MM-DD` (`toISOString` da la fecha UTC: de noche en Argentina ya es mañana). */
+/**
+ * Hoy en hora argentina como `YYYY-MM-DD`. Ni `toISOString` (fecha UTC: de noche en Argentina ya
+ * es mañana) ni la fecha local del navegador (desde otro país puede ser otro día).
+ */
 export function hoyIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return claveDia(new Date());
 }
