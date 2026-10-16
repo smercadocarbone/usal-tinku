@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "oxlint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e-real": "playwright test --project=e2e-real"
   },
   "dependencies": {
     "@tensorflow/tfjs": "4.22.0",

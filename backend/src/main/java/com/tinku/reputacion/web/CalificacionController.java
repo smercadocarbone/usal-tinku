@@ -45,7 +45,7 @@ public class CalificacionController {
     @PostMapping("/sesiones/{sesionId}/calificacion")
     public ResponseEntity<CalificacionResponse> calificar(
             @PathVariable UUID sesionId,
-            @RequestBody CalificarRequest request,
+            @jakarta.validation.Valid @RequestBody CalificarRequest request,
             Authentication authentication) {
         Usuario autor = usuarioActual.obtener(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -67,7 +67,7 @@ public class CalificacionController {
     @PatchMapping("/calificaciones/{id}")
     public ResponseEntity<CalificacionResponse> editar(
             @PathVariable UUID id,
-            @RequestBody CalificarRequest request,
+            @jakarta.validation.Valid @RequestBody CalificarRequest request,
             Authentication authentication) {
         Usuario autor = usuarioActual.obtener(authentication);
         return ResponseEntity.ok(calificacionService.editar(autor, id, request));

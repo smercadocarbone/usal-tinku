@@ -47,7 +47,8 @@ public class EvidenciaService {
         if (clip == null || clip.length == 0 || !esVideo(clip)) {
             throw new EvidenciaInvalidaException("el clip tiene que ser un video WebM o MP4.");
         }
-        AlertaSeguridad alerta = alertaRepo.findBySesionId(sesionId)
+        // Lock de fila: si Moderación la está resolviendo, se espera y se ve el estado final.
+        AlertaSeguridad alerta = alertaRepo.findBySesionIdParaActualizar(sesionId)
                 .orElseThrow(AlertaNoEncontradaException::new);
         if (!AlertaSeguridad.ESTADO_PENDIENTE_REVISION.equals(alerta.getEstado())) {
             throw new EvidenciaInvalidaException("la Alerta ya se resolvió.");

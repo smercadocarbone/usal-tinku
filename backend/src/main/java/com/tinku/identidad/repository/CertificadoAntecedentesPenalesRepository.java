@@ -15,6 +15,13 @@ import java.util.UUID;
 public interface CertificadoAntecedentesPenalesRepository
         extends JpaRepository<CertificadoAntecedentesPenales, UUID> {
 
+    /** Lectura con lock de fila ({@code SELECT ... FOR UPDATE}): dos admins que deciden el mismo
+     *  caso a la vez se serializan y el segundo ve la decisión del primero. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select x from CertificadoAntecedentesPenales x where x.id = :id")
+    java.util.Optional<CertificadoAntecedentesPenales> findByIdParaActualizar(@org.springframework.data.repository.query.Param("id") UUID id);
+
+
     Optional<CertificadoAntecedentesPenales> findByTutorIdAndEstado(UUID tutorId, EstadoCap estado);
 
     Optional<CertificadoAntecedentesPenales> findFirstByTutorIdOrderByCreatedAtDesc(UUID tutorId);

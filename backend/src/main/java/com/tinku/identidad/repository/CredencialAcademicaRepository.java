@@ -12,6 +12,13 @@ import java.util.UUID;
 
 public interface CredencialAcademicaRepository extends JpaRepository<CredencialAcademica, UUID> {
 
+    /** Con lock de fila: dos admins que revisan la misma credencial se serializan. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select c from CredencialAcademica c where c.id = :id")
+    java.util.Optional<com.tinku.identidad.model.CredencialAcademica> findByIdParaActualizar(
+            @org.springframework.data.repository.query.Param("id") java.util.UUID id);
+
+
     Optional<CredencialAcademica> findByTutorIdAndEstado(UUID tutorId, EstadoCredencial estado);
 
     /** Última credencial cargada por un Tutor (para saber el intento y el ciclo). */
@@ -31,4 +38,15 @@ public interface CredencialAcademicaRepository extends JpaRepository<CredencialA
             order by c.cicloEsperaHasta asc nulls last
             """)
     List<CredencialAcademica> colaPendientes(@Param("estado") EstadoCredencial estado);
+
+    /**
+     * ADR-M1-06: especialidades cubiertas por las credenciales APROBADAS de un Tutor, con el método
+     * con el que se verificó cada una (fila = {especialidadId, MetodoVerificacion}).
+     */
+    @Query("""
+            select e, c.metodoVerificacion from CredencialAcademica c
+            join c.especialidadesCubiertas e
+            where c.tutor.id = :tutorId and c.estado = com.tinku.identidad.model.EstadoCredencial.APROBADO
+            """)
+    List<Object[]> coberturasAprobadas(@Param("tutorId") UUID tutorId);
 }

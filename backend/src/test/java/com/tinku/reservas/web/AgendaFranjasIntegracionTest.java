@@ -266,7 +266,8 @@ class AgendaFranjasIntegracionTest extends IntegracionBase {
     @Test
     void disponibilidad_deHoy_empiezaDespuesDeLaVentanaMinima() throws Exception {
         Usuario tutor = tutor(LocalTime.of(0, 0), LocalTime.of(23, 30));
-        LocalTime limite = ZonedDateTime.now(ReservasZonaHoraria.ZONA).plusMinutes(30).toLocalTime();
+        LocalTime limite = ZonedDateTime.now(ReservasZonaHoraria.ZONA)
+                .plus(com.tinku.reservas.service.ReservaService.VENTANA_MINIMA).toLocalTime();
         JsonNode dias = json(mockMvc.perform(get("/api/tutores/" + tutor.getId() + "/disponibilidad")
                         .param("dias", "1")
                         .header("Authorization", bearer(token(tutor))))

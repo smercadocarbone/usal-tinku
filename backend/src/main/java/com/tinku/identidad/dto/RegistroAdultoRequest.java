@@ -13,11 +13,11 @@ import java.time.LocalDate;
  * (multipart), no en este JSON — ver UsuarioController.
  */
 public record RegistroAdultoRequest(
-        @NotBlank String dniDeclarado,
+        @NotBlank @jakarta.validation.constraints.Pattern(regexp = FormatoDni.REGEX, message = FormatoDni.MENSAJE) String dniDeclarado,
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada,
-        @NotBlank @Email(regexp = com.tinku.identidad.dto.FormatoEmail.REGEX, message = "debe ser un email válido, por ejemplo nombre@gmail.com") String email,
+        @NotBlank @Email(regexp = com.tinku.identidad.dto.FormatoEmail.REGEX, message = "debe ser un email válido, por ejemplo nombre@gmail.com") @jakarta.validation.constraints.Size(max = com.tinku.identidad.dto.FormatoEmail.MAX, message = "puede tener hasta 254 caracteres") String email,
         @NotBlank @PasswordSegura String password,
         boolean capacidadEstudiante,
         boolean capacidadAdultoResponsable,

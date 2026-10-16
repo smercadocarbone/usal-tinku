@@ -1,6 +1,8 @@
 package com.tinku.identidad.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -15,6 +17,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -69,4 +73,47 @@ public class CredencialAcademica {
 
     @Column(name = "revisado_at")
     private Instant revisadoAt;
+
+    // ---- ADR-M1-06 (V56). Solo se usan con tinku.especialidades.habilitado encendido, salvo
+    // metodoVerificacion, que toda aprobación deja en SOLO_DOCUMENTO si no se indica otro.
+
+    @Column(length = 200)
+    private String institucion;
+
+    /** Denominación del título ("Profesora de Matemática"). */
+    @Column(length = 200)
+    private String denominacion;
+
+    /** Año de egreso (o de cursada, para un alumno regular). */
+    @Column(name = "anio_egreso")
+    private Integer anioEgreso;
+
+    @Column(name = "es_digital")
+    private Boolean esDigital;
+
+    /** Enlace o código de verificación. Nunca se scrapea: el Admin lo abre con un clic. */
+    @Column(name = "enlace_verificacion", length = 500)
+    private String enlaceVerificacion;
+
+    /** OCR contra el nombre del DNI verificado: null = no se pudo comparar; false = marca para el Admin. */
+    @Column(name = "nombre_coincide")
+    private Boolean nombreCoincide;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_verificacion", length = 20)
+    private MetodoVerificacion metodoVerificacion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo_rechazo", length = 30)
+    private MotivoRechazoCredencial motivoRechazo;
+
+    @Column(name = "detalle_rechazo", length = 500)
+    private String detalleRechazo;
+
+    /** Especialidades del Tutor que esta credencial cubre (las elige el Admin al aprobar). */
+    @ElementCollection
+    @CollectionTable(name = "credencial_especialidades", schema = "identidad",
+            joinColumns = @JoinColumn(name = "credencial_id"))
+    @Column(name = "especialidad_id")
+    private Set<UUID> especialidadesCubiertas = new HashSet<>();
 }

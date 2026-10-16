@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarDays, Eye, TrendingUp, Wallet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatearPesos } from "@/lib/formatos";
+import { precioClase } from "@/lib/agenda";
 import { Alerta, Boton, Selector, useToast } from "@/components/ui";
 
 /** ADR-M5-03: tope del descuento del paquete (el backend rechaza más con 422). */
@@ -11,7 +12,7 @@ export const DESCUENTO_MAXIMO_PAQUETE = 30;
 
 /** Precio de una clase del paquete: mismo redondeo que `ReservaService.precioDe` (HALF_UP a centavos). */
 export function precioClasePaquete(precioHora: number, minutos: number, descuento: number): number {
-  return Math.round((precioHora * minutos * (100 - descuento)) / 60) / 100;
+  return precioClase(precioHora, minutos, descuento);
 }
 
 
@@ -150,6 +151,7 @@ export default function TabPrecio() {
         .catch((err: unknown) => {
           const pisoDelError = err instanceof ApiError ? err.detalles?.pisoHora : undefined;
           if (err instanceof ApiError && err.status === 422 && pisoDelError != null) setPiso(Number(pisoDelError));
+          else if (err instanceof ApiError && err.status === 422 && err.message) setError(err.message);
           else setError("No pudimos guardar el precio. Probá cambiando el valor de nuevo.");
         });
     }, 700);
@@ -350,7 +352,7 @@ function PaqueteDelMes({
             Guardar descuento
           </Boton>
           <p className="basis-full text-[13px] text-tinta-tenue">
-            Un paquete de 4 clases de 1 hora sale {formatearPesos(precioClasePaquete(precioHora, 60, fueraDeRango ? 0 : d) * 4)}.
+            Un paquete de 4 clases de 1 hora sale {formatearPesos((Math.round(precioClasePaquete(precioHora, 60, fueraDeRango ? 0 : d) * 100) * 4) / 100)}.
             {" "}Hasta {DESCUENTO_MAXIMO_PAQUETE} %.
           </p>
           {fueraDeRango && (

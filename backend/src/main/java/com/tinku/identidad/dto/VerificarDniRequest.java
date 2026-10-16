@@ -11,7 +11,7 @@ import java.time.LocalDate;
  * no existe. Ver UsuarioController/verificar-dni y UsuarioService.
  */
 public record VerificarDniRequest(
-        @NotBlank String dniDeclarado,
+        @NotBlank @jakarta.validation.constraints.Pattern(regexp = FormatoDni.REGEX, message = FormatoDni.MENSAJE) String dniDeclarado,
         @NotBlank String nombreDeclarado,
         @NotBlank String apellidoDeclarado,
         @NotNull LocalDate fechaNacimientoDeclarada

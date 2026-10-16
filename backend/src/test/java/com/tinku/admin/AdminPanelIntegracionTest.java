@@ -425,6 +425,41 @@ class AdminPanelIntegracionTest {
                 .isEqualTo(RolAdmin.MODERACION_SEGURIDAD.getValor());
     }
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTickets;
+
+    /**
+     * Auditoría de acceso (listados sin límite): la cola de tickets trae todos los abiertos o en
+     * proceso, pero de los ya terminados solo los 100 más nuevos — antes devolvía la historia entera.
+     */
+    @Test
+    void tickets_colaConTodosLosPendientes_ySoloLosUltimosTerminados() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        Usuario soporte = admin(RolAdmin.SOPORTE_FINANCIERO);
+        String insertar = "INSERT INTO admin.tickets_soporte (id, usuario_id, origen_modulo, asunto, detalle, estado,"
+                + " rol_asignado, creado_en) VALUES (?, ?, 'M5.pago_fallido', 'a', 'd', ?, 'SOPORTE_FINANCIERO', ?)";
+        List<UUID> creados = new java.util.ArrayList<>();
+        try {
+            UUID viejoAbierto = UUID.randomUUID();
+            creados.add(viejoAbierto);
+            jdbcTickets.update(insertar, viejoAbierto, tutor.getId(), "ABIERTO",
+                    java.sql.Timestamp.from(java.time.Instant.now().minus(java.time.Duration.ofDays(400))));
+            for (int i = 0; i < 105; i++) {
+                UUID id = UUID.randomUUID();
+                creados.add(id);
+                jdbcTickets.update(insertar, id, tutor.getId(), i % 2 == 0 ? "RESUELTO" : "CERRADO",
+                        java.sql.Timestamp.from(java.time.Instant.now().minus(java.time.Duration.ofMinutes(i))));
+            }
+
+            String cola = mvc.perform(get("/api/admin/tickets").header("Authorization", "Bearer " + token(soporte)))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            List<UUID> ids = idsDe(cola);
+            assertThat(ids).contains(viejoAbierto);
+            assertThat(ids.stream().filter(creados::contains).count()).isEqualTo(101);
+        } finally {
+            creados.forEach(id -> jdbcTickets.update("DELETE FROM admin.tickets_soporte WHERE id = ?", id));
+        }
+    }
+
     @Test
     void tickets_actualizarEstado_soloElRolAsignado_yFijaResueltoEnUnaVezSola() throws Exception {
         // Auditoría 2026-09-18 (gap del frontend): antes no existía ningún
@@ -565,7 +600,7 @@ class AdminPanelIntegracionTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value(EstadoTransaccion.RETENIDO_ESCROW.getValor()))
                 .andExpect(jsonPath("$.montoBruto").value(new BigDecimal("15000.0")));
-        verify(reembolsoParcial).reembolsarParcial(mpPaymentId, new BigDecimal("6000"));
+        verify(reembolsoParcial).reembolsarParcial(mpPaymentId, new BigDecimal("6000"), "parcial-" + enEscrow.getId());
         assertThat(transaccionRepository.findById(enEscrow.getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoTransaccion.RETENIDO_ESCROW);
 

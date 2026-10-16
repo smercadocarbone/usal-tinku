@@ -14,5 +14,8 @@ import java.util.UUID;
  */
 public interface TicketSoporteRepository extends JpaRepository<TicketSoporte, UUID> {
 
-    List<TicketSoporte> findByRolAsignadoOrderByCreadoEnDesc(RolAdmin rolAsignado);
+    /** Tickets del rol en esos estados, los más nuevos primero (el id desempata). */
+    List<TicketSoporte> findByRolAsignadoAndEstadoInOrderByCreadoEnDescIdDesc(
+            RolAdmin rolAsignado, java.util.Collection<com.tinku.admin.model.EstadoTicket> estados,
+            org.springframework.data.domain.Pageable pagina);
 }

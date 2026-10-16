@@ -61,6 +61,7 @@ public class ColasFinancieroController {
     private final PasarelaService pasarela;
     private final ReservaRepository reservaRepo;
     private final com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional;
+    private final com.tinku.pagos.service.BloqueoTransaccion bloqueo;
 
     public ColasFinancieroController(AdminModeracionGate gate,
                                      TransaccionRepository transaccionRepo,
@@ -69,7 +70,9 @@ public class ColasFinancieroController {
                                      ReembolsoParcialProveedor reembolsoParcial,
                                      PasarelaService pasarela,
                                      ReservaRepository reservaRepo,
-                                     com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional) {
+                                     com.tinku.pagos.service.ReembolsoAdicionalOutbox reembolsoAdicional,
+                                     com.tinku.pagos.service.BloqueoTransaccion bloqueo) {
+        this.bloqueo = bloqueo;
         this.gate = gate;
         this.transaccionRepo = transaccionRepo;
         this.precioRepo = precioRepo;
@@ -178,6 +181,7 @@ public class ColasFinancieroController {
      * sigue su curso normal y MP maneja el saldo (Spec no define una transición).
      */
     @PostMapping("/transacciones/{transaccionId}/reembolso-parcial")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> reembolsoParcial(@PathVariable UUID transaccionId,
                                               @Valid @RequestBody ReembolsoParcialRequest request,
                                               Authentication authentication) {
@@ -188,6 +192,12 @@ public class ColasFinancieroController {
             throw new com.tinku.admin.service.RecursoAdminNoEncontradoException("No encontramos ese elemento.");
         }
         exigirNoEsParteDeLaReserva(adminUsuarioId, transaccion);
+        // Lock de fila + registro (V54): un doble envío no devuelve dos veces.
+        transaccion = bloqueo.porId(transaccionId).orElseThrow();
+        if (transaccion.getReembolsoParcialAt() != null) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", "Esta transacción ya tiene un reembolso parcial."));
+        }
         // Solo hay algo que parcializar si el dinero sigue en el escrow.
         boolean escrowDisponible = transaccion.getEstado() == EstadoTransaccion.RETENIDO_ESCROW
                 || transaccion.getEstado() == EstadoTransaccion.PAUSADO_DENUNCIA;
@@ -211,7 +221,11 @@ public class ColasFinancieroController {
                     .body(Map.of("error",
                             "Transacción simulada (modo Bypass): no hay dinero real que reembolsar."));
         }
-        reembolsoParcial.reembolsarParcial(transaccion.idPagoMp(), request.monto());
+        reembolsoParcial.reembolsarParcial(transaccion.idPagoMp(), request.monto(),
+                "parcial-" + transaccion.getId());
+        transaccion.setReembolsoParcialMonto(request.monto());
+        transaccion.setReembolsoParcialAt(java.time.Instant.now());
+        transaccionRepo.save(transaccion);
         return ResponseEntity.ok(PagoFallidoResponse.from(
                 transaccionRepo.findById(transaccionId).orElseThrow()));
     }

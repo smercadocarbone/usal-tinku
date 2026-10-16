@@ -677,6 +677,7 @@ class SesionesIntegracionTest {
         // El tutor entró 10 segundos antes del final → duración efectiva > 0.
         // (inicio_real lo marca el primer join del webhook; acá se simula directo.)
         sesion.setTutorJoinedAt(Instant.now().minusSeconds(10));
+        sesion.setEstudianteJoinedAt(Instant.now().minusSeconds(10));
         sesion.setInicioReal(Instant.now().minusSeconds(10));
         sesionRepository.save(sesion);
         Instant previo = Instant.now();
@@ -711,6 +712,9 @@ class SesionesIntegracionTest {
         Escenario e = escenarioBase();
         Reserva reserva = reservaConfirmadaDirecta(e);
         SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setTutorJoinedAt(Instant.now().minusSeconds(60));
+        sesion.setEstudianteJoinedAt(Instant.now().minusSeconds(60));
+        sesionRepository.save(sesion);
 
         // El menor (beneficiario, US-8 "cualquiera de las dos partes") finaliza.
         mockMvc.perform(post("/api/sesiones/{id}/finalizar", sesion.getId())
@@ -718,6 +722,27 @@ class SesionesIntegracionTest {
                 .andExpect(status().isOk());
         assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
                 .isEqualTo("finalizada");
+    }
+
+    /**
+     * Saltar el paso "la clase se dio": el Tutor llama a «Finalizar» antes de que nadie entre
+     * a la sala. Antes quedaba finalizada y M5 le liberaba el cobro a las 24 hs, en lugar de
+     * que el no-show decidiera (y devolviera la plata si el que faltó es él).
+     */
+    @Test
+    void finalizar_claseQueNadieEmpezo_422YSigueNoIniciada() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        mockMvc.perform(post("/api/sesiones/{id}/finalizar", sesion.getId())
+                        .header("Authorization", "Bearer " + e.tokenTutor()))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstado())
+                .isEqualTo("no_iniciada");
+        assertThat(reservaRepository.findById(reserva.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(EVENTOS).isEmpty();
     }
 
     @Test

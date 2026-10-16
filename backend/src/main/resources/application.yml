@@ -18,6 +18,14 @@ spring:
     locale: es_AR
     locale-resolver: fixed
 
+  # Fechas en parámetros de la URL: solo ISO-8601 (AAAA-MM-DD). Con el locale es_AR, Spring
+  # aceptaba además el formato corto local ("05/11/26"), ambiguo en día/mes y con año de 2 cifras.
+  mvc:
+    format:
+      date: iso
+      time: iso
+      date-time: iso
+
   # R-B B-3 (T4-H4): "ACOSO", "acoso" y "Acoso" son el mismo valor de un enum en el cuerpo.
   jackson:
     mapper:
@@ -194,6 +202,17 @@ tinku:
     # hace que "Mi cuenta" los pida de nuevo una vez.
     terminos:
       version: ${TINKU_CLAUSULA_TERMINOS_VERSION:2026-09-26}
+    # ADR-M1-06 / Pendiente: consentimiento para consultar registros oficiales con el DNI del
+    # Tutor. PENDIENTE DEL DUEÑO: falta el texto legal; el marcador no es una versión válida.
+    consulta-registros:
+      version: ${TINKU_CLAUSULA_CONSULTA_REGISTROS_VERSION:pendiente-del-duenio}
+  # ADR-M1-06 (T-ESP-01..04): especialidades del Tutor y verificación de títulos contra el registro
+  # oficial. APAGADO hasta que el dueño entregue el texto legal de la cláusula de consentimiento
+  # para consultar registros con el DNI del Tutor (Ley 25.326). Apagado = el sistema se comporta
+  # como antes de V56. No encender en prod/staging sin la versión real de la cláusula
+  # (EspecialidadesFlag aborta el arranque si sigue el marcador).
+  especialidades:
+    habilitado: ${TINKU_ESPECIALIDADES_HABILITADO:false}
   menores:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.

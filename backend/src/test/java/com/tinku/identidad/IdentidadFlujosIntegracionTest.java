@@ -92,6 +92,7 @@ class IdentidadFlujosIntegracionTest {
     @Autowired CredencialService credencialService;
 
     @MockitoBean OcrService ocrService;
+    @Autowired com.tinku.identidad.repository.IntentoOcrRepository intentoOcrRepository;
     @MockitoBean NotificadorResetPassword notificadorResetPassword;
     @org.springframework.beans.factory.annotation.Value("${tinku.jwt.secret}") String jwtSecret;
 
@@ -165,6 +166,78 @@ class IdentidadFlujosIntegracionTest {
 
     private Usuario usuarioPorDni(String dni) {
         return usuarioRepository.findByDni(dni).orElseThrow();
+    }
+
+    // ------------------------------------------------ Entradas de texto: DNI declarado
+
+    private org.springframework.test.web.servlet.ResultActions registroCon(String dniDeclarado) throws Exception {
+        return mockMvc.perform(multipart("/api/usuarios/registro")
+                .file(jsonPart("datos", new RegistroAdultoRequest(
+                        dniDeclarado, "Juan", "Perez", LocalDate.of(1990, 5, 15),
+                        "dni" + Math.abs(dniDeclarado.hashCode()) + "@tinku.test", PASSWORD, true, false)))
+                .file(foto()));
+    }
+
+    /** El DNI declarado son 6 a 8 dígitos (con o sin puntos): con letras o más largo es 400, no se
+     *  "limpia" a otro número ni rompe la base (intentos_ocr.dni es VARCHAR(20)). */
+    @Test
+    void dniDeclarado_conLetrasOLargo_400() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado("31234567", "Juan", "Perez", LocalDate.of(1990, 5, 15)));
+        registroCon("3a1b2c3d4e5f6g7").andExpect(status().isBadRequest());
+        assertThat(usuarioRepository.findByDni("31234567")).isEmpty();
+
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        registroCon("1".repeat(100)).andExpect(status().isBadRequest());
+    }
+
+    /** FR-ID-011: la foto ilegible cuenta también si se llama al alta directo, sin el paso de
+     *  verificación del wizard. El contador se guardaba dentro de la transacción del alta y la
+     *  excepción de "ilegible" lo deshacía: el backoff nunca llegaba. */
+    @Test
+    void fotosIlegibles_enElAltaDirecta_tambienCuentanYLlegaLaEspera() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        registroCon("31234570").andExpect(status().isUnprocessableEntity());
+        assertThat(intentoOcrRepository.findByDni("31234570").orElseThrow().getIntentosConsumidos()).isEqualTo(1);
+        for (int i = 1; i < 6; i++) {
+            registroCon("31234570").andExpect(status().isUnprocessableEntity());
+        }
+        registroCon("31234570").andExpect(status().isTooManyRequests());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions verificarDni(String dniDeclarado) throws Exception {
+        return mockMvc.perform(multipart("/api/usuarios/verificar-dni")
+                .file(jsonPart("datos", new com.tinku.identidad.dto.VerificarDniRequest(
+                        dniDeclarado, "Juan", "Perez", LocalDate.of(1990, 5, 15))))
+                .file(foto()));
+    }
+
+    /** FR-ID-011: el contador de fotos ilegibles es del número, no de cómo se escribió
+     *  ("31.234.568" y "31234568" son el mismo DNI). Por el paso de verificación del wizard,
+     *  que es el que deja el contador guardado. */
+    @Test
+    void dniDeclarado_conPuntos_comparteElContadorDeIntentos() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        verificarDni("31234568").andExpect(status().isUnprocessableEntity());
+        verificarDni("31.234.568").andExpect(status().isUnprocessableEntity());
+
+        assertThat(intentoOcrRepository.findByDni("31.234.568")).isEmpty();
+        assertThat(intentoOcrRepository.findByDni("31234568").orElseThrow().getIntentosConsumidos()).isEqualTo(2);
+    }
+
+    /** FR-ID-011: 6 fotos ilegibles por ciclo (tinku.ocr.max-intentos) y después la espera. La
+     *  columna de V4 solo admitía 0 a 3: la cuarta foto ilegible daba 500 y la espera nunca llegaba. */
+    @Test
+    void fotosIlegibles_seisPorCiclo_yDespuesLaEspera() throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(new ResultadoOcr(false, null, null, null, null));
+        for (int i = 0; i < 6; i++) {
+            verificarDni("31234569").andExpect(status().isUnprocessableEntity());
+        }
+        verificarDni("31234569").andExpect(status().isTooManyRequests());
     }
 
     // ------------------------------------------------ US-1: adulto
@@ -612,6 +685,45 @@ class IdentidadFlujosIntegracionTest {
                 .andExpect(status().isConflict());
     }
 
+    private org.springframework.test.web.servlet.ResultActions registroConEmail(String dni, String email) throws Exception {
+        when(ocrService.procesarDocumento(any(), any()))
+                .thenReturn(resultado(dni, "Juan", "Perez", LocalDate.of(1990, 5, 15)));
+        return mockMvc.perform(multipart("/api/usuarios/registro")
+                .file(jsonPart("datos", new RegistroAdultoRequest(
+                        dni, "Juan", "Perez", LocalDate.of(1990, 5, 15), email, PASSWORD, true, false)))
+                .file(foto()));
+    }
+
+    /** Entradas de texto: el email es uno solo sin importar mayúsculas, el alta con un email ya
+     *  usado es 409 (no un 500 del índice único) y uno de más de 254 caracteres es 400. */
+    @Test
+    void email_mayusculasDuplicadoYLargo() throws Exception {
+        registroConEmail("23230001", "Ana.Dup@Tinku.test").andExpect(status().isCreated());
+        assertThat(usuarioPorDni("23230001").getEmail()).isEqualTo("ana.dup@tinku.test");
+
+        registroConEmail("23230006", "Ana.Dup@Tinku.test").andExpect(status().isConflict());
+        registroConEmail("23230002", "ana.dup@tinku.test").andExpect(status().isConflict());
+        registroConEmail("23230003", "ANA.DUP@TINKU.TEST").andExpect(status().isConflict());
+        assertThat(usuarioRepository.findByDni("23230002")).isEmpty();
+
+        String largo = "a".repeat(250) + "@tinku.test";
+        registroConEmail("23230004", largo).andExpect(status().isBadRequest());
+
+        String token = registrarAdultoYToken("23230005", "Juan", "Perez", false);
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest(largo))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/api/usuarios/me/email")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.tinku.identidad.dto.ActualizarEmailRequest("ANA.dup@tinku.test"))))
+                .andExpect(status().isConflict());
+    }
+
     @Test
     void editarCuenta_cambiaPassword_conActualCorrecta_yRechazaConIncorrecta() throws Exception {
         String token = registrarAdultoYToken("22222299", "Sol", "Aguirre", false);
@@ -698,6 +810,36 @@ class IdentidadFlujosIntegracionTest {
                         jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
                 .compact();
         mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + viejo))
+                .andExpect(status().isForbidden());
+    }
+
+    // ------------------------------------------------ Auditoría de acceso: cerrar sesión
+
+    @Test
+    void cerrarSesion_elTokenDejaDeServirEnElServidor() throws Exception {
+        String token = registrarAdultoYToken("55556610", "Ana", "Test", false);
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/usuarios/logout").header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        // Copiado antes de "Cerrar sesión", el token ya no abre la cuenta.
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        // Volver a entrar da un token nuevo que sí sirve.
+        String nuevo = login("55556610");
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + nuevo))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void cuentaSuspendida_elTokenYaEmitidoDejaDeServir() throws Exception {
+        String token = registrarAdultoYToken("55556611", "Ana", "Test", false);
+        Usuario u = usuarioPorDni("55556611");
+        u.setEstadoCuenta(EstadoCuenta.SUSPENDIDA);
+        usuarioRepository.save(u);
+        mockMvc.perform(get("/api/usuarios/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 

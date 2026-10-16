@@ -41,6 +41,8 @@ function formatFecha(iso: string | null): string {
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "America/Argentina/Buenos_Aires",
   });
 }
 

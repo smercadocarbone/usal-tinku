@@ -92,10 +92,18 @@ export function iniciosEnFranja(f: Pick<Franja, "horaInicio" | "horaFin">, durac
   return inicios;
 }
 
-/** Precio de una clase: tarifa por hora × minutos / 60, redondeado a centavos (igual que el backend). */
-export function precioClase(precioHora: number | null, duracion: number): number | null {
+/**
+ * Precio de una clase: tarifa por hora × minutos × (100 − descuento) / 6000, redondeado a centavos
+ * hacia arriba en el medio, igual que `ReservaService.precioDe` (BigDecimal HALF_UP). Se calcula en
+ * centavos enteros: con flotantes, una tarifa con centavos (6000,07 $/h) daba un centavo menos.
+ */
+export function precioClase(precioHora: number, duracion: number, descuento?: number): number;
+export function precioClase(precioHora: number | null, duracion: number, descuento?: number): number | null;
+export function precioClase(precioHora: number | null, duracion: number, descuento = 0): number | null {
   if (precioHora == null) return null;
-  return Math.round(((precioHora * duracion) / 60) * 100) / 100;
+  const centavosHora = Math.round(precioHora * 100);
+  const n = centavosHora * duracion * (100 - descuento);
+  return Math.floor((2 * n + 6000) / 12000) / 100;
 }
 
 export interface GrupoFranjas {

@@ -148,6 +148,21 @@ class PerfilPublicoTutorIntegracionTest {
         assertThat(usuarioRepository.findById(tutor.getId()).orElseThrow().getBio()).isNull();
     }
 
+    /** Entradas de texto: el aviso "[contacto oculto]" es más largo que lo que tapa ("@abc"); una
+     *  bio de 500 caracteres llena de usuarios pasaba el tope y rompía la columna VARCHAR(500). */
+    @Test
+    void us7_bioDe500ConContactos_alOcultarlosNoPasaElTope() throws Exception {
+        Usuario tutor = usuario(TipoUsuario.TUTOR);
+        String llena = "@abc ".repeat(100).strip(); // 499 caracteres
+
+        mvc.perform(put("/api/tutores/me/perfil").header("Authorization", token(tutor))
+                        .contentType(MediaType.APPLICATION_JSON).content(bio(llena)))
+                .andExpect(status().isOk());
+        String guardada = usuarioRepository.findById(tutor.getId()).orElseThrow().getBio();
+        assertThat(guardada).doesNotContain("@abc");
+        assertThat(guardada.codePointCount(0, guardada.length())).isLessThanOrEqualTo(500);
+    }
+
     @Test
     void us7_unAdultoNoTienePerfilPublico_403() throws Exception {
         Usuario adulto = usuario(TipoUsuario.ADULTO);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api";
 import { TOKEN_KEY } from "./auth";
+import type { Especialidad } from "./especialidades";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -24,6 +25,8 @@ export interface TutorPerfil {
   precioHora: number | null;
   /** FR-ID-026: CAP aprobado y vigente. Nada más del CAP se muestra a terceros. */
   habilitadoParaMenores: boolean;
+  /** ADR-M1-06: insignias por especialidad. Solo viene con el flag encendido en el backend. */
+  especialidades?: Especialidad[];
 }
 
 export function getTutor(id: string): Promise<TutorPerfil> {
@@ -45,6 +48,7 @@ export function normalizarTutor(t: Partial<TutorPerfil> & { id: string }): Tutor
     verificado: t.verificado ?? false,
     habilitadoParaMenores: t.habilitadoParaMenores ?? false,
     precioHora: t.precioHora ?? null,
+    ...(t.especialidades ? { especialidades: t.especialidades } : {}),
   };
 }
 

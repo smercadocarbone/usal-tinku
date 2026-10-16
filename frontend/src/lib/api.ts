@@ -12,6 +12,13 @@ import { ESPERA_SUBIDA_CLIP_MS, REINTENTOS_SUBIDA_CLIP } from "./killswitch/conf
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+import type {
+  DatosVerificacionCola,
+  DetalleDecisionCredencial,
+  MotivoRechazoCredencial,
+  TipoCredencialEspecialidades,
+} from "./especialidades";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -347,10 +354,10 @@ export function setPasarelaEstado(habilitada: boolean): Promise<PasarelaEstado> 
  *  cola de {@code colaPendientes()} solo trae PENDIENTE), pero el tipo
  *  mentía sobre el contrato real. */
 export type EstadoCredencial = "PENDIENTE" | "APROBADO" | "RECHAZADO";
-export type TipoCredencial = "TITULO" | "CERTIFICADO_ANALITICO" | "MATRICULA";
+export type TipoCredencial = "TITULO" | "CERTIFICADO_ANALITICO" | "MATRICULA" | TipoCredencialEspecialidades;
 export type DecisionCredencial = "APROBAR" | "RECHAZAR";
 
-export interface CredencialCola {
+export interface CredencialCola extends DatosVerificacionCola {
   id: string;
   tutorId: string;
   tutorNombre: string;
@@ -385,9 +392,11 @@ export async function getArchivoCredencial(id: string): Promise<Blob> {
 
 export function resolverCredencial(
   id: string,
-  decision: DecisionCredencial
+  decision: DecisionCredencial,
+  /** ADR-M1-06 (solo con el flag encendido): método y cobertura, o motivo del rechazo. */
+  extra?: DetalleDecisionCredencial
 ): Promise<CredencialCola> {
-  return api.post(`/api/admin/moderacion/credenciales/${id}/resolver`, { decision });
+  return api.post(`/api/admin/moderacion/credenciales/${id}/resolver`, { decision, ...extra });
 }
 
 export type DecisionAlerta = "reactivar" | "sancionar";
@@ -776,6 +785,16 @@ export function actualizarEmail(email: string): Promise<PerfilPropio> {
   return api.patch("/api/usuarios/me/email", { email });
 }
 
+/** "Cerrar sesión": invalida el token en el servidor. Si falla (sin red, token ya vencido),
+ *  no se insiste: la sesión local se borra igual. */
+export async function cerrarSesionEnServidor(): Promise<void> {
+  try {
+    await request<void>("/api/usuarios/logout", { method: "POST" });
+  } catch {
+    /* el token igual se descarta en el navegador */
+  }
+}
+
 export function cambiarPassword(passwordActual: string, passwordNueva: string): Promise<void> {
   return api.patch("/api/usuarios/me/password", { passwordActual, passwordNueva });
 }
@@ -812,6 +831,10 @@ export interface CredencialPropia {
   createdAt: string;
   /** B12: true si el Tutor tiene ALGUNA aprobada aunque la última siga en revisión. */
   tieneAprobada: boolean;
+  /** ADR-M1-06: motivo del rechazo que eligió el Admin (solo con el flag encendido). */
+  motivoRechazo?: MotivoRechazoCredencial;
+  motivoRechazoTexto?: string;
+  detalleRechazo?: string;
 }
 
 /** null = todavía no cargó ninguna credencial (204 del backend). */

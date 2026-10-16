@@ -309,6 +309,29 @@ class CalificacionesFlujosIntegracionTest {
         calificarStatus(tokenTutor, sesionDe(enCurso), 3, null, 422, null);
     }
 
+    /** Entradas de texto: el comentario público tiene tope de 1000 caracteres (columna
+     *  VARCHAR(1000)); pasarse es un error del usuario (400), no un 500 de la base. */
+    @Test
+    void comentarioDeMasDe1000Caracteres_400_alCalificarYAlEditar() throws Exception {
+        String dniEst = dniUnico();
+        registrarAdulto(dniEst, "Ana", true, false);
+        String tokenEst = login(dniEst);
+        String dniTutor = dniUnico();
+        registrarTutor(dniTutor, "Pablo");
+        UUID sesion = escenaFinalizada(usuarioPorDni(dniTutor).getId(), usuarioPorDni(dniEst).getId(),
+                usuarioPorDni(dniEst).getId(), 60);
+
+        calificarStatus(tokenEst, sesion, 5, "a".repeat(1_000_000), 400, null);
+        calificarStatus(tokenEst, sesion, 5, "a".repeat(1001), 400, null);
+        String idCalif = calificarYDevolverId(tokenEst, sesion, 5, "Explica muy bien, se lo recomiendo a O'Connor \uD83D\uDE00");
+
+        mockMvc.perform(patch("/api/calificaciones/{id}", idCalif)
+                        .header("Authorization", "Bearer " + tokenEst)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(cuerpoCalificacion(4, "a".repeat(1001)))))
+                .andExpect(status().isBadRequest());
+    }
+
     private UUID sesionDe(Reserva r) {
         return sesionRepository.findByReservaId(r.getId()).orElseThrow().getId();
     }

@@ -47,6 +47,12 @@ public class AdminExceptionHandler {
         return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
     }
 
+    /** ADR-M1-06: la decisión del Admin no se puede aplicar (falta el método, cobertura inválida...). */
+    @ExceptionHandler(com.tinku.identidad.service.RevisionCredencialInvalidaException.class)
+    public ResponseEntity<Map<String, String>> revisionInvalida(RuntimeException e) {
+        return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(com.tinku.admin.service.RecursoAdminNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> recursoNoEncontrado(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));

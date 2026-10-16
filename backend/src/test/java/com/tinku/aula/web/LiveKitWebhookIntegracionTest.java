@@ -70,6 +70,8 @@ class LiveKitWebhookIntegracionTest {
     @Autowired UsuarioRepository usuarioRepository;
     @Autowired ReservaRepository reservaRepository;
     @Autowired SesionAprendizajeRepository sesionRepository;
+    @Autowired com.tinku.aula.LiveKitWebhookService webhookService;
+    @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
 
     @Value("${tinku.livekit.api-key}") String apiKey;
     @Value("${tinku.livekit.api-secret}") String apiSecret;
@@ -199,6 +201,56 @@ class LiveKitWebhookIntegracionTest {
 
     private String dniDel(UUID userId) {
         return usuarioRepository.findById(userId).orElseThrow().getDni();
+    }
+
+    /**
+     * M3C-06 (E2E contra LiveKit real): el corte del kill-switch cierra la sala dentro de su
+     * transacción y LiveKit manda enseguida los participant_left. El webhook leía la sesión sin
+     * lock (todavía en_curso), esperaba el lock de fila del corte en el UPDATE y al guardar pisaba
+     * estado y fin_real: la sesión cortada volvía a en_curso (y con eso, el token volvía a salir).
+     */
+    @Test
+    void salidaDuranteElCorte_noPisaLaSesionFinalizada() throws Exception {
+        EscenarioWebhook esc = prepararSesionConReserva();
+        SesionAprendizaje s = sesionRepository.findByLivekitRoomId(esc.nombreSala()).orElseThrow();
+        s.setEstado(SesionAprendizaje.ESTADO_EN_CURSO);
+        s.setTutorConectado(true);
+        s.setEstudianteConectado(true);
+        sesionRepository.save(s);
+        UUID sesionId = s.getId();
+
+        org.springframework.transaction.support.TransactionTemplate tx =
+                new org.springframework.transaction.support.TransactionTemplate(txManager);
+        java.util.concurrent.CountDownLatch bloqueada = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch webhookLanzado = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService hilos = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            // Como SesionService.ejecutarKillswitch: lock de fila, corte, y commit un rato después.
+            var corte = hilos.submit(() -> tx.executeWithoutResult(st -> {
+                SesionAprendizaje enCorte = sesionRepository.findByIdParaActualizar(sesionId).orElseThrow();
+                enCorte.setEstado(SesionAprendizaje.ESTADO_FINALIZADA);
+                enCorte.setFinReal(Instant.now());
+                sesionRepository.saveAndFlush(enCorte);
+                bloqueada.countDown();
+                try {
+                    webhookLanzado.await();
+                    Thread.sleep(1_500); // el webhook ya leyó y espera el lock
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+            bloqueada.await();
+            var salida = hilos.submit(() -> webhookService.registrarSalida(esc.nombreSala(), esc.tutorId().toString()));
+            webhookLanzado.countDown();
+            corte.get(30, java.util.concurrent.TimeUnit.SECONDS);
+            salida.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        } finally {
+            hilos.shutdownNow();
+        }
+
+        SesionAprendizaje despues = sesionRepository.findById(sesionId).orElseThrow();
+        assertThat(despues.getEstado()).isEqualTo(SesionAprendizaje.ESTADO_FINALIZADA);
+        assertThat(despues.getFinReal()).isNotNull();
     }
 
     private String cuerpo(String evento, String identidad, String sala) throws Exception {

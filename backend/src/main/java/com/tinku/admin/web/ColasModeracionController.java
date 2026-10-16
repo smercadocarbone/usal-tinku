@@ -63,6 +63,10 @@ public class ColasModeracionController {
     private final Almacenamiento almacenamiento;
     private final PerfilPublicoTutorService perfilPublicoService;
     private final com.tinku.identidad.repository.UsuarioRepository usuarioRepo;
+    /** ADR-M1-06 (apagado por defecto): cola con DNI y guía por tipo; decisión con método y cobertura. */
+    private final com.tinku.identidad.service.EspecialidadesFlag especialidadesFlag;
+    private final com.tinku.identidad.service.EspecialidadService especialidadService;
+    private final com.tinku.identidad.service.RevisionCredencialService revisionCredencial;
 
     public ColasModeracionController(AdminModeracionGate gate,
                                      CredencialAcademicaRepository credencialRepo,
@@ -71,8 +75,14 @@ public class ColasModeracionController {
                                      CredencialService credencialService,
                                      Almacenamiento almacenamiento,
                                      PerfilPublicoTutorService perfilPublicoService,
-                                     com.tinku.identidad.repository.UsuarioRepository usuarioRepo) {
+                                     com.tinku.identidad.repository.UsuarioRepository usuarioRepo,
+                                     com.tinku.identidad.service.EspecialidadesFlag especialidadesFlag,
+                                     com.tinku.identidad.service.EspecialidadService especialidadService,
+                                     com.tinku.identidad.service.RevisionCredencialService revisionCredencial) {
         this.usuarioRepo = usuarioRepo;
+        this.especialidadesFlag = especialidadesFlag;
+        this.especialidadService = especialidadService;
+        this.revisionCredencial = revisionCredencial;
         this.gate = gate;
         this.credencialRepo = credencialRepo;
         this.alertaRepo = alertaRepo;
@@ -111,8 +121,11 @@ public class ColasModeracionController {
     @GetMapping("/credenciales")
     public ResponseEntity<List<CredencialColaResponse>> credenciales(Authentication authentication) {
         gate.requiereModeracion(authentication);
-        return ResponseEntity.ok(credencialRepo.colaPendientes(EstadoCredencial.PENDIENTE)
-                .stream().map(CredencialColaResponse::from).toList());
+        var cola = credencialRepo.colaPendientes(EstadoCredencial.PENDIENTE).stream();
+        return ResponseEntity.ok(especialidadesFlag.habilitado()
+                ? cola.map(c -> CredencialColaResponse.conDatosDeVerificacion(
+                        c, especialidadService.listar(c.getTutor().getId()))).toList()
+                : cola.map(CredencialColaResponse::from).toList());
     }
 
     /**
@@ -195,9 +208,19 @@ public class ColasModeracionController {
             return ResponseEntity.unprocessableEntity()
                     .body(Map.of("error", "La credencial no está pendiente de revisión."));
         }
-        CredencialAcademica resuelta = request.decision() == DecisionCredencial.APROBAR
-                ? credencialService.marcarAprobada(credencialId, adminId)
-                : credencialService.marcarRechazada(credencialId, adminId);
+        CredencialAcademica resuelta;
+        if (especialidadesFlag.habilitado()) {
+            // ADR-M1-06: cómo se verificó y qué especialidades cubre, o el motivo del rechazo.
+            resuelta = request.decision() == DecisionCredencial.APROBAR
+                    ? revisionCredencial.aprobar(credencialId, adminId, request.metodoVerificacion(),
+                            request.especialidadesCubiertas())
+                    : revisionCredencial.rechazar(credencialId, adminId, request.motivoRechazo(),
+                            request.detalleRechazo());
+        } else {
+            resuelta = request.decision() == DecisionCredencial.APROBAR
+                    ? credencialService.marcarAprobada(credencialId, adminId)
+                    : credencialService.marcarRechazada(credencialId, adminId);
+        }
         return ResponseEntity.ok(CredencialResponse.from(resuelta));
     }
 

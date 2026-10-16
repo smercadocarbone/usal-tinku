@@ -16,6 +16,9 @@ spring:
             idleWaitTime: 1000
 
 tinku:
+  # ADR-M1-06: especialidades apagadas hasta tener el texto legal de la cláusula de consentimiento.
+  especialidades:
+    habilitado: false
   # ADR-M1-10: la suite no llama al validador oficial; CapFirmaValidadorIntegracionTest lo
   # enciende con un validador simulado.
   cap:

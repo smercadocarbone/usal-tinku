@@ -380,6 +380,8 @@ class E2EFlujoFelizIntegracionTest {
         // de duración mínima de M6).
         sesion.setEstado(SesionAprendizaje.ESTADO_EN_CURSO);
         sesion.setInicioReal(Instant.now().minusSeconds(11 * 60));
+        sesion.setTutorJoinedAt(Instant.now().minusSeconds(11 * 60));
+        sesion.setEstudianteJoinedAt(Instant.now().minusSeconds(11 * 60));
         sesionRepository.save(sesion);
 
         // M3 — US-8 «Finalizar»: emite `sesion.finalizada`.

@@ -142,6 +142,32 @@ class ReservaVistaIntegracionTest {
                 .andExpect(jsonPath("$.cancelarReembolsaTotal").value(true));
     }
 
+    /**
+     * Auditoría de acceso (listados sin límite): "Mis clases" trae todas las que siguen en pie y,
+     * de las terminadas, las 200 más recientes — antes devolvía la historia entera de la cuenta.
+     */
+    @Test
+    void misClases_todasLasVigentes_ySoloLasUltimas200Terminadas() throws Exception {
+        Usuario ana = usuario(TipoUsuario.ADULTO, "Ana", "Larga");
+        Usuario jorge = usuario(TipoUsuario.TUTOR, "Jorge", "Historia");
+        Reserva proxima = reserva(ana, jorge, enDias(5), EstadoReserva.CONFIRMADA);
+        java.util.List<Reserva> pasadas = new java.util.ArrayList<>();
+        for (int i = 1; i <= 205; i++) {
+            pasadas.add(reserva(ana, jorge, enDias(-i), EstadoReserva.FINALIZADA));
+        }
+
+        String json = mvc.perform(get("/api/reservas").header("Authorization", token(jorge)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        new com.fasterxml.jackson.databind.ObjectMapper().readTree(json).forEach(n -> ids.add(n.get("id").asText()));
+
+        org.assertj.core.api.Assertions.assertThat(ids).hasSize(201)
+                .contains(proxima.getId().toString(), pasadas.get(0).getId().toString(),
+                        pasadas.get(199).getId().toString())
+                .doesNotContain(pasadas.get(200).getId().toString(), pasadas.get(204).getId().toString());
+    }
+
     @Test
     void unaClaseFinalizadaNoOfreceNiPagarNiCancelar() throws Exception {
         Usuario ana = usuario(TipoUsuario.ADULTO, "Ana", "Sosa");
