@@ -10,6 +10,9 @@ spring:
     password: ${DB_PASSWORD}
 
 tinku:
+  # ADR-M1-06: especialidades apagadas hasta tener el texto legal de la cláusula de consentimiento.
+  especialidades:
+    habilitado: ${TINKU_ESPECIALIDADES_HABILITADO:false}
   jwt:
     secret: ${JWT_SECRET}
   matching-service:

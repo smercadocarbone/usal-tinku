@@ -9,6 +9,9 @@ spring:
     password: ${DB_PASSWORD:changeme}
 
 tinku:
+  # ADR-M1-06: especialidades apagadas hasta tener el texto legal de la cláusula de consentimiento.
+  especialidades:
+    habilitado: false
   # ADR-M1-10: en desarrollo no se mandan PDFs al validador oficial.
   cap:
     validador:
