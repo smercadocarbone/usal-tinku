@@ -30,6 +30,13 @@ public interface DenunciaRepository extends JpaRepository<Denuncia, UUID> {
      *  del resumen si existe {@code registrada}/{@code en_revision} (FR-SUM-008). */
     boolean existsBySesionIdAndEstadoIn(UUID sesionId, Collection<EstadoDenuncia> estados);
 
+    /** Doble envío: ¿ya hay una igual en revisión? (con clase / de perfil). */
+    boolean existsByDenuncianteIdAndDenunciadoIdAndSesionIdAndEstado(
+            UUID denuncianteId, UUID denunciadoId, UUID sesionId, EstadoDenuncia estado);
+
+    boolean existsByDenuncianteIdAndDenunciadoIdAndSesionIdIsNullAndEstado(
+            UUID denuncianteId, UUID denunciadoId, EstadoDenuncia estado);
+
     /**
      * Cola de revisión del Admin (US-3, T-M8-04): denuncias {@code en_revision}
      * con descargo ya recibido, ordenadas por urgencia real — prioridad alta

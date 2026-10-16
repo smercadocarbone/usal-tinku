@@ -41,6 +41,11 @@ public class SeguridadExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(com.tinku.seguridad.DenunciaDuplicadaException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicada(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler({DenunciaYaResueltaException.class, AlertaYaResueltaException.class,
             DescargoInvalidoException.class, SancionInvalidaException.class,
             AutoDenunciaException.class})
