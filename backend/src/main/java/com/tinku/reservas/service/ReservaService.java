@@ -249,8 +249,9 @@ public class ReservaService {
      */
     @Transactional
     public Reserva reprogramar(Usuario usuario, UUID reservaId, Instant nuevoHorario) {
-        Reserva reserva = reservaRepo.findById(reservaId)
-                .orElseThrow(ReservaNoEncontradaException::new);
+        // Lock de fila: una cancelación simultánea no queda pisada por el horario nuevo.
+        Reserva reserva = bloquear(reservaRepo.findById(reservaId)
+                .orElseThrow(ReservaNoEncontradaException::new));
         // R-B B-4 (T1-10): a quien no participa no se le confirma que la reserva existe.
         if (!esParticipante(reserva, usuario)) {
             throw new ReservaNoEncontradaException();
@@ -288,6 +289,10 @@ public class ReservaService {
      */
     @Transactional
     public void aplicarNuevoHorario(Reserva reserva, Instant nuevoHorario) {
+        bloquear(reserva);
+        if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+            throw new ReservaNoReprogramableException(); // se canceló mientras tanto
+        }
         validarNuevoHorario(reserva, nuevoHorario);
         reserva.definirHorario(nuevoHorario, reserva.getDuracionMinutos());
         reservaRepo.saveAndFlush(reserva); // flush: la EXCLUDE (horario ocupado) salta acá, no en el commit
