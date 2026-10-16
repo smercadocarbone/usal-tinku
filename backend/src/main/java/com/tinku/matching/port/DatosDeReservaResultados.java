@@ -28,12 +28,18 @@ public class DatosDeReservaResultados {
         this.horarios = horarios;
     }
 
+    /** Tope de resultados por búsqueda (los mejores del ranking): el frontend pide el perfil de
+     *  cada uno, y el próximo horario libre se calcula por resultado. */
+    public static final int MAX_RESULTADOS = 50;
+
     @Transactional(readOnly = true)
     public List<BusquedaResponse> completar(List<BusquedaResponse> resultados, BigDecimal precioMaxHora) {
         return resultados.stream()
-                .map(r -> r.conDatosDeReserva(precioHora(r), horarios.proximoLibre(r.tutorId()).orElse(null)))
+                .map(r -> r.conDatosDeReserva(precioHora(r), null))
                 .filter(r -> precioMaxHora == null
                         || (r.precioHora() != null && r.precioHora().compareTo(precioMaxHora) <= 0))
+                .limit(MAX_RESULTADOS)
+                .map(r -> r.conDatosDeReserva(r.precioHora(), horarios.proximoLibre(r.tutorId()).orElse(null)))
                 .toList();
     }
 
