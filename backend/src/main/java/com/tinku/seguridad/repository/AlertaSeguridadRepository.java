@@ -18,6 +18,12 @@ public interface AlertaSeguridadRepository extends JpaRepository<AlertaSeguridad
 
     Optional<AlertaSeguridad> findBySesionId(UUID sesionId);
 
+    /** La alerta de la sesión con lock de fila (subida del clip vs. resolución del admin). */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select a from AlertaSeguridad a where a.sesionId = :sesionId")
+    Optional<AlertaSeguridad> findBySesionIdParaActualizar(
+            @org.springframework.data.repository.query.Param("sesionId") UUID sesionId);
+
     /** Auditoría 2026-09-20: propias del Tutor detectado, para que pueda verlas
      * y presentar su descargo (US-2) — antes no existía forma de listarlas. */
     List<AlertaSeguridad> findByDetectadoIdOrderByCreatedAtDesc(UUID detectadoId);
