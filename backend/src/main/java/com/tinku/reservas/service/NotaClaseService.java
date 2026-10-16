@@ -63,10 +63,11 @@ public class NotaClaseService {
         if (texto == null || texto.isBlank()) {
             throw new NotaClaseNoPermitidaException("Escribí la nota.");
         }
-        String limpio = anonimizador.anonimizar(texto.strip());
-        if (limpio.length() > 1000) {
-            limpio = limpio.substring(0, 1000);
+        String crudo = texto.strip();
+        if (TextoDemasiadoLargoException.largo(crudo) > PedidoPrevioService.MAX_TEXTO) {
+            throw new TextoDemasiadoLargoException(PedidoPrevioService.MAX_TEXTO);
         }
+        String limpio = TextoDemasiadoLargoException.cortar(anonimizador.anonimizar(crudo), PedidoPrevioService.MAX_TEXTO);
         Instant ahora = Instant.now();
         Optional<NotaClase> existente = notaRepo.findById(reservaId);
         if (existente.isPresent() && !editable(existente.get(), ahora)) {

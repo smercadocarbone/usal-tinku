@@ -47,10 +47,11 @@ public class PedidoPrevioService {
         if (texto == null || texto.isBlank()) {
             throw new PedidoPrevioVacioException();
         }
-        String limpio = anonimizador.anonimizar(texto.strip());
-        if (limpio.length() > MAX_TEXTO) {
-            limpio = limpio.substring(0, MAX_TEXTO);
+        String crudo = texto.strip();
+        if (TextoDemasiadoLargoException.largo(crudo) > MAX_TEXTO) {
+            throw new TextoDemasiadoLargoException(MAX_TEXTO);
         }
+        String limpio = TextoDemasiadoLargoException.cortar(anonimizador.anonimizar(crudo), MAX_TEXTO);
         PedidoPrevio pedido = pedidoRepo.findById(reservaId).orElseGet(() -> new PedidoPrevio(reservaId));
         pedido.setTexto(limpio);
         pedido.setUpdatedAt(Instant.now());
