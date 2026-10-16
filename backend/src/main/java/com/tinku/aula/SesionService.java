@@ -510,6 +510,12 @@ public class SesionService {
         if (!esParticipante(reserva, usuario)) {
             throw new SoloParticipanteException("finalizarla");
         }
+        // Sin los dos adentro no se dio la clase: decide el no-show, no el botón (que liberaría
+        // el cobro al Tutor por una clase que no existió). Una ya cerrada sigue siendo no-op.
+        boolean cerrada = reserva.getEstado() == EstadoReserva.FINALIZADA;
+        if (!cerrada && (sesion.getTutorJoinedAt() == null || sesion.getEstudianteJoinedAt() == null)) {
+            throw new ClaseNoEmpezadaException();
+        }
         return marcarFinalizada(sesion, reserva);
     }
 

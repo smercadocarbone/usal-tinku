@@ -677,6 +677,7 @@ class SesionesIntegracionTest {
         // El tutor entró 10 segundos antes del final → duración efectiva > 0.
         // (inicio_real lo marca el primer join del webhook; acá se simula directo.)
         sesion.setTutorJoinedAt(Instant.now().minusSeconds(10));
+        sesion.setEstudianteJoinedAt(Instant.now().minusSeconds(10));
         sesion.setInicioReal(Instant.now().minusSeconds(10));
         sesionRepository.save(sesion);
         Instant previo = Instant.now();
@@ -711,6 +712,9 @@ class SesionesIntegracionTest {
         Escenario e = escenarioBase();
         Reserva reserva = reservaConfirmadaDirecta(e);
         SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setTutorJoinedAt(Instant.now().minusSeconds(60));
+        sesion.setEstudianteJoinedAt(Instant.now().minusSeconds(60));
+        sesionRepository.save(sesion);
 
         // El menor (beneficiario, US-8 "cualquiera de las dos partes") finaliza.
         mockMvc.perform(post("/api/sesiones/{id}/finalizar", sesion.getId())

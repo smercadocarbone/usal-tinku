@@ -60,6 +60,7 @@ public class AulaExceptionHandler {
     }
 
     @ExceptionHandler({SesionSinSalaException.class, SesionCerradaException.class,
+            com.tinku.aula.ClaseNoEmpezadaException.class,
             DetectadoInvalidoException.class,
             ConfirmacionNoPendienteException.class,
             EvidenciaInvalidaException.class,
