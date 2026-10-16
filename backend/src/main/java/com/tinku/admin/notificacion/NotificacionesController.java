@@ -41,7 +41,7 @@ public class NotificacionesController {
     @GetMapping
     public List<NotificacionResponse> mias(@RequestParam(defaultValue = "0") int pagina, Authentication authentication) {
         UUID yo = usuarioActual.obtener(authentication).getId();
-        return repo.findByDestinatarioIdOrderByCreadaAtDesc(yo, PageRequest.of(Math.max(pagina, 0), TAMANIO_PAGINA))
+        return repo.findByDestinatarioIdOrderByCreadaAtDescIdDesc(yo, PageRequest.of(Math.max(pagina, 0), TAMANIO_PAGINA))
                 .map(NotificacionResponse::from)
                 .getContent();
     }

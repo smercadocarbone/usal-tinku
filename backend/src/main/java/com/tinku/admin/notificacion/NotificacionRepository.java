@@ -16,7 +16,8 @@ import java.util.UUID;
 
 public interface NotificacionRepository extends JpaRepository<Notificacion, UUID> {
 
-    Page<Notificacion> findByDestinatarioIdOrderByCreadaAtDesc(UUID destinatarioId, Pageable pageable);
+    /** Más nuevas primero; el id desempata los avisos del mismo instante (paginación estable). */
+    Page<Notificacion> findByDestinatarioIdOrderByCreadaAtDescIdDesc(UUID destinatarioId, Pageable pageable);
 
     Optional<Notificacion> findByIdAndDestinatarioId(UUID id, UUID destinatarioId);
 
