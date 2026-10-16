@@ -44,8 +44,17 @@ public class PerfilPublicoTutorService {
         if (limpia != null && limpia.length() > MAX_BIO) {
             throw new IllegalArgumentException("La presentación puede tener hasta " + MAX_BIO + " caracteres.");
         }
-        tutor.setBio(limpia == null || limpia.isEmpty() ? null : OcultadorDeContacto.ocultar(limpia));
+        tutor.setBio(limpia == null || limpia.isEmpty() ? null : hastaElTope(OcultadorDeContacto.ocultar(limpia)));
         return usuarioRepository.save(tutor);
+    }
+
+    /** "[contacto oculto]" es más largo que lo que tapa: el resultado puede pasar el tope de la
+     *  columna (VARCHAR(500)). Se corta sin partir un emoji. */
+    private static String hastaElTope(String bio) {
+        if (bio.codePointCount(0, bio.length()) <= MAX_BIO) {
+            return bio;
+        }
+        return bio.substring(0, bio.offsetByCodePoints(0, MAX_BIO)).strip();
     }
 
     @Transactional
