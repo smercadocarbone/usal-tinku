@@ -231,4 +231,66 @@ class EscrowCarrerasIntegracionTest extends IntegracionBase {
             return null;
         });
     }
+
+    /**
+     * El Tutor cancela mientras el alumno reprograma la misma clase. La reprogramación leía la
+     * reserva confirmada sin lock y, al guardar el horario nuevo después del commit de la
+     * cancelación, la volvía a dejar confirmada: clase "viva" con la plata ya devuelta.
+     */
+    @Test
+    void reprogramarMientrasSeCancela_laCancelacionNoSeDeshace() throws Exception {
+        Usuario alumno = adulto(false);
+        Usuario profe = tutor(java.time.LocalTime.of(8, 0), java.time.LocalTime.of(20, 0));
+        java.time.ZoneId zona = java.time.ZoneId.of("America/Argentina/Buenos_Aires");
+        java.time.LocalDate dia = java.time.LocalDate.now(zona).plusDays(3);
+        Reserva reserva = new Reserva();
+        reserva.setPagador(alumno);
+        reserva.setBeneficiario(alumno);
+        reserva.setTutor(profe);
+        reserva.definirHorario(dia.atTime(10, 0).atZone(zona).toInstant(), 60);
+        reserva.setPrecio(BigDecimal.valueOf(15000));
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reservaRepo.saveAndFlush(reserva);
+        Instant nuevo = dia.atTime(12, 0).atZone(zona).toInstant();
+
+        CountDownLatch cancelado = new CountDownLatch(1);
+        CountDownLatch reprogramacionTermino = new CountDownLatch(1);
+        org.springframework.transaction.support.TransactionTemplate tx =
+                new org.springframework.transaction.support.TransactionTemplate(txManager);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        Throwable errorReprogramar = null;
+        try {
+            Future<?> cancela = pool.submit(() -> tx.execute(st -> {
+                reservaService.cancelar(profe, reserva.getId());
+                cancelado.countDown();
+                try {
+                    reprogramacionTermino.await(3, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return null;
+            }));
+            assertThat(cancelado.await(20, TimeUnit.SECONDS)).isTrue();
+            Future<?> reprograma = pool.submit(() -> {
+                try {
+                    return reservaService.reprogramar(alumno, reserva.getId(), nuevo);
+                } finally {
+                    reprogramacionTermino.countDown();
+                }
+            });
+            cancela.get(30, TimeUnit.SECONDS);
+            try {
+                reprograma.get(30, TimeUnit.SECONDS);
+            } catch (java.util.concurrent.ExecutionException e) {
+                errorReprogramar = e.getCause();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(reservaRepo.findById(reserva.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoReserva.CANCELADA);
+        assertThat(errorReprogramar)
+                .isInstanceOf(com.tinku.reservas.service.ReservaNoReprogramableException.class);
+    }
 }
