@@ -155,6 +155,10 @@ public class ReservaService {
         SolicitudSesion solicitud = solicitudRepo.findByIdAndEstado(
                 solicitudId, EstadoSolicitud.PENDIENTE)
                 .orElseThrow(SolicitudNoPendienteException::new);
+        // FR-RES-022: vencida es vencida aunque el job de expiración todavía no la haya marcado.
+        if (!solicitud.getExpiraAt().isAfter(Instant.now())) {
+            throw new SolicitudNoPendienteException();
+        }
 
         // FR-ID-020: solo puede operar menores a su cargo.
         Usuario menor = solicitud.getMenor();
