@@ -421,6 +421,26 @@ class ReservasFlujosIntegracionTest {
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("21 minutos")));
     }
 
+    /**
+     * FR-RES-022: una solicitud cuyo plazo ya venció no se aprueba aunque el job de
+     * expiración todavía no la haya marcado (job demorado, reinicio): antes se convertía
+     * en una Reserva lista para pagar.
+     */
+    @Test
+    void frRes022_aprobarUnaSolicitudYaVencida_quedaRechazada() throws Exception {
+        Escenario e = escenarioBase();
+        UUID solicitudId = crearSolicitud(e.tokenMenor(), e.tutorId(), e.horario());
+        // Venció hace un minuto y sigue PENDIENTE (el job todavía no corrió).
+        jdbcTemplate.update("UPDATE reservas.solicitudes_sesion SET created_at = now() - interval '49 hours', "
+                + "expira_at = now() - interval '1 minute' WHERE id = ?", solicitudId);
+
+        mockMvc.perform(post("/api/solicitudes/{id}/aprobar", solicitudId)
+                        .header("Authorization", "Bearer " + e.tokenAr()))
+                .andExpect(status().isNotFound());
+        assertThat(reservaRepo.findAll().stream()
+                .anyMatch(r -> e.menorId().equals(r.getBeneficiario().getId()))).isFalse();
+    }
+
     @Test
     void solicitudDeOtroAdulto_noSePuedeAprobar_quedaProhibido() throws Exception {
         String dniAr = dniUnico();
