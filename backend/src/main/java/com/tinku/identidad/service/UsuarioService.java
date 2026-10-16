@@ -46,6 +46,7 @@ public class UsuarioService {
     private static final int MAX_MENORES_POR_ADULTO = 5; // FR-ID-013
     /** La edad se mide con el "hoy" de Argentina: el servidor corre en UTC y de 21 a 24 h ya es mañana. */
     private static final java.time.ZoneId ZONA_ARGENTINA = java.time.ZoneId.of("America/Argentina/Buenos_Aires");
+    private static final LocalDate NACIMIENTO_MAS_ANTIGUO = LocalDate.of(1900, 1, 1);
     private static final String VERSION_CONSENTIMIENTO_DEFAULT = "v1";
 
     // FASE2-06 / AUD-017 (ADR-M1-05): fecha fija de la anonimización. La tabla
@@ -421,6 +422,16 @@ public class UsuarioService {
     }
 
     /**
+     * Una fecha futura o anterior a 1900 no puede estar en un DNI vigente: se rechaza como
+     * inválida antes del OCR (no consume un intento de foto) y nunca llega a calcular una edad.
+     */
+    private static void exigirFechaNacimientoPosible(LocalDate fecha) {
+        if (fecha == null || fecha.isAfter(LocalDate.now(ZONA_ARGENTINA)) || fecha.isBefore(NACIMIENTO_MAS_ANTIGUO)) {
+            throw new IllegalArgumentException("La fecha de nacimiento no es válida.");
+        }
+    }
+
+    /**
      * Pasos compartidos de los flujos de registro (FR-ID-019): lectura OCR
      * del documento, distinción ilegible/no-coincide/servicio-caído y
      * devolución del resultado.
@@ -437,6 +448,7 @@ public class UsuarioService {
     private ResultadoOcr validarDocumento(String dniDeclarado, String nombreDeclarado,
                                           String apellidoDeclarado, LocalDate fechaNacimientoDeclarada,
                                           byte[] fotoDni) {
+        exigirFechaNacimientoPosible(fechaNacimientoDeclarada);
         ResultadoOcr ocr = ocrService.procesarDocumento(fotoDni,
                 new DatosDniDeclarados(dniDeclarado, nombreDeclarado,
                         apellidoDeclarado, fechaNacimientoDeclarada));
