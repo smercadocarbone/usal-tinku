@@ -109,6 +109,22 @@ public class IdentidadExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
     }
 
+    /** ADR-M1-06: función apagada por flag → para afuera, no existe. */
+    @ExceptionHandler(FuncionNoHabilitadaException.class)
+    public ResponseEntity<Map<String, String>> handleFuncionNoHabilitada(FuncionNoHabilitadaException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler({EspecialidadInvalidaException.class, DatosCredencialInvalidosException.class})
+    public ResponseEntity<Map<String, String>> handleEspecialidades(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TipoCredencialNoAdmitidaException.class)
+    public ResponseEntity<Map<String, String>> handleTipoNoAdmitido(TipoCredencialNoAdmitidaException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(ClausulaDesconocidaException.class)
     public ResponseEntity<Map<String, String>> handleClausulaDesconocida(ClausulaDesconocidaException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));

@@ -1,6 +1,8 @@
 package com.tinku.identidad.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.tinku.identidad.model.CredencialAcademica;
+import com.tinku.identidad.model.MotivoRechazoCredencial;
 import com.tinku.identidad.model.EstadoCredencial;
 import com.tinku.identidad.model.TipoCredencial;
 
@@ -21,13 +23,19 @@ public record CredencialResponse(
         EstadoCredencial estado,
         int numeroIntento,
         Instant createdAt,
-        boolean tieneAprobada
+        boolean tieneAprobada,
+        /** ADR-M1-06: motivo del rechazo (lista cerrada + texto). Solo si el Admin lo indicó. */
+        @JsonInclude(JsonInclude.Include.NON_NULL) MotivoRechazoCredencial motivoRechazo,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String motivoRechazoTexto,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String detalleRechazo
 ) {
 
     public static CredencialResponse from(CredencialAcademica c, boolean tieneAprobada) {
+        MotivoRechazoCredencial motivo = c.getMotivoRechazo();
         return new CredencialResponse(
                 c.getId(), c.getTipoDocumento(), c.getEstado(),
-                c.getNumeroIntento(), c.getCreatedAt(), tieneAprobada);
+                c.getNumeroIntento(), c.getCreatedAt(), tieneAprobada,
+                motivo, motivo == null ? null : motivo.getTexto(), c.getDetalleRechazo());
     }
 
     public static CredencialResponse from(CredencialAcademica c) {

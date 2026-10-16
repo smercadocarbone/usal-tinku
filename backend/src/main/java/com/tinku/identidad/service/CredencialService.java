@@ -2,6 +2,8 @@ package com.tinku.identidad.service;
 
 import com.tinku.identidad.model.CredencialAcademica;
 import com.tinku.identidad.model.EstadoCredencial;
+import com.tinku.identidad.model.MetodoVerificacion;
+import com.tinku.identidad.model.MotivoRechazoCredencial;
 import com.tinku.identidad.model.TipoCredencial;
 import com.tinku.identidad.model.TipoUsuario;
 import com.tinku.identidad.model.Usuario;
@@ -65,6 +67,13 @@ public class CredencialService {
      */
     @Transactional
     public CredencialAcademica cargarCredencial(Usuario tutor, TipoCredencial tipo, String archivoUrl) {
+        return cargarCredencial(tutor, tipo, archivoUrl, c -> { });
+    }
+
+    /** Igual, pero {@code completar} agrega los datos estructurados de ADR-M1-06 en la misma transacción. */
+    @Transactional
+    public CredencialAcademica cargarCredencial(Usuario tutor, TipoCredencial tipo, String archivoUrl,
+                                                java.util.function.Consumer<CredencialAcademica> completar) {
         if (tutor.getTipo() != TipoUsuario.TUTOR) {
             throw new IllegalArgumentException("Solo un perfil de Tutor puede cargar credenciales.");
         }
@@ -82,6 +91,7 @@ public class CredencialService {
         credencial.setArchivoUrl(archivoUrl);
         credencial.setEstado(EstadoCredencial.PENDIENTE);
         credencial.setNumeroIntento(numeroDeIntentoParaCiclo(tutor.getId()));
+        completar.accept(credencial);
         return credencialRepo.save(credencial);
     }
 
@@ -114,8 +124,19 @@ public class CredencialService {
      * matching no se toca. */
     @Transactional
     public CredencialAcademica marcarAprobada(UUID credencialId, UUID adminRevisorId) {
+        // ADR-M1-06: sin decir cómo se verificó, es una revisión manual del documento.
+        return marcarAprobada(credencialId, adminRevisorId, MetodoVerificacion.SOLO_DOCUMENTO, java.util.Set.of());
+    }
+
+    /** ADR-M1-06: aprobación indicando cómo se verificó y qué especialidades del Tutor cubre
+     *  (validadas antes por {@code RevisionCredencialService}). */
+    @Transactional
+    public CredencialAcademica marcarAprobada(UUID credencialId, UUID adminRevisorId, MetodoVerificacion metodo,
+                                              java.util.Set<UUID> especialidadesCubiertas) {
         CredencialAcademica c = pendienteO(credencialId);
         c.setEstado(EstadoCredencial.APROBADO);
+        c.setMetodoVerificacion(metodo);
+        c.setEspecialidadesCubiertas(new java.util.HashSet<>(especialidadesCubiertas));
         c.setAdminRevisorId(adminRevisorId);
         c.setRevisadoAt(Instant.now());
         CredencialAcademica guardada = credencialRepo.save(c);
@@ -136,8 +157,17 @@ public class CredencialService {
      */
     @Transactional
     public CredencialAcademica marcarRechazada(UUID credencialId, UUID adminRevisorId) {
+        return marcarRechazada(credencialId, adminRevisorId, null, null);
+    }
+
+    /** ADR-M1-06: rechazo con motivo (lista cerrada) y detalle, que el Tutor ve. */
+    @Transactional
+    public CredencialAcademica marcarRechazada(UUID credencialId, UUID adminRevisorId,
+                                               MotivoRechazoCredencial motivo, String detalle) {
         CredencialAcademica c = pendienteO(credencialId);
         c.setEstado(EstadoCredencial.RECHAZADO);
+        c.setMotivoRechazo(motivo);
+        c.setDetalleRechazo(detalle);
         c.setAdminRevisorId(adminRevisorId);
         c.setRevisadoAt(Instant.now());
         CredencialAcademica guardada = credencialRepo.save(c);

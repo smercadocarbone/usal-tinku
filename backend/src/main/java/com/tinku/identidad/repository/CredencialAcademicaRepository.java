@@ -38,4 +38,15 @@ public interface CredencialAcademicaRepository extends JpaRepository<CredencialA
             order by c.cicloEsperaHasta asc nulls last
             """)
     List<CredencialAcademica> colaPendientes(@Param("estado") EstadoCredencial estado);
+
+    /**
+     * ADR-M1-06: especialidades cubiertas por las credenciales APROBADAS de un Tutor, con el método
+     * con el que se verificó cada una (fila = {especialidadId, MetodoVerificacion}).
+     */
+    @Query("""
+            select e, c.metodoVerificacion from CredencialAcademica c
+            join c.especialidadesCubiertas e
+            where c.tutor.id = :tutorId and c.estado = com.tinku.identidad.model.EstadoCredencial.APROBADO
+            """)
+    List<Object[]> coberturasAprobadas(@Param("tutorId") UUID tutorId);
 }

@@ -74,6 +74,10 @@ public class TutorController {
     private final com.tinku.identidad.service.ConsentimientoService consentimiento;
     /** Mismo valor que corta el contenedor; se re-chequea acá (ver cargarCredencial). */
     private final DataSize maxArchivoCredencial;
+    /** ADR-M1-06 (apagado por defecto): especialidades y carga estructurada de credenciales. */
+    private final com.tinku.identidad.service.EspecialidadesFlag especialidadesFlag;
+    private final com.tinku.identidad.service.EspecialidadService especialidadService;
+    private final com.tinku.identidad.service.CargaCredencialService cargaCredencial;
 
     public TutorController(UsuarioService usuarioService,
                            CredencialService credencialService,
@@ -85,8 +89,14 @@ public class TutorController {
                            PerfilPublicoTutorService perfilPublicoService,
                            CertificadoService certificadoService,
                            com.tinku.identidad.service.ConsentimientoService consentimiento,
-                           @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial) {
+                           @Value("${spring.servlet.multipart.max-file-size}") DataSize maxArchivoCredencial,
+                           com.tinku.identidad.service.EspecialidadesFlag especialidadesFlag,
+                           com.tinku.identidad.service.EspecialidadService especialidadService,
+                           com.tinku.identidad.service.CargaCredencialService cargaCredencial) {
         this.maxArchivoCredencial = maxArchivoCredencial;
+        this.especialidadesFlag = especialidadesFlag;
+        this.especialidadService = especialidadService;
+        this.cargaCredencial = cargaCredencial;
         this.usuarioService = usuarioService;
         this.credencialService = credencialService;
         this.usuarioActual = usuarioActual;
@@ -122,10 +132,14 @@ public class TutorController {
         UUID id = tutor.getId();
         Optional<MateriasNivel> materiasNivel = perfilMatchingProvider.materiasYNivel(id);
         ReputacionTutor reputacion = reputacionPerfilProvider.reputacion(id);
-        return TutorPerfilResponse.of(tutor, materiasNivel.orElse(null), reputacion,
+        TutorPerfilResponse perfil = TutorPerfilResponse.of(tutor, materiasNivel.orElse(null), reputacion,
                 credencialService.existeAprobada(id),
                 tarifaPerfilProvider.tarifaConfigurada(id).orElse(null),
                 certificadoService.habilitadoParaMenores(id));
+        // ADR-M1-06: insignias por especialidad (en el perfil y, vía el perfil, en los resultados).
+        return especialidadesFlag.habilitado()
+                ? perfil.conEspecialidades(especialidadService.listar(id))
+                : perfil;
     }
 
     /** UX-06 §1: checklist de "qué me falta para recibir alumnos". Solo Tutores. */
@@ -289,9 +303,17 @@ public class TutorController {
         if (TipoArchivoCredencial.detectar(contenido).isEmpty()) {
             throw new ArchivoCredencialInvalidoException();
         }
-        String archivoUrl = almacenamiento.guardar(contenido, archivo.getOriginalFilename());
-        CredencialAcademica credencial =
-                credencialService.cargarCredencial(tutor, request.tipoDocumento(), archivoUrl);
+        CredencialAcademica credencial;
+        if (especialidadesFlag.habilitado()) {
+            // ADR-M1-06: datos estructurados, consentimiento y triaje automático.
+            credencial = cargaCredencial.cargar(tutor, request, contenido, archivo.getOriginalFilename());
+        } else {
+            if (request.tipoDocumento().esDeEspecialidades()) {
+                throw new com.tinku.identidad.service.TipoCredencialNoAdmitidaException(); // BR-ID-01
+            }
+            String archivoUrl = almacenamiento.guardar(contenido, archivo.getOriginalFilename());
+            credencial = credencialService.cargarCredencial(tutor, request.tipoDocumento(), archivoUrl);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(CredencialResponse.from(
                 credencial, credencialService.existeAprobada(tutor.getId())));
     }
