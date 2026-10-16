@@ -1,0 +1,45 @@
+# Override para el E2E del kill-switch contra backend y LiveKit reales (M3C-06, T-M3-06f).
+# Solo local. No toca docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+#
+# - LiveKit en modo --dev con webhook al backend. Key `devkey`; el secret es más largo que el
+#   `secret` de --dev porque el backend exige 256 bits (ver deploy/e2e/livekit.yaml).
+# - backend y livekit usan la red del host: el backend devuelve al navegador la misma URL de
+#   LiveKit que usa él (`tinku.livekit.base-url`), así que tiene que ser una que sirva desde los
+#   dos lados: ws://localhost:7880.
+# - El frontend del compose es un build de producción: el E2E no lo usa (necesita `npm run dev`
+#   para inyectar el modelo falso). Queda fuera con el perfil `sin-e2e`.
+# - TINKU_MENORES_SESIONES_HABILITADAS=true SOLO en este archivo (AGENTS §3): nunca en la
+#   configuración persistente.
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    container_name: tinku-livekit-e2e
+    command: --config /etc/livekit.yaml --dev --bind 0.0.0.0
+    network_mode: host
+    # Puertos (en la red del host): 7880 (señalización y API), 7881/tcp y 7882/udp (media).
+    volumes:
+      - ./deploy/e2e/livekit.yaml:/etc/livekit.yaml:ro
+
+  backend:
+    network_mode: host
+    ports: !reset []
+    environment:
+      SPRING_PROFILES_ACTIVE: dev,seed-demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/tinku
+      MATCHING_SERVICE_URL: http://localhost:8000
+      CORS_ALLOWED_ORIGINS: ${E2E_FRONTEND_ORIGIN:-http://localhost:3000}
+      LIVEKIT_URL: ws://localhost:7880
+      LIVEKIT_API_KEY: devkey
+      # Igual que deploy/e2e/livekit.yaml: el `secret` de --dev es muy corto para el backend (jjwt).
+      LIVEKIT_API_SECRET: e2e-local-solo-dev-tinku-0123456789abcdef
+      TINKU_MENORES_SESIONES_HABILITADAS: "true"
+      # AdminSeedRunner (perfil dev) promueve estos DNIs del seed (tinku.admin.*.ids).
+      TINKU_ADMIN_MODERACION_IDS: "40000013"
+      TINKU_ADMIN_FINANCIERO_IDS: "40000014"
+    depends_on:
+      livekit:
+        condition: service_started
+
+  frontend:
+    profiles: ["sin-e2e"]
