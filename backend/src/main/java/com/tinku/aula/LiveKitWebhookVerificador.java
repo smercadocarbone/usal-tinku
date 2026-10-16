@@ -14,7 +14,7 @@ import java.util.Base64;
 
 /**
  * Validación de firma del webhook de LiveKit (T-M3-02): los webhooks llegan con
- * {@code Authorization: Bearer <JWT>} firmado HS256 con el API secret de la
+ * {@code Authorization: <JWT>} (sin "Bearer"; también se acepta con el prefijo) firmado HS256 con el API secret de la
  * cuenta. El claim {@code sha256} es el digest SHA-256 del body CRUDO en base64.
  *
  * Mismo patrón de seguridad que el futuro webhook de MercadoPago (Chunk M5-B):
@@ -41,12 +41,15 @@ public class LiveKitWebhookVerificador {
     }
 
     public boolean esFirmaValida(String authorizationHeader, byte[] cuerpoRaw) {
-        if (secretKey == null || authorizationHeader == null
-                || !authorizationHeader.startsWith("Bearer ")) {
+        if (secretKey == null || authorizationHeader == null || authorizationHeader.isBlank()) {
             return false;
         }
         try {
-            String jwt = authorizationHeader.substring("Bearer ".length());
+            // livekit-server manda el JWT solo, sin "Bearer " (verificado en el E2E de M3C-06);
+            // se acepta también con el prefijo. Cualquier otra cosa falla al parsear la firma.
+            String jwt = authorizationHeader.startsWith("Bearer ")
+                    ? authorizationHeader.substring("Bearer ".length())
+                    : authorizationHeader;
             Claims claims = Jwts.parser().verifyWith(secretKey).build()
                     .parseSignedClaims(jwt).getPayload();
             if (!apiKey.equals(claims.getIssuer())) {
