@@ -126,6 +126,10 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       # T09: adicional pago de resumen. false hasta tener el texto legal de la cláusula (ADR-M3-04).
       TINKU_RESUMEN_ADICIONAL_HABILITADO: ${TINKU_RESUMEN_ADICIONAL_HABILITADO:-false}
+      # ADR-M1-06: especialidades y verificación de títulos. false hasta tener el texto legal de la
+      # cláusula de consulta a registros; con true exige TINKU_CLAUSULA_CONSULTA_REGISTROS_VERSION.
+      TINKU_ESPECIALIDADES_HABILITADO: ${TINKU_ESPECIALIDADES_HABILITADO:-false}
+      TINKU_CLAUSULA_CONSULTA_REGISTROS_VERSION: ${TINKU_CLAUSULA_CONSULTA_REGISTROS_VERSION:-pendiente-del-duenio}
       # ADR-M5-06: precio = margen x costo de IA por duración. Defaults = tesis Cap. 5 (tarifas de lista de OpenAI).
       TINKU_RESUMEN_TIPO_CAMBIO_ARS: ${TINKU_RESUMEN_TIPO_CAMBIO_ARS:-1535}
       TINKU_RESUMEN_MARGEN: ${TINKU_RESUMEN_MARGEN:-1.50}
