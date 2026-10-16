@@ -144,6 +144,14 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Cerrar sesión: el token deja de valer también en el servidor, no solo en el navegador
+     *  (sube la versión de credenciales: se cierran las sesiones abiertas de la cuenta). */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> cerrarSesion(Authentication authentication) {
+        usuarioService.cerrarSesiones(usuarioActual.obtener(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/me/capacidades")
     public ResponseEntity<UsuarioResponse> actualizarCapacidades(
             @Valid @RequestBody ActualizarCapacidadesRequest request,

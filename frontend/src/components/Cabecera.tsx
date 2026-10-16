@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bell, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { clearSession } from "@/lib/auth";
+import { cerrarSesionEnServidor } from "@/lib/api";
 import { getNoLeidas } from "@/lib/notificaciones";
 import { useSesion } from "@/lib/useSesion";
 import { usePerfilPropio, useRolAdmin } from "@/lib/usePerfil";
@@ -76,7 +77,8 @@ function CabeceraUsuario() {
   // En mobile sí queda en la barra de abajo, que es la navegación principal ahí.
   const items = navegacionPorRol(sesion?.payload, rol !== null).filter((it) => it.href !== "/cuenta");
 
-  function salir() {
+  async function salir() {
+    await cerrarSesionEnServidor();
     clearSession();
     try {
       window.sessionStorage.clear();

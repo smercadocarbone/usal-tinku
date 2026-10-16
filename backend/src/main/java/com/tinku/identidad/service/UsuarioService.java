@@ -292,6 +292,16 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
     }
 
+    /** "Cerrar sesión": los tokens emitidos hasta ahora dejan de valer (mismo mecanismo que el
+     *  cambio de contraseña, AUD-027). Cierra todas las sesiones abiertas de la cuenta. */
+    @Transactional
+    public void cerrarSesiones(Usuario usuario) {
+        // Se relee: el Usuario del token viene de otra transacción y no debe pisar cambios recientes.
+        Usuario actual = usuarioRepository.findById(usuario.getId()).orElseThrow();
+        actual.invalidarCredenciales();
+        usuarioRepository.save(actual);
+    }
+
     /** Menores a cargo del Adulto Responsable autenticado (auditoría 2026-09-18,
      *  ver darDeBajaMenor arriba). Nunca de OTRO Adulto Responsable — el filtro
      *  de pertenencia es el propio parámetro de la consulta, no un chequeo aparte.
