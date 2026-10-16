@@ -36,9 +36,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, UUID> {
     List<Reserva> findByEstadoInAndHorarioAfterAndPagador_Id(Collection<EstadoReserva> estados,
                                                              Instant despuesDe, UUID pagadorId);
 
-    /** GET /api/reservas — las reservas donde el usuario es pagador, beneficiario o tutor. */
-    List<Reserva> findByPagador_IdOrBeneficiario_IdOrTutor_IdOrderByHorario(
-            UUID pagadorId, UUID beneficiarioId, UUID tutorId);
+    /** GET /api/reservas — las reservas en esos estados donde el usuario es pagador, beneficiario
+     *  o tutor, las más recientes primero (el id desempata). */
+    @org.springframework.data.jpa.repository.Query("select r from Reserva r where (r.pagador.id = :usuarioId"
+            + " or r.beneficiario.id = :usuarioId or r.tutor.id = :usuarioId) and r.estado in :estados"
+            + " order by r.horario desc, r.id desc")
+    List<Reserva> deUsuarioEnEstados(UUID usuarioId, Collection<EstadoReserva> estados,
+                                     org.springframework.data.domain.Pageable pagina);
 
     /** T-M7-07 (señal de re-enganche): historial completo Tutor+beneficiario. */
     List<Reserva> findByTutor_IdAndBeneficiario_Id(UUID tutorId, UUID beneficiarioId);

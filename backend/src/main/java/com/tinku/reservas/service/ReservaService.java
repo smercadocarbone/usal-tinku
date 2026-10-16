@@ -386,11 +386,24 @@ public class ReservaService {
                 PaqueteService.puedeCancelarse(r.getPaquete(), clases, ahora));
     }
 
-    /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor. */
+    /** Cuántas clases ya terminadas (finalizadas, canceladas o no-show) trae "Mis clases". */
+    public static final int MAX_TERMINADAS_EN_LISTA = 200;
+
+    private static final List<EstadoReserva> ESTADOS_VIGENTES =
+            List.of(EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA, EstadoReserva.EN_CURSO);
+
+    /** GET /api/reservas — reservas donde el usuario es pagador, beneficiario o tutor: todas las
+     *  vigentes y las {@link #MAX_TERMINADAS_EN_LISTA} terminadas más recientes, por horario. */
     @Transactional(readOnly = true)
     public List<Reserva> listarDe(Usuario usuario) {
-        return reservaRepo.findByPagador_IdOrBeneficiario_IdOrTutor_IdOrderByHorario(
-                usuario.getId(), usuario.getId(), usuario.getId());
+        List<EstadoReserva> terminadas = java.util.Arrays.stream(EstadoReserva.values())
+                .filter(e -> !ESTADOS_VIGENTES.contains(e)).toList();
+        List<Reserva> lista = new java.util.ArrayList<>(reservaRepo.deUsuarioEnEstados(
+                usuario.getId(), ESTADOS_VIGENTES, org.springframework.data.domain.Pageable.unpaged()));
+        lista.addAll(reservaRepo.deUsuarioEnEstados(usuario.getId(), terminadas,
+                org.springframework.data.domain.PageRequest.of(0, MAX_TERMINADAS_EN_LISTA)));
+        lista.sort(java.util.Comparator.comparing(Reserva::getHorario).thenComparing(Reserva::getId));
+        return lista;
     }
 
     /** GET /api/reservas/{id} — detalle. Solo participantes; caso contrario 404
