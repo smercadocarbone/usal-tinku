@@ -11,7 +11,7 @@ spring:
 tinku:
   # ADR-M1-06: especialidades apagadas hasta tener el texto legal de la cláusula de consentimiento.
   especialidades:
-    habilitado: false
+    habilitado: ${TINKU_ESPECIALIDADES_HABILITADO:false}
   # ADR-M1-10: en desarrollo no se mandan PDFs al validador oficial.
   cap:
     validador:
