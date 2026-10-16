@@ -115,10 +115,12 @@ public class Usuario {
     private String fotoRef;
 
     /** Edad calculada al momento de la consulta — no persistida (evita
-     * inconsistencias si la fila se lee mucho tiempo después de creada). */
+     * inconsistencias si la fila se lee mucho tiempo después de creada). El
+     * "hoy" es el de Argentina, nunca el de la zona del servidor (UTC). */
     @Transient
     @com.fasterxml.jackson.annotation.JsonIgnore // AUD-036.6: dato derivado, no parte de ninguna respuesta
     public int getEdad() {
-        return java.time.Period.between(fechaNacimiento, LocalDate.now()).getYears();
+        return java.time.Period.between(fechaNacimiento,
+                LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"))).getYears();
     }
 }

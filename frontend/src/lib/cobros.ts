@@ -1,5 +1,6 @@
 /** Cobros del Tutor y conexión de MercadoPago (R3/R5, ADR-M5-02). */
 import { api, guardarArchivo } from "./api";
+import { claveDia } from "./formatos";
 
 export type EstadoCobro = "retenido" | "en_revision" | "liberado" | "reembolsado";
 
@@ -49,10 +50,12 @@ export function desconectarMp(): Promise<void> {
 
 /** Los últimos `cantidad` meses (el actual primero) como AAAA-MM con su nombre para mostrar. */
 export function ultimosMeses(cantidad = 12, hoy = new Date()): { valor: string; texto: string }[] {
+  // El mes en curso es el de Argentina (el CSV se arma por mes argentino), no el del navegador.
+  const [anio, mes] = claveDia(hoy).split("-").map(Number) as [number, number];
   return Array.from({ length: cantidad }, (_, i) => {
-    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    const valor = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
-    const texto = fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+    const fecha = new Date(Date.UTC(anio, mes - 1 - i, 15));
+    const valor = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, "0")}`;
+    const texto = fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric", timeZone: "UTC" });
     return { valor, texto: texto.charAt(0).toUpperCase() + texto.slice(1) };
   });
 }

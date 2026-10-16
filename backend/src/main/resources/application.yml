@@ -18,6 +18,14 @@ spring:
     locale: es_AR
     locale-resolver: fixed
 
+  # Fechas en parámetros de la URL: solo ISO-8601 (AAAA-MM-DD). Con el locale es_AR, Spring
+  # aceptaba además el formato corto local ("05/11/26"), ambiguo en día/mes y con año de 2 cifras.
+  mvc:
+    format:
+      date: iso
+      time: iso
+      date-time: iso
+
   # R-B B-3 (T4-H4): "ACOSO", "acoso" y "Acoso" son el mismo valor de un enum en el cuerpo.
   jackson:
     mapper:

@@ -127,6 +127,27 @@ class ErroresHttpIntegracionTest {
         assertThat(r.body()).contains("Falta el parámetro");
     }
 
+    /**
+     * Las fechas de la API son solo ISO-8601 (AAAA-MM-DD). Con el locale fijo es_AR, Spring
+     * aceptaba también el formato corto local ("05/11/26"): año de dos dígitos y orden día/mes
+     * que un cliente en otro idioma lee al revés. Uno ambiguo tiene que dar 400, no un día distinto.
+     */
+    @Test
+    void horarios_fechaNoIso_400() throws Exception {
+        Usuario t = tutor();
+        for (String fecha : new String[]{"05/11/26", "5/11/2026"}) {
+            HttpResponse<String> r = enviar(HttpRequest.newBuilder(
+                            uri("/api/tutores/" + t.getId() + "/horarios?duracionMinutos=60&fecha="
+                                    + java.net.URLEncoder.encode(fecha, StandardCharsets.UTF_8)))
+                    .header("Authorization", "Bearer " + token(t)).GET());
+            assertThat(r.statusCode()).as(fecha).isEqualTo(400);
+        }
+        HttpResponse<String> iso = enviar(HttpRequest.newBuilder(
+                        uri("/api/tutores/" + t.getId() + "/horarios?duracionMinutos=60&fecha=2026-11-05"))
+                .header("Authorization", "Bearer " + token(t)).GET());
+        assertThat(iso.statusCode()).isEqualTo(200);
+    }
+
     @Test
     void foto_masDe5MB_413() throws Exception {
         Usuario t = tutor();

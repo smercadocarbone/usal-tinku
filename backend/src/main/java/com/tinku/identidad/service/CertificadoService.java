@@ -103,6 +103,11 @@ public class CertificadoService {
         if (fechaEmision.isAfter(hoy)) {
             throw new IllegalArgumentException("La fecha de emisión del certificado no puede ser futura.");
         }
+        // FR-ID-025: vigente hasta vence_at inclusive (como HabilitacionMenoresCap); si ya pasó, nace vencido.
+        if (fechaEmision.plusMonths(MESES_VIGENCIA).isBefore(hoy)) {
+            throw new IllegalArgumentException(
+                    "El certificado ya venció: tiene que estar emitido en los últimos 12 meses.");
+        }
         backoffService.chequearPuedeIntentar(tutor.getId()); // FR-ID-021 reutiliza FR-ID-012
 
         capRepo.findByTutorIdAndEstado(tutor.getId(), EstadoCap.PENDIENTE)

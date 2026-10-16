@@ -50,9 +50,9 @@ const TIPOS_CREDENCIAL: { value: TipoCredencial; label: string }[] = [
 function edad(fechaIso: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaIso)) return null;
   const [a, m, d] = fechaIso.split("-").map(Number) as [number, number, number];
-  const hoy = new Date();
-  let e = hoy.getFullYear() - a;
-  if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) e--;
+  const [ha, hm, hd] = hoyIso().split("-").map(Number) as [number, number, number];
+  let e = ha - a;
+  if (hm < m || (hm === m && hd < d)) e--;
   return e;
 }
 
