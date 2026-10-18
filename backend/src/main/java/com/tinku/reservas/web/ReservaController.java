@@ -3,6 +3,7 @@ package com.tinku.reservas.web;
 import com.tinku.identidad.model.Usuario;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.service.AdicionalResumen;
+import com.tinku.reservas.service.PoliticaSesionesMenores;
 import com.tinku.reservas.service.ReservaService;
 import com.tinku.shared.UsuarioActual;
 import jakarta.validation.Valid;
@@ -32,10 +33,12 @@ public class ReservaController {
     private final ReservaService reservaService;
     private final UsuarioActual usuarioActual;
     private final AdicionalResumen adicionalResumen;
+    private final PoliticaSesionesMenores politicaMenores;
 
     public ReservaController(ReservaService reservaService, UsuarioActual usuarioActual,
-                             AdicionalResumen adicionalResumen) {
+                             AdicionalResumen adicionalResumen, PoliticaSesionesMenores politicaMenores) {
         this.adicionalResumen = adicionalResumen;
+        this.politicaMenores = politicaMenores;
         this.reservaService = reservaService;
         this.usuarioActual = usuarioActual;
     }
@@ -90,5 +93,17 @@ public class ReservaController {
         }
         return ResponseEntity.ok(new AdicionalResumenResponse(
                 adicionalResumen.disponibleCon(tutorId), adicionalResumen.precio(duracionMinutos)));
+    }
+
+    public record ClasesConMenoresResponse(boolean habilitadas) {
+    }
+
+    /**
+     * T-TES-10: estado del gate de menores, para que la interfaz muestre el aviso al Menor solo si
+     * está apagado. Público y de solo lectura (SecurityConfig): no expone nada más que el booleano.
+     */
+    @GetMapping("/clases-con-menores")
+    public ResponseEntity<ClasesConMenoresResponse> clasesConMenores() {
+        return ResponseEntity.ok(new ClasesConMenoresResponse(politicaMenores.sesionesHabilitadas()));
     }
 }

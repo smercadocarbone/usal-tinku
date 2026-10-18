@@ -133,6 +133,8 @@ public class SecurityConfig {
                 // ADR-M5-02: vuelta de la autorización de MercadoPago. El navegador llega sin JWT;
                 // la autenticación es el state de un solo uso (CuentasMpService.completarConexion).
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/pagos/mp/callback").permitAll()
+                // T-TES-10: si las clases con menores están habilitadas (solo un booleano, sin datos).
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reservas/clases-con-menores").permitAll()
                 // Healthcheck del contenedor (sin detalles, ver application.yml).
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Defensa en profundidad (auditoría 2026-09-18): antes solo

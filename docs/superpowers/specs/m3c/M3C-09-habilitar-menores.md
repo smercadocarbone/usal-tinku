@@ -57,7 +57,7 @@ De `docs/operacion/HALLAZGOS_pruebas.md`. Los cuatro se arreglan en **M3C-10**:
 1. Coolify → recurso de producción → *Environment Variables* →
    `TINKU_MENORES_SESIONES_HABILITADAS=true` → redeploy.
 2. Verificar con una cuenta de prueba de un menor (no un menor real): una reserva con un Tutor con CAP
-   aprobado **no** da 409 `MENORES_PILOTO`, y una con un Tutor sin CAP sigue dando 409.
+   aprobado **no** da 409 `MENORES_NO_HABILITADAS`, y una con un Tutor sin CAP sigue dando 409.
 3. Dejar registro de la fecha en `Tasks_Tinku_Implementacion.md` (T-TES-10).
    - Si la línea de AGENTS §3 sobre la flag tiene que cambiar, AGENTS §8 dice que va junto con la
      enmienda de la Constitución que corresponda: preguntar antes de editarla sola.
