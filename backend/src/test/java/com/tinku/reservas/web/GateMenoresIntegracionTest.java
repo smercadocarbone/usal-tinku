@@ -54,8 +54,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * T-TES-10 (DT7) — gate del piloto: sin sesiones con menores hasta cerrar
- * T-M3-06 (kill-switch en cliente) y T02 (CAP). Corre con la flag en
+ * T-TES-10 (DT7) — gate de menores: sin sesiones con menores mientras la flag
+ * {@code tinku.menores.sesiones-habilitadas} esté apagada (se enciende con el
+ * checklist de M3C-09). Corre con la flag en
  * {@code false}, que es el default de {@code application.yml} — sin
  * {@code @TestPropertySource}: el gate tiene que estar OFF por defecto.
  *
@@ -67,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-class GateMenoresPilotoIntegracionTest {
+class GateMenoresIntegracionTest {
 
     @Container
     static PostgreSQLContainer postgres =

@@ -83,7 +83,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 // T-TES-10/DT7: crea Reservas con beneficiario menor para ejercitar la
 // preferencia de pago del AR; la flag en true mantiene el escenario activo
-// (el corte por defecto lo cubre GateMenoresPilotoIntegracionTest).
+// (el corte por defecto lo cubre GateMenoresIntegracionTest).
 @TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class PagosFlujosIntegracionTest {
 

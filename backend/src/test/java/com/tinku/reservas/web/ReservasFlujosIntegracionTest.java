@@ -90,9 +90,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Testcontainers
 // T-TES-10/DT7: ejercita el flujo existente de sesiones con menores (US-2/US-3,
-// FR-RES-003), que el gate del piloto bloquea salvo que la flag esté en true.
+// FR-RES-003), que el gate de menores bloquea salvo que la flag esté en true.
 // La flag solo se abre con T-M3-06 y T02 cerradas (AGENTS §3) — ver el test
-// crearReserva_beneficiarioMenor_conFlagTrue_ok y GateMenoresPilotoIntegracionTest.
+// crearReserva_beneficiarioMenor_conFlagTrue_ok y GateMenoresIntegracionTest.
 @TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class ReservasFlujosIntegracionTest {
 
