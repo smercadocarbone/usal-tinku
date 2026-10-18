@@ -17,7 +17,7 @@ public interface MercadoPagoClient {
     // ADR-M5-02 (modelo A, OAuth por Tutor): cada llamada lleva el access token del VENDEDOR —
     // el Tutor dueño de la Reserva — obtenido por OAuth. Solo así MercadoPago reparte el cobro
     // con marketplace_fee. {@code tokenVendedor == null} usa el token de la plataforma (modo sin
-    // OAuth configurado: dev, tests y el piloto antes de conectar la app de marketplace).
+    // OAuth configurado: dev, tests y la demo antes de conectar la app de marketplace).
 
     /**
      * Crea una preferencia de Checkout Pro y devuelve el link de pago
