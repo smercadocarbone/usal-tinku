@@ -40,6 +40,9 @@ class EvaluacionIntegracionTest extends IntegracionBase {
 
     @Autowired ReservaRepository reservaRepo;
 
+    /** Cada clase en un horario distinto: un Tutor no puede tener dos reservas superpuestas. */
+    private static final java.util.concurrent.atomic.AtomicInteger HORAS_ATRAS = new java.util.concurrent.atomic.AtomicInteger(2);
+
     // ---- helpers ----
 
     private MvcResult buscar(String token, String texto) throws Exception {
@@ -73,7 +76,7 @@ class EvaluacionIntegracionTest extends IntegracionBase {
         reserva.setPagador(alumno);
         reserva.setBeneficiario(alumno);
         reserva.setTutor(tutor);
-        reserva.setHorario(Instant.now().minusSeconds(7200));
+        reserva.setHorario(Instant.now().minusSeconds(3600L * HORAS_ATRAS.getAndIncrement()));
         reserva.setPrecio(BigDecimal.valueOf(15000));
         reserva.setEstado(EstadoReserva.CONFIRMADA);
         reservaRepo.saveAndFlush(reserva);
@@ -107,7 +110,7 @@ class EvaluacionIntegracionTest extends IntegracionBase {
     void busqueda_conFlag_registraResultadosEnOrden_sinTexto() throws Exception {
         Usuario a = tutor(null, null);
         Usuario b = tutor(null, null);
-        String texto = "derivadas parciales para la facultad";
+        String texto = "series de Taylor y derivadas";
         when(matchingClient.match(anyList(), eq(texto)))
                 .thenReturn(List.of(new ResultadoMatch(a.getId(), 0.9), new ResultadoMatch(b.getId(), 0.8)));
         Usuario yo = adulto(false);

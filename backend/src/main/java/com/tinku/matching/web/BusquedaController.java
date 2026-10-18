@@ -6,6 +6,7 @@ import com.tinku.matching.service.BusquedaInvalidaException;
 import com.tinku.matching.service.BusquedasGuardadasService;
 import com.tinku.matching.service.MatchingContextoService;
 import com.tinku.matching.service.MatchingOrquestador;
+import com.tinku.matching.service.RegistroBusquedasEvaluacion;
 
 import com.tinku.identidad.model.Usuario;
 import com.tinku.shared.UsuarioActual;
@@ -38,15 +39,21 @@ public class BusquedaController {
     private final BusquedasGuardadasService guardadasService;
     private final UsuarioActual usuarioActual;
     private final DatosDeReservaResultados datosDeReserva;
+    private final RegistroBusquedasEvaluacion registroEvaluacion;
+
+    /** T-TES-11b: id de la búsqueda registrada (solo con tinku.evaluacion.habilitada=true). */
+    public static final String HEADER_BUSQUEDA_ID = "X-Busqueda-Id";
 
     public BusquedaController(MatchingOrquestador orquestador,
                               BusquedasGuardadasService guardadasService,
                               UsuarioActual usuarioActual,
-                              DatosDeReservaResultados datosDeReserva) {
+                              DatosDeReservaResultados datosDeReserva,
+                              RegistroBusquedasEvaluacion registroEvaluacion) {
         this.orquestador = orquestador;
         this.guardadasService = guardadasService;
         this.usuarioActual = usuarioActual;
         this.datosDeReserva = datosDeReserva;
+        this.registroEvaluacion = registroEvaluacion;
     }
 
     /** US-1: búsqueda en lenguaje natural. US-2: respeta el contexto del menor.
@@ -65,7 +72,23 @@ public class BusquedaController {
         }
         List<BusquedaResponse> resultados = orquestador.buscar(usuario, texto, nombre, materia,
                 trimToNull(request.filtroNivel()));
-        return ResponseEntity.ok(datosDeReserva.completar(resultados, request.precioMaxHora()));
+        List<BusquedaResponse> mostrados = datosDeReserva.completar(resultados, request.precioMaxHora());
+        // T-TES-11b §4.1: con el flag encendido se registra qué se mostró (sin el texto) y se devuelve
+        // el id en un header; el cuerpo no cambia.
+        ResponseEntity.BodyBuilder ok = ResponseEntity.ok();
+        registroEvaluacion.registrar(usuario, texto, mostrados)
+                .ifPresent(id -> ok.header(HEADER_BUSQUEDA_ID, id.toString()));
+        return ok.body(mostrados);
+    }
+
+    /** T-TES-11b §4.1 (I-01): el usuario abrió el perfil o reservó un Tutor de esta búsqueda (204). */
+    @PostMapping("/{id}/aceptaciones")
+    public ResponseEntity<Void> aceptar(@PathVariable UUID id,
+                                        @RequestBody AceptacionRequest request,
+                                        Authentication authentication) {
+        registroEvaluacion.aceptar(usuarioActual.obtener(authentication).getId(), id,
+                request.tutorId(), request.tipo());
+        return ResponseEntity.noContent().build();
     }
 
     /** US-6: guarda una búsqueda para re-ejecutar después (FR-MATCH-008).

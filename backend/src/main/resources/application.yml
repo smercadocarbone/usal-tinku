@@ -213,6 +213,14 @@ tinku:
   # (EspecialidadesFlag aborta el arranque si sigue el marcador).
   especialidades:
     habilitado: ${TINKU_ESPECIALIDADES_HABILITADO:false}
+  evaluacion:
+    # T-TES-11b (docs/superpowers/specs/tesis/T11b-evaluacion-sin-piloto.md §4): registro de búsquedas
+    # y aceptaciones (I-01) y NPS in-app (I-04) para las sesiones moderadas que reemplazan al piloto.
+    # false (default) = no se registra nada. Lo enciende el dueño en el entorno de la demo solo durante
+    # las sesiones; NO dejarlo encendido en la configuración persistente de producción.
+    habilitada: ${TINKU_EVALUACION_HABILITADA:false}
+    # I-01: una aceptación cuenta si el Tutor estaba entre los primeros top-k mostrados.
+    top-k: ${TINKU_EVALUACION_TOP_K:5}
   menores:
     # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
     # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
