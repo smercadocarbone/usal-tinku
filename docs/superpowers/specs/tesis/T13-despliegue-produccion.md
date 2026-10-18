@@ -3,6 +3,10 @@
 > **Enmendada por `docs/adr/ADR-000-07.md` (2026-09-24):** todo corre en el VPS de 8 GB con Coolify
 > (Postgres y frontend incluidos, sin Supabase ni Vercel). Parte A hecha en el branch
 > `claude/lucid-lovelace-htlv4z`; la Parte B está en `docs/operacion/RUNBOOK_produccion.md`.
+>
+> **2026-10-18 (decisión del dueño):** el piloto no se hace; `tinku.site` queda como demo pública de
+> pruebas. El ensayo de B6 y el criterio de la Parte B ("antes del piloto") pasan a ser **antes de
+> abrir a usuarios reales** (RUNBOOK de producción §8).
 
 **Branch:** `tesis/despliegue` · **Riesgo:** **ALTO** (operación) ·
 **Bloqueada por:** T05–T12 mergeadas y FASE 2 de remediación mergeada (al menos FASE2-02 rate limiting,

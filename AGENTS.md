@@ -35,7 +35,7 @@ Documentos fuente (no dupliques su contenido en código ni en comentarios — re
 - La rama de kill-switch con menor presente **nunca** continúa la sesión ni pregunta al menor si vio algo — corta directo. La rama de "ambos adultos" sí pregunta y puede continuar.
 - Si una tarea te deja en duda sobre a cuál de estos dos casos aplica, tratala como si hubiera un menor — nunca al revés.
 - **Enmienda v2.5:** la pizarra compartida nunca se habilita en una clase con un Menor hasta que el kill-switch del cliente (T-M3-06) la analice; el pedido previo y la respuesta a un pedido de reprogramación del Tutor los hace el Adulto Responsable, nunca el Menor; la nota del Tutor va al AR y es texto filtrado, no una grabación.
-- **Flag T-TES-10 (piloto sin menores):** `tinku.menores.sesiones-habilitadas` solo pasa a `true` cuando cierran **T-M3-06** (kill-switch en cliente) y **T02** (CAP). Mientras tanto es `false` (default) y el corte es fail-closed en `ReservaService.crearReserva` y `SolicitudService.crear`.
+- **Flag T-TES-10 (gate de menores):** `tinku.menores.sesiones-habilitadas` es `false` por defecto y el corte es fail-closed en `ReservaService.crearReserva` (vía `validarNuevaClase`: reserva directa y aprobación de Solicitud) y `SolicitudService.crear`. **T-M3-06** y **T02** ya cerraron; la flag la pasa a `true` **solo el dueño**, en Coolify, con la lista de `docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md` cumplida. Un agente nunca la pone en `true` en configuración persistente (`application*.yml`, compose de Coolify); la única excepción es `docker-compose.e2e.yml` (E2E local). _(2026-10-18: sin piloto; nota operativa, no enmienda de la Constitución.)_
 
 ## 4. Convención de eventos de dominio
 

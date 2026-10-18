@@ -69,7 +69,7 @@ public class SolicitudService {
             throw new SoloMenorException(
                     "Tu cuenta todavía no tiene un adulto responsable asociado.");
         }
-        // T-TES-10/DT7: piloto sin menores (US-2). Fail-closed (AGENTS §3).
+        // T-TES-10/DT7: gate de menores (US-2). Fail-closed (AGENTS §3).
         politicaMenores.validarSesionesHabilitadas();
 
         Usuario tutor = usuarioRepo.findById(request.tutorId())

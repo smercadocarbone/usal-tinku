@@ -58,6 +58,10 @@ El piloto arranca el **27/10/2026 sin sesiones con Menores** (DT7, T10): no se h
 se cierren T-M3-06 (kill-switch en el cliente) y T02 (implementación backend del CAP). Este ADR
 solo documenta la decisión; la habilitación operativa es posterior.
 
+_Nota 2026-10-18:_ el piloto no se hace (decisión del dueño). T-M3-06 y T02 ya están cerradas; las
+clases con menores se habilitan sin piloto cuando el dueño encienda la flag, con la lista de
+`docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md`. La decisión de este ADR no cambia.
+
 ## Consecuencias
 - **ADR-M1-02:** anotado "Reemplazado por ADR-M1-04", queda como registro histórico.
 - **Constitución:** enmienda v2.2 → v2.3 del Artículo I (retorno del CAP, acotado a Menores).

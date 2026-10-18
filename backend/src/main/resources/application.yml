@@ -214,8 +214,9 @@ tinku:
   especialidades:
     habilitado: ${TINKU_ESPECIALIDADES_HABILITADO:false}
   menores:
-    # T-TES-10/DT7: gate del piloto. false (default) = NO hay clases con menores
-    # hasta cerrar T-M3-06 (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
+    # T-TES-10/DT7: gate de menores. false (default) = NO hay clases con menores.
+    # Lo enciende SOLO el dueño, en Coolify, con el checklist de M3C-09 cumplido
+    # (docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md). Nunca true acá.
     sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}
   # M6 — resumen automatico con GPT-4o (ADR-M6-03). Solo LLM_PROVEEDOR=gpt-4o
   # activa OpenAI (transcripcion + resumen); vacio u otro valor = fail-closed, NO sale

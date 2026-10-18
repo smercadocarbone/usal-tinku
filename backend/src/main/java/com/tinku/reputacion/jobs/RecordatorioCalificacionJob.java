@@ -15,9 +15,10 @@ import java.util.UUID;
  * Job de Quartz (JobStore persistido, Artículo IV/X) — T-M7-06: recordatorio
  * unico a las 24hs del fin de la Sesion para que el Estudiante califique al
  * Tutor (FR-REP-005). Idempotente: si ya existe la calificacion publica
- * (estudiante_a_tutor), no hace nada. Sin infraestructura de notificaciones en
- * el piloto, el recordatorio es un log estructurado (mismo criterio que
- * {@code AlertaSoporteProveedorLog}).
+ * (estudiante_a_tutor), no hace nada. Hoy el recordatorio es solo un log
+ * estructurado: todavia no pasa por el {@code Notificador} de
+ * {@code shared.notificacion}, que ya existe. Conectarlo es un cambio de
+ * comportamiento aparte.
  */
 @Component
 @DisallowConcurrentExecution

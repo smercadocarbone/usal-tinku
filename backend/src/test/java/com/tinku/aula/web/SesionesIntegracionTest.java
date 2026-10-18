@@ -93,8 +93,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Testcontainers
 // T-TES-10/DT7: siembra Reservas con beneficiario menor vía repositorio (es la
-// unidad de M3); la flag en true mantiene ese escenario activo mientras el
-// piloto corre con el gate OFF (GateMenoresPilotoIntegracionTest).
+// unidad de M3); la flag en true mantiene ese escenario activo aunque el
+// default sea el gate OFF (GateMenoresIntegracionTest).
 @TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class SesionesIntegracionTest {
 

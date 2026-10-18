@@ -14,8 +14,8 @@ import java.util.UUID;
  * criterio que {@code RecordatorioCalificacionJob} de M7). One-shot: se agenda
  * una sola vez al generar, no se reprograma. Idempotente por la bandera
  * {@code recordatorio_pendiente} de la fila — {@link
- * ResumenService#enviarRecordatorio} solo envia la primera vez y las
- * infraestructuras de notificacion del piloto son log estructurado.
+ * ResumenService#enviarRecordatorio} solo envia la primera vez; hoy ese envio es
+ * un log estructurado, no pasa por el {@code Notificador}.
  */
 @Component
 @DisallowConcurrentExecution

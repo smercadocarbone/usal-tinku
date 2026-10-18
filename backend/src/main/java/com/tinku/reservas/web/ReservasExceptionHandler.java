@@ -81,14 +81,14 @@ public class ReservasExceptionHandler {
     }
 
     /**
-     * 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate del piloto (T-TES-10).
+     * 409 con el copy del dominio: solicitud duplicada (FR-RES-019) o gate de menores (T-TES-10).
      * R5: cada 409 lleva un {@code codigo} estable; el frontend decide por él, no por el texto.
      */
     @ExceptionHandler({SolicitudDuplicadaException.class, SesionesConMenoresDeshabilitadasException.class,
             TutorSinHabilitacionMenoresException.class})
     public ResponseEntity<Map<String, String>> handleConflicto(RuntimeException ex) {
         String codigo = ex instanceof SolicitudDuplicadaException ? "SOLICITUD_DUPLICADA"
-                : ex instanceof SesionesConMenoresDeshabilitadasException ? "MENORES_PILOTO"
+                : ex instanceof SesionesConMenoresDeshabilitadasException ? "MENORES_NO_HABILITADAS"
                 : "TUTOR_SIN_CAP";
         return conflicto(codigo, ex.getMessage());
     }

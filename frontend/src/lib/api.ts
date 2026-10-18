@@ -985,6 +985,19 @@ export function getAdicionalResumen(tutorId: string, duracionMinutos: number): P
   );
 }
 
+/**
+ * T-TES-10: si las clases con menores están habilitadas (endpoint público). Fail-closed: ante
+ * cualquier error o respuesta inesperada, `false`.
+ */
+export async function getClasesConMenoresHabilitadas(): Promise<boolean> {
+  try {
+    const r = await api.get<{ habilitadas?: unknown }>("/api/reservas/clases-con-menores");
+    return r?.habilitadas === true;
+  } catch {
+    return false;
+  }
+}
+
 export const CLAUSULA_GRABACION = "GRABACION_AUDIO_RESUMEN";
 /** ADR-M3-05: los Términos (incluyen el consentimiento de la grabación del resumen). */
 export const CLAUSULA_TERMINOS = "TERMINOS_Y_CONDICIONES";

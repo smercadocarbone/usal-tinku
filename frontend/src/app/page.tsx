@@ -63,7 +63,7 @@ const PREGUNTAS = [
   },
   {
     pregunta: "¿Desde qué edad se puede usar?",
-    respuesta: `Desde los ${TIEMPOS.edadMinimaMenor} años, siempre con un adulto responsable que crea la cuenta del chico, autoriza a cada tutor y paga. Durante el piloto, las clases son solo para mayores de 18.`,
+    respuesta: `Desde los ${TIEMPOS.edadMinimaMenor} años, siempre con un adulto responsable que crea la cuenta del chico, autoriza a cada tutor y paga. Un tutor solo puede dar clases a menores con su certificado de antecedentes penales aprobado y vigente, y las clases con menores nunca se graban.`,
   },
   {
     pregunta: "¿Cómo se verifica a un tutor?",

@@ -7,6 +7,7 @@ import { CalendarX2, Check, ChevronLeft, Clock, Copy, Send, ShieldCheck, UserRou
 import { api, ApiError, getAdicionalResumen, getMenores, mensajeDeError, type AdicionalResumen, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { useAhora } from "@/lib/useAhora";
+import { useClasesConMenores } from "@/lib/useClasesConMenores";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
@@ -39,6 +40,8 @@ function ReservarFlujo() {
   const payload = sesion?.payload;
   const esMenor = payload?.tipo === "MENOR";
   const esAR = !esMenor && payload?.cap_ar === true;
+  // T-TES-10: el aviso al Menor solo si el gate de menores está apagado (o no se pudo saber).
+  const menoresHabilitadas = useClasesConMenores(esMenor);
 
   const [tutor, setTutor] = useState<TutorPerfil | null>(null);
   const [franjas, setFranjas] = useState<Franja[] | null>(null);
@@ -294,7 +297,7 @@ function ReservarFlujo() {
         <h1 className="text-[28px] font-extrabold sm:text-[36px]">{esMenor ? "Pedir una clase" : "Reservar una clase"}</h1>
         <Pasos pasos={pasos} actual={paso} className="mt-6" />
 
-        {esMenor && <MensajeParaAdulto nombreTutor={nombreTutor} />}
+        {esMenor && menoresHabilitadas === false && <MensajeParaAdulto nombreTutor={nombreTutor} />}
 
         {error && (
           <Alerta tono="peligro" className="mt-6">
@@ -694,8 +697,8 @@ function ResumenLateral({ tutor, elegido, precio }: { tutor: TutorPerfil; elegid
 }
 
 /**
- * B5: el menor no se queda en un callejón. Durante el piloto (T-TES-10) las clases
- * para menores están cerradas: le queda un mensaje listo para mandarle a su adulto.
+ * B5: el menor no se queda en un callejón. Con el gate de menores apagado (T-TES-10) las
+ * clases para menores están cerradas: le queda un mensaje listo para mandarle a su adulto.
  */
 function MensajeParaAdulto({ nombreTutor }: { nombreTutor: string }) {
   const [copiado, setCopiado] = useState(false);
@@ -704,7 +707,7 @@ function MensajeParaAdulto({ nombreTutor }: { nombreTutor: string }) {
     <Alerta
       tono="aviso"
       className="mt-6"
-      titulo="Las clases para menores se habilitan al finalizar el piloto."
+      titulo="Las clases para menores todavía no están habilitadas."
       accion={
         <Boton
           variante="secundario"
