@@ -186,7 +186,13 @@ commit, no de memoria.
   en ese caso anota la tarea como "con ayuda" (no cuenta como éxito).
 - Lee cada tarea en voz alta tal como está escrita; no nombra botones.
 - Antes de la sesión: flag `tinku.evaluacion.habilitada=true` en el entorno (§4), pasarela en
-  *bypass* (panel Admin → Pagos), Tutores del seed con franjas en las próximas horas.
+  *bypass* (panel Admin → Salud de Infraestructura, rol Soporte Financiero), Tutores del seed con
+  franjas en las próximas horas.
+- **Bloqueo a resolver por el dueño:** con el perfil `prod` la pasarela **no se puede apagar**
+  (FASE2-07/AUD-018, `BypassNoPermitidoException`), y el 2026-10-14 `tinku.site` estaba en cobro real
+  (`bypassPermitido=false`, `HALLAZGOS_pruebas.md` §7). Para que T5 sea "pagar en bypass" sin plata
+  real, las sesiones se hacen en un entorno sin `prod` (staging con `seed-demo`) o se decide otra
+  cosa; no se cambia el bloqueo del código.
 
 ### 2.4 Guion de tareas
 

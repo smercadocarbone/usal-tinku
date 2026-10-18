@@ -134,6 +134,9 @@ Opencode deja estos pasos como checklist en el runbook y **se frena**:
 - Parte B: ensayo de vuelta atrás registrado en el runbook **antes** del piloto.
 - Disponibilidad y latencia (RNF-01 y RNF-04 de la tesis) medibles desde el día 1: panel de Coolify y
   paneles de LiveKit.
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto, la disponibilidad se reporta para el período de las
+  sesiones moderadas (panel de Coolify) y la latencia de la API con `scripts/evaluacion/latencias.py`
+  (resultados en `docs/operacion/EVALUACION_tecnica.md` §1.b).
 
 ## 6. NO tocar
 - La arquitectura: nada de consolidar Supabase o Vercel dentro del VPS (evaluado y descartado en la
