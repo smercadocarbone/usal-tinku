@@ -33,9 +33,11 @@ public class NpsController {
         return ResponseEntity.ok(Map.of("ofrecer", nps.ofrecer(usuarioActual.obtener(authentication))));
     }
 
+    /** 201 con el puntaje guardado (con cuerpo: el cliente del frontend espera JSON en un 201). */
     @PostMapping
-    public ResponseEntity<Void> responder(@RequestBody RespuestaNpsRequest request, Authentication authentication) {
+    public ResponseEntity<Map<String, Integer>> responder(@RequestBody RespuestaNpsRequest request,
+                                                          Authentication authentication) {
         nps.responder(usuarioActual.obtener(authentication), request.puntaje());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("puntaje", request.puntaje()));
     }
 }

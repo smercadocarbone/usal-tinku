@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarX2, Check, ChevronLeft, Clock, Copy, Send, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { api, ApiError, getAdicionalResumen, getMenores, mensajeDeError, type AdicionalResumen, type Menor } from "@/lib/api";
+import { registrarAceptacion } from "@/lib/evaluacion";
 import { useSesion } from "@/lib/useSesion";
 import { useAhora } from "@/lib/useAhora";
 import { diaCorto, duracionLegible, fechaHoraLarga, formatearPesos } from "@/lib/formatos";
@@ -199,6 +200,7 @@ function ReservarFlujo() {
           duracionMinutos: elegido.duracion,
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
         });
+        registrarAceptacion(tutorId, "RESERVA");
         if (pedidoTexto.trim()) {
           await guardarPedido(paquete.reservaAnclaId, pedidoTexto).catch(() => undefined);
         }
@@ -211,6 +213,7 @@ function ReservarFlujo() {
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
           ...(resumenElegido ? { resumenContratado: true } : {}),
         });
+        registrarAceptacion(tutorId, "RESERVA");
         if (pedidoTexto.trim()) {
           // Si falla, la reserva ya existe: se paga igual y el pedido se puede escribir después.
           await guardarPedido(reserva.id, pedidoTexto).catch(() => undefined);
