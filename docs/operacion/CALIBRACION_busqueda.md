@@ -67,3 +67,13 @@ python -I tests/eval_relevancia/evaluar.py --url https://<matching-staging> --tu
 (`ids.txt`: los UUID de los Tutores activos, uno por línea.) Si con datos reales los relevantes bajan del 90 %,
 bajar el absoluto de a 0,02 y repetir; si no hay ningún valor que cumpla, parar: puede hacer falta otro modelo
 (eso exige un ADR, AGENTS §2).
+
+> **Nota 2026-10-18 (T-TES-11b, sin piloto):** el piloto no se hace (decisión del dueño), así que no
+> habrá "búsquedas reales del piloto". Las reemplazan (1) el set etiquetado de 120 búsquedas con relevancia por
+> Tutor del seed (`consultas_etiquetadas.csv`, script `evaluar_ranking.py`, resultados en
+> `docs/operacion/EVALUACION_tecnica.md` §1.a) y (2) las búsquedas que registren las sesiones moderadas con
+> `tinku.evaluacion.habilitada=true` (T11b §4.1, panel Admin → Evaluación: búsquedas sin resultado).
+> **Ojo:** el `evaluar.py` de esta calibración solo leía los 7 Tutores del seed definidos con `tema(...)`; con los
+> 37 (incluidos los de `trayecto(...)`) el umbral 0,46 deja pasar 8/20 irrelevantes y 3/15 sin sentido. El barrido
+> de `EVALUACION_tecnica.md` sugiere **0,54** (cumple las cinco metas de T11b). El default no se cambió: decide el
+> dueño.

@@ -32,8 +32,9 @@ piloto. Los números se escriben solo cuando se midieron (nada estimado se prese
 
 ### 1.a Matching (reemplaza la parte "técnica" de I-01)
 
-**Set etiquetado.** `matching-service/tests/eval_relevancia/consultas_etiquetadas.csv`, ~100 búsquedas
-inventadas (amplía las 40 de `CALIBRACION_busqueda.md`). Columnas: `id, texto, grupo, relevantes`.
+**Set etiquetado.** `matching-service/tests/eval_relevancia/consultas_etiquetadas.csv`, 120 búsquedas
+inventadas: 85 relevantes, 20 irrelevantes y 15 sin sentido (amplía las 40 de `CALIBRACION_busqueda.md`).
+Columnas: `id, texto, grupo, relevantes`. **Resultados medidos: `docs/operacion/EVALUACION_tecnica.md`.**
 
 - `grupo`: `relevante` (hay al menos un Tutor del seed que la cubre), `irrelevante` (pedido con sentido
   que ningún Tutor cubre: tango, cocina...), `sin_sentido` (teclado, números, letras sueltas).
@@ -281,7 +282,7 @@ desvío, NPS (= % promotores 9–10 − % detractores 0–6), I-01/I-02 copiados
 
 **Limitación que se declara en la tesis:** n = 5–8 es una muestra chica y no aleatoria; los
 indicadores de las sesiones son **evidencia exploratoria**, no una estimación poblacional. Por eso
-I-01 se apoya también en la evaluación offline (100 consultas), y el umbral de I-04 es solo "positivo".
+I-01 se apoya también en la evaluación offline (120 consultas), y el umbral de I-04 es solo "positivo".
 
 ### Lo que pasa a trabajo futuro
 
@@ -397,7 +398,7 @@ con `trayecto`, corte del backend).
 
 | Documento | Dato que esperaba | Reemplazo |
 |---|---|---|
-| `CALIBRACION_busqueda.md` | Búsquedas reales del piloto | Set etiquetado de ~100 (§1.a) + registro de búsquedas en las sesiones moderadas (§4.1) |
+| `CALIBRACION_busqueda.md` | Búsquedas reales del piloto | Set etiquetado de 120 (§1.a) + registro de búsquedas en las sesiones moderadas (§4.1) |
 | `ADR-M2-02.md`, `Plan_M2_Motor_Matching.md`, `ReputacionSignalProveedorImpl.java` | Peso de la reputación con calificaciones reales | Trabajo futuro: disparador = 50 calificaciones reales `estudiante_a_tutor` |
 | `ADR-M3-07.md` | Revisión del kill-switch con datos del piloto | E2E + benchmark (§1.c); revisión con menores = trabajo futuro (al encender menores, M3C-09) |
 | `ADR-M3-01.md` | Latencia en un celular real (O-10) | Tarea opcional T8 de las sesiones; si no, trabajo futuro |

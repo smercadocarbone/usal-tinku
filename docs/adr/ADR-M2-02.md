@@ -25,6 +25,12 @@ crudo de M7) y recién ahora formalizada y corregida.
 3. Los dos valores son configuración, no código: se calibran con las búsquedas reales del
    piloto (lo que el Plan pedía: "empíricamente, con datos reales").
 
+   > **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto, el mínimo de relevancia se calibra con el set
+   > etiquetado de T11b §1.a (`docs/operacion/EVALUACION_tecnica.md`) y con las búsquedas de las sesiones
+   > moderadas. El **peso de la reputación** (0,05) queda como **trabajo futuro**: se recalibra cuando haya al
+   > menos 50 calificaciones reales `estudiante_a_tutor` (las del seed-demo son sintéticas). La decisión de este
+   > ADR no cambia.
+
 ## Alternativas descartadas
 - **Multiplicar por la reputación:** un Tutor nuevo (señal 0) quedaría en cero.
 - **Umbral en el servicio Python:** es una regla de producto; el servicio Python no tiene

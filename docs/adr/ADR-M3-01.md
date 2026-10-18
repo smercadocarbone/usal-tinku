@@ -96,6 +96,8 @@ Lectura:
   cambia nada (ni el intervalo, ni el umbral, ni la Tabla de Tiempos).
 - Con 2 tracks (cámara + pantalla) a 4× queda en ~3,7 s, y a 6× en ~2,9 s (1 track) / ~5,8 s (2 tracks).
   Es el costo ya aceptado en ADR-M3-07 ("Latencia en gama media"); se anota para la revisión del piloto.
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** no hay piloto; esta revisión pasa a la tarea opcional T8 de las
+  sesiones moderadas (T11b §2.4) o a trabajo futuro.
 - El ciclo **no se traba**: 0 turnos salteados en todas las filas (el ciclo programa el próximo turno
   al terminar la inferencia, así que una inferencia lenta alarga el intervalo efectivo en vez de
   saltear) y ningún evento de demora, caída ni detección en los 60 s.
@@ -107,3 +109,8 @@ Lectura:
 Sigue pendiente la fila de un dispositivo físico: abrir `https://<entorno>/diagnostico/clasificador` en
 un Android de gama media con Chrome, tocar "Empezar medición" y después "Copiar resultados", y agregar
 la fila acá.
+
+> **Nota 2026-10-18 (T-TES-11b, sin piloto):** la fila de un celular físico de gama media (O-10) ya no se
+> espera del piloto. Se intenta en las sesiones moderadas (tarea opcional T8 de T11b §2.4, si un participante
+> presta un Android de gama media); si no, queda como trabajo futuro con disparador: antes de encender
+> `tinku.menores.sesiones-habilitadas` (M3C-09). Las decisiones de este ADR no cambian.

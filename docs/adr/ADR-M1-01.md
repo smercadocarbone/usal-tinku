@@ -33,6 +33,11 @@ Tesseract tiene **menor precisión que Vision** en fotos de celular (ángulo, lu
 ## Revisión futura
 Si en el **piloto** la tasa de "documento ilegible" resulta demasiado alta pese al preprocesamiento, **reabrir este ADR** para reconsiderar Vision con guardas de presupuesto estrictas (tarjeta virtual + alerta de gasto). **No** reabrir antes de tener datos reales del piloto.
 
+> **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto no habrá una tasa real de "documento ilegible". En las
+> sesiones moderadas (T1 de T11b §2.4) se usan DNIs de prueba, así que solo se anota si el OCR falló, como
+> señal cualitativa, no como tasa. La tasa real pasa a **trabajo futuro**: primeras 100 altas reales con OCR. La
+> regla "no reabrir sin datos" se mantiene.
+
 ## Implementación
 - Dependencia **Tess4J** en el `pom.xml` + binario nativo de Tesseract instalado como **paquete del sistema** (documentado en README: Linux/Docker `apt install tesseract-ocr tesseract-ocr-spa`, Mac `brew install tesseract`).
 - **`spa.traineddata`** (idioma español) descargado y documentado dónde vive (carpeta de recursos o volumen), vía `TESSDATA_PREFIX`.
