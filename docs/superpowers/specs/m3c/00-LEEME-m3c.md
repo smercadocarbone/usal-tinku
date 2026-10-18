@@ -47,18 +47,20 @@ Las decisiones de producto ya están tomadas y escritas: **no se reabren**.
 
 ## 3. Specs y orden
 
+_Estado actualizado el 2026-10-18._
+
 | # | Spec | Estado | Tarea |
 |---|------|--------|-------|
 | 01 | `M3C-01-adr-y-tiempos.md` | **Hecha** (2026-10-14) | T-M3-06a |
-| 02 | `M3C-02-backend.md` | Pendiente | T-M3-06b |
-| 03 | `M3C-03-clasificador-cliente.md` | Pendiente | T-M3-06c |
-| 04 | `M3C-04-buffer-evidencia.md` | Pendiente | T-M3-06d |
-| 05 | `M3C-05-integracion-aula.md` | Pendiente | T-M3-06e |
-| 06 | `M3C-06-tests-e2e.md` | Pendiente | T-M3-06f |
-| 07 | `M3C-07-benchmark.md` | Pendiente (medición aproximada ya hecha) | T-M3-06g |
-| 08 | `M3C-08-entorno-pruebas.md` | Pendiente; el dueño crea el recurso en Coolify | T-M3-06h |
-| 10 | `M3C-10-hallazgos-menores.md` | Pendiente (4 hallazgos de las pruebas que tocan a menores) | T-M3-06j |
-| 09 | `M3C-09-habilitar-menores.md` | Lo último; decide el dueño | T-M3-06i |
+| 02 | `M3C-02-backend.md` | **Hecha** (PR #85) | T-M3-06b |
+| 03 | `M3C-03-clasificador-cliente.md` | **Hecha** (PR #85) | T-M3-06c |
+| 04 | `M3C-04-buffer-evidencia.md` | **Hecha** (PR #85) | T-M3-06d |
+| 05 | `M3C-05-integracion-aula.md` | **Hecha** (PR #85) | T-M3-06e |
+| 06 | `M3C-06-tests-e2e.md` | **Hecha** (2026-10-16, 9 passed) | T-M3-06f |
+| 07 | `M3C-07-benchmark.md` | **Hecha** (2026-10-16; falta opcional la fila de un celular real) | T-M3-06g |
+| 08 | `M3C-08-entorno-pruebas.md` | Archivos listos; `tinku.site` hace de entorno de pruebas por pedido del dueño | T-M3-06h |
+| 10 | `M3C-10-hallazgos-menores.md` | **Hecha** (2026-10-15, `fix/rem-a`) | T-M3-06j |
+| 09 | `M3C-09-habilitar-menores.md` | Lo último; decide el dueño. Estado y pendientes del dueño en la spec (2026-10-18, sin piloto) | T-M3-06i |
 
 Dependencias:
 - 02 y 03 son independientes entre sí.
