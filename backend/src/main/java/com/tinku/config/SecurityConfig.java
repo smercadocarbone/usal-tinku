@@ -73,6 +73,8 @@ public class SecurityConfig {
                 HttpMethod.OPTIONS.name()));
         config.setAllowedHeaders(List.of("Origin", "Content-Type", "Authorization", "Accept"));
         config.setAllowCredentials(true);
+        // T-TES-11b: el frontend lee el id de la búsqueda registrada (otro origin en dev y prod).
+        config.setExposedHeaders(List.of(com.tinku.matching.web.BusquedaController.HEADER_BUSQUEDA_ID));
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
@@ -133,6 +135,8 @@ public class SecurityConfig {
                 // ADR-M5-02: vuelta de la autorización de MercadoPago. El navegador llega sin JWT;
                 // la autenticación es el state de un solo uso (CuentasMpService.completarConexion).
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/pagos/mp/callback").permitAll()
+                // T-TES-10: si las clases con menores están habilitadas (solo un booleano, sin datos).
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reservas/clases-con-menores").permitAll()
                 // Healthcheck del contenedor (sin detalles, ver application.yml).
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Defensa en profundidad (auditoría 2026-09-18): antes solo

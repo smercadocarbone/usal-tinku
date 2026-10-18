@@ -49,6 +49,14 @@ async function request<T>(
   path: string,
   options: { method: string; body?: Cuerpo }
 ): Promise<T> {
+  return (await requestCompleta<T>(path, options)).datos;
+}
+
+/** Igual que {@link request}, pero devuelve también los headers de la respuesta (T-TES-11b). */
+async function requestCompleta<T>(
+  path: string,
+  options: { method: string; body?: Cuerpo }
+): Promise<{ datos: T; headers: Headers }> {
   const esMultipart =
     typeof FormData !== "undefined" && options.body instanceof FormData;
 
@@ -75,8 +83,8 @@ async function request<T>(
     throw new ApiError(res.status, mensaje, detalles);
   }
 
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  if (res.status === 204) return { datos: undefined as T, headers: res.headers };
+  return { datos: (await res.json()) as T, headers: res.headers };
 }
 
 /** Extrae un mensaje legible y el detalle estructurado del cuerpo de error
@@ -132,6 +140,9 @@ export const api = {
     manageSesion(() => request<T>(path, { method: "GET" })),
   post: <T>(path: string, body?: Cuerpo) =>
     manageSesion(() => request<T>(path, { method: "POST", body })),
+  /** POST que además devuelve los headers de la respuesta (p. ej. `X-Busqueda-Id`, T-TES-11b). */
+  postConHeaders: <T>(path: string, body?: Cuerpo) =>
+    manageSesion(() => requestCompleta<T>(path, { method: "POST", body })),
   put: <T>(path: string, body?: Cuerpo) =>
     manageSesion(() => request<T>(path, { method: "PUT", body })),
   patch: <T>(path: string, body?: Cuerpo) =>
@@ -245,13 +256,24 @@ export interface CuerpoBusqueda {
 }
 
 export function buscarTutores(body: CuerpoBusqueda): Promise<ResultadoBusqueda[]> {
-  return api.post<ResultadoBusqueda[]>("/api/busquedas", {
+  return buscarTutoresConId(body).then((r) => r.resultados);
+}
+
+/**
+ * Búsqueda + id de la búsqueda registrada para la evaluación (T-TES-11b §4.1). `busquedaId` es
+ * null salvo que el backend tenga `tinku.evaluacion.habilitada=true`.
+ */
+export async function buscarTutoresConId(
+  body: CuerpoBusqueda
+): Promise<{ resultados: ResultadoBusqueda[]; busquedaId: string | null }> {
+  const { datos, headers } = await api.postConHeaders<ResultadoBusqueda[]>("/api/busquedas", {
     texto_busqueda: body.textoBusqueda || undefined,
     nombre: body.nombre || undefined,
     filtro_materia: body.filtroMateria || undefined,
     filtro_nivel: body.filtroNivel || undefined,
     precio_max_hora: body.precioMaxHora || undefined,
   });
+  return { resultados: datos, busquedaId: headers.get("X-Busqueda-Id") };
 }
 
 /* ---- M2 — Búsquedas guardadas (US-6, FR-MATCH-008; auditoría 2026-09-20) ----
@@ -983,6 +1005,19 @@ export function getAdicionalResumen(tutorId: string, duracionMinutos: number): P
   return api.get<AdicionalResumen>(
     `/api/reservas/adicional-resumen?tutorId=${encodeURIComponent(tutorId)}&duracionMinutos=${duracionMinutos}`
   );
+}
+
+/**
+ * T-TES-10: si las clases con menores están habilitadas (endpoint público). Fail-closed: ante
+ * cualquier error o respuesta inesperada, `false`.
+ */
+export async function getClasesConMenoresHabilitadas(): Promise<boolean> {
+  try {
+    const r = await api.get<{ habilitadas?: unknown }>("/api/reservas/clases-con-menores");
+    return r?.habilitadas === true;
+  } catch {
+    return false;
+  }
 }
 
 export const CLAUSULA_GRABACION = "GRABACION_AUDIO_RESUMEN";

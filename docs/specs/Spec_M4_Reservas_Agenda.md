@@ -39,12 +39,13 @@ _Como_ Usuario con capacidad Adulto Responsable, _quiero_ ser quien efectivament
 - **Dado** que quiera reservar directamente para mi menor a cargo sin pasar por una Solicitud previa, **cuando** lo haga, **entonces** el sistema lo permite igual — la Solicitud es un atajo opcional para el menor, no un paso obligatorio del flujo. En ambos caminos (Solicitud o directa) el Tutor debe estar habilitado para Menores (CAP `aprobado` y vigente, FR-ID-026).
 - **Dado** que sea un Estudiante adulto reservando para sí mismo, **cuando** seleccione un horario, **entonces** no hay Solicitud intermedia — reserva y paga directamente (FR-RES-001).
 
-> **Nota (T-TES-10, piloto):** durante el piloto `tinku.menores.sesiones-habilitadas` es
-> `false` por defecto: la Solicitud del menor (US-2) y toda Reserva con beneficiario menor
-> (rama menor de US-3/US-4) responden 409 "Las clases para menores se habilitan al
-> finalizar el piloto". La flag solo pasa a `true` con T-M3-06 (kill-switch en cliente) y
-> T02 (CAP) cerradas — AGENTS §3. El resto del flujo (reserva directa de adulto, US-4) es
-> independiente de la flag.
+> **Nota (T-TES-10, gate de menores):** `tinku.menores.sesiones-habilitadas` es `false` por
+> defecto: con la flag apagada, la Solicitud del menor (US-2) y toda Reserva con beneficiario
+> menor (rama menor de US-3/US-4) responden 409 `MENORES_NO_HABILITADAS`, "Las clases para
+> menores todavía no están habilitadas.", y la vista del Menor muestra ese aviso. La flag la
+> enciende solo el dueño en producción, con la lista de `M3C-09` cumplida (T-M3-06 y T02 ya
+> están cerradas) — AGENTS §3. El resto del flujo (reserva directa de adulto, US-4) es
+> independiente de la flag. _(Hasta 2026-10-18 esta nota hablaba de un piloto, que no se hace.)_
 
 ### US-4 — Reserva auto-confirmada y pago
 

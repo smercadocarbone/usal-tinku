@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * <p>Todo el historial es de hace 3 a ~75 días: ninguna calificación de 1-2
  * estrellas cae en las últimas 24hs (BR-MATCH-01 no sombrea a nadie) y todas
  * están fuera de la ventana de edición de 48hs. Solo participan Estudiantes
- * adultos: el piloto no tiene sesiones con menores (T-TES-10).
+ * adultos: las clases con menores dependen de la flag del gate (T-TES-10).
  *
  * <p>Se inserta directo por SQL a propósito: el flujo real exige la ventana de
  * 15 min y fechas futuras, así que no hay forma de "reservar en el pasado". No

@@ -3,6 +3,10 @@
 > **Enmendada por `docs/adr/ADR-000-07.md` (2026-09-24):** todo corre en el VPS de 8 GB con Coolify
 > (Postgres y frontend incluidos, sin Supabase ni Vercel). Parte A hecha en el branch
 > `claude/lucid-lovelace-htlv4z`; la Parte B está en `docs/operacion/RUNBOOK_produccion.md`.
+>
+> **2026-10-18 (decisión del dueño):** el piloto no se hace; `tinku.site` queda como demo pública de
+> pruebas. El ensayo de B6 y el criterio de la Parte B ("antes del piloto") pasan a ser **antes de
+> abrir a usuarios reales** (RUNBOOK de producción §8).
 
 **Branch:** `tesis/despliegue` · **Riesgo:** **ALTO** (operación) ·
 **Bloqueada por:** T05–T12 mergeadas y FASE 2 de remediación mergeada (al menos FASE2-02 rate limiting,
@@ -134,6 +138,9 @@ Opencode deja estos pasos como checklist en el runbook y **se frena**:
 - Parte B: ensayo de vuelta atrás registrado en el runbook **antes** del piloto.
 - Disponibilidad y latencia (RNF-01 y RNF-04 de la tesis) medibles desde el día 1: panel de Coolify y
   paneles de LiveKit.
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto, la disponibilidad se reporta para el período de las
+  sesiones moderadas (panel de Coolify) y la latencia de la API con `scripts/evaluacion/latencias.py`
+  (resultados en `docs/operacion/EVALUACION_tecnica.md` §1.b).
 
 ## 6. NO tocar
 - La arquitectura: nada de consolidar Supabase o Vercel dentro del VPS (evaluado y descartado en la

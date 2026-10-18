@@ -124,6 +124,7 @@ Este documento **solo releva**. No propone el texto nuevo ni modifica nada de la
   - `application.yml:177`: `sesiones-habilitadas: ${TINKU_MENORES_SESIONES_HABILITADAS:false}`.
   - Último cambio: C-gate.
 - **Correcto:** el código. La tesis tiene que declarar la restricción.
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** el piloto no se hace. La validación pasa a evaluación técnica + sesiones moderadas con adultos y datos de prueba; el texto sugerido para `:170-172`, `:328-330` y las limitaciones está en `TESIS_sin_piloto.md` (Cap. 1). Pendiente de pegar en la tesis.
 
 **A-08 · Revisión manual de la autenticidad del DNI** — Media
 - **Tesis:** `01-introduccion.tex:384-389`. Último cambio: T0.
@@ -491,11 +492,13 @@ Verificado sin hallazgos: el CSV de Superprof (414 avisos, promedio 13.392,43, m
 - **Dónde:**
   - `02:128-129`: aceptación del matching y calidad percibida (T0).
   - `07:61-62`: latencia p95 y F1 (TP).
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** la reformulación de I-01..I-04 (T11b §3) y la estructura nueva del capítulo 7 usan los mismos nombres que el capítulo 2; propuesta en `TESIS_sin_piloto.md` (Cap. 2 y 7). Pendiente de pegar.
 
 **B-10 · Instrumento de entrevistas distinto en el capítulo 2 y en el apéndice B** — Media
 - **Dónde:**
   - `02:150-155`: dos tutores y cuatro familias (T0).
   - `apendices/B-entrevista.tex:23`: dos especialistas, «Sprint 3», que ya pasó y siguen pendientes (T0).
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** se propone que el instrumento con usuarios sean las sesiones moderadas y que el apéndice B tenga su protocolo (T11b §2); si el dueño no hace las entrevistas, quitar la promesa de `02:150-155`. Ver `TESIS_sin_piloto.md` (Cap. 2). Decisión del dueño.
 
 **B-11 · Inversión valorizada en 812 h de cuatro perfiles contra «1 desarrollador, 15-20 h semanales»** — Media
 - **Dónde:**
@@ -593,6 +596,7 @@ Otras menores (T0 y T1):
   - `AGENTS.md:55-58`: 661 tests, 0 fallas, 85,6 % de cobertura (C-27).
   - `HALLAZGOS_pruebas.md:3`: pruebas en producción con 7 testers (Claude, 2026-10-14, `77d0a94`).
   - En `fix/rem-h`: 738 tests y 86,2 %, la prueba del aula en vivo y `CALIBRACION_busqueda.md`.
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** hay resultados nuevos medidos para el capítulo 7 en `docs/operacion/EVALUACION_tecnica.md` (matching sobre 120 búsquedas, latencias p95, kill-switch, auditoría 36/36) y la estructura y el texto sugerido en `TESIS_sin_piloto.md` (Cap. 7). Tests y cobertura se copian del CI al cerrar. Pendiente de pegar.
 
 **D-02 · La matriz de riesgos es la del ejemplo (API de terceros, reentrenar, hosting administrado, presupuesto en pesos)** — Media
 - **Tesis:** `06-riesgos.tex:97-98` (TP).
@@ -612,10 +616,12 @@ Otras menores (T0 y T1):
 **D-04 · Conclusiones: OE-1 «Alcanzado» citando un capítulo vacío** — Media
 - **Tesis:** `08-conclusiones.tex:50-51` (TP).
 - **Código:** `Tasks_Tinku_Implementacion.md:277`: el piloto arranca el 27/10/2026 (santy-air, 2026-09-23, `235796b`).
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** el piloto del 27/10/2026 no se hace. OE-1 se declara según la evidencia del capítulo 7 (texto base en `TESIS_sin_piloto.md`, Cap. 8), sin «Alcanzado» hasta tener los resultados de las sesiones. Pendiente.
 
 **D-05 · RNF de ejemplo (p95 < 5 s, F1 ≥ 0,70)** — Media
 - **Tesis:** `07:61-62` (TP).
 - **Código:** `Constitucion_Tinku.md:97-101`: los requisitos no funcionales reales (C-ini).
+- **Actualización 2026-10-18 (T-TES-11b, sin piloto):** los umbrales que reemplazan a los del piloto están en T11b §1 (p95 de API, MRR, recall@5); propuesta en `TESIS_sin_piloto.md` (Cap. 7, final).
 
 **D-06 · Fila de feedback inventada que figura como «Implementado»** — Baja
 - **Tesis:** `07:103` (TP). Se imprime en el PDF.
@@ -641,6 +647,7 @@ Más diferencias de la misma rama, de gravedad media o baja:
 - R-11: «MercadoPago solo probado con usuarios de prueba». Producción ya está en cobro real (`77d0a94`).
 - R-10: «verificación de la firma digital del CAP». Está diferida según `ADR-M1-04.md:50` (C-cap23).
 - R-15: «migración a VPS antes del piloto». Ya está en `RUNBOOK_produccion.md:12` (C-tunnel).
+- **Actualización 2026-10-18 (T-TES-11b):** sin piloto, R-11 y R-15 se reformulan (R-11: cobros reales no validados con usuarios, la evaluación usa bypass; R-15: disponibilidad de la demo durante las sesiones) y se suman dos riesgos (validez limitada de la evaluación; parámetros calibrados sin datos de operación). Texto en `TESIS_sin_piloto.md` (Cap. 6).
 - M4: «falta la selección dinámica de horarios». T-M4-13 se cerró el 2026-09-25 (`5322caa`).
 - La rama no menciona las pruebas en producción del 2026-10-14.
 

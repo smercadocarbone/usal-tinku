@@ -41,7 +41,7 @@ import java.util.UUID;
  * del vendedor para cada operación de cobro.
  *
  * <p><b>Cuándo está activo:</b> solo si está configurada la app de marketplace
- * ({@code MP_CLIENT_ID}). Sin ella (dev, tests, piloto antes de crear la app), todo sigue con el
+ * ({@code MP_CLIENT_ID}). Sin ella (dev, tests, la demo antes de crear la app), todo sigue con el
  * token de la plataforma y ningún Tutor queda bloqueado por no tener cuenta conectada.</p>
  */
 @Service

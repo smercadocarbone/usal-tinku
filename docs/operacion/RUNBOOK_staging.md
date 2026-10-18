@@ -27,7 +27,7 @@ Con un admin financiero (ver RUNBOOK de producción §2.5 para promoverlo):
 
 - `GET https://api.tinku.site/actuator/health` → `UP`.
 - `GET /api/admin/financiero/pasarela` → `bypassPermitido: true`.
-- Una reserva de un AR para un Menor **no** da 409 `MENORES_PILOTO`.
+- Una reserva de un AR para un Menor **no** da 409 `MENORES_NO_HABILITADAS` (hasta 2026-10-18 se llamaba `MENORES_PILOTO`).
 
 ## 4. Límite conocido
 

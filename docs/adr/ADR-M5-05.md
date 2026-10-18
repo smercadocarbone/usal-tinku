@@ -33,4 +33,6 @@ con 21 %, el VAN se anula con 12,4 %") dejó de ser verdad.
 - Vuelven a valer los riesgos R-02 (desintermediación) y R-07 (cuesta más sumar Tutores), con seis
   puntos menos de neto para el Tutor. La métrica para revisar la comisión tras el piloto sigue
   diferida (BR-PAG-03).
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto, la revisión pasa a **trabajo futuro** (primer trimestre
+  de operación con cobro real); las sesiones moderadas usan pagos en bypass y no aportan datos de comisión.
 - La pestaña "Precio" (FR-PAG-019) toma el porcentaje del backend: muestra Tinku 27 % + MercadoPago ~6,04 %.

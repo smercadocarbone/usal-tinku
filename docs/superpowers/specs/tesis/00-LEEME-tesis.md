@@ -25,7 +25,7 @@ La tesis fijó decisiones que el código todavía no refleja:
 | Grabación de audio | Prohibida (AGENTS §1.5) | **Solo audio, solo si se contrató el adicional, borrado tras transcribir** |
 | CAP (antecedentes penales) | Retirado (ADR-M1-02) | **Obligatorio solo para dictar clases a menores** |
 | Piloto | Sin restricción de menores | **Sin menores** hasta kill-switch en cliente (T-M3-06) + CAP |
-| Indicadores del piloto (I-01 a I-04) | No se miden | **Instrumentados** |
+| Indicadores del piloto (I-01 a I-04) | No se miden | **Instrumentados** _(2026-10-18: sin piloto; se miden con evaluación técnica + sesiones moderadas, T11b)_ |
 | Producción | Coolify en equipo propio | **VPS DigitalOcean 4 GB** + runbook de despliegue y rollback |
 
 ---
@@ -35,6 +35,12 @@ La tesis fijó decisiones que el código todavía no refleja:
 El piloto arranca el **27/10/2026** (Sprint 11). Todo lo marcado *Antes del piloto* es
 bloqueante.
 
+> **2026-10-18 (decisión del dueño):** el piloto con usuarios reales **no se hace**. `tinku.site`
+> queda como demo pública de pruebas y las clases con menores se habilitan sin piloto cuando el dueño
+> encienda la flag (`../m3c/M3C-09-habilitar-menores.md`). En la columna *Etapa*, "Antes del piloto"
+> se lee como "antes de abrir a usuarios reales". Esta nota no cambia la medición de indicadores
+> (T11, I-01 a I-04), que se trata aparte en la evaluación de la tesis.
+
 | # | Spec | Etapa | Depende de | Riesgo |
 |---|------|-------|-----------|--------|
 | 1 | `T05-comision-27.md` | Antes del piloto | — | Medio (dinero) |
@@ -43,7 +49,7 @@ bloqueante.
 | 4 | `T07-proveedor-llm.md` | Antes del piloto | — | Medio (datos) |
 | 5 | `T08-grabacion-audio-resumen.md` | Antes del piloto | T07 | **ALTO** (privacidad) |
 | 6 | `T09-adicional-resumen.md` | Antes del piloto | T05, T08 | Medio (dinero) |
-| 7 | `T11-instrumentacion-piloto.md` | Antes del piloto | — | Bajo |
+| 7 | `T11-instrumentacion-piloto.md` → **reemplazada por `T11b-evaluacion-sin-piloto.md`** (2026-10-18) | Antes del piloto | — | Bajo |
 | 8 | `T12-ux-recomendaciones.md` | Antes del piloto | — | Bajo |
 | 9 | `T13-despliegue-produccion.md` | Antes del piloto (semana previa) | 1–8 mergeadas | **ALTO** (operación) |
 | 10 | `T01-cap-adr-enmienda.md` | Antes de habilitar menores | — | Bajo (solo docs) |
@@ -87,7 +93,7 @@ la tarea, y se tilda en el commit que la cierra.
 | PT5 | Precio del adicional en ARS y qué pasa si el resumen falla | **770 ARS** (USD 0,50 redondeado) y **reembolso automático del adicional** si el resumen queda `fallido`. | **$770 + reembolso parcial del adicional** si el resumen falla. **El caso "sin consentimiento" no existe:** la grabación de audio es condición del adicional y se acepta en los Términos y Condiciones (el alumno, de forma explícita al contratarlo; el Tutor, en el onboarding). _(2026-09-23)_ |
 | PT6 | Plazo máximo de retención del audio (va a la Tabla de Tiempos, A3) | Borrar **al generar el transcript**, con un **máximo de 24 hs** aunque falle. | **Hasta el transcript, máximo 24 hs.** _(2026-09-23)_ |
 | PT7 | Pipeline del resumen: ¿una llamada con audio o dos (transcribir → anonimizar → resumir)? | **Dos llamadas**: mantiene la anonimización antes del resumen que ya implementa `ResumenService`; el costo extra es despreciable (el audio domina). | **Dos llamadas** (transcribir → anonimizar → resumir). _(2026-09-23)_ |
-| PT8 | ¿Cuándo y cómo se pregunta el NPS (I-04)? | **Una vez por usuario al cierre del piloto**, in-app, pregunta 0–10. | **Una vez al cierre del piloto, in-app**, 0–10. _(2026-09-23)_ |
+| PT8 | ¿Cuándo y cómo se pregunta el NPS (I-04)? | **Una vez por usuario al cierre del piloto**, in-app, pregunta 0–10. | **Una vez al cierre del piloto, in-app**, 0–10. _(2026-09-23)_ **Reemplazada (2026-10-18, T11b):** sin piloto, una vez por usuario después de su primera clase finalizada o calificada, solo con `tinku.evaluacion.habilitada`, nunca a menores. |
 | PT9 | ¿Dónde escribe LiveKit Cloud el audio grabado? (no escribe en un disco local: necesita un endpoint compatible con S3) | **Supabase Storage** (compatible con S3, incluido en el plan Pro), bucket privado. | **Garage autoalojado en el VPS** (compatible con S3). **No MinIO:** su edición Community fue archivada en feb-2026 y no recibe parches de seguridad. Requiere ADR. _(2026-09-23)_ |
 | PT10 | Si vence o se revoca el CAP de un Tutor con reservas confirmadas con Menores | Cancelar esas reservas con **reembolso total** y aviso al Adulto Responsable; el Tutor sigue habilitado para adultos. | **Cancelar con reembolso total** y aviso al Adulto Responsable. _(2026-09-23)_ |
 | TS1 | ¿Cómo lee y borra el backend el audio en Garage? (T08) | **AWS SDK for Java v2, solo `s3` + `url-connection-client`**, declarado en ADR-000-06. Implementar la firma SigV4 a mano es la fuente de bugs más probable de T08. | _Sin objeto (2026-09-25, ADR-M3-04): el audio lo graba el navegador del Tutor y se guarda en el almacenamiento existente; no hay Garage ni SDK de S3._ |

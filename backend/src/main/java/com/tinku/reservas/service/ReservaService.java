@@ -610,7 +610,7 @@ public class ReservaService {
     }
 
     /**
-     * Todas las reglas de una clase nueva, sin crearla: Tutor reservable y que cobra, piloto sin
+     * Todas las reglas de una clase nueva, sin crearla: Tutor reservable y que cobra, gate de
      * menores y CAP, calificación pendiente, ventana mínima, duración y franja. La usan la reserva
      * suelta y cada clase de un paquete (FR-RES-032).
      */
@@ -621,7 +621,7 @@ public class ReservaService {
         if (!verificadorCobro.puedeCobrar(tutor.getId())) {
             throw new TutorSinCobroException();
         }
-        // T-TES-10/DT7: piloto sin menores — cubre la directa (crearDirecta) y la
+        // T-TES-10/DT7: gate de menores — cubre la directa (crearDirecta) y la
         // aprobación (aprobarSolicitud), ambas caen acá. Fail-closed (AGENTS §3).
         if (beneficiario.getTipo() == TipoUsuario.MENOR) {
             politicaMenores.validarClaseConMenor(tutor.getId()); // T-TES-10 + FR-ID-026 (CAP)

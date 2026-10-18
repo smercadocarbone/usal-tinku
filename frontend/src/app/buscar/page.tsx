@@ -5,7 +5,7 @@ import { ArrowUpDown, Bookmark, BookmarkCheck, History, Search, SearchX, Sliders
 import AppShell from "@/components/shell/AppShell";
 import TarjetaTutor from "@/components/tutores/TarjetaTutor";
 import {
-  buscarTutores,
+  buscarTutoresConId,
   borrarBusquedaGuardada,
   ejecutarBusquedaGuardada,
   getBusquedasGuardadas,
@@ -17,6 +17,7 @@ import {
   type ResultadoBusqueda,
 } from "@/lib/api";
 import { getTutor, normalizarTutor, type TutorPerfil } from "@/lib/tutores";
+import { recordarBusqueda } from "@/lib/evaluacion";
 import { useToast } from "@/components/ui";
 import { Alerta, Boton, Chip, EstadoVacio, Insignia, Modal, SkeletonTarjetas } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -148,12 +149,14 @@ export default function BuscarPage() {
     setYaGuardada(false);
     setConsulta({ texto: q.trim(), materia: m });
     try {
-      const lista = await buscarTutores({
+      const { resultados: lista, busquedaId } = await buscarTutoresConId({
         textoBusqueda: q.trim() || undefined,
         filtroMateria: m || undefined,
         filtroNivel: n || undefined,
         precioMaxHora: p ?? undefined,
       });
+      // T-TES-11b (I-01): solo con la evaluación encendida llega un id.
+      recordarBusqueda(busquedaId, lista.map((r) => r.tutorId));
       await hidratar(lista);
     } catch (err) {
       setError(mensajeDeError(err, "No pudimos completar la búsqueda. Revisá tu conexión y probá de nuevo."));

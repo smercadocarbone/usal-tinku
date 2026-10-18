@@ -65,6 +65,10 @@ clase.
 - **Entre adultos** no se cuenta `Sexy`: ahí la rama pregunta antes de cortar (US-7) y no tiene
   sentido ocultarle el video a alguien por una musculosa.
 - Sin calibración en el MVP (BR-KS-04): los números se revisan con los datos de alertas del piloto.
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** no hay piloto con menores (T-TES-10). Lo que existe para revisar
+  estos números es el E2E con LiveKit real (M3C-06, 9 casos) y el benchmark del clasificador (M3C-07, anexo de
+  ADR-M3-01). La revisión con datos de alertas reales pasa a **trabajo futuro**, con disparador: el encendido de
+  `tinku.menores.sesiones-habilitadas` (M3C-09) y sus primeros 3 meses de alertas. La decisión no cambia.
 
 ### 5. Clip de evidencia
 

@@ -7,11 +7,11 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * T-TES-10/DT7 — gate del piloto: único árbitro de si las sesiones con menores
+ * T-TES-10/DT7 — gate de menores: único árbitro de si las sesiones con menores
  * (Solicitudes de Sesión y Reservas con beneficiario menor, US-2/US-3/US-4)
- * están habilitadas. Default {@code false}: durante el piloto no hay clases con
- * menores. Fail-closed: la flag solo pasa a true cuando cierran T-M3-06
- * (kill-switch en cliente) y T02 (CAP) — ver AGENTS §3.
+ * están habilitadas. Default {@code false}: sin la flag no hay clases con
+ * menores. Fail-closed: la flag la enciende el dueño en producción con el
+ * checklist de M3C-09 cumplido — ver AGENTS §3.
  */
 @Component
 public class PoliticaSesionesMenores {
@@ -27,7 +27,7 @@ public class PoliticaSesionesMenores {
     }
 
     /**
-     * FR-ID-026 (T02): el piloto habilitado Y el Tutor con CAP aprobado y vigente. Lo llama
+     * FR-ID-026 (T02): las clases con menores habilitadas Y el Tutor con CAP aprobado y vigente. Lo llama
      * todo punto de M4 donde hay un menor de por medio (reserva directa, aprobación de
      * solicitud, solicitud nueva). Fail-closed.
      */
@@ -36,6 +36,11 @@ public class PoliticaSesionesMenores {
         if (!habilitacion.habilitadoParaMenores(tutorId)) {
             throw new TutorSinHabilitacionMenoresException();
         }
+    }
+
+    /** Estado de la flag, para que la interfaz no anuncie un corte que no existe (ni al revés). */
+    public boolean sesionesHabilitadas() {
+        return sesionesHabilitadas;
     }
 
     /**

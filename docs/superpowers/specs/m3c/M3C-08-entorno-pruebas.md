@@ -72,7 +72,7 @@ Los pasos 1 a 5 y 8 de `RUNBOOK_staging.md`. Cuando el entorno responde, el agen
 - `GET https://api.staging.tinku.site/actuator/health` → `UP`;
 - `GET /api/admin/financiero/pasarela` con el admin financiero → `bypassPermitido: true`;
 - una reserva del AR `40000012` para Mía `50000001` con el Tutor `31000028` **no** da 409
-  `MENORES_PILOTO`.
+  `MENORES_NO_HABILITADAS` (hasta 2026-10-18 se llamaba `MENORES_PILOTO`).
 
 ## 5. Verificación
 

@@ -49,13 +49,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * T-TES-10 (DT7) — gate del piloto: sin sesiones con menores hasta cerrar
- * T-M3-06 (kill-switch en cliente) y T02 (CAP). Corre con la flag en
+ * T-TES-10 (DT7) — gate de menores: sin sesiones con menores mientras la flag
+ * {@code tinku.menores.sesiones-habilitadas} esté apagada (se enciende con el
+ * checklist de M3C-09). Corre con la flag en
  * {@code false}, que es el default de {@code application.yml} — sin
  * {@code @TestPropertySource}: el gate tiene que estar OFF por defecto.
  *
@@ -67,7 +70,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-class GateMenoresPilotoIntegracionTest {
+class GateMenoresIntegracionTest {
 
     @Container
     static PostgreSQLContainer postgres =
@@ -95,6 +98,8 @@ class GateMenoresPilotoIntegracionTest {
     @MockitoBean ReputacionBloqueoProveedor reputacionBloqueo;
 
     private static final String PASSWORD = "password123";
+    static final String CODIGO_MENORES = "MENORES_NO_HABILITADAS";
+    static final String MENSAJE_MENORES = "Las clases para menores todavía no están habilitadas.";
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 
     private String dniUnico() {
@@ -242,7 +247,10 @@ class GateMenoresPilotoIntegracionTest {
                                 "beneficiarioId", e.menorId().toString(),
                                 "horario", e.horario().toString(),
                                 "duracionMinutos", 30))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                // Sin piloto (2026-10-18): el texto no promete una fecha ni un "fin del piloto".
+                .andExpect(jsonPath("$.codigo").value(CODIGO_MENORES))
+                .andExpect(jsonPath("$.error").value(MENSAJE_MENORES));
 
         assertThat(reservaRepo.count()).isEqualTo(reservasAntes);
     }
@@ -304,8 +312,21 @@ class GateMenoresPilotoIntegracionTest {
                                 "tutorId", e.tutorId().toString(),
                                 "horarioPropuesto", e.horario().toString(),
                                 "duracionMinutos", 30))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value(CODIGO_MENORES))
+                .andExpect(jsonPath("$.error").value(MENSAJE_MENORES));
 
         assertThat(solicitudRepo.count()).isEqualTo(solicitudesAntes);
+    }
+
+    /**
+     * El frontend decide si muestra el aviso al Menor según el estado real de la flag
+     * (antes lo mostraba siempre). Público y de solo lectura: no expone nada más que el booleano.
+     */
+    @Test
+    void estadoClasesConMenores_sinSesion_conFlagFalse_devuelveDeshabilitadas() throws Exception {
+        mockMvc.perform(get("/api/reservas/clases-con-menores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.habilitadas").value(false));
     }
 }

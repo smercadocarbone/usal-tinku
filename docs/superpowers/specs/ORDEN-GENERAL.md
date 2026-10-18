@@ -13,6 +13,12 @@ piloto necesita (dinero, seguridad, que los flujos funcionen) y deja para despu�
 con menores. Las olas se ejecutan en orden; **dentro** de una ola, las specs sin dependencias entre sí
 pueden ir en paralelo (en branches distintos).
 
+> **2026-10-18 (decisión del dueño):** el piloto del 27/10/2026 **no se hace**; esa fecha ya no manda.
+> `tinku.site` queda como demo pública de pruebas, y las clases con menores se habilitan sin piloto
+> cuando el dueño encienda la flag con la lista de `m3c/M3C-09-habilitar-menores.md`. Las olas de
+> abajo quedan como registro del orden en que se ejecutaron; "antes del piloto" se lee como "antes de
+> abrir a usuarios reales".
+
 ## Ola 0 — Arrancar ya (no dependen de ninguna decisión pendiente)
 
 | Spec | Por qué ahora |
@@ -50,10 +56,14 @@ una vez resuelta `ux/02`.
 
 ## Ola 4 — Semana previa al piloto
 
+_2026-10-18: sin piloto. T13 está hecha; su ensayo (B6) queda para antes de abrir a usuarios reales._
+
 `remediacion/FASE2-08-ci-matching-e2e.md` (P3) → `tesis/T13-despliegue-produccion.md` (**riesgo alto**,
 con todo lo anterior mergeado).
 
 ## Después del piloto / antes de habilitar menores
+
+_2026-10-18: sin piloto. Lo que queda antes de encender menores está en `m3c/M3C-09-habilitar-menores.md`._
 
 - CAP: `tesis/T01` → `T02` (**riesgo alto**) → `T03` → `T04` (opcional). PT1, PT2, PT10.
 - `remediacion/FASE2-06-baja-menor-anonimizacion.md`, `remediacion/FASE2-09-evidencia-upload.md`.

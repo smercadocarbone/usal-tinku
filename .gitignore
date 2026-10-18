@@ -12,8 +12,8 @@ frontend/test-results/
 frontend/blob-report/
 
 # matching-service (Python)
-matching-service/__pycache__/
-matching-service/*.pyc
+__pycache__/
+*.pyc
 matching-service/venv/
 matching-service/.venv/
 

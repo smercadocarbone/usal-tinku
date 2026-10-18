@@ -97,7 +97,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // T-TES-10/DT7: el E2E del flujo feliz incluye US-2/US-3 (Solicitud y aprobación
 // por el AR de una clase con menor). La spec T10 manda este test CON la flag en
 // true para que siga ejerciendo el flujo completo; el corte por defecto (flag
-// false) lo cubre GateMenoresPilotoIntegracionTest. La flag solo se abre con
+// false) lo cubre GateMenoresIntegracionTest. La flag solo se abre con
 // T-M3-06 y T02 cerradas (AGENTS §3).
 @TestPropertySource(properties = "tinku.menores.sesiones-habilitadas=true")
 class E2EFlujoFelizIntegracionTest {

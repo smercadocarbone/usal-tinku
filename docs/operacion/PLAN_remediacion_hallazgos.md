@@ -77,8 +77,8 @@ pasarela), O-3 (rotar la clave de los admins), O-6 (script de limpieza), O-7 (se
 | **O-1** | **Cerrar el bypass de pago.** Con el admin financiero: `PATCH /api/admin/financiero/pasarela {"habilitada": true}`. **Después** volver `TINKU_PERFILES` a `prod` (o `prod,seed-demo` mientras haya pruebas) en Coolify y redeployar | Hoy `habilitada=false` está **guardado en la base** y el modo bypass (`PagoService`) confirma reservas sin cobrar a **cualquier** usuario real. Volver al perfil `prod` **no** lo cierra: el flag vive en `pagos.pasarela_estado`. Además, sin el perfil `prod`, `ArranqueSeguroValidator` está más permisivo | `GET /api/admin/financiero/pasarela` → `habilitada:true, bypassPermitido:false`; `POST /api/pagos/preferencia` sobre una reserva nueva devuelve `bypass:false` y un `initPoint` |
 | O-2 | Si querés seguir probando con bypass, hacelo en el **entorno de pruebas** (`M3C-08`, perfil `staging`), no en `tinku.site` | Mismo motivo | `RUNBOOK_staging.md` |
 | O-3 | **Cambiar la contraseña de los admins** `99900301` y `99900302` | La clave `UnaClaveLarga-2026` circuló en el chat de las pruebas | Login con la clave vieja falla |
-| O-4 | Antes del piloto real: sacar `seed-demo` de `TINKU_PERFILES` | Contraseña conocida (`password123`) en 60 cuentas | Login de `40000001` da 401 |
-| O-5 | Decidir si la flag de menores sigue encendida: `TINKU_MENORES_SESIONES_HABILITADAS`. Hoy está en `true` | `M3C-09` exige antes M3C-10 (T3-01, T4-H1, T3-03, TRANS-1) y definir FR-SEC-013. Con el pago real activo, un menor real podría reservar | Una reserva con un menor da 409 `MENORES_PILOTO` si la apagás |
+| O-4 | Antes del piloto real (desde 2026-10-18: antes de abrir a usuarios reales, §3.1): sacar `seed-demo` de `TINKU_PERFILES` | Contraseña conocida (`password123`) en 60 cuentas | Login de `40000001` da 401 |
+| O-5 | Decidir si la flag de menores sigue encendida: `TINKU_MENORES_SESIONES_HABILITADAS`. Hoy está en `true` _(dato del 2026-10-15; confirmarlo en Coolify. Desde 2026-10-18 el encendido definitivo es M3C-09 §3)_ | `M3C-09` exige antes M3C-10 (T3-01, T4-H1, T3-03, TRANS-1) y definir FR-SEC-013. Con el pago real activo, un menor real podría reservar | Una reserva con un menor da 409 `MENORES_NO_HABILITADAS` (antes `MENORES_PILOTO`) si la apagás |
 | O-6 | Correr `deploy/demo/limpiar-residuos-pruebas-2026-10-14.sql` (viene en `ROLLBACK`; mirá los conteos y pasalo a `COMMIT`) | Restaura a Benjamín (T3-01), borra la franja de 2020, cierra las 2 denuncias huérfanas y las búsquedas guardadas | Los conteos del script |
 | O-7 | **Nombrar un segundo admin de Moderación** (`INSERT INTO admin.admins`, RUNBOOK §2.5) | Con uno solo, una denuncia donde es parte queda sin salida (T4-H3). Mitigación sin código | Un admin distinto puede resolver una denuncia del otro |
 | O-8 | **Cargar los precios regionales** (`/admin/precios`) o confirmar que está vacío a propósito | `precios-regionales` devuelve `[]`: el Tutor no tiene referencia de precio (T5-H4) | `GET /api/pagos/precio-referencia/{provincia}` devuelve un valor |
@@ -87,6 +87,22 @@ pasarela), O-3 (rotar la clave de los admins), O-6 (script de limpieza), O-7 (se
 | O-12 | Revisar la consola del navegador una semana con la CSP en `Report-Only` (R-G G-8) y, sin violaciones, cambiar la cabecera a `Content-Security-Policy` en `frontend/next.config.js` | Una CSP mal escrita rompe en silencio | Commit que cambia la cabecera |
 | O-13 | Si Coolify define `MATCHING_SCORE_MINIMO`, borrarla o ponerla en `0.46` (R-E E-1) | La variable manda sobre el default calibrado | Búsqueda "clases de tango" sin resultados directos |
 | O-10 | Medir la latencia del clasificador en un celular real (página `/diagnostico/clasificador`, `M3C-07`) | Los números son de un Chromium con la CPU frenada | Anexo de ADR-M3-01 |
+
+### 3.1 Riesgo aceptado por el dueño (2026-10-18)
+
+El piloto con usuarios reales (27/10/2026) **no se hace**, y las clases con menores se habilitan sin
+piloto (encendido: `m3c/M3C-09-habilitar-menores.md` §3). `tinku.site` queda como **demo pública de
+pruebas**. Decisiones del dueño, con fecha 2026-10-18:
+
+- **O-1** (bypass de pago), **O-3** (clave de los admins demo) y **O-4** (`seed-demo` con
+  `password123`) **no se ejecutan** mientras `tinku.site` sea demo. Se dejan como están.
+- El dueño eligió **no bloquear** la combinación "menores encendidos + cuentas demo con contraseña
+  pública" ("aunque la web esté pública es solo para pruebas"). Con la flag en `true`, cualquiera que
+  entre con un Adulto Responsable demo puede reservar sin pagar una clase para un menor demo. No se
+  agrega código que lo impida, a propósito. Queda registrado también en M3C-09 §6 y en el RUNBOOK de
+  producción §11.
+- **Deja de valer** apenas `tinku.site` tenga un usuario real: antes de eso, O-1, O-3, O-4, O-6 y el
+  borrado de la demo (RUNBOOK §10.3) pasan a ser requisito, esté la flag como esté.
 
 ## 4. Decisiones de producto — **adoptadas el 2026-10-15**
 
@@ -201,7 +217,7 @@ Leyenda: **Fix** = arreglo con test · **Dec** = espera una decisión de §4 · 
 | T2-H7 el neto se muestra con un precio inválido | Fix | G |
 | T2-H8 `updatedAt` viejo y 3 decimales en tarifa | Fix | B |
 | T2-H11 contacto en la bio | Dec D-7 | B |
-| T3-02 aviso de piloto tarde | **Acepto**: deja de aplicar si la flag de menores se enciende (O-5) | — |
+| T3-02 aviso de piloto tarde | **Acepto**: deja de aplicar si la flag de menores se enciende (O-5). _2026-10-18: el aviso ya no menciona un piloto y depende de la flag real (`feat/menores-sin-piloto`)_ | — |
 | T3-05 `GET /pagos/tarifa` responde 200 al menor | Fix | B |
 | T3-06 solo Lorena tiene CAP en el seed | Fix | H |
 | T4-H2 mensaje falso del 403 por conflicto de interés | Fix | F |
@@ -247,4 +263,4 @@ Leyenda: **Fix** = arreglo con test · **Dec** = espera una decisión de §4 · 
 3. Repetir las pruebas de los testers sobre producción para los hallazgos altos y medios: T3 (menores),
    T4 (cola de CAP), T2 (franjas), T1 (búsqueda y horarios) y T7 (móvil). Se corre un script por
    tester, reutilizando `docs/operacion/pruebas_aula/scripts/` como modelo.
-4. La Ola 0 completa, en especial O-1, O-3 y O-5, antes de abrir el piloto a usuarios reales.
+4. La Ola 0 completa, en especial O-1, O-3 y O-5, antes de abrir el piloto a usuarios reales. _2026-10-18: no hay piloto; la Ola 0 queda como riesgo aceptado mientras `tinku.site` sea demo (§3.1) y es requisito antes de abrir a usuarios reales._
