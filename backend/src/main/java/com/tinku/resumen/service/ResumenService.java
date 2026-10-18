@@ -79,8 +79,10 @@ import java.util.UUID;
  *
  * <p><b>T-M6-07:</b> al generar, agenda un recordatorio unico a las 24hs
  * (Tabla_Tiempos) con {@code recordatorio_pendiente}; se envia una sola vez.
- * Sin infraestructura de notificaciones en el piloto, el envio es un log
- * estructurado (mismo criterio que {@code RecordatorioCalificacionJob} de M7).</p>
+ * Hoy el envio es solo un log estructurado (mismo criterio que
+ * {@code RecordatorioCalificacionJob} de M7): todavia no pasa por el
+ * {@code Notificador} de {@code shared.notificacion}, que ya existe. Conectarlo es
+ * un cambio de comportamiento aparte.</p>
  */
 @Service
 public class ResumenService {
