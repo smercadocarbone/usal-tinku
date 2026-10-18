@@ -13,8 +13,9 @@ antes de mostrar (`MatchingOrquestador` + `AjusteRankingService`):
   3. corte = max(absoluto, mejor − relativo); se muestran como mucho 50.
 
 No replica la "recomendación por área" (FR-MATCH-011), que solo actúa cuando no hay resultados
-directos: las métricas miden los resultados DIRECTOS. Tampoco la reputación (el seed no tiene
-calificaciones, así que no cambia el orden).
+directos: las métricas miden los resultados DIRECTOS. Tampoco la reputación (ADR-M2-02: suma como
+mucho `peso-reputacion` = 0,05 DESPUÉS del corte, así que no cambia quién aparece; con el historial
+del seed-demo puede reordenar Tutores con puntajes a menos de 0,05).
 
 Salida: `reporte_ranking.csv` (una fila por consulta) y `reporte_ranking.md` (métricas por grupo y
 contra los umbrales de T11b). El embebedor es inyectable: los tests usan uno falso.
