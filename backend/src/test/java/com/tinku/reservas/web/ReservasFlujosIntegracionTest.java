@@ -929,6 +929,14 @@ class ReservasFlujosIntegracionTest {
     }
 
     @Test
+    void estadoClasesConMenores_sinSesion_conFlagTrue_devuelveHabilitadas() throws Exception {
+        // El aviso al Menor en el frontend depende de este estado: con la flag encendida no aparece.
+        mockMvc.perform(get("/api/reservas/clases-con-menores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.habilitadas").value(true));
+    }
+
+    @Test
     void frRes021_arReservaParaMenor_conTutorNoAutorizado_queda403() throws Exception {
         String dniAr = dniUnico();
         String dniTutor = dniUnico();

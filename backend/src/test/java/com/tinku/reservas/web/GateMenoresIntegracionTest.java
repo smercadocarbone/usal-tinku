@@ -49,8 +49,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -96,6 +98,8 @@ class GateMenoresIntegracionTest {
     @MockitoBean ReputacionBloqueoProveedor reputacionBloqueo;
 
     private static final String PASSWORD = "password123";
+    static final String CODIGO_MENORES = "MENORES_NO_HABILITADAS";
+    static final String MENSAJE_MENORES = "Las clases para menores todavía no están habilitadas.";
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
 
     private String dniUnico() {
@@ -243,7 +247,10 @@ class GateMenoresIntegracionTest {
                                 "beneficiarioId", e.menorId().toString(),
                                 "horario", e.horario().toString(),
                                 "duracionMinutos", 30))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                // Sin piloto (2026-10-18): el texto no promete una fecha ni un "fin del piloto".
+                .andExpect(jsonPath("$.codigo").value(CODIGO_MENORES))
+                .andExpect(jsonPath("$.error").value(MENSAJE_MENORES));
 
         assertThat(reservaRepo.count()).isEqualTo(reservasAntes);
     }
@@ -305,8 +312,21 @@ class GateMenoresIntegracionTest {
                                 "tutorId", e.tutorId().toString(),
                                 "horarioPropuesto", e.horario().toString(),
                                 "duracionMinutos", 30))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value(CODIGO_MENORES))
+                .andExpect(jsonPath("$.error").value(MENSAJE_MENORES));
 
         assertThat(solicitudRepo.count()).isEqualTo(solicitudesAntes);
+    }
+
+    /**
+     * El frontend decide si muestra el aviso al Menor según el estado real de la flag
+     * (antes lo mostraba siempre). Público y de solo lectura: no expone nada más que el booleano.
+     */
+    @Test
+    void estadoClasesConMenores_sinSesion_conFlagFalse_devuelveDeshabilitadas() throws Exception {
+        mockMvc.perform(get("/api/reservas/clases-con-menores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.habilitadas").value(false));
     }
 }
