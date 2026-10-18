@@ -35,6 +35,12 @@ La tesis fijó decisiones que el código todavía no refleja:
 El piloto arranca el **27/10/2026** (Sprint 11). Todo lo marcado *Antes del piloto* es
 bloqueante.
 
+> **2026-10-18 (decisión del dueño):** el piloto con usuarios reales **no se hace**. `tinku.site`
+> queda como demo pública de pruebas y las clases con menores se habilitan sin piloto cuando el dueño
+> encienda la flag (`../m3c/M3C-09-habilitar-menores.md`). En la columna *Etapa*, "Antes del piloto"
+> se lee como "antes de abrir a usuarios reales". Esta nota no cambia la medición de indicadores
+> (T11, I-01 a I-04), que se trata aparte en la evaluación de la tesis.
+
 | # | Spec | Etapa | Depende de | Riesgo |
 |---|------|-------|-----------|--------|
 | 1 | `T05-comision-27.md` | Antes del piloto | — | Medio (dinero) |

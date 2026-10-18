@@ -82,7 +82,7 @@ SELECT id, 'MODERACION_SEGURIDAD' FROM identidad.usuarios WHERE dni = '<DNI>';
 ```
 El admin tiene que volver a iniciar sesión.
 
-Desactivar o cambiar el rol de un admin (no hay pantalla de equipo en el piloto; revisión por rol §8):
+Desactivar o cambiar el rol de un admin (todavía no hay pantalla de equipo; revisión por rol §8):
 ```sql
 UPDATE admin.admins SET activo = false WHERE usuario_id = (SELECT id FROM identidad.usuarios WHERE dni = '<DNI>');
 UPDATE admin.admins SET rol = 'SOPORTE_FINANCIERO' WHERE usuario_id = (SELECT id FROM identidad.usuarios WHERE dni = '<DNI>');
@@ -115,6 +115,7 @@ Una cuenta de menor nunca opera el panel.
 | `TINKU_RESUMEN_MARGEN` | no (1.50) | Margen sobre el costo de IA (costo + 50 %). Las tarifas de OpenAI tienen su variable `TINKU_RESUMEN_COSTO_*` (ver `application.yml`) |
 | `TINKU_CLAUSULA_GRABACION_VERSION` | no (`borrador-1`) | Versión vigente de la cláusula. Al cambiar el texto, subila: todos vuelven a aceptar |
 | `TARIFA_PISO_HORA_ARS` | no (6140) | Piso por hora (T06); se revisa una vez por mes |
+| `TINKU_MENORES_SESIONES_HABILITADAS` | no (`false`) | Llave de las clases con menores (T-TES-10). **La enciende solo el dueño**, con la lista de `docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md` revisada; procedimiento de encendido y apagado en §11. Nunca se cambia el default del compose ni de `application.yml` |
 | `TINKU_TAG` | no (`latest`) | Versión de las imágenes. Para volver atrás, ver §6 |
 
 ## 4. Qué mirar en un deploy
@@ -147,9 +148,11 @@ Los hashes están en el resumen de cada run de `Deploy - produccion` en GitHub A
   `docker exec <contenedor-backup> sh backup.sh`.
 - Restaurar el último: `docker exec <contenedor-backup> sh restore.sh` (o `sh restore.sh <timestamp>`).
   **Pisa la base actual**: hacerlo con el backend detenido.
-- Ensayar la restauración en un VPS o base de prueba antes del piloto (§8).
+- Ensayar la restauración en un VPS o base de prueba antes de abrir a usuarios reales (§8).
 
-## 8. Ensayo antes del piloto (lo completa la persona que opera)
+## 8. Ensayo antes de abrir a usuarios reales (lo completa la persona que opera)
+_Hasta el 2026-10-18 decía "antes del piloto". El piloto no se hace (decisión del dueño): el ensayo
+sigue haciendo falta antes del primer usuario real, y conviene antes de encender menores (§11)._
 | Fecha | Qué se ensayó | Resultado |
 |---|---|---|
 | | Deploy de un tag por merge a `main` | |
@@ -215,3 +218,24 @@ lo que se creó con ellas probando (reservas, pagos, denuncias, notificaciones, 
 pendientes). Los dos admins demo no se pueden borrar: el log de auditoría es append-only (V16).
 Se desactivan y se anonimizan como una baja. Después, crear el admin real (§2.5) y cambiar las
 credenciales de MercadoPago de prueba por las de producción.
+
+## 11. Clases con menores y riesgo aceptado de la demo (2026-10-18)
+
+**Decisión del dueño, 2026-10-18:** el piloto con usuarios reales no se hace; las clases con menores
+se habilitan sin piloto. La lista de precondiciones, el encendido y el apagado están en
+`docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md` (§2, §3 y §4). En corto:
+
+- **Encender:** backup manual (§7) → Coolify → Environment Variables →
+  `TINKU_MENORES_SESIONES_HABILITADAS=true` → Redeploy → `curl -s
+  https://api.tinku.site/api/reservas/clases-con-menores` devuelve `{"habilitadas":true}`.
+- **Apagar:** la misma variable en `false` (o borrarla) → Redeploy → `{"habilitadas":false}`. Corta
+  las reservas y solicitudes nuevas con menores; **no** cancela las ya creadas (consulta SQL para
+  listarlas en M3C-09 §4).
+
+**Riesgo aceptado por el dueño (2026-10-18).** `tinku.site` es una demo pública de pruebas: siguen
+el bypass de pago (O-1), las claves de los admins demo (O-3) y el perfil `seed-demo` con
+`password123` (O-4). El dueño eligió **no bloquear** que convivan con los menores encendidos ("aunque
+la web esté pública es solo para pruebas"): con la flag en `true`, cualquiera que use un Adulto
+Responsable demo puede reservar sin pagar una clase para un menor demo. No hay código que lo impida.
+Esto deja de valer con el primer usuario real: antes, §10.3 (borrar la demo) y la Ola 0 completa de
+`PLAN_remediacion_hallazgos.md` (§3 y §3.1).
