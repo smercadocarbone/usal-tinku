@@ -57,10 +57,14 @@ TUTOR_TOKEN=$(login "$TUTOR_DNI" "$TUTOR_PASSWORD") || falla "login del tutor de
 TUTOR_ID=$(psql_tAc "SELECT id FROM identidad.usuarios WHERE dni='$TUTOR_DNI'")
 curl -sf -X PUT "$BASE/api/pagos/tarifa" -H "Authorization: Bearer $TUTOR_TOKEN" \
     -H 'Content-Type: application/json' -d '{"precioHora":12000}' > /dev/null || falla "PUT tarifa"
-curl -sf -X POST "$BASE/api/tutores/franjas" -H "Authorization: Bearer $TUTOR_TOKEN" \
+# Desde el seed de franjas semanales de 08 a 23 (9ca1aac) la tutora ya tiene ese horario:
+# el backend responde 409 FRANJA_SUPERPUESTA y la franja de mañana ya está cubierta.
+FRANJA=$(curl -s -w '\n%{http_code}' -X POST "$BASE/api/tutores/franjas" -H "Authorization: Bearer $TUTOR_TOKEN" \
     -H 'Content-Type: application/json' \
-    -d "{\"fechaEspecifica\":\"$FECHA\",\"horaInicio\":\"17:00\",\"horaFin\":\"20:00\"}" > /dev/null \
-    || falla "POST franja"
+    -d "{\"fechaEspecifica\":\"$FECHA\",\"horaInicio\":\"17:00\",\"horaFin\":\"20:00\"}")
+code=$(echo "$FRANJA" | tail -n1)
+[ "$code" = "201" ] || { [ "$code" = "409" ] && echo "$FRANJA" | grep -q FRANJA_SUPERPUESTA; } \
+    || falla "POST franja devolvió $code: $(echo "$FRANJA" | head -n1)"
 
 paso "Registro y login de un estudiante nuevo ($EST_DNI)"
 DATOS="{\"dniDeclarado\":\"$EST_DNI\",\"nombreDeclarado\":\"Smoke\",\"apellidoDeclarado\":\"Test\",\"fechaNacimientoDeclarada\":\"2000-01-01\",\"email\":\"smoke$EST_DNI@tinku.test\",\"password\":\"$EST_PASSWORD\",\"capacidadEstudiante\":true,\"capacidadAdultoResponsable\":false,\"aceptaTerminos\":true}"
