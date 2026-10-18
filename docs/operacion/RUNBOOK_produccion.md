@@ -173,7 +173,7 @@ contraseña, que elegís vos al cargarlas (no está en el repo).
 | 99900101 – 99900104 | Lucía, Martín, Valentina, Nicolás (estudiantes adultos) | Buscar, reservar, pagar, entrar al aula, calificar, ver resúmenes. Lucía ya tiene historial |
 | 99900001 – 99900008 | María (Matemática), Juan (Inglés), Ana (Física/Química), Carlos (Programación), Laura (Historia), Diego (Anatomía), Sofía (primaria), Paula (Análisis, nueva: sin calificaciones) | Panel del tutor, franjas, tarifa, aula |
 | 99900201 | Roberto (Adulto Responsable) | Menores a cargo, autorizaciones (ya autorizó a María para Tomás) |
-| 99900202 | Tomás, 14 años (menor) | Que las clases con menores sigan cerradas (T-TES-10) |
+| 99900202 | Tomás, 14 años (menor) | Que las clases con menores respeten la flag (T-TES-10): con `TINKU_MENORES_SESIONES_HABILITADAS=false` ve el aviso y su pedido da 409 |
 | 99900301 | Carla (admin Moderación y Seguridad) | Panel de moderación |
 | 99900302 | Federico (admin Soporte Financiero) | Panel financiero |
 
