@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import math
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ import pytest
 RUTA = Path(__file__).resolve().parent / "eval_relevancia" / "evaluar_ranking.py"
 _spec = importlib.util.spec_from_file_location("evaluar_ranking", RUTA)
 er = importlib.util.module_from_spec(_spec)
+sys.modules["evaluar_ranking"] = er  # dataclasses lo busca por nombre de módulo
 _spec.loader.exec_module(er)
 
 
@@ -101,13 +103,13 @@ def test_evaluar_yMetricas_casoAMano():
     # Vectores unitarios en el plano: el coseno es el producto escalar.
     ang = lambda g: [math.cos(math.radians(g)), math.sin(math.radians(g))]  # noqa: E731
     vectores = {"T1: x": ang(0), "T2: x": ang(30), "T3: x": ang(90),
-                "q1": ang(10),           # A 0,985 · B 0,940 · C 0,174 → muestra A, B
-                "q2 en primaria": ang(0),  # solo C es de primaria: 0,0 < 0,46 → nada
-                "q3": ang(60)}           # A 0,5 · B 0,866 · C 0,866 → corte 0,616: B, C (empate)
+                "uno": ang(10),          # A 0,985 · B 0,940 · C 0,174 → muestra A, B
+                "dos en primaria": ang(0), # solo C es de primaria: 0,0 < 0,46 → nada
+                "tres": ang(60)}         # A 0,5 · B 0,866 · C 0,866 → corte 0,616: B, C (empate)
     consultas = [
-        er.Consulta("1", "q1", "relevante", {"B"}),
-        er.Consulta("2", "q2 en primaria", "relevante", {"C"}),
-        er.Consulta("3", "q3", "relevante", {"A", "C"}),
+        er.Consulta("1", "uno", "relevante", {"B"}),
+        er.Consulta("2", "dos en primaria", "relevante", {"C"}),
+        er.Consulta("3", "tres", "relevante", {"A", "C"}),
         er.Consulta("4", "!!", "sin_sentido", set()),
     ]
     res = er.evaluar(consultas, tutores, _embebedor_falso(vectores), 0.46, 0.25)
@@ -137,3 +139,26 @@ def test_reportes_seEscriben(tmp_path):
     assert "Q" not in (tmp_path / "r.csv").read_text(encoding="utf-8").splitlines()[0]
     md = (tmp_path / "r.md").read_text(encoding="utf-8")
     assert "| MRR (relevantes) | 1,000 | ≥ 0,80 | sí |" in md
+
+
+def test_conMemoria_embebeCadaTextoUnaVez():
+    llamadas = []
+
+    def emb(textos):
+        llamadas.append(list(textos))
+        return [[float(len(t)), 0.0] for t in textos]
+
+    m = er.con_memoria(emb)
+    assert m(["ab", "abc", "ab"]) == [[2.0, 0.0], [3.0, 0.0], [2.0, 0.0]]
+    assert m(["abc"]) == [[3.0, 0.0]]
+    assert llamadas == [["ab", "abc"]]
+
+
+def test_reporte_incluyeBarrido(tmp_path):
+    m = {"n_relevante": 1, "n_irrelevante": 0, "n_sin_sentido": 0, "mrr": 1.0, "recall@5": 1.0,
+         "relevantes_con_resultado": 1.0, "irrelevantes_en_cero": 0.5, "sin_sentido_en_cero": 1.0,
+         "sin_resultados_total": 0.0}
+    er.escribir_md(m, tmp_path / "r.md", 0.46, 0.25, "falso", "2026-10-18", [(0.46, m), (0.5, m)])
+    md = (tmp_path / "r.md").read_text(encoding="utf-8")
+    assert "## Barrido del umbral absoluto" in md
+    assert "| 0,500 | 1,000 | 1,000 | 100,0 % | 50,0 % | 100,0 % |" in md
