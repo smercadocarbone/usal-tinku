@@ -1,0 +1,121 @@
+id,texto,grupo,relevantes
+Q001,ayuda con funciones cuadráticas,relevante,30111222|31000002|31000003
+Q002,necesito aprender a resolver sistemas de ecuaciones,relevante,30111222|31000001|31000002|31000003|31000016|31000026
+Q003,clases de matemática para secundario,relevante,30111222|31000001|31000002|31000003|31000004
+Q004,mi hijo no entiende las fracciones,relevante,30777888|31000028|31000004|31000001
+Q005,cómo hacer divisiones de dos cifras,relevante,31000028
+Q006,tablas de multiplicar para primaria,relevante,30777888|31000028
+Q007,inglés para chicos de primer grado,relevante,30222333|31000030
+Q008,voz pasiva en inglés,relevante,30222333|31000005|31000007
+Q009,past simple y present perfect,relevante,30222333|31000005|31000006|31000007
+Q010,física: cinemática y movimiento,relevante,30333444|31000008|31000010|31000019
+Q011,problemas de dinámica y fuerzas,relevante,30333444|31000008|31000010|31000002|31000019
+Q012,trabajo y energía física,relevante,30333444|31000008|31000010|31000002|31000019
+Q013,química la tabla periódica,relevante,30333444|31000009|31000010|31000019
+Q014,estructura del átomo,relevante,30333444|31000009|31000010|31000019
+Q015,historia revolución francesa,relevante,30555666|31000014
+Q016,la revolución industrial,relevante,30555666|31000014
+Q017,programación recursividad,relevante,30444555|31000018|31000015
+Q018,algoritmos de búsqueda y ordenamiento,relevante,30444555|31000018|31000015
+Q019,anatomía sistema nervioso,relevante,30666777|31000024|31000025|31000027
+Q020,comprensión lectora para primaria,relevante,30777888|31000028
+Q021,derivadas e integrales,relevante,31000002|31000003|31000016|31000017|31000026
+Q022,límites y continuidad para la facultad,relevante,31000016|31000017|31000026
+Q023,teorema de pitágoras,relevante,31000001|31000003
+Q024,ecuaciones lineales,relevante,31000001|31000002|31000003|31000004|31000028
+Q025,trigonometría,relevante,31000002|31000003|31000026
+Q026,números complejos,relevante,31000002|31000003
+Q027,logaritmos y función exponencial,relevante,31000002|31000003
+Q028,probabilidad y estadística para ingeniería,relevante,31000017|31000023
+Q029,prueba de hipótesis estadística,relevante,31000017|31000023
+Q030,álgebra lineal: matrices y determinantes,relevante,31000016|31000026
+Q031,vectores y producto vectorial,relevante,31000016|31000026
+Q032,lógica proposicional y grafos,relevante,31000018
+Q033,sistemas de numeración binario,relevante,31000018
+Q034,listas pilas y colas en programación,relevante,30444555|31000018|31000015
+Q035,consultas SQL y bases de datos,relevante,31000015
+Q036,programación orientada a objetos,relevante,31000015
+Q037,aprender a programar desde cero,relevante,30444555|31000018|31000015
+Q038,circuitos eléctricos,relevante,31000002|31000008|31000019
+Q039,electromagnetismo y ley de Faraday,relevante,31000002|31000008|31000019
+Q040,óptica y luz,relevante,31000002|31000008|31000010|31000019|31000029
+Q041,química orgánica,relevante,31000009|31000010
+Q042,estequiometría y moles,relevante,31000009|31000010|31000019
+Q043,soluciones y concentraciones en química,relevante,31000009|31000010|31000019
+Q044,la célula y sus partes,relevante,31000009|31000011|31000024|31000029
+Q045,genética mendeliana,relevante,31000009|31000011|31000024
+Q046,fotosíntesis,relevante,31000009|31000011|31000029
+Q047,sistema inmunológico,relevante,31000009|31000011|31000027
+Q048,análisis sintáctico de oraciones,relevante,31000012|31000028|31000030
+Q049,literatura gauchesca martín fierro,relevante,31000012
+Q050,el boom latinoamericano,relevante,31000012|31000013
+Q051,cómo escribir un texto argumentativo,relevante,31000012|31000013|31000030
+Q052,ortografía y uso de la tilde,relevante,31000012|31000028|31000030
+Q053,filosofía moderna kant,relevante,31000013
+Q054,existencialismo,relevante,31000013
+Q055,peronismo y la década del 30,relevante,31000014
+Q056,revolución de mayo,relevante,31000014|31000029
+Q057,geografía argentina relieve y climas,relevante,31000014|31000029
+Q058,globalización e integración regional,relevante,31000014|31000029
+Q059,derecho constitucional,relevante,31000020|31000021
+Q060,teoría del delito derecho penal,relevante,31000021
+Q061,obligaciones civiles y responsabilidad civil,relevante,31000020
+Q062,contabilidad partida doble,relevante,31000022
+Q063,microeconomía oferta y demanda,relevante,31000022|31000023
+Q064,macroeconomía inflación y dinero,relevante,31000022|31000023
+Q065,administración de empresas planificación,relevante,31000022
+Q066,histología tejidos,relevante,31000024|31000009
+Q067,ciclo de Krebs bioquímica,relevante,31000024
+Q068,neurotransmisión y sinapsis,relevante,31000011|31000025
+Q069,historia de la psicología psicoanálisis,relevante,31000025
+Q070,metodología de la investigación,relevante,31000025
+Q071,perspectiva y dibujo arquitectónico,relevante,31000026
+Q072,signos vitales enfermería,relevante,31000027
+Q073,microbiología bacterias y virus,relevante,31000027
+Q074,fisiología cardiovascular,relevante,30666777|31000027
+Q075,sumas y restas para primer grado,relevante,30111222|31000028
+Q076,geometría figuras y perímetro primaria,relevante,31000028|31000004
+Q077,regla de tres y porcentajes,relevante,31000001|31000004|31000028
+Q078,ciencias naturales sistema solar,relevante,31000029
+Q079,inglés conditionals,relevante,31000005|31000006|31000007
+Q080,english reported speech,relevante,30222333|31000005|31000007
+Q081,vocabulario de inglés colores y animales para chicos,relevante,30222333|31000030
+Q082,álgebra para ingeniería civil,relevante,31000016
+Q083,matemática para arquitectura,relevante,31000026
+Q084,física para ingeniería leyes de newton,relevante,31000019
+Q085,biología celular para el cbc,relevante,31000024
+Q086,clases de tango bailarín,irrelevante,
+Q087,cómo cocinar milanesas,irrelevante,
+Q088,jardinería y huerta en casa,irrelevante,
+Q089,aprender a manejar un auto,irrelevante,
+Q090,reparación de celulares,irrelevante,
+Q091,clases de guitarra eléctrica,irrelevante,
+Q092,yoga y meditación,irrelevante,
+Q093,maquillaje profesional,irrelevante,
+Q094,entrenamiento de perros,irrelevante,
+Q095,tejido al crochet,irrelevante,
+Q096,clases de natación,irrelevante,
+Q097,curso de fotografía,irrelevante,
+Q098,reparar una bicicleta,irrelevante,
+Q099,recetas de pastelería,irrelevante,
+Q100,aprender a tocar el piano,irrelevante,
+Q101,trámite del pasaporte,irrelevante,
+Q102,invertir en criptomonedas,irrelevante,
+Q103,corte y confección,irrelevante,
+Q104,clases de surf,irrelevante,
+Q105,manejo de drones,irrelevante,
+Q106,asdkjh qwezxc,sin_sentido,
+Q107,a,sin_sentido,
+Q108,zzzz,sin_sentido,
+Q109,!!!!,sin_sentido,
+Q110,qwerty uiop,sin_sentido,
+Q111,lkjh gfds,sin_sentido,
+Q112,xyz,sin_sentido,
+Q113,123456,sin_sentido,
+Q114,ñññ ñññ,sin_sentido,
+Q115,bla bla bla,sin_sentido,
+Q116,jjjjj kkkk,sin_sentido,
+Q117,pppp qqqq rrrr,sin_sentido,
+Q118,?? ¿¿,sin_sentido,
+Q119,xx yy zz,sin_sentido,
+Q120,hgfdsa,sin_sentido,

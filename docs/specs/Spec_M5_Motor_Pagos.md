@@ -136,6 +136,9 @@ Este módulo gestiona el dinero: cobro vía MercadoPago en escrow, la comisión 
 | 6 | Fondos de un Tutor con sanción definitiva | Se libera lo de sesiones ya realizadas, se retiene y reembolsa lo futuro (FR-PAG-011). |
 | 7 _(agregado, auditoría 2026-09-18)_ | Titular de la tarjeta disputa el cargo directamente con su banco (contracargo), en paralelo o en vez de usar la Denuncia de Tinku | Cola de intervención manual de Soporte Financiero; pausa si el escrow sigue retenido, sin reversión automática si ya se liberó (FR-PAG-015/016). |
 
+> **Nota 2026-10-18 (T-TES-11b, sin piloto):** el piloto no se hace; la revisión de la comisión del caso 4 pasa a
+> trabajo futuro, con disparador: primer trimestre de operación con cobro real (no hay datos de cobro en la demo).
+
 ## 6. Fuera de Alcance de este Spec
 
 - La integración técnica con la API de MercadoPago (webhooks, tokens, sandbox) — Plan técnico.

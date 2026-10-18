@@ -48,7 +48,14 @@ const GRUPOS: GrupoAdmin[] = [
     ],
   },
   { titulo: "Soporte", items: [{ href: "/admin/tickets", label: "Tickets de soporte", cola: "tickets" }] },
-  { titulo: "Sistema", items: [{ href: "/admin/salud", label: "Salud de Infraestructura" }] },
+  {
+    titulo: "Sistema",
+    items: [
+      { href: "/admin/salud", label: "Salud de Infraestructura" },
+      // T-TES-11b: indicadores de las sesiones moderadas (cualquier Admin, solo lectura).
+      { href: "/admin/evaluacion", label: "Evaluación" },
+    ],
+  },
 ];
 
 const NOMBRE_ROL: Record<RolAdmin, string> = {

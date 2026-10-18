@@ -73,6 +73,8 @@ public class SecurityConfig {
                 HttpMethod.OPTIONS.name()));
         config.setAllowedHeaders(List.of("Origin", "Content-Type", "Authorization", "Accept"));
         config.setAllowCredentials(true);
+        // T-TES-11b: el frontend lee el id de la búsqueda registrada (otro origin en dev y prod).
+        config.setExposedHeaders(List.of(com.tinku.matching.web.BusquedaController.HEADER_BUSQUEDA_ID));
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);

@@ -58,6 +58,18 @@ public class MatchingExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
+    /** T-TES-11b: flag apagado o búsqueda ajena/inexistente → 404. */
+    @ExceptionHandler({com.tinku.shared.evaluacion.EvaluacionDeshabilitadaException.class,
+            com.tinku.matching.service.BusquedaEvaluacionNoEncontradaException.class})
+    public ResponseEntity<Map<String, String>> handleEvaluacionNoEncontrada(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(com.tinku.matching.service.AceptacionInvalidaException.class)
+    public ResponseEntity<Map<String, String>> handleAceptacionInvalida(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(MateriaNivelInvalidaException.class)
     public ResponseEntity<Map<String, String>> handleMateriaInvalida(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)

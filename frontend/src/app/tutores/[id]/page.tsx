@@ -8,6 +8,7 @@ import { BadgeCheck, CalendarDays, ChevronLeft, Flag, IdCard, ShieldCheck, UserX
 import { api, ApiError, autorizarTutor, getComentariosTutor, getDisponibilidadTutor, getMenores, mensajeDeError, type ComentarioPublico, type DiaDisponible, type Menor } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import { useClasesConMenores } from "@/lib/useClasesConMenores";
+import { registrarAceptacion } from "@/lib/evaluacion";
 import { diaCorto } from "@/lib/formatos";
 import { TIEMPOS } from "@/lib/tiempos";
 import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tutores";
@@ -80,6 +81,11 @@ export default function TutorPerfilPage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // T-TES-11b (I-01): abrir el perfil de un Tutor sugerido cuenta como aceptación (si la evaluación está encendida).
+  useEffect(() => {
+    registrarAceptacion(params.id, "PERFIL");
+  }, [params.id]);
 
   const foto = useFotoTutor(perfil?.id, perfil?.tieneFoto);
   const esMenor = payload?.tipo === "MENOR";

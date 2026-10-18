@@ -19,7 +19,8 @@ import java.util.UUID;
 /**
  * Implementacion real de {@link ReputacionSignalProvider} (reemplaza el stub de
  * M2-C). Peso simple por Tutor (ADR-M7-01 / ADR-M2-02, version piloto) — se
- * recalibra con datos reales:
+ * recalibra con datos reales (2026-10-18, T-TES-11b: sin piloto, la recalibracion queda como
+ * trabajo futuro hasta tener 50 calificaciones reales; ver la nota en ADR-M2-02):
  *
  * <ul>
  *   <li>volumen: hasta 1.0 por sesiones dictadas (saturado en 50 sesiones)</li>

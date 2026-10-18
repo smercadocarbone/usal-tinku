@@ -77,3 +77,5 @@ Decisiones Técnicas de la Constitución, porque esa fila no fija el porcentaje.
   cobros muestran 27 % en las viejas y 21 % en las nuevas.
 - **Revisión.** La métrica para revisar la comisión después del piloto sigue diferida
   (BR-PAG-03).
+  **Nota 2026-10-18 (T-TES-11b, sin piloto):** sin piloto ni cobro real (la demo usa bypass), no hay datos para
+  esta revisión: pasa a **trabajo futuro**, disparador: primer trimestre de operación con cobro real.

@@ -1,5 +1,10 @@
 # T11 — Instrumentación de los indicadores del piloto
 
+> **REEMPLAZADA (2026-10-18)** por [`T11b-evaluacion-sin-piloto.md`](T11b-evaluacion-sin-piloto.md).
+> Decisión del dueño: el piloto con usuarios reales del 27/10/2026 no se hace; la hipótesis se valida
+> con evaluación técnica + sesiones moderadas con usuarios. Esta spec nunca se registró como tarea ni
+> se implementó. Se conserva como antecedente; no implementar lo que sigue.
+
 **Branch:** `tesis/instrumentacion-piloto` · **Riesgo:** bajo · **Bloqueada por:** — (PT8 ya resuelta)
 
 ## 1. Problema (verificado al 2026-09-23)

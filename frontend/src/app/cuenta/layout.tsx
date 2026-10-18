@@ -7,6 +7,7 @@ import { getAlertasMias, getDenunciasRecibidas } from "@/lib/api";
 import { useSesion } from "@/lib/useSesion";
 import AppShell from "@/components/shell/AppShell";
 import SettingsShell, { type GrupoNavAjustes } from "@/components/settings/SettingsShell";
+import EncuestaNps from "@/components/evaluacion/EncuestaNps";
 
 /** Rutas de "ajustes" de la cuenta: van con el menú lateral. El resto son destinos
  *  principales (Mis clases, Mis chicos, Mi agenda…) y ocupan la pantalla entera. */
@@ -52,8 +53,16 @@ export default function CuentaLayout({ children }: { children: ReactNode }) {
   // pediría datos de otro rol (p. ej. estado-perfil del Tutor) y recién después redirigiría.
   if ((sesion && !permitida) || (!sesion && rutaCuentaRestringida(pathname))) return <AppShell>{null}</AppShell>;
 
+  // T-TES-11b (I-04): NPS in-app; decide el backend y nunca a un Menor.
+  const encuesta = sesion ? <EncuestaNps esMenor={sesion.payload.tipo === "MENOR"} /> : null;
+
   if (!RUTAS_AJUSTES.includes(pathname)) {
-    return <AppShell>{children}</AppShell>;
+    return (
+      <AppShell>
+        {children}
+        {encuesta}
+      </AppShell>
+    );
   }
 
   const payload = sesion?.payload;
@@ -102,6 +111,7 @@ export default function CuentaLayout({ children }: { children: ReactNode }) {
       <SettingsShell base="/cuenta" grupos={grupos}>
         {children}
       </SettingsShell>
+      {encuesta}
     </AppShell>
   );
 }
