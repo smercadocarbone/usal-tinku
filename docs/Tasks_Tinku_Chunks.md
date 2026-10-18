@@ -176,6 +176,7 @@ _(requiere M1, M9, M5 cerrados — es la interfaz sobre reglas ya definidas, no 
 - [x] **Chunk TESIS-RESUMEN-PRECIO** — Precio del adicional de resumen por duración (T-TES-17, spec `tesis/T17-precio-resumen-por-duracion.md`, ADR-M5-06, BR-PAG-11) — _branch `tesis/resumen-precio-duracion`. Riesgo medio (dinero). Sin dependencias._
 - [x] **Chunk TESIS-COBERTURA** — JaCoCo en CI (T-TES-14, spec `tesis/T14-cobertura-ci.md`, ADR-000-05) — _Riesgo bajo. Cerrado 2026-10-14: 85,6 % de líneas._
 - [x] **Chunk SEED-DEMO** — Seed de pruebas rescatado del PR #75 (T-TES-18) — _Cerrado 2026-10-14; suite 661/0._
+- [~] **Chunk TESIS-EVALUACION** — Evaluación sin piloto (T-TES-11b, spec `tesis/T11b-evaluacion-sin-piloto.md`; reemplaza a T11) — _branch `feat/evaluacion-sin-piloto`. Riesgo bajo (todo apagado por defecto). Código, scripts, evaluación técnica y textos de la tesis hechos 2026-10-18; quedan las sesiones moderadas y las decisiones del dueño (umbral 0,46 vs 0,54, consentimiento, entorno con bypass)._
 
 
 ## UX — Rediseño UX/UI (specs en `docs/superpowers/specs/ux/`)
