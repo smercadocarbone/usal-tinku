@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tinku Proyecto Final</title>
 <link rel="stylesheet" href="/presentacion/media/vendor/fonts.css">
 <style>
@@ -88,11 +89,15 @@ h2 em{font-style:normal;color:var(--amber)}
 /* 3 diagnóstico */
 .diag-h{display:flex;justify-content:space-between;align-items:flex-end;gap:60px}
 .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:62px;height:560px}
-.pn{position:relative;border-radius:28px;background:var(--pine);border:1px solid var(--line);padding:46px 44px;overflow:hidden;cursor:pointer}
+.pn{position:relative;border-radius:28px;background:var(--pine);border:1px solid var(--line);padding:46px 44px;overflow:hidden}
 .pn .p{position:absolute;inset:46px 44px;transition:opacity .6s,transform .6s}
 .pn .s{position:absolute;inset:0;padding:46px 44px;background:var(--brand);opacity:0;transform:translateY(40px);transition:opacity .6s,transform .6s;display:flex;flex-direction:column;justify-content:flex-end}
 .pn.sol .s{opacity:1;transform:none}
 .pn.sol .p{opacity:.0;transform:translateY(-20px)}
+/* diagnóstico por pasos: cada panel aparece con Siguiente */
+.slide.on .pn.hid,.slide.on .fc.hid{visibility:hidden}
+.slide.on .pn.vis,.slide.on .fc.vis{animation:pnIn .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pnIn{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
 .pn .w{overflow-wrap:anywhere;font:800 70px/.95 var(--f-display);letter-spacing:-.03em;margin:0}
 .pn .w s{text-decoration-thickness:8px;text-decoration-color:var(--alert)}
 .pn .d{font:400 30px/1.35 var(--f-body);color:var(--mute);margin:26px 0 0}
@@ -310,7 +315,7 @@ h2 em{font-style:normal;color:var(--amber)}
 /* 13 riesgos */
 .risk h2{font-size:100px}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:60px;height:520px}
-.fc{perspective:1600px;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left}
+.fc{perspective:1600px;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left}
 .fc:focus-visible{outline:3px solid var(--amber);outline-offset:6px;border-radius:30px}
 .fi{position:relative;width:100%;height:100%;transition:transform .9s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
 .fc.flip .fi{transform:rotateY(180deg)}
@@ -428,7 +433,10 @@ body[data-model="pptx"] span[data-only="pptx"],body[data-model="tesis"] span[dat
 .rs.ok i{background:var(--leaf);box-shadow:0 0 0 4px rgba(79,209,161,.2)}
 #qp{position:fixed;inset:0;z-index:60;background:rgba(3,10,8,.82);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px}
 #qp.open{display:flex}
-.qpb{background:var(--pine);border:1px solid var(--line);border-radius:26px;padding:30px;width:min(440px,100%);text-align:center}
+.qpb{background:var(--pine);border:1px solid var(--line);border-radius:26px;padding:30px;width:min(720px,100%);text-align:center}
+.qpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.qpg h4{font:700 20px var(--f-display);margin:0 0 4px}
+.qpg small{display:block;font:400 13px/1.4 var(--f-body);color:var(--mute);margin:0 0 12px}
 .qpb h3{font:800 28px/1.1 var(--f-display);margin:0 0 6px}
 .qpb p{font:400 15px/1.45 var(--f-body);color:var(--mute);margin:0 0 18px}
 .qpb .qq{background:#fff;border-radius:18px;padding:16px;width:260px;height:260px;margin:0 auto 16px;display:grid;place-items:center}
@@ -546,6 +554,32 @@ body.idle,body.idle *{cursor:none!important}
 #mnav button:active{transform:scale(.97)}
 #mnav #mnext{background:var(--amber);color:#2a1a00;border-color:var(--amber)}
 #mnav button[disabled]{opacity:.3}
+/* jurado: sin pasar diapositivas, sin notas ni cronómetro; solo los controles de cada diapositiva */
+body.jurado #mnav,body.jurado #mtm,body.jurado #mnotes{display:none!important}
+/* ajustes para celulares angostos (~360-400 px): nada se corta ni se sale del ancho */
+#mando header{gap:8px}
+#mst{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mando header .sp{display:none}
+#mando header .mtm,#mcnt{flex:0 0 auto;white-space:nowrap}
+#mnotes summary{font-size:16px}
+/* el contenido crece y #mando hace scroll; así nada pasa por debajo de Anterior/Siguiente */
+#mando main{flex:1 0 auto}
+/* presentador: arriba título, notas y avance; la mitad de abajo es Anterior / Siguiente */
+body.mando:not(.jurado) #mando{overflow:hidden;height:100vh;height:100dvh}
+body.mando:not(.jurado) #mando main{flex:1 1 0;min-height:0;overflow:auto}
+body.mando:not(.jurado) #mnav{position:static;flex:0 0 50%;grid-template-columns:1fr;grid-template-rows:1fr 1.6fr}
+body.mando:not(.jurado) #mnav button{display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:clamp(30px,10vw,44px)}
+body.mando:not(.jurado) #mnav small{font-size:15px;max-width:100%}
+body.mando:not(.jurado) #mctl:empty{display:none}
+#mctl>*{flex-shrink:0}
+.mrow>*{min-width:0}
+.mrow.msm .mb{font-size:20px;padding:12px 4px;min-height:84px}
+.mrow.msm{grid-auto-rows:minmax(84px,1fr)}
+.mval{font-size:clamp(40px,12vw,72px)}
+.mq input{font-size:22px}
+#mnav{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)}
+#mnav button{min-width:0;font-size:clamp(22px,7vw,30px)}
+#mnav small{font-size:14px}
 #mnav small{display:block;margin-top:8px;font:500 13px/1.2 var(--f-mono);letter-spacing:0;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msnap{color:var(--amber)!important}
 </style>
@@ -634,39 +668,39 @@ body.idle,body.idle *{cursor:none!important}
   </div>
 </section>
 <!-- 3 DIAGNOSTICO -->
-<section class="slide" data-id="diagnostico" data-title="Diagnóstico: tres fallas del mercado" data-kw="diagnostico mercado oferta fragmentada brecha geografica ritmo inflexible clases particulares garantias verificar clases uno a uno" data-notes="Tres fallas: oferta fragmentada (redes de recomendación sin estándares), brecha geográfica (el interior queda afuera) y ritmo inflexible (la clase avanza al ritmo del grupo). Los paneles se dan vuelta solos; desde el celular se puede elegir cuál.">
+<section class="slide" data-id="diagnostico" data-title="Diagnóstico: tres fallas del mercado" data-kw="diagnostico mercado oferta fragmentada brecha geografica ritmo inflexible clases particulares garantias verificar clases uno a uno" data-notes="Tres fallas: oferta fragmentada (redes de recomendación sin estándares), brecha geográfica (el interior queda afuera) y ritmo inflexible (la clase avanza al ritmo del grupo). Arranca vacía: cada Siguiente descubre una falla y, el siguiente, su respuesta (seis pasos). Anterior deshace el último paso.">
   <div class="diag-h">
     <div><h2 class="r" style="--i:1">Tres cosas<br>que <em>no andan.</em></h2></div>
   </div>
   <div class="panels">
-    <div class="pn r" style="--i:3" tabindex="0" role="button" aria-label="Oferta fragmentada. Activar para ver la respuesta">
+    <div class="pn r" style="--i:3">
       <div class="p"><p class="tag">Falla 1</p><p class="w"><s>Oferta fragmentada</s></p><p class="d">Boca en boca, sin garantías objetivas de quién enseña ni de cómo se paga.</p></div>
       <div class="s"><p class="tag">Respuesta</p><p class="w">Tutores verificados</p><p class="d">Identidad con DNI, título revisado y pago protegido en un solo lugar.</p></div>
     </div>
-    <div class="pn r" style="--i:4" tabindex="0" role="button" aria-label="Brecha geográfica. Activar para ver la respuesta">
+    <div class="pn r" style="--i:4">
       <div class="p"><p class="tag">Falla 2</p><p class="w"><s>Brecha geográfica</s></p><p class="d">Escasez de tutores en el interior. Viajar horas no es una opción para la mayoría.</p></div>
       <div class="s"><p class="tag">Respuesta</p><p class="w">Aula en el navegador</p><p class="d">Con conexión alcanza. Sin instalar nada, el tutor puede estar a cientos de km.</p></div>
     </div>
-    <div class="pn r" style="--i:5" tabindex="0" role="button" aria-label="Ritmo inflexible. Activar para ver la respuesta">
+    <div class="pn r" style="--i:5">
       <div class="p"><p class="tag">Falla 3</p><p class="w"><s>Ritmo inflexible</s></p><p class="d">La clase colectiva avanza al ritmo del grupo, no al de cada alumno.</p></div>
       <div class="s"><p class="tag">Respuesta</p><p class="w">Clase 1 a 1</p><p class="d">Horario, duración y tema los elige quien aprende. Resumen con IA para repasar.</p></div>
     </div>
   </div>
 </section>
 <!-- CLIENTES -->
-<section class="slide who" data-id="clientes" data-title="Dos clientes, un mercado" data-kw="clientes tutores estudiantes familias entrevista apoyo escolar agenda completa intermediacion no lo usaria menores publico objetivo segmento oferta demanda quien" data-notes="Tinku tiene dos clientes: quien necesita aprender y quien enseña. Contar las entrevistas (≈1 min): nueve personas en cuatro perfiles. La tutora consolidada, con más de veinte alumnos, no la usaría: no necesita intermediación. Los cuatro tutores con horas libres aceptan el 27 % a cambio de alumnos y cobro garantizado. Las tres familias del interior (Maciá, Ingeniero Jacobacci y Rafaela) no consiguieron profesor cerca y aceptarían uno de otra provincia, si la recomendación dice por qué.">
+<section class="slide who" data-id="clientes" data-title="Dos clientes, un mercado" data-kw="clientes tutores estudiantes familias entrevista apoyo escolar agenda completa intermediacion no lo usaria menores publico objetivo segmento oferta demanda quien" data-notes="Tinku tiene dos clientes: quien necesita aprender y quien enseña. Contar las entrevistas (≈1 min): diez personas en cuatro perfiles. La tutora consolidada, con más de veinte alumnos, no la usaría: no necesita intermediación. Cuatro de los cinco tutores con horas libres aceptan el 27 % a cambio de alumnos y cobro garantizado; la quinta, que factura y nunca tuvo problemas para cobrar, no pagaría la comisión. Las tres familias del interior (Maciá, Ingeniero Jacobacci y Rafaela) no consiguieron profesor cerca y aceptarían uno de otra provincia, si la recomendación dice por qué.">
   <h2 class="r" style="--i:0">Dos clientes, <em>un mercado.</em></h2>
   <div class="wg">
     <div class="wc r" style="--i:1"><p class="t">La demanda</p><b>Estudiantes y familias</b><ul><li>Buscan un tutor en el que confiar</li><li>Reservan en minutos y pagan protegido</li><li>Los menores van siempre de la mano de un adulto responsable</li></ul></div>
     <div class="wc r" style="--i:2"><p class="t">La oferta</p><b>Tutores</b><ul><li>Tienen horarios libres y quieren llegar a más alumnos</li><li>Fijan su precio y sus horarios</li><li>Cobran en su propia cuenta de MercadoPago</li></ul></div>
   </div>
   <div class="iv r" style="--i:3">
-    <div><p class="t">Entrevistas · 9 personas, 4 perfiles</p><b>Con la agenda llena, no. Con horas libres, sí.</b><p>La tutora consolidada no lo usaría. Los cuatro tutores con horas libres aceptan la comisión por el cobro garantizado, y las tres familias del interior no consiguieron profesor cerca.</p></div>
-    <div class="pl"><span class="no">Tutora consolidada: no lo usaría</span><span class="si">4 de 4 tutores: aceptan el 27 %</span><span class="si">3 de 3 familias: sí a un tutor de otra provincia</span></div>
+    <div><p class="t">Entrevistas · 10 personas, 4 perfiles</p><b>Con la agenda llena, no. Con horas libres, sí.</b><p>La tutora consolidada no lo usaría. Cuatro de cinco tutores con horas libres aceptan la comisión por el cobro garantizado, y las tres familias del interior no consiguieron profesor cerca.</p></div>
+    <div class="pl"><span class="no">Tutora consolidada: no lo usaría</span><span class="si">4 de 5 tutores: aceptan el 27 %</span><span class="si">3 de 3 familias: sí a un tutor de otra provincia</span></div>
   </div>
 </section>
 <!-- ENCUESTA -->
-<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Abrir cada tarjeta desde el celular para mostrar qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; la mediana de disposición a pagar es USD 4,56 por hora; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación; 90,9 % de las respuestas viene de Buenos Aires, por eso la hipótesis geográfica sigue pendiente.">
+<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Invitar al jurado a abrir cada tarjeta desde su celular para ver qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; la mediana de disposición a pagar es USD 4,56 por hora; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación; 90,9 % de las respuestas viene de Buenos Aires, por eso la hipótesis geográfica sigue pendiente.">
   <h2 class="r" style="--i:1">Lo que dijo<br><em>la encuesta.</em></h2>
   <p class="r" style="--i:2;font:500 22px var(--f-mono);color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 0">88 respuestas válidas · qué se decidió con cada dato</p>
   <div class="enc">
@@ -740,7 +774,7 @@ body.idle,body.idle *{cursor:none!important}
   </div>
 </section>
 <!-- 9 PAGOS -->
-<section class="slide pay" data-id="pagos" data-title="Pagos protegidos" data-kw="pagos pago escrow retenido dinero mercadopago comision reembolso cancelar cancelacion cuanto cuesta precio plata liberacion tutor cobra 24 horas garantia bypass" data-notes="El pago se hace con MercadoPago y entra directo a la cuenta del tutor (modelo A, ADR-M5-02): Tinku no guarda plata de terceros. Tinku cobra su comisión del 27 % y MercadoPago la suya (≈6 %) al tutor. Durante 24 horas después de la clase Tinku todavía puede reembolsar. Si se cancela con más de 24 hs de anticipación, o el tutor no se presenta, el reembolso es total. Mover el precio desde el celular: el reparto entre tutor, Tinku y MercadoPago se actualiza, y el control se pega al precio del modelo ($ 13.392, promedio del relevamiento) y al de equilibrio ($ 9.010). Ningún plazo de dinero vive en memoria: son tareas Quartz persistidas en la base.">
+<section class="slide pay" data-id="pagos" data-title="Pagos protegidos" data-kw="pagos pago escrow retenido dinero mercadopago comision reembolso cancelar cancelacion cuanto cuesta precio plata liberacion tutor cobra 24 horas garantia bypass" data-notes="El pago se hace con MercadoPago y entra directo a la cuenta del tutor (modelo A, ADR-M5-02): Tinku no guarda plata de terceros. Tinku cobra su comisión del 27 % y MercadoPago la suya (≈6 %) al tutor. Durante 24 horas después de la clase Tinku todavía puede reembolsar. Si se cancela con más de 24 hs de anticipación, o el tutor no se presenta, el reembolso es total. Invitar al jurado a mover el precio desde su celular: el reparto entre tutor, Tinku y MercadoPago se actualiza, y el control se pega al precio del modelo ($ 13.392, promedio del relevamiento) y al de equilibrio ($ 9.010). Ningún plazo de dinero vive en memoria: son tareas Quartz persistidas en la base.">
   <h2 class="r" style="--i:1">Pagás al reservar.<br><em>Reclamás si algo falla.</em></h2>
   <div class="tl r" style="--i:2">
     <div class="tn" style="--k:0"><i>1</i><b>Reserva</b><span>15 minutos para pagar</span></div>
@@ -797,7 +831,7 @@ body.idle,body.idle *{cursor:none!important}
   </div>
 </section>
 <!-- 12 FINANZAS -->
-<section class="slide fin" data-id="finanzas" data-title="Evaluación financiera" data-kw="finanzas financiera van tir repago retorno inversion rentabilidad comision ticket sesiones piso minimo punto de equilibrio escenario base cinco años dinero modelo negocio ingresos" data-notes="Simulador sobre el modelo del capítulo 5. Base: 8.712 sesiones al año en promedio, 27 % y $ 13.392 por hora: VAN USD 18.869, TIR 41,57 %, repago 1,99 años. Mover las sesiones desde el celular: el VAN cambia en vivo y el control se pega al escenario base. Bajando, el VAN se anula en unas 5.858 sesiones (−32,8 %); en 5.256 es el pesimista (VAN USD −4.410) y en 13.824 el optimista (USD 51.990). La comisión y el precio también mueven el resultado.">
+<section class="slide fin" data-id="finanzas" data-title="Evaluación financiera" data-kw="finanzas financiera van tir repago retorno inversion rentabilidad comision ticket sesiones piso minimo punto de equilibrio escenario base cinco años dinero modelo negocio ingresos" data-notes="Simulador sobre el modelo del capítulo 5. Base: 8.712 sesiones al año en promedio, 27 % y $ 13.392 por hora: VAN USD 18.869, TIR 41,57 %, repago 1,99 años. Invitar al jurado a mover las sesiones desde su celular: el VAN cambia en vivo y el control se pega al escenario base. Bajando, el VAN se anula en unas 5.858 sesiones (−32,8 %); en 5.256 es el pesimista (VAN USD −4.410) y en 13.824 el optimista (USD 51.990). La comisión y el precio también mueven el resultado.">
   <h2 class="r" style="--i:1">Los números,<br><em>en movimiento.</em></h2>
   <div class="kp">
     <div class="kpi hi r" style="--i:2"><div class="n"><span id="kvan">0</span></div><p>VAN · USD</p></div>
@@ -815,27 +849,27 @@ body.idle,body.idle *{cursor:none!important}
   <p class="fcm r" style="--i:8" id="fcm"></p>
 </section>
 <!-- 13 RIESGOS -->
-<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con funciones que solo existen dentro de la plataforma. Dar vuelta cada tarjeta desde el celular. En desintermediación, sumar que una de tres familias pagaría directo al tutor; en adopción, que los cuatro tutores en actividad aceptan la comisión.">
+<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con funciones que solo existen dentro de la plataforma. Arranca vacía: cada Siguiente muestra un riesgo y el siguiente lo da vuelta para ver su mitigación (seis pasos). Anterior deshace el último paso. En desintermediación, sumar que una de tres familias pagaría directo al tutor; en adopción, que cuatro de los cinco tutores en actividad aceptan la comisión, y que la que no la acepta es la que nunca tuvo problemas para cobrar.">
   <h2 class="r" style="--i:1">Lo que puede<br><em>salir mal.</em></h2>
   <div class="cards">
-    <button class="fc r" style="--i:2" aria-label="Riesgo de viabilidad comercial. Activar para ver la mitigación">
+    <div class="fc r" style="--i:2">
       <div class="fi">
         <div class="fa"><p class="tg">Riesgo</p><b>Viabilidad comercial</b><p>Con menos de <b style="color:var(--paper)"><span id="rfl">5.858</span> sesiones anuales</b> en promedio, el VAN se vuelve negativo.</p><p>Escenario pesimista: VAN USD −4.410.</p><span class="more">1 / 3</span></div>
         <div class="fb"><p class="tg">Mitigación</p><b>Operar liviano</b><p>Costos fijos de USD 3.555 a 4.395 por año: se cubren con 1.774 a 2.194 sesiones.</p><p>Piso de tarifa de USD 4 por hora (BR-PAG-04).</p><span class="more">1 / 3</span></div>
       </div>
-    </button>
-    <button class="fc r" style="--i:3" aria-label="Riesgo de desintermediación. Activar para ver la mitigación">
+    </div>
+    <div class="fc r" style="--i:3">
       <div class="fi">
         <div class="fa"><p class="tg">Riesgo</p><b>Desintermediación</b><p>Tutor y familia acuerdan por fuera de la plataforma después del primer contacto.</p><p><b style="color:var(--paper)">34,1 %</b> prefiere la transferencia (encuesta, n = 88), y una de tres familias del interior le pagaría directo al tutor.</p><span class="more">2 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Valor que no se lleva</b><p>Lo que solo existe adentro: cobro garantizado, reputación verificada, aula y resumen con IA.</p><p>Los 4 tutores entrevistados aceptan la comisión justamente por el cobro garantizado.</p><span class="more">2 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Valor que no se lleva</b><p>Lo que solo existe adentro: cobro garantizado, reputación verificada, aula y resumen con IA.</p><p>4 de 5 tutores entrevistados aceptan la comisión justamente por el cobro garantizado.</p><span class="more">2 / 3</span></div>
       </div>
-    </button>
-    <button class="fc r" style="--i:4" aria-label="Riesgo de adopción por parte de los tutores. Activar para ver la mitigación">
+    </div>
+    <div class="fc r" style="--i:4">
       <div class="fi">
         <div class="fa"><p class="tg">Riesgo</p><b>Adopción de tutores</b><p>Los tutores con la agenda completa no necesitan intermediación.</p><p>Una tutora consolidada, con más de veinte alumnos, dijo que no lo usaría.</p><span class="more">3 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Tinku apunta a quien tiene horas libres. 4 de 4 tutores en actividad aceptan el 27 % a cambio de alumnos y cobro en 24 hs.</p><span class="more">3 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Tinku apunta a quien tiene horas libres. 4 de 5 tutores en actividad aceptan el 27 % a cambio de alumnos y cobro en 24 hs.</p><span class="more">3 / 3</span></div>
       </div>
-    </button>
+    </div>
   </div>
 </section>
 <!-- CONCLUSIONES -->
@@ -868,7 +902,7 @@ body.idle,body.idle *{cursor:none!important}
 
 <div id="toast" role="status" aria-live="polite"><i></i><span id="toastt"></span></div>
 <div id="notes" role="region" aria-label="Notas del orador"><h5>Notas del orador</h5><div id="nt"></div></div>
-<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><h3>Mando en el celular</h3><p>Escanealo con el celular de la presentación. Desde ahí pasás de diapositiva, ves las notas y el tiempo, y manejás los controles.</p><div class="qq" id="qq"></div><code id="qu"></code><button id="qc" type="button">Cerrar</button></div></div>
+<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><h3>Mandos en el celular</h3><p>Uno para quien presenta y otro para el jurado. El jurado maneja los controles de cada diapositiva, pero no puede pasar de diapositiva.</p><div class="qpg"><div><h4>Presentador</h4><small>Anterior y Siguiente, notas, tiempo y controles.</small><div class="qq" id="qq"></div><code id="qu"></code></div><div><h4>Jurado</h4><small>Solo los controles de cada diapositiva.</small><div class="qq" id="qqj"></div><code id="quj"></code></div></div><button id="qc" type="button">Cerrar</button></div></div>
 <div id="mando" aria-label="Mando"><header><i class="mdot" id="mdot"></i><span id="mst">buscando la pantalla…</span><span class="sp"></span><button type="button" class="mtm" id="mtm" aria-label="Cronómetro: tocá para iniciar o pausar, mantené para reiniciar">0:00 / 15:00</button><span id="mcnt"></span></header><main><h1 id="mtitle"></h1><details id="mnotes"><summary>Notas</summary><p id="mnt"></p></details><p class="mhint" id="mhint"></p><div id="mctl"></div></main><nav id="mnav" aria-label="Navegación"><button type="button" id="mprev">Anterior<small id="mprevt"></small></button><button type="button" id="mnext">Siguiente<small id="mnextt"></small></button></nav></div>
 <div id="pal" role="dialog" aria-modal="true" aria-label="Preguntale al deck">
   <div class="pbox"><div class="hd">Preguntale al deck</div><input id="pi" type="text" placeholder="¿Cómo cuidan a los menores? ¿Cuánto cuesta? ¿Qué tecnología usa?" autocomplete="off" aria-label="Escribí una pregunta"><ul id="pl"></ul><div class="ft2">↑ ↓ para elegir · Enter para ir · Esc para cerrar. Busca por significado, como Tinku.</div></div>
@@ -898,18 +932,21 @@ document.body.setAttribute("data-model",MODO_ACTIVO);
 (function(){
 "use strict";
 var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
-var HM=/^#mando(?:\.([A-Za-z0-9]{4,16}))?$/.exec(location.hash||"");
-var MANDO=!!HM;
+/* #mando.<sala>: celular de quien presenta. #jurado.<sala>: celular del jurado, sin Anterior ni Siguiente. */
+var HM=/^#(mando|jurado)(?:\.([A-Za-z0-9]{4,16}))?$/.exec(location.hash||"");
+var MANDO=!!HM,JURADO=!!HM&&HM[1]==="jurado";
+var ROLE=JURADO?"jurado":MANDO?"mando":"deck";
 var ROOMKEY=(function(){
   var qs="";try{qs=new URLSearchParams(location.search).get("sala")||""}catch(e){}
   if(/^[A-Za-z0-9]{4,16}$/.test(qs))return qs;
-  if(HM&&HM[1])return HM[1];
+  if(HM&&HM[2])return HM[2];
   if(MANDO)return "x";
   var k="";try{k=localStorage.getItem("tinku_room")||""}catch(e){}
   if(!/^[A-Za-z0-9]{4,16}$/.test(k)){k=Math.random().toString(36).slice(2,8);try{localStorage.setItem("tinku_room",k)}catch(e){}}
   return k;
 })();
 if(MANDO)document.body.classList.add("mando");
+if(JURADO)document.body.classList.add("jurado");
 var slides=$$(".slide"),N=slides.length,cur=0,stage=$("#stage");
 var fmt=function(n,d){return n.toLocaleString("es-AR",{minimumFractionDigits:d||0,maximumFractionDigits:d||0})};
 var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -917,12 +954,12 @@ var num=function(v,a,b,d){v=Number(v);if(!isFinite(v))return d;return Math.max(a
 function idxOf(id){for(var i=0;i<N;i++)if(slides[i].dataset.id===id)return i;return 0}
 
 /* ===== estado compartido entre el deck y el mando ===== */
-var ST={slide:0,diag:[0,0,0],step:0,q:-1,qt:"",km:"menor",kf:0,pr:13392,v:0,mod:-1,ses:8712,fl:[0,0,0],esc:"base",com:27,en:[0,0,0,0]};
+var ST={slide:0,diag:0,step:0,q:-1,qt:"",km:"menor",kf:0,pr:13392,v:0,mod:-1,ses:8712,fl:0,esc:"base",com:27,en:[0,0,0,0]};
 var room=null,seq=0,applying=false,lastSeen={};
 function commit(){
   if(applying||!room)return;
   seq++;
-  try{var p=room.presence({st:JSON.parse(JSON.stringify(ST)),n:seq,role:MANDO?"mando":"deck"});if(p&&p.catch)p.catch(function(){})}catch(e){}
+  try{var p=room.presence({st:JSON.parse(JSON.stringify(ST)),n:seq,role:ROLE});if(p&&p.catch)p.catch(function(){})}catch(e){}
 }
 
 function fit(){var s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.setProperty("--s",s)}
@@ -938,11 +975,13 @@ function runCounters(sl){$$(".cnt",sl).forEach(function(el){
 })}
 
 /* ===== navegación ===== */
-function go(i){
+/* dir < 0: se llega desde la diapositiva siguiente, y el diagnóstico se muestra completo */
+function go(i,dir){
   i=Math.max(0,Math.min(N-1,i));
   var id=slides[i].dataset.id;
   slides.forEach(function(s,k){s.classList.toggle("on",k===i);if(MANDO)return;$$("video",s).forEach(function(v){if(k===i){try{v.currentTime=0;var p=v.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}else{try{v.pause()}catch(e){}}})});
   cur=i;ST.slide=i;
+  var sc=stepCfg(id);if(sc&&!applying)sc.set(dir<0?sc.max:sc.min,true);
   $("#pbar").style.width=((i+1)/N*100)+"%";
   $("#nt").textContent=slides[i].dataset.notes||"";
   if(!MANDO){
@@ -951,14 +990,21 @@ function go(i){
     if(id==="finanzas")finSel(true);
     if(id==="matching")startMatch();else{matchOn=false;cancelAnimationFrame(raf)}
     if(id==="flujo")startSteps(applying?ST.step:0);
-    if(id==="diagnostico"){slides[i].dataset.t=Date.now();delete slides[i].dataset.manual;if(!applying)setDiag([0,0,0],true)}
   }
   renderMando();
   commit();
 }
 function nextI(d){var k=cur+d;while(k>=0&&k<N&&slides[k].dataset.skip)k+=d;return k}
-function next(){var k=nextI(1);if(k<N)go(k)}
-function prev(){var k=nextI(-1);if(k>=0)go(k)}
+/* Diapositivas por pasos: Siguiente y Anterior avanzan o deshacen un paso antes de cambiar de
+   diapositiva. Solo las maneja quien presenta. min es el paso con el que se entra. */
+function stepCfg(id){
+  if(id==="diagnostico")return {k:"diag",min:0,max:DIAG_MAX,txt:DIAG_TXT,set:setDiag};
+  if(id==="riesgos")return {k:"fl",min:0,max:RISK_MAX,txt:RISK_TXT,set:setFlip};
+  return null;
+}
+function stepMove(d){var sc=stepCfg(slides[cur].dataset.id);if(!sc)return false;var n=ST[sc.k]+d;if(n<sc.min||n>sc.max)return false;sc.set(n);return true}
+function next(){if(stepMove(1))return;var k=nextI(1);if(k<N)go(k,1)}
+function prev(){if(stepMove(-1))return;var k=nextI(-1);if(k>=0)go(k,-1)}
 $$("[data-jump]").forEach(function(b){b.addEventListener("click",function(){go(idxOf(b.dataset.jump))})});
 
 var palOpen=false;
@@ -1046,30 +1092,25 @@ addEventListener("keydown",function(e){if(palOpen&&e.key==="Escape")closePal()})
 
 /* ===== QR (mando) ===== */
 function makeQR(el,text){try{var q=qrcode(0,"M");q.addData(text);q.make();el.innerHTML=q.createSvgTag({cellSize:8,margin:0,scalable:true})}catch(e){el.innerHTML='<span style="font:600 22px var(--f-display);color:#06130f;text-align:center;padding:10px">QR no disponible sin conexión</span>'}}
-var mandoUrl=MANDO_URL;
+var mandoUrl=MANDO_URL,juradoUrl=MANDO_URL.replace("#mando","#jurado");
 if(!(window.claude&&window.claude.use)&&/^https?:$/.test(location.protocol)){
-  mandoUrl=location.origin+location.pathname+"#mando."+ROOMKEY;
-  try{fetch("/presentacion/sync/info").then(function(r){return r.json()}).then(function(j){if(j&&j.url){mandoUrl=j.url+"#mando."+ROOMKEY}}).catch(function(){})}catch(e){}
+  var setBase=function(b){mandoUrl=b+"#mando."+ROOMKEY;juradoUrl=b+"#jurado."+ROOMKEY};
+  setBase(location.origin+location.pathname);
+  try{fetch("/presentacion/sync/info").then(function(r){return r.json()}).then(function(j){if(j&&j.url)setBase(j.url)}).catch(function(){})}catch(e){}
 }
-function toggleQp(){var p=$("#qp");p.classList.toggle("open");if(p.classList.contains("open")){makeQR($("#qq"),mandoUrl);$("#qu").textContent=mandoUrl}}
+function toggleQp(){var p=$("#qp");p.classList.toggle("open");if(p.classList.contains("open")){makeQR($("#qq"),mandoUrl);$("#qu").textContent=mandoUrl;makeQR($("#qqj"),juradoUrl);$("#quj").textContent=juradoUrl}}
 $("#qc").addEventListener("click",toggleQp);
 $("#qp").addEventListener("click",function(e){if(e.target.id==="qp")toggleQp()});
 
 /* ===== Diagnóstico ===== */
-var pns=$$(".pn");
-function setDiag(a,quiet){
-  a=(Array.isArray(a)?a:[0,0,0]).slice(0,3);while(a.length<3)a.push(0);a=a.map(function(x){return x?1:0});
-  ST.diag=a;pns.forEach(function(p,k){p.classList.toggle("sol",!!a[k])});
+/* Paso n (0 a 6): el panel k aparece en el paso 2k+1 y muestra su respuesta en el 2k+2. */
+var pns=$$(".pn"),DIAG_MAX=pns.length*2;
+var DIAG_TXT=["Falla 1","Respuesta 1","Falla 2","Respuesta 2","Falla 3","Respuesta 3"];
+function setDiag(n,quiet){
+  n=Math.round(num(n,0,DIAG_MAX,0));
+  ST.diag=n;pns.forEach(function(p,k){var v=n>=2*k+1;p.classList.toggle("vis",v);p.classList.toggle("hid",!v);p.classList.toggle("sol",n>=2*k+2)});
   if(!quiet)commit();syncMando();
 }
-pns.forEach(function(p,k){
-  var t=function(){var a=ST.diag.slice();a[k]=a[k]?0:1;p.closest(".slide").dataset.manual="1";setDiag(a)};
-  p.addEventListener("click",t);p.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();t()}});
-});
-setInterval(function(){
-  if(MANDO||slides[cur].dataset.id!=="diagnostico"||slides[cur].dataset.manual)return;
-  var k=ST.diag.indexOf(0);if(k>-1&&slides[cur].dataset.t&&Date.now()-slides[cur].dataset.t>2600){var a=ST.diag.slice();a[k]=1;setDiag(a)}
-},1400);
 
 /* ===== Video: botón de reproducir + respaldo ===== */
 function wireVideo(v){
@@ -1337,9 +1378,14 @@ function setEn(a,quiet){a=(Array.isArray(a)?a:[0,0,0,0]).slice(0,4);while(a.leng
 ecs.forEach(function(c,k){c.addEventListener("click",function(){var a=ST.en.slice();a[k]=a[k]?0:1;setEn(a)})});
 
 /* ===== Riesgos ===== */
-var fcs=$$(".fc");
-function setFlip(a,quiet){a=(Array.isArray(a)?a:[0,0,0]).slice(0,3);while(a.length<3)a.push(0);a=a.map(function(x){return x?1:0});ST.fl=a;fcs.forEach(function(c,k){c.classList.toggle("flip",!!a[k])});if(!quiet)commit();syncMando()}
-fcs.forEach(function(c,k){c.addEventListener("click",function(){var a=ST.fl.slice();a[k]=a[k]?0:1;setFlip(a)})});
+/* Riesgos por pasos, como el diagnóstico: la tarjeta k aparece en el paso 2k+1 y se da vuelta en el 2k+2. */
+var fcs=$$(".fc"),RISK_MAX=fcs.length*2;
+var RISK_TXT=["Riesgo 1","Mitigación 1","Riesgo 2","Mitigación 2","Riesgo 3","Mitigación 3"];
+function setFlip(n,quiet){
+  n=Math.round(num(n,0,RISK_MAX,0));
+  ST.fl=n;fcs.forEach(function(c,k){var v=n>=2*k+1;c.classList.toggle("vis",v);c.classList.toggle("hid",!v);c.classList.toggle("flip",n>=2*k+2)});
+  if(!quiet)commit();syncMando();
+}
 
 /* ===== QR de cierre ===== */
 makeQR($("#qr"),"https://tinku.site");
@@ -1363,9 +1409,11 @@ if(!MANDO)(function(){
   }
   function rs(){w=innerWidth;h=innerHeight;c.width=w*dpr;c.height=h*dpr;g.setTransform(dpr,0,0,dpr,0,0);pat=g.createPattern(tela(),"repeat");f(performance.now())}
   function f(now){
-    var off=reduce?0:((now-t0)/1000*5)%(CELL*N);
+    /* cada eje vuelve a cero al completar un patrón entero (CELL*N): así el loop no salta.
+       Antes Y se derivaba de X (off*.5) y volvía a cero a mitad del patrón. */
+    var P=CELL*N,s=reduce?0:(now-t0)/1000,ox=(s*5)%P,oy=(s*2.5)%P;
     g.clearRect(0,0,w,h);
-    g.save();g.globalAlpha=.12;g.translate(off,off*.5);g.fillStyle=pat;g.fillRect(-CELL*N,-CELL*N,w+CELL*N*2,h+CELL*N*2);g.restore();
+    g.save();g.globalAlpha=.12;g.translate(ox,oy);g.fillStyle=pat;g.fillRect(-CELL*N,-CELL*N,w+CELL*N*2,h+CELL*N*2);g.restore();
     /* más apagado al centro, donde va el contenido */
     var v=g.createRadialGradient(w*.45,h*.5,Math.min(w,h)*.15,w*.45,h*.5,Math.max(w,h)*.75);
     v.addColorStop(0,"rgba(6,19,15,.7)");v.addColorStop(1,"rgba(6,19,15,0)");
@@ -1378,7 +1426,8 @@ if(!MANDO)(function(){
 /* ===== MANDO (celular) ===== */
 var PRECIOS_HINT="Mové el control y se actualiza en la pantalla grande.";
 var MC={
-  diagnostico:{h:"Tocá una falla para ver la respuesta.",html:function(){return '<div class="mrow">'+["Oferta fragmentada","Brecha geográfica","Ritmo inflexible"].map(function(t,i){return '<button type="button" class="mb" data-a="diag" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
+  diagnostico:{soloMando:true,h:"Siguiente descubre una falla y, después, su respuesta.",html:function(){return '<div class="mval" id="mdg"></div><div class="msub" id="mdgs"></div>'}},
+  riesgos:{soloMando:true,h:"Siguiente muestra un riesgo y, después, lo da vuelta para ver la mitigación.",html:function(){return '<div class="mval" id="mdg"></div><div class="msub" id="mdgs"></div>'}},
   flujo:{h:"Elegí el paso que se muestra.",html:function(){return '<div class="mrow">'+["1 · Buscar","2 · Perfil del tutor","3 · Día, duración y hora","4 · Confirmar","5 · Pagar"].map(function(t,i){return '<button type="button" class="mb" data-a="step" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   matching:{h:"Probá una consulta o escribí la tuya.",html:function(){return '<div class="mrow">'+PRE.map(function(p,i){return '<button type="button" class="mb" data-a="q" data-i="'+i+'">'+p.q+'</button>'}).join("")+'</div><form class="mq" id="mqf"><input id="mqi" type="text" maxlength="80" placeholder="Escribí qué querés aprender" autocomplete="off"><button type="submit">Buscar</button></form>'}},
   confianza:{h:"Elegí quién está en la clase y probá el corte.",html:function(){return '<div class="mrow mg2"><button type="button" class="mb" data-a="km" data-m="menor">Hay un menor</button><button type="button" class="mb" data-a="km" data-m="adultos">Dos adultos</button></div><div class="mrow" style="margin-top:14px"><button type="button" class="mb red" data-a="kill">Detectar contenido inapropiado</button></div>'}},
@@ -1386,8 +1435,7 @@ var MC={
   vistas:{h:"Elegí la vista.",html:function(){return '<div class="mrow mg2">'+["Familias","Tutores","Moderación","Finanzas"].map(function(t,i){return '<button type="button" class="mb" data-a="v" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   arquitectura:{h:"Tocá un módulo para resaltarlo.",html:function(){var n=["M1 Identidad","M2 Matching","M3 Aula","M4 Reservas","M5 Pagos","M6 Resumen","M7 Reputación","M8 Admin","M9 Seguridad","Servicio de matching"];return '<div class="mrow mg2">'+n.map(function(t,i){return '<button type="button" class="mb" data-a="mod" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   encuesta:{h:"Tocá un dato para ver qué se decidió.",html:function(){return '<div class="mrow">'+["77,3 % · clases virtuales","USD 4,56 por hora","34,1 % · transferencia","90,9 % · Buenos Aires"].map(function(t,i){return '<button type="button" class="mb" data-a="en" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
-  finanzas:{h:"Mové las sesiones: el VAN cambia y se pega al escenario base.",html:function(){return '<div class="mval" id="mgv"></div><div class="msub" id="mgs"></div><input class="mrng" id="mgr" type="range" min="2000" max="16000" step="1" aria-label="Sesiones por año"><div class="mrow mg2"><button type="button" class="mb" data-a="ses" data-d="-500">− 500 sesiones</button><button type="button" class="mb" data-a="ses" data-d="500">+ 500 sesiones</button></div><div class="mrow" style="grid-template-columns:repeat(3,1fr)">'+[["pes","Pesimista"],["base","Base"],["opt","Optimista"]].map(function(x){return '<button type="button" class="mb" data-a="esc" data-e="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div><div class="mrow" style="grid-template-columns:repeat(5,1fr)">'+[20,23,25,27,30].map(function(c){return '<button type="button" class="mb" data-a="com" data-c="'+c+'">'+c+'%</button>'}).join("")+'</div>'}},
-  riesgos:{h:"Tocá un riesgo para ver la mitigación.",html:function(){return '<div class="mrow">'+["Viabilidad comercial","Desintermediación","Adopción de tutores"].map(function(t,i){return '<button type="button" class="mb" data-a="fl" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}}
+  finanzas:{h:"Mové las sesiones: el VAN cambia y se pega al escenario base.",html:function(){return '<div class="mval" id="mgv"></div><div class="msub" id="mgs"></div><input class="mrng" id="mgr" type="range" min="2000" max="16000" step="1" aria-label="Sesiones por año"><div class="mrow mg2"><button type="button" class="mb" data-a="ses" data-d="-500">− 500 sesiones</button><button type="button" class="mb" data-a="ses" data-d="500">+ 500 sesiones</button></div><div class="mrow msm" style="grid-template-columns:repeat(3,1fr)">'+[["pes","Pesimista"],["base","Base"],["opt","Optimista"]].map(function(x){return '<button type="button" class="mb" data-a="esc" data-e="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div><div class="mrow msm" style="grid-template-columns:repeat(5,1fr)">'+[20,23,25,27,30].map(function(c){return '<button type="button" class="mb" data-a="com" data-c="'+c+'">'+c+'%</button>'}).join("")+'</div>'}},
 };
 var mid="";
 function renderMando(){
@@ -1395,15 +1443,12 @@ function renderMando(){
   var id=slides[cur].dataset.id,sl=slides[cur];
   $("#mcnt").textContent=("0"+(cur+1)).slice(-2)+" / "+N;
   $("#mtitle").textContent=sl.dataset.title;
-  var pv=nextI(-1),nx=nextI(1);
-  $("#mprev").disabled=pv<0;$("#mnext").disabled=nx>=N;
-  $("#mprevt").textContent=pv>=0?slides[pv].dataset.title:"";
-  $("#mnextt").textContent=nx<N?slides[nx].dataset.title:"Fin";
   $("#mnt").textContent=sl.dataset.notes||"";$("#mnotes").style.display=sl.dataset.notes?"":"none";
   if(id!==mid){
-    mid=id;var c=MC[id];
-    $("#mnotes").open=!c;
-    $("#mhint").textContent=c?c.h:"";
+    /* reparto: los pasos (soloMando) son de quien presenta; todos los demás controles, del jurado */
+    mid=id;var c=MC[id],c0=c;if(c&&(JURADO?c.soloMando:!c.soloMando))c=null;
+    $("#mnotes").open=true;
+    $("#mhint").textContent=c?c.h:(JURADO&&c0&&c0.soloMando?"Esta diapositiva la avanza quien presenta.":"");
     $("#mctl").innerHTML=c?c.html():"";
   }
   syncMando();
@@ -1412,13 +1457,17 @@ function syncMando(){
   if(!MANDO)return;
   var id=slides[cur].dataset.id,box=$("#mctl");
   var on=function(sel,fn){$$(sel,box).forEach(function(b){b.classList.toggle("on",!!fn(b))})};
-  if(id==="diagnostico")on('[data-a="diag"]',function(b){return ST.diag[+b.dataset.i]});
+  var pv=nextI(-1),nx=nextI(1),sc=stepCfg(id),sn=sc?ST[sc.k]:0;
+  var atras=sc&&sn>sc.min,adelante=sc&&sn<sc.max;
+  $("#mprev").disabled=pv<0&&!atras;$("#mnext").disabled=nx>=N&&!adelante;
+  $("#mprevt").textContent=atras?"Ocultar "+sc.txt[sn-1].toLowerCase():pv>=0?slides[pv].dataset.title:"";
+  $("#mnextt").textContent=adelante?"Mostrar "+sc.txt[sn].toLowerCase():nx<N?slides[nx].dataset.title:"Fin";
+  if(sc&&$("#mdg")){$("#mdg").textContent=sn+" / "+sc.max;$("#mdgs").textContent=sn?sc.txt[sn-1]+" en pantalla":"Pantalla vacía"}
   if(id==="flujo")on('[data-a="step"]',function(b){return +b.dataset.i===ST.step});
   if(id==="matching")on('[data-a="q"]',function(b){return +b.dataset.i===ST.q});
   if(id==="confianza")on('[data-a="km"]',function(b){return b.dataset.m===ST.km});
   if(id==="vistas")on('[data-a="v"]',function(b){return +b.dataset.i===ST.v});
   if(id==="arquitectura")on('[data-a="mod"]',function(b){return +b.dataset.i===ST.mod});
-  if(id==="riesgos")on('[data-a="fl"]',function(b){return ST.fl[+b.dataset.i]});
   if(id==="encuesta")on('[data-a="en"]',function(b){return ST.en[+b.dataset.i]});
   if(id==="finanzas"){on('[data-a="esc"]',function(b){return b.dataset.e===ST.esc});on('[data-a="com"]',function(b){return +b.dataset.c===ST.com})}
   if(id==="pagos"){var r=$("#mpr");if(r){if(document.activeElement!==r)r.value=ST.pr;$("#mpv").textContent="$ "+fmt(ST.pr)+" / h";$("#mpv").classList.toggle("msnap",ST.pr===IDEAL.pr);$("#mps").textContent="Tutor $ "+fmt(Math.round(ST.pr*(100-ST.com-MODELO.mp)/100))+" · Tinku $ "+fmt(Math.round(ST.pr*ST.com/100))+" · MercadoPago $ "+fmt(Math.round(ST.pr*MODELO.mp/100))}}
@@ -1431,15 +1480,13 @@ if(MANDO){
   $("#mnext").addEventListener("click",function(){wake();if(!tmOn&&tmS===0)tmToggle();next();buzz()});
   $("#mprev").addEventListener("click",function(){wake();prev();buzz()});
   $("#mctl").addEventListener("click",function(e){
-    var b=e.target.closest("[data-a]");if(!b)return;var a=b.dataset.a,i=parseInt(b.dataset.i,10);
-    if(a==="diag"){var d=ST.diag.slice();d[i]=d[i]?0:1;setDiag(d)}
-    else if(a==="step")setStep(i);
+    var b=e.target.closest("[data-a]");if(!b)return;var a=b.dataset.a,i=parseInt(b.dataset.i,10);wake();
+    if(a==="step")setStep(i);
     else if(a==="q")runQuery(i,"");
     else if(a==="km")setKm(b.dataset.m);
     else if(a==="kill")fireKill();
     else if(a==="v")setVista(i);
     else if(a==="mod")setMod(ST.mod===i?-1:i);
-    else if(a==="fl"){var f=ST.fl.slice();f[i]=f[i]?0:1;setFlip(f)}
     else if(a==="pr"){var pp=ST.pr,tp=ST.pr+parseInt(b.dataset.d,10);setPr(tp);if(ST.pr===pp)setPr(tp,false,true)}
     else if(a==="en"){var en=ST.en.slice();en[i]=en[i]?0:1;setEn(en)}
     else if(a==="esc")setEsc(b.dataset.e);
@@ -1451,27 +1498,34 @@ if(MANDO){
 }
 
 /* ===== recibir el estado del otro dispositivo ===== */
-function applyRemote(s){
+/* El jurado nunca mueve la diapositiva ni el paso del diagnóstico: de su estado se ignoran los dos. */
+function applyRemote(s,from){
   if(!s||typeof s!=="object")return;
+  var jur=from==="jurado";
   applying=true;
   try{
-    setDiag(s.diag,true);setStep(s.step,true);
-    setKm(s.km,true);setVista(s.v,true);setMod(s.mod,true);setFlip(s.fl,true);setEn(s.en,true);
+    if(!jur)setDiag(s.diag,true);setStep(s.step,true);
+    setKm(s.km,true);setVista(s.v,true);setMod(s.mod,true);if(!jur)setFlip(s.fl,true);setEn(s.en,true);
     setEsc(s.esc,true);setCom(s.com,true);setPr(s.pr,true,true);setSes(s.ses,true,true);
     if(+s.q>=0||s.qt){runQuery(+s.q>=0?+s.q:-1,s.qt,true)}else{ST.q=-1;ST.qt=""}
     var kf=Math.round(num(s.kf,0,999,0));if(kf!==ST.kf){ST.kf=kf;if(slides[cur].dataset.id==="confianza")fireApply()}
-    var sl=Math.round(num(s.slide,0,N-1,0));if(sl!==cur)go(sl);else renderMando();
+    var sl=Math.round(num(s.slide,0,N-1,0));if(!jur&&sl!==cur)go(sl);else renderMando();
   }catch(e){}finally{applying=false}
 }
-var lastOther=0,toastT=null;
+var lastOther=0,lastJur=0,toastT=null;
 function toast(t,off){var el=$("#toast");$("#toastt").textContent=t;el.classList.toggle("off",!!off);el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove("show")},2600)}
 function status(peers){
-  var other=peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.role===(MANDO?"deck":"mando")}).length;
-  if(MANDO){$("#mdot").classList.toggle("ok",other>0);$("#mst").textContent=other>0?"pantalla conectada":"esperando la pantalla…"}
+  var cnt=function(r){return peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.role===r}).length};
+  if(MANDO){var d=cnt("deck");$("#mdot").classList.toggle("ok",d>0);$("#mst").textContent=(JURADO?"Jurado · ":"")+(d>0?"conectado":"sin pantalla…")}
   else{
-    if(other>0&&lastOther<=0){toast("Celular conectado");$("#qp").classList.remove("open")}
-    else if(other===0&&lastOther>0)toast("Celular desconectado",true);
-    lastOther=other;
+    var m=cnt("mando"),j=cnt("jurado");
+    if(m>0&&lastOther<=0)toast("Celular conectado");
+    else if(m===0&&lastOther>0)toast("Celular desconectado",true);
+    if(j>0&&lastJur<=0)toast("Jurado conectado");
+    else if(j===0&&lastJur>0)toast("Jurado desconectado",true);
+    /* el diálogo de los QR se cierra solo cuando ya están los dos celulares */
+    if(m>0&&j>0&&(lastOther<=0||lastJur<=0))$("#qp").classList.remove("open");
+    lastOther=m;lastJur=j;
   }
 }
 /* Sincronización propia (sin Claude): servidor local por SSE. Solo si no existe window.claude */
@@ -1502,11 +1556,11 @@ function getRoom(){
 function joinRoom(){
   getRoom().then(function(r){
     if(!r)return;room=r;
-    try{var p=r.presence({role:MANDO?"mando":"deck"});if(p&&p.catch)p.catch(function(){})}catch(e){}
+    try{var p=r.presence({role:ROLE});if(p&&p.catch)p.catch(function(){})}catch(e){}
     r.onPeers(function(ch){
       ch.peers.forEach(function(p){
         if(p.isMe)return;var pr=p.presence||{};
-        if(pr.st&&pr.n!==undefined&&lastSeen[p.peer]!==pr.n){lastSeen[p.peer]=pr.n;applyRemote(pr.st)}
+        if(pr.st&&pr.n!==undefined&&lastSeen[p.peer]!==pr.n){lastSeen[p.peer]=pr.n;applyRemote(pr.st,pr.role)}
       });
       status(ch.peers);
     },function(){});
@@ -1515,7 +1569,7 @@ function joinRoom(){
 }
 
 /* ===== arranque ===== */
-finanzas();finSel();pagosDraw();setVista(0,true);setDiag([0,0,0],true);setFlip([0,0,0],true);setEn([0,0,0,0],true);
+finanzas();finSel();pagosDraw();setVista(0,true);setDiag(0,true);setFlip(0,true);setEn([0,0,0,0],true);
 tmDraw();
 var hh=(location.hash||"").replace("#",""),start=0;if(!MANDO)slides.forEach(function(s,i){if(s.dataset.id===hh)start=i});
 go(start);
