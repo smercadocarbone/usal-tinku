@@ -23,7 +23,7 @@
 html,body{height:100%;overflow:hidden}
 body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
 .viewport{position:fixed;inset:0;overflow:hidden;background:var(--ink)}
-#net{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+#net{position:absolute;inset:0;width:100%;height:100%}
 .stage{overflow:hidden;position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--s,.5));transform-origin:center center}
 .slide{position:absolute;inset:0;padding:96px 120px 120px;opacity:0;visibility:hidden;transform:scale(.985);transition:opacity .55s ease,transform .7s cubic-bezier(.2,.8,.2,1),visibility 0s .55s}
 .slide.on{opacity:1;visibility:visible;transform:none;transition:opacity .55s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
@@ -445,15 +445,15 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
 #mando header .sp{flex:1}
 .mdot{width:10px;height:10px;border-radius:50%;background:var(--alert);display:block}
 .mdot.ok{background:var(--leaf);box-shadow:0 0 0 4px rgba(79,209,161,.2)}
-/* El celular es solo para los controles interactivos: la navegación la maneja quien presenta.
-   Todo ocupa la pantalla entera y se toca con el pulgar sin apuntar. */
+/* El celular es el control remoto: pasa de diapositiva, muestra notas y tiempo, y maneja los
+   controles de cada diapositiva. Todo se toca con el pulgar sin apuntar. */
 #mando header{padding:10px 16px;font-size:13px}
 #mando main{flex:1;display:flex;flex-direction:column;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));min-height:0}
 #mtitle{font:800 26px/1.1 var(--f-display);letter-spacing:-.02em;margin:0 0 6px}
 .mhint{color:var(--mute);font:500 20px/1.35 var(--f-body);margin:0 0 14px}
 #mctl{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
-#mctl:empty{display:grid;place-items:center;text-align:center;border:2px dashed var(--line);border-radius:28px;padding:24px}
-#mctl:empty::before{content:"Esta diapositiva no tiene botones.\A Esperá la siguiente.";white-space:pre-line;font:700 30px/1.3 var(--f-display);color:var(--mute)}
+#mctl:empty{display:grid;place-items:center;text-align:center;border:2px dashed var(--line);border-radius:28px;padding:18px;flex:0 0 auto}
+#mctl:empty::before{content:"Sin controles en esta diapositiva.";white-space:pre-line;font:700 30px/1.3 var(--f-display);color:var(--mute)}
 .mrow{flex:1;display:grid;gap:14px;grid-auto-rows:minmax(110px,1fr)}
 .mg2{grid-template-columns:1fr 1fr}.mg3{grid-template-columns:repeat(3,1fr)}
 .mb{all:unset;box-sizing:border-box;cursor:pointer;padding:18px 14px;border-radius:26px;border:2px solid var(--line);background:var(--pine);font:700 30px/1.15 var(--f-body);text-align:center;min-height:110px;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
@@ -479,6 +479,75 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
 .fa,.fb{padding:36px 38px!important}
 @media (prefers-reduced-motion:reduce){.r,.cv-a,.cv-b,.wordmark .dot,.live::before{animation:none!important}.slide{transition:opacity .2s}.tl::after{animation:none;width:90%}.slide.on .tn i{animation:none;border-color:var(--amber);color:var(--amber)}}
 @media print{.ui,.navb,.pbar{display:none}}
+
+/* ===== limpieza: en la pantalla grande no hay controles visibles ===== */
+.pbar{height:3px}.pbar i{opacity:.8}
+body.idle,body.idle *{cursor:none!important}
+#toast{position:fixed;left:50%;bottom:28px;z-index:40;transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;font:500 15px var(--f-mono);letter-spacing:.06em;color:var(--paper);background:rgba(6,19,15,.9);border:1px solid var(--line);border-radius:99px;padding:10px 18px;display:flex;gap:10px;align-items:center}
+#toast i{width:9px;height:9px;border-radius:50%;background:var(--leaf);display:block}
+#toast.off i{background:var(--alert)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+/* guarda de tejido en las diapositivas de identidad (portada y cierre) */
+.cover::after,.end::after{content:"";position:absolute;left:0;right:0;bottom:44px;height:24px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' shape-rendering='crispEdges'%3E%3Cg fill='%23ffb23e'%3E%3Crect x='20' y='0' width='8' height='4'/%3E%3Crect x='16' y='4' width='16' height='4'/%3E%3Crect x='12' y='8' width='8' height='4'/%3E%3Crect x='28' y='8' width='8' height='4'/%3E%3Crect x='12' y='12' width='8' height='4'/%3E%3Crect x='28' y='12' width='8' height='4'/%3E%3Crect x='16' y='16' width='16' height='4'/%3E%3Crect x='20' y='20' width='8' height='4'/%3E%3C/g%3E%3Cg fill='%234fd1a1'%3E%3Crect x='0' y='8' width='4' height='8'/%3E%3Crect x='44' y='8' width='4' height='8'/%3E%3Crect x='4' y='10' width='4' height='4'/%3E%3Crect x='40' y='10' width='4' height='4'/%3E%3C/g%3E%3C/svg%3E") repeat-x center;opacity:.32;pointer-events:none}
+.end::after{bottom:auto;top:44px}
+/* cita real en el problema */
+.hook .dist{height:560px}
+.quote{margin:10px 0 0 40px;padding:0 0 0 28px;border-left:6px solid var(--amber);max-width:700px}
+.quote p{font:600 34px/1.25 var(--f-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.quote span{display:block;margin-top:14px;font:400 21px var(--f-mono);color:var(--mute)}
+/* ===== slider con imán ===== */
+.msl{padding:24px 32px 18px;border-radius:26px;background:var(--pine);border:1px solid var(--line);transition:border-color .3s,box-shadow .3s}
+.msl.snap{border-color:var(--amber);box-shadow:0 0 0 6px rgba(255,178,62,.12)}
+.msl-h{display:flex;align-items:baseline;gap:6px 18px;flex-wrap:wrap}
+.msl-h span{font:500 19px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);flex:1;white-space:nowrap}
+.msl-h b{font:800 54px/1 var(--f-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.msl-h em{font:500 19px var(--f-mono);font-style:normal;color:var(--mute);flex-basis:100%;order:3;min-height:1.2em}
+.msl.snap .msl-h em{color:var(--amber)}
+.msl-t{position:relative;height:118px;margin-top:6px}
+.msl-t input{position:absolute;left:0;right:0;top:46px;width:100%;margin:0;height:44px;-webkit-appearance:none;appearance:none;background:transparent;z-index:2;cursor:pointer}
+.msl-t input::-webkit-slider-runnable-track{height:12px;border-radius:12px;background:rgba(0,0,0,.45)}
+.msl-t input::-moz-range-track{height:12px;border-radius:12px;background:rgba(0,0,0,.45)}
+.msl-t input::-webkit-slider-thumb{-webkit-appearance:none;width:40px;height:40px;border-radius:50%;background:var(--amber);border:5px solid #2a1a00;margin-top:-14px;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.msl-t input::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:var(--amber);border:5px solid #2a1a00}
+.msl-t input:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:12px}
+.mk{position:absolute;top:0;transform:translateX(-50%);font:500 15px/1.2 var(--f-mono);color:var(--mute);white-space:nowrap;text-align:center;pointer-events:none;transition:left .4s cubic-bezier(.2,.8,.2,1)}
+.mk::after{content:"";display:block;width:2px;height:26px;background:currentColor;margin:6px auto 0;opacity:.7}
+.mk.ideal{color:var(--amber);font-weight:500}
+.mk.zero{color:var(--alert);top:auto;bottom:0}
+.mk.zero::after{display:none}
+.mk.zero::before{content:"";display:block;width:2px;height:16px;background:currentColor;margin:0 auto 4px;opacity:.7}
+/* finanzas: simulador */
+.fin h2{font-size:78px!important}
+.fin .kp{margin-top:34px}
+.fin .kpi{transition:background .35s}
+.fin .kpi.hi.neg{background:#5a1d12}
+.fin .kpi .n{font-variant-numeric:tabular-nums}
+.fsim{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+.fctl{grid-column:1/-1;display:flex;gap:40px;flex-wrap:wrap}
+.fctl .chips span{min-width:0}
+.fin .fcm{margin-top:18px;font-size:23px}
+/* pagos: el slider ocupa el lugar del anterior */
+.pay .msl{margin-top:22px}
+.pay .tl{margin-top:56px}.pay .split{margin-top:44px}
+/* encuesta y riesgos: sin indicaciones de "tocar" en la pantalla grande */
+.ec .h{display:none}
+/* ===== mando: navegación, notas y cronómetro ===== */
+#mando header .mtm{all:unset;font:600 15px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--paper);padding:6px 12px;border-radius:99px;border:1px solid var(--line)}
+#mando header .mtm.run{border-color:var(--leaf)}
+#mando header .mtm.warn{color:var(--amber);border-color:var(--amber)}
+#mando header .mtm.over{color:#fff;background:var(--alert);border-color:var(--alert)}
+#mnotes{margin:0 0 14px;border:1px solid var(--line);border-radius:18px;background:var(--pine)}
+#mnotes summary{list-style:none;cursor:pointer;padding:14px 18px;font:500 14px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+#mnotes summary::-webkit-details-marker{display:none}
+#mnotes p{margin:0;padding:0 18px 16px;font:400 19px/1.55 var(--f-body);color:var(--paper)}
+#mctl:empty::before{font-size:20px!important}
+#mnav{position:sticky;bottom:0;z-index:3;display:grid;grid-template-columns:1fr 1.6fr;gap:12px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);border-top:1px solid var(--line)}
+#mnav button{all:unset;box-sizing:border-box;text-align:center;padding:24px 10px;border-radius:24px;font:800 30px/1 var(--f-display);letter-spacing:-.01em;background:var(--pine2);border:2px solid var(--line);color:var(--paper);touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#mnav button:active{transform:scale(.97)}
+#mnav #mnext{background:var(--amber);color:#2a1a00;border-color:var(--amber)}
+#mnav button[disabled]{opacity:.3}
+#mnav small{display:block;margin-top:8px;font:500 13px/1.2 var(--f-mono);letter-spacing:0;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msnap{color:var(--amber)!important}
 </style>
 
 <div class="viewport" id="vp">
@@ -540,13 +609,14 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
   </div>
   </section>
 <!-- 2 HOOK -->
-<section class="slide hook" data-id="problema" data-title="El problema, en una escena" data-kw="problema historia san antonio de los cobres salta interior pueblo examen matematica distancia geografia brecha" data-notes="Contar la escena de la tesis: un alumno de 5° año en San Antonio de los Cobres necesita reforzar Matemática y no tiene un tutor en su localidad. La única alternativa es viajar horas. Cerrar con: la distancia pasa a ser un dato irrelevante.">
+<section class="slide hook" data-id="problema" data-title="El problema, en una escena" data-kw="problema historia san antonio de los cobres salta interior pueblo examen matematica distancia geografia brecha" data-notes="Contar la escena de la tesis: un alumno de 5° año en San Antonio de los Cobres necesita reforzar Matemática y no tiene un tutor en su localidad. La única alternativa es viajar horas. Leer la cita de Raúl, padre de Ingeniero Jacobacci: es un caso real, de las entrevistas. Cerrar con: la distancia pasa a ser un dato irrelevante.">
   <div>
     <p class="time r" style="--i:0">MARTES · 22:14</p>
     <h2 class="r" style="--i:1">Mañana rinde Matemática.</h2>
     <h2 class="r" style="--i:3;color:var(--mute)">En su pueblo no hay a quién llamar.</h2>
     <p class="lead r" style="--i:5">Más de 2,7 millones de km² y el apoyo escolar extra casi no llega fuera de las grandes ciudades.</p>
   </div>
+  <div class="hook-r">
   <svg class="dist r" style="--i:3" viewBox="0 0 760 700" role="img" aria-label="Un alumno en San Antonio de los Cobres conectado con un tutor verificado">
     <defs><radialGradient id="g1"><stop offset="0" stop-color="#ffb23e" stop-opacity=".5"/><stop offset="1" stop-color="#ffb23e" stop-opacity="0"/></radialGradient></defs>
     <circle cx="220" cy="170" r="110" fill="url(#g1)"/>
@@ -560,12 +630,13 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
     <circle r="11" fill="#ffb23e"><animateMotion dur="3.2s" repeatCount="indefinite" path="M244 170 C 460 170, 610 250, 610 498"/></circle>
     <text class="lbl" x="330" y="330" text-anchor="middle" style="fill:#ffb23e">la distancia deja de importar</text>
   </svg>
+  <blockquote class="quote r" style="--i:6"><p>“Conseguir un profesor de otra manera es prácticamente imposible.”</p><span>Raúl · Ingeniero Jacobacci, Río Negro · entrevista, oct. 2026</span></blockquote>
+  </div>
 </section>
 <!-- 3 DIAGNOSTICO -->
-<section class="slide" data-id="diagnostico" data-title="Diagnóstico: tres fallas del mercado" data-kw="diagnostico mercado oferta fragmentada brecha geografica ritmo inflexible clases particulares garantias verificar clases uno a uno" data-notes="Tres fallas: oferta fragmentada (redes de recomendación sin estándares), brecha geográfica (el interior queda afuera) y ritmo inflexible (la clase avanza al ritmo del grupo). Hacer clic en cada panel para pasar de problema a respuesta.">
+<section class="slide" data-id="diagnostico" data-title="Diagnóstico: tres fallas del mercado" data-kw="diagnostico mercado oferta fragmentada brecha geografica ritmo inflexible clases particulares garantias verificar clases uno a uno" data-notes="Tres fallas: oferta fragmentada (redes de recomendación sin estándares), brecha geográfica (el interior queda afuera) y ritmo inflexible (la clase avanza al ritmo del grupo). Los paneles se dan vuelta solos; desde el celular se puede elegir cuál.">
   <div class="diag-h">
     <div><h2 class="r" style="--i:1">Tres cosas<br>que <em>no andan.</em></h2></div>
-    <p class="hint r" style="--i:2">clic en cada panel →</p>
   </div>
   <div class="panels">
     <div class="pn r" style="--i:3" tabindex="0" role="button" aria-label="Oferta fragmentada. Activar para ver la respuesta">
@@ -580,6 +651,29 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
       <div class="p"><p class="tag">Falla 3</p><p class="w"><s>Ritmo inflexible</s></p><p class="d">La clase colectiva avanza al ritmo del grupo, no al de cada alumno.</p></div>
       <div class="s"><p class="tag">Respuesta</p><p class="w">Clase 1 a 1</p><p class="d">Horario, duración y tema los elige quien aprende. Resumen con IA para repasar.</p></div>
     </div>
+  </div>
+</section>
+<!-- CLIENTES -->
+<section class="slide who" data-id="clientes" data-title="Dos clientes, un mercado" data-kw="clientes tutores estudiantes familias entrevista apoyo escolar agenda completa intermediacion no lo usaria menores publico objetivo segmento oferta demanda quien" data-notes="Tinku tiene dos clientes: quien necesita aprender y quien enseña. Contar las entrevistas (≈1 min): nueve personas en cuatro perfiles. La tutora consolidada, con más de veinte alumnos, no la usaría: no necesita intermediación. Los cuatro tutores con horas libres aceptan el 27 % a cambio de alumnos y cobro garantizado. Las tres familias del interior (Maciá, Ingeniero Jacobacci y Rafaela) no consiguieron profesor cerca y aceptarían uno de otra provincia, si la recomendación dice por qué.">
+  <h2 class="r" style="--i:0">Dos clientes, <em>un mercado.</em></h2>
+  <div class="wg">
+    <div class="wc r" style="--i:1"><p class="t">La demanda</p><b>Estudiantes y familias</b><ul><li>Buscan un tutor en el que confiar</li><li>Reservan en minutos y pagan protegido</li><li>Los menores van siempre de la mano de un adulto responsable</li></ul></div>
+    <div class="wc r" style="--i:2"><p class="t">La oferta</p><b>Tutores</b><ul><li>Tienen horarios libres y quieren llegar a más alumnos</li><li>Fijan su precio y sus horarios</li><li>Cobran en su propia cuenta de MercadoPago</li></ul></div>
+  </div>
+  <div class="iv r" style="--i:3">
+    <div><p class="t">Entrevistas · 9 personas, 4 perfiles</p><b>Con la agenda llena, no. Con horas libres, sí.</b><p>La tutora consolidada no lo usaría. Los cuatro tutores con horas libres aceptan la comisión por el cobro garantizado, y las tres familias del interior no consiguieron profesor cerca.</p></div>
+    <div class="pl"><span class="no">Tutora consolidada: no lo usaría</span><span class="si">4 de 4 tutores: aceptan el 27 %</span><span class="si">3 de 3 familias: sí a un tutor de otra provincia</span></div>
+  </div>
+</section>
+<!-- ENCUESTA -->
+<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Abrir cada tarjeta desde el celular para mostrar qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; la mediana de disposición a pagar es USD 4,56 por hora; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación; 90,9 % de las respuestas viene de Buenos Aires, por eso la hipótesis geográfica sigue pendiente.">
+  <h2 class="r" style="--i:1">Lo que dijo<br><em>la encuesta.</em></h2>
+  <p class="r" style="--i:2;font:500 22px var(--f-mono);color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 0">88 respuestas válidas · qué se decidió con cada dato</p>
+  <div class="enc">
+    <button class="ec r" style="--i:3" data-n="0"><span class="k">77,3<small>%</small></span><span class="q">tomaría clases virtuales si el profesor es bueno.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Aula en el navegador, sin instalar nada. La modalidad virtual queda validada.</span></button>
+    <button class="ec r" style="--i:4" data-n="1"><span class="k">4,56<small>USD/h</small></span><span class="q">es la mediana de lo que pagarían por una hora.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>El tutor fija su precio, con un piso de USD 4/h. Riesgo: el equilibrio pide USD 5,87/h.</span></button>
+    <button class="ec r" style="--i:5" data-n="2"><span class="k">34,1<small>%</small></span><span class="q">prefiere pagar por transferencia antes que en una plataforma.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Riesgo de desintermediación: valor que solo existe adentro, como el pago protegido, la reputación y el aula.</span></button>
+    <button class="ec r" style="--i:6" data-n="3"><span class="k">90,9<small>%</small></span><span class="q">de las respuestas viene de Buenos Aires (provincia y CABA).</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Se entrevistó a familias del interior: dan los primeros casos, pero hay que medirlo con usuarios reales.</span></button>
   </div>
 </section>
 <!-- 4 PRODUCTO -->
@@ -608,7 +702,7 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
   <p class="note-src">Proyección ilustrativa en 2D de un espacio de 384 dimensiones · paraphrase-multilingual-MiniLM-L12-v2 · pgvector</p>
 </section>
 <!-- 7 AULA -->
-<section class="slide aula" data-id="aula" data-title="Aula virtual y pizarra" data-kw="aula virtual videollamada webrtc livekit pizarra compartida resumen automatico ia transcripcion audio consentimiento clase en vivo navegador sin instalar privacidad" data-notes="La clase se da dentro de la plataforma, sin instalar nada, sobre LiveKit. La pizarra se sincroniza en tiempo real entre tutor y alumno. El resumen post-sesión es un adicional opcional de $2.000: temas vistos, conceptos clave y qué repasar; si no se puede generar se devuelve el monto. Privacidad: no se guarda video; el audio solo se usa entre adultos, con consentimiento de ambos y se borra al transcribir.">
+<section class="slide aula" data-id="aula" data-title="Aula virtual y pizarra" data-kw="aula virtual videollamada webrtc livekit pizarra compartida resumen automatico ia transcripcion audio consentimiento clase en vivo navegador sin instalar privacidad" data-notes="La clase se da dentro de la plataforma, sin instalar nada, sobre LiveKit. La pizarra se sincroniza en tiempo real entre tutor y alumno. El resumen post-sesión es un adicional opcional, con precio según la duración (costo de IA más 50 %): temas vistos, conceptos clave y qué repasar; si no se puede generar se devuelve el monto. Privacidad: no se guarda video; el audio solo se usa entre adultos, con consentimiento de ambos y se borra al transcribir.">
   <div>
     <h2 class="r" style="--i:1">La clase pasa<br><em>dentro de Tinku.</em></h2>
     <div class="bf r" style="--i:2"><div class="bf-bar"><i></i><i></i><i></i><span>Pizarra del aula</span></div><video data-play muted loop playsinline preload="metadata" poster="data:image/jpeg;base64,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sM0k32uZCgAbHyKpJIUY6ZPJNeh1m99C0FFFFIAooooA4P43/wDJsfxG/wCxX1P/ANJJK/GAdK/Z/wCN/wDybH8Rv+xX1P8A9JJK/GAdKDKoLRRRQQFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFACHpX7P/BD/k2P4c/9ivpn/pJHX4wHpX7P/BD/AJNj+HP/AGK+mf8ApJHQXTO8ooooNQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDwn9sj/AJMs8Y/71j/6XQUv7HH/ACZZ4O+t9/6XT079sOGWb9i/xkkMTyMBZuQikkKt7ASeOwAJJ9BS/sewzQfsX+DUnieJiLxwHUqSrXs7KeexBBB7g1p/y7+ZP2j3KiiisygooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDg/jf/AMmx/Eb/ALFfU/8A0kkr8YB0r9n/AI3/APJsfxG/7FfU/wD0kkr8YB0oMqgtFFFBAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAIelfs/8EP+TY/hz/2K+mf+kkdfjAelfs/8EP8Ak2P4c/8AYr6Z/wCkkdBdM7yiiig1CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAGyRxyxNHKiujDBVhkEURxxxRLHEioijAVRgAU6igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA4P43/8mx/Eb/sV9T/9JJK/GAdK/Z/43/8AJsfxG/7FfU//AEkkr8YB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"><source src="/presentacion/media/pizarra.mp4" type="video/mp4"><source src="/presentacion/media/pizarra.webm" type="video/webm"></video></div>
@@ -646,7 +740,7 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
   </div>
 </section>
 <!-- 9 PAGOS -->
-<section class="slide pay" data-id="pagos" data-title="Pagos protegidos" data-kw="pagos pago escrow retenido dinero mercadopago comision reembolso cancelar cancelacion cuanto cuesta precio plata liberacion tutor cobra 24 horas garantia bypass" data-notes="El pago se hace con MercadoPago y entra directo a la cuenta del tutor (modelo A, ADR-M5-02): Tinku no guarda plata de terceros. Tinku cobra su comisión del 27 % y MercadoPago la suya (≈6 %) al tutor. Durante 24 horas después de la clase Tinku todavía puede reembolsar. Si se cancela con más de 24 hs de anticipación, o el tutor no se presenta, el reembolso es total. Mover el control para mostrar cómo se reparte una clase entre tutor y plataforma. Ningún plazo de dinero vive en memoria: son tareas Quartz persistidas en la base.">
+<section class="slide pay" data-id="pagos" data-title="Pagos protegidos" data-kw="pagos pago escrow retenido dinero mercadopago comision reembolso cancelar cancelacion cuanto cuesta precio plata liberacion tutor cobra 24 horas garantia bypass" data-notes="El pago se hace con MercadoPago y entra directo a la cuenta del tutor (modelo A, ADR-M5-02): Tinku no guarda plata de terceros. Tinku cobra su comisión del 27 % y MercadoPago la suya (≈6 %) al tutor. Durante 24 horas después de la clase Tinku todavía puede reembolsar. Si se cancela con más de 24 hs de anticipación, o el tutor no se presenta, el reembolso es total. Mover el precio desde el celular: el reparto entre tutor, Tinku y MercadoPago se actualiza, y el control se pega al precio del modelo ($ 13.392, promedio del relevamiento) y al de equilibrio ($ 9.010). Ningún plazo de dinero vive en memoria: son tareas Quartz persistidas en la base.">
   <h2 class="r" style="--i:1">Pagás al reservar.<br><em>Reclamás si algo falla.</em></h2>
   <div class="tl r" style="--i:2">
     <div class="tn" style="--k:0"><i>1</i><b>Reserva</b><span>15 minutos para pagar</span></div>
@@ -658,7 +752,7 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
   <div class="split">
     <div>
       <div class="sb r" style="--i:3"><i class="tu" id="sbt" style="flex-basis:66.96%"></i><i class="mp" id="sbm" style="flex-basis:6.04%"></i><i class="ti" id="sbi" style="flex-basis:27%"></i></div>
-      <div class="sl r" style="--i:4"><span>Precio de la clase</span><input id="pr" type="range" min="3000" max="40000" step="500" value="15000" aria-label="Precio de la clase en pesos"><output id="po">$ 15.000</output></div>
+      <div class="msl r" style="--i:4" id="prw"><div class="msl-h"><span>Precio por hora</span><b id="po">$ 13.392</b><em id="pos"></em></div><div class="msl-t" id="prt"><input id="pr" type="range" min="6140" max="25000" step="1" value="13392" aria-label="Precio por hora en pesos"></div></div>
     </div>
     <div class="rules r" style="--i:5">
       <div class="rule"><b>Cancelás con más de 24 hs</b> o el tutor no se presenta: reembolso total.</div>
@@ -703,77 +797,54 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
   </div>
 </section>
 <!-- 12 FINANZAS -->
-<section class="slide fin" data-id="finanzas" data-title="Evaluación financiera" data-kw="finanzas financiera van tir repago retorno inversion rentabilidad comision ticket sesiones piso minimo punto de equilibrio escenario base cinco años dinero modelo negocio ingresos" data-notes="Escenario base a cinco años (capítulo 5 de la tesis): VAN USD 18.869, TIR 41,57 %, repago en 1,99 años, con la comisión del 27 % entera para la plataforma porque MercadoPago le cobra al tutor. Usar el control para mostrar el piso: con menos de unas 5.900 sesiones por año en promedio el VAN se vuelve negativo. Escenario pesimista: VAN USD −4.410. El ingreso mostrado es bruto por comisión, ilustrativo: sesiones por comisión por ticket promedio.">
-  <h2 class="r" style="--i:1">Los números,<br><em>en tres escenarios.</em></h2>
+<section class="slide fin" data-id="finanzas" data-title="Evaluación financiera" data-kw="finanzas financiera van tir repago retorno inversion rentabilidad comision ticket sesiones piso minimo punto de equilibrio escenario base cinco años dinero modelo negocio ingresos" data-notes="Simulador sobre el modelo del capítulo 5. Base: 8.712 sesiones al año en promedio, 27 % y $ 13.392 por hora: VAN USD 18.869, TIR 41,57 %, repago 1,99 años. Mover las sesiones desde el celular: el VAN cambia en vivo y el control se pega al escenario base. Bajando, el VAN se anula en unas 5.858 sesiones (−32,8 %); en 5.256 es el pesimista (VAN USD −4.410) y en 13.824 el optimista (USD 51.990). La comisión y el precio también mueven el resultado.">
+  <h2 class="r" style="--i:1">Los números,<br><em>en movimiento.</em></h2>
   <div class="kp">
-    <div class="kpi hi r" style="--i:2"><div class="n"><span id="kvan" class="cnt" data-to="0">0</span></div><p>VAN · USD</p></div>
-    <div class="kpi r" style="--i:3"><div class="n"><span id="ktir" class="cnt" data-to="0">0</span><small>%</small></div><p>TIR</p></div>
-    <div class="kpi r" style="--i:4"><div class="n"><span id="krep" class="cnt" data-to="0" data-dec="2">0</span><small>años</small></div><p>Repago</p></div>
+    <div class="kpi hi r" style="--i:2"><div class="n"><span id="kvan">0</span></div><p>VAN · USD</p></div>
+    <div class="kpi r" style="--i:3"><div class="n"><span id="ktir">0</span><small>%</small></div><p>TIR</p></div>
+    <div class="kpi r" style="--i:4"><div class="n"><span id="krep">0</span><small>años</small></div><p>Repago</p></div>
   </div>
-  <div class="fsel r" style="--i:5">
-    <div class="chips" id="fesc" role="tablist" aria-label="Escenario"><span>Escenario</span><button data-e="pes">Pesimista</button><button data-e="base">Base</button><button data-e="opt">Optimista</button></div>
-    <div class="chips" id="fcom" role="tablist" aria-label="Comisión"><span>Comisión</span><button data-c="20">20 %</button><button data-c="23">23 %</button><button data-c="25">25 %</button><button data-c="27">27 %</button><button data-c="30">30 %</button></div>
-    <p class="fcm" id="fcm"></p>
+  <div class="fsim">
+    <div class="fctl r" style="--i:5">
+      <div class="chips" id="fesc" role="tablist" aria-label="Escenario"><span>Escenario</span><button data-e="pes">Pesimista</button><button data-e="base">Base</button><button data-e="opt">Optimista</button></div>
+      <div class="chips" id="fcom" role="tablist" aria-label="Comisión"><span>Comisión</span><button data-c="20">20 %</button><button data-c="23">23 %</button><button data-c="25">25 %</button><button data-c="27">27 %</button><button data-c="30">30 %</button></div>
+    </div>
+    <div class="msl r" style="--i:6" id="alw"><div class="msl-h"><span>Sesiones por año</span><b id="alv">8.712</b><em id="als"></em></div><div class="msl-t" id="alt"><input id="al" type="range" min="2000" max="16000" step="1" value="8712" aria-label="Sesiones por año, en promedio"></div></div>
+    <div class="msl r" style="--i:7" id="fpw"><div class="msl-h"><span>Precio por hora</span><b id="fpv">$ 13.392</b><em id="fps"></em></div><div class="msl-t" id="fpt"><input id="fp" type="range" min="6140" max="25000" step="1" value="13392" aria-label="Precio por hora en pesos"></div></div>
   </div>
-  <div class="gauge r" style="--i:6">
-    <h4>¿Alcanzan las sesiones?<span>Comisión <b id="gcom">21</b>% · ticket <b id="gtk"></b>. Ingreso bruto ilustrativo.</span></h4>
-    <div><div class="gtrack"><div class="fill" id="gf"></div><div class="fl" id="gfl" data-l=""></div></div><input id="gs" type="range" min="0" max="10000" step="100" value="2000" aria-label="Sesiones por año"></div>
-    <div class="gout"><b id="gn">2.000</b><span id="gt"></span></div>
-  </div>
+  <p class="fcm r" style="--i:8" id="fcm"></p>
 </section>
 <!-- 13 RIESGOS -->
-<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con funciones que solo existen dentro de la plataforma. Hacer clic en cada tarjeta para pasar de riesgo a mitigación.">
+<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con funciones que solo existen dentro de la plataforma. Dar vuelta cada tarjeta desde el celular. En desintermediación, sumar que una de tres familias pagaría directo al tutor; en adopción, que los cuatro tutores en actividad aceptan la comisión.">
   <h2 class="r" style="--i:1">Lo que puede<br><em>salir mal.</em></h2>
   <div class="cards">
     <button class="fc r" style="--i:2" aria-label="Riesgo de viabilidad comercial. Activar para ver la mitigación">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo · clic para ver la mitigación</p><b>Viabilidad comercial</b><p>Con menos de <b style="color:var(--paper)"><span id="rfl">5.858</span> sesiones anuales</b> en promedio, el VAN se vuelve negativo.</p><p>Escenario pesimista: VAN USD −4.410.</p><span class="more">1 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Viabilidad comercial</b><p>Con menos de <b style="color:var(--paper)"><span id="rfl">5.858</span> sesiones anuales</b> en promedio, el VAN se vuelve negativo.</p><p>Escenario pesimista: VAN USD −4.410.</p><span class="more">1 / 3</span></div>
         <div class="fb"><p class="tg">Mitigación</p><b>Operar liviano</b><p>Costos fijos de USD 3.555 a 4.395 por año: se cubren con 1.774 a 2.194 sesiones.</p><p>Piso de tarifa de USD 4 por hora (BR-PAG-04).</p><span class="more">1 / 3</span></div>
       </div>
     </button>
     <button class="fc r" style="--i:3" aria-label="Riesgo de desintermediación. Activar para ver la mitigación">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo · clic para ver la mitigación</p><b>Desintermediación</b><p>Tutor y familia acuerdan por fuera de la plataforma después del primer contacto.</p><p><b style="color:var(--paper)">34,1 %</b> prefiere pagar por transferencia (encuesta, n = 88).</p><span class="more">2 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Valor que no se lleva</b><p>Funciones exclusivas dentro de la plataforma: resumen con IA y reputación verificada.</p><p>Pago protegido, aula integrada y el tutor se queda con el 66,96 %.</p><span class="more">2 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Desintermediación</b><p>Tutor y familia acuerdan por fuera de la plataforma después del primer contacto.</p><p><b style="color:var(--paper)">34,1 %</b> prefiere la transferencia (encuesta, n = 88), y una de tres familias del interior le pagaría directo al tutor.</p><span class="more">2 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Valor que no se lleva</b><p>Lo que solo existe adentro: cobro garantizado, reputación verificada, aula y resumen con IA.</p><p>Los 4 tutores entrevistados aceptan la comisión justamente por el cobro garantizado.</p><span class="more">2 / 3</span></div>
       </div>
     </button>
     <button class="fc r" style="--i:4" aria-label="Riesgo de adopción por parte de los tutores. Activar para ver la mitigación">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo · clic para ver la mitigación</p><b>Adopción de tutores</b><p>Los tutores con la agenda completa no necesitan intermediación.</p><p>Una profesional de apoyo escolar, entrevistada, dijo que no lo usaría.</p><span class="more">3 / 3 · detalle en la siguiente</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Tinku apunta a quien tiene horarios libres y quiere llegar a más alumnos.</p><p>Ella ya tiene todo lo necesario: no es el cliente. La entrevista aportó otra cosa: el vínculo con menores.</p><span class="more">3 / 3 · detalle en la siguiente</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Adopción de tutores</b><p>Los tutores con la agenda completa no necesitan intermediación.</p><p>Una tutora consolidada, con más de veinte alumnos, dijo que no lo usaría.</p><span class="more">3 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Tinku apunta a quien tiene horas libres. 4 de 4 tutores en actividad aceptan el 27 % a cambio de alumnos y cobro en 24 hs.</p><span class="more">3 / 3</span></div>
       </div>
     </button>
   </div>
 </section>
-<!-- CLIENTES -->
-<section class="slide who" data-id="clientes" data-title="Dos clientes, un mercado" data-kw="clientes tutores estudiantes familias entrevista apoyo escolar agenda completa intermediacion no lo usaria menores publico objetivo segmento oferta demanda quien" data-notes="Tinku tiene dos clientes: quien necesita aprender y quien enseña. Contar la entrevista (≈1 min): se entrevistó a una persona que hace apoyo escolar; dijo que no usaría la plataforma. Tiene sentido: ya tiene la agenda completa y no necesita intermediación, así que no es el tutor al que apunta el sistema. La entrevista se hizo para conocer la relación con menores y otros temas del oficio. Completar en la tesis la síntesis de esta entrevista (el capítulo 2 la tiene marcada como pendiente).">
-  <h2 class="r" style="--i:0">Dos clientes, <em>un mercado.</em></h2>
-  <div class="wg">
-    <div class="wc r" style="--i:1"><p class="t">La demanda</p><b>Estudiantes y familias</b><ul><li>Buscan un tutor en el que confiar</li><li>Reservan en minutos y pagan protegido</li><li>Los menores van siempre de la mano de un adulto responsable</li></ul></div>
-    <div class="wc r" style="--i:2"><p class="t">La oferta</p><b>Tutores</b><ul><li>Tienen horarios libres y quieren llegar a más alumnos</li><li>Fijan su precio y sus horarios</li><li>Cobran en su propia cuenta de MercadoPago</li></ul></div>
-  </div>
-  <div class="iv r" style="--i:3">
-    <div><p class="t">Entrevista · apoyo escolar</p><b>Dijo que no lo usaría. Y tiene sentido.</b><p>Entrevistamos a una persona que da apoyo escolar. Ya tiene la agenda completa y no necesita intermediación, así que no es el tutor al que apunta Tinku. La entrevista sirvió para conocer su relación con los menores y otros temas del oficio.</p></div>
-    <div class="pl"><span class="no">No es el cliente: agenda completa</span><span class="no">No necesita intermediación</span><span class="si">Sí aportó: el vínculo con menores</span></div>
-  </div>
-</section>
-<!-- 14 CONCLUSIONES -->
-<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Tocar cada tarjeta para mostrar qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; la mediana de disposición a pagar es USD 4,56 por hora; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación; 90,9 % de las respuestas viene de Buenos Aires, por eso la hipótesis geográfica sigue pendiente.">
-  <h2 class="r" style="--i:1">Lo que dijo<br><em>la encuesta.</em></h2>
-  <p class="r" style="--i:2;font:500 22px var(--f-mono);color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 0">88 respuestas válidas · tocá cada dato para ver qué se decidió</p>
-  <div class="enc">
-    <button class="ec r" style="--i:3" data-n="0"><span class="k">77,3<small>%</small></span><span class="q">tomaría clases virtuales si el profesor es bueno.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Aula en el navegador, sin instalar nada. La modalidad virtual queda validada.</span></button>
-    <button class="ec r" style="--i:4" data-n="1"><span class="k">4,56<small>USD/h</small></span><span class="q">es la mediana de lo que pagarían por una hora.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>El tutor fija su precio, con un piso de USD 4/h. Riesgo: el equilibrio pide USD 5,87/h.</span></button>
-    <button class="ec r" style="--i:5" data-n="2"><span class="k">34,1<small>%</small></span><span class="q">prefiere pagar por transferencia antes que en una plataforma.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Riesgo de desintermediación: valor que solo existe adentro, como el pago protegido, la reputación y el aula.</span></button>
-    <button class="ec r" style="--i:6" data-n="3"><span class="k">90,9<small>%</small></span><span class="q">de las respuestas viene de Buenos Aires (provincia y CABA).</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>La hipótesis geográfica sigue pendiente: hay que medirla con usuarios del interior.</span></button>
-  </div>
-</section>
-<section class="slide concl" data-id="conclusiones" data-title="Conclusiones y estado" data-kw="conclusiones estado del proyecto demanda validada hipotesis geografica pendiente construccion sostenible desarrollo unipersonal asistido por ia aceptacion modalidad virtual usuarios interior" data-notes="Ser claro con lo que está probado y lo que no. Probado: se puede construir y sostener un sistema completo con una sola persona asistida por IA (739 tests). Demanda: validación de la modalidad virtual. Pendiente: la hipótesis geográfica, es decir probar con usuarios reales del interior. Eso es lo que sigue.">
+<!-- CONCLUSIONES -->
+<section class="slide concl" data-id="conclusiones" data-title="Conclusiones y estado" data-kw="conclusiones estado del proyecto demanda validada hipotesis geografica pendiente construccion sostenible desarrollo unipersonal asistido por ia aceptacion modalidad virtual usuarios interior" data-notes="Ser claro con lo que está probado y lo que no. Probado: se puede construir y sostener un sistema completo con una sola persona asistida por IA (739 tests). Demanda: validación de la modalidad virtual. Pendiente: la hipótesis geográfica. Las familias de Maciá y Jacobacci aportan los primeros casos concretos, pero falta medirla con usuarios reales del interior. Eso es lo que sigue.">
   <h2 class="r" style="--i:1">Lo probado.<br><em>Y lo que falta.</em></h2>
   <div class="cl">
     <div class="cc done r" style="--i:2"><span class="st2">Comprobado</span><b>Construcción sostenible</b><p>Un desarrollador, asistido por IA, entregó 9 módulos en producción.</p><div class="big"><span class="cnt" data-to="739">0</span></div></div>
     <div class="cc done r" style="--i:3"><span class="st2">Comprobado</span><b>Demanda por lo virtual</b><p>Aceptación de la modalidad virtual entre las personas encuestadas.</p><div class="big"><span class="cnt" data-to="77" data-suf="%">0</span></div></div>
-    <div class="cc pend r" style="--i:4"><span class="st2">Pendiente</span><b>Hipótesis geográfica</b><p>Validar con usuarios reales del interior que la distancia deja de ser un obstáculo.</p><div class="big">siguiente paso</div></div>
+    <div class="cc pend r" style="--i:4"><span class="st2">Pendiente</span><b>Hipótesis geográfica</b><p>Primeros casos reales: en Maciá y en Jacobacci no hubo profesor. Falta medirla con usuarios del interior.</p><div class="big">siguiente paso</div></div>
   </div>
 </section>
 <!-- CLASE VIVA -->
@@ -795,20 +866,10 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
 </section>
 </div><!-- /stage -->
 
-<div class="navb" id="prev" role="button" tabindex="0" aria-label="Diapositiva anterior">←</div>
-<div class="navb" id="next" role="button" tabindex="0" aria-label="Diapositiva siguiente">→</div>
-<div class="ui">
-  <span class="cnt-s" id="cnum">01 / 15</span><span class="sp"></span>
-  <span class="rs" id="rs" title="Estado del mando"><i></i><span id="rst">mando: sin conectar</span></span>
-  <button id="tm" class="tm" aria-label="Cronómetro">0:00 / 15:00</button>
-  <button id="bm" aria-label="Conectar el celular como mando"><kbd>M</kbd> mando</button>
-  <button id="bs" aria-label="Buscar en la presentación"><kbd>/</kbd> preguntale al deck</button>
-  <button id="bn" aria-label="Notas del orador"><kbd>N</kbd> notas</button>
-  <button id="bf2" aria-label="Pantalla completa"><kbd>F</kbd> pantalla completa</button>
-</div>
+<div id="toast" role="status" aria-live="polite"><i></i><span id="toastt"></span></div>
 <div id="notes" role="region" aria-label="Notas del orador"><h5>Notas del orador</h5><div id="nt"></div></div>
-<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><h3>Mando en el celular</h3><p>Abrí este código en el celular con tu cuenta de Claude. Muestra la diapositiva actual y deja mover los controles.</p><div class="qq" id="qq"></div><code id="qu"></code><button id="qc" type="button">Cerrar</button></div></div>
-<div id="mando" aria-label="Mando"><header><i class="mdot" id="mdot"></i><b>Mando</b><span class="sp"></span><span id="mst">buscando el deck…</span><span id="mcnt"></span></header><main><h1 id="mtitle"></h1><p class="mhint" id="mhint"></p><div id="mctl"></div></main></div>
+<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><h3>Mando en el celular</h3><p>Escanealo con el celular de la presentación. Desde ahí pasás de diapositiva, ves las notas y el tiempo, y manejás los controles.</p><div class="qq" id="qq"></div><code id="qu"></code><button id="qc" type="button">Cerrar</button></div></div>
+<div id="mando" aria-label="Mando"><header><i class="mdot" id="mdot"></i><span id="mst">buscando la pantalla…</span><span class="sp"></span><button type="button" class="mtm" id="mtm" aria-label="Cronómetro: tocá para iniciar o pausar, mantené para reiniciar">0:00 / 15:00</button><span id="mcnt"></span></header><main><h1 id="mtitle"></h1><details id="mnotes"><summary>Notas</summary><p id="mnt"></p></details><p class="mhint" id="mhint"></p><div id="mctl"></div></main><nav id="mnav" aria-label="Navegación"><button type="button" id="mprev">Anterior<small id="mprevt"></small></button><button type="button" id="mnext">Siguiente<small id="mnextt"></small></button></nav></div>
 <div id="pal" role="dialog" aria-modal="true" aria-label="Preguntale al deck">
   <div class="pbox"><div class="hd">Preguntale al deck</div><input id="pi" type="text" placeholder="¿Cómo cuidan a los menores? ¿Cuánto cuesta? ¿Qué tecnología usa?" autocomplete="off" aria-label="Escribí una pregunta"><ul id="pl"></ul><div class="ft2">↑ ↓ para elegir · Enter para ir · Esc para cerrar. Busca por significado, como Tinku.</div></div>
 </div>
@@ -840,6 +901,8 @@ var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){retu
 var HM=/^#mando(?:\.([A-Za-z0-9]{4,16}))?$/.exec(location.hash||"");
 var MANDO=!!HM;
 var ROOMKEY=(function(){
+  var qs="";try{qs=new URLSearchParams(location.search).get("sala")||""}catch(e){}
+  if(/^[A-Za-z0-9]{4,16}$/.test(qs))return qs;
   if(HM&&HM[1])return HM[1];
   if(MANDO)return "x";
   var k="";try{k=localStorage.getItem("tinku_room")||""}catch(e){}
@@ -854,7 +917,7 @@ var num=function(v,a,b,d){v=Number(v);if(!isFinite(v))return d;return Math.max(a
 function idxOf(id){for(var i=0;i<N;i++)if(slides[i].dataset.id===id)return i;return 0}
 
 /* ===== estado compartido entre el deck y el mando ===== */
-var ST={slide:0,diag:[0,0,0],step:0,q:-1,qt:"",km:"menor",kf:0,pr:15000,v:0,mod:-1,gs:2000,fl:[0,0,0],esc:"base",com:27,en:[0,0,0,0]};
+var ST={slide:0,diag:[0,0,0],step:0,q:-1,qt:"",km:"menor",kf:0,pr:13392,v:0,mod:-1,ses:8712,fl:[0,0,0],esc:"base",com:27,en:[0,0,0,0]};
 var room=null,seq=0,applying=false,lastSeen={};
 function commit(){
   if(applying||!room)return;
@@ -867,6 +930,7 @@ addEventListener("resize",fit);fit();
 
 /* contadores */
 function runCounters(sl){$$(".cnt",sl).forEach(function(el){
+  if(el.dataset.to==="")return;
   var to=parseFloat(el.dataset.to||"0"),dec=parseInt(el.dataset.dec||"0",10),pre=el.dataset.pre||"",suf=el.dataset.suf||"";
   if(reduce){el.textContent=pre+fmt(to,dec)+suf;return}
   var t0=performance.now(),dur=1400;
@@ -880,11 +944,11 @@ function go(i){
   slides.forEach(function(s,k){s.classList.toggle("on",k===i);if(MANDO)return;$$("video",s).forEach(function(v){if(k===i){try{v.currentTime=0;var p=v.play();if(p&&p.catch)p.catch(function(){})}catch(e){}}else{try{v.pause()}catch(e){}}})});
   cur=i;ST.slide=i;
   $("#pbar").style.width=((i+1)/N*100)+"%";
-  $("#cnum").textContent=("0"+(i+1)).slice(-2)+" / "+N;
   $("#nt").textContent=slides[i].dataset.notes||"";
   if(!MANDO){
     runCounters(slides[i]);
     try{history.replaceState(null,"","#"+id)}catch(e){}
+    if(id==="finanzas")finSel(true);
     if(id==="matching")startMatch();else{matchOn=false;cancelAnimationFrame(raf)}
     if(id==="flujo")startSteps(applying?ST.step:0);
     if(id==="diagnostico"){slides[i].dataset.t=Date.now();delete slides[i].dataset.manual;if(!applying)setDiag([0,0,0],true)}
@@ -895,8 +959,6 @@ function go(i){
 function nextI(d){var k=cur+d;while(k>=0&&k<N&&slides[k].dataset.skip)k+=d;return k}
 function next(){var k=nextI(1);if(k<N)go(k)}
 function prev(){var k=nextI(-1);if(k>=0)go(k)}
-$("#next").addEventListener("click",next);$("#prev").addEventListener("click",prev);
-["#next","#prev"].forEach(function(s){$(s).addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();$(s).click()}})});
 $$("[data-jump]").forEach(function(b){b.addEventListener("click",function(){go(idxOf(b.dataset.jump))})});
 
 var palOpen=false;
@@ -911,22 +973,24 @@ addEventListener("keydown",function(e){
   else if(e.key.toLowerCase()==="n"){$("#notes").classList.toggle("open")}
   else if(e.key.toLowerCase()==="f"){toggleFs()}
   else if(e.key.toLowerCase()==="m"){toggleQp()}
-  else if(e.key.toLowerCase()==="t"){e.shiftKey?tmReset():tmToggle()}
 });
 var tx=null;
 $("#vp").addEventListener("touchstart",function(e){tx=e.touches[0].clientX},{passive:true});
 $("#vp").addEventListener("touchend",function(e){if(tx===null||MANDO)return;var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>70){dx<0?next():prev()}tx=null},{passive:true});
 function toggleFs(){try{if(document.fullscreenElement){document.exitFullscreen()}else{var r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(function(){})}}catch(e){}}
-$("#bf2").addEventListener("click",toggleFs);
-$("#bn").addEventListener("click",function(){$("#notes").classList.toggle("open")});
-$("#bs").addEventListener("click",openPal);
+/* el cursor se esconde solo cuando no se mueve el mouse */
+if(!MANDO){var idleT=null;var despierto=function(){document.body.classList.remove("idle");clearTimeout(idleT);idleT=setTimeout(function(){document.body.classList.add("idle")},2500)};addEventListener("mousemove",despierto);despierto()}
 
-/* ===== cronómetro ===== */
-var tmS=0,tmOn=false,tmI=null,tm=$("#tm");
-function tmDraw(){var m=Math.floor(tmS/60),s=tmS%60;tm.textContent=m+":"+("0"+s).slice(-2)+" / "+META_MIN+":00";tm.classList.toggle("warn",tmS>=(META_MIN-2)*60&&tmS<META_MIN*60);tm.classList.toggle("over",tmS>=META_MIN*60)}
-function tmToggle(){tmOn=!tmOn;clearInterval(tmI);if(tmOn)tmI=setInterval(function(){tmS++;tmDraw()},1000)}
+/* ===== cronómetro (vive en el celular) ===== */
+var tmS=0,tmOn=false,tmI=null,tm=$("#mtm");
+function tmDraw(){var m=Math.floor(tmS/60),s=tmS%60;tm.textContent=m+":"+("0"+s).slice(-2)+" / "+META_MIN+":00";tm.classList.toggle("run",tmOn);tm.classList.toggle("warn",tmS>=(META_MIN-2)*60&&tmS<META_MIN*60);tm.classList.toggle("over",tmS>=META_MIN*60)}
+function tmToggle(){tmOn=!tmOn;clearInterval(tmI);if(tmOn)tmI=setInterval(function(){tmS++;tmDraw()},1000);tmDraw()}
 function tmReset(){tmOn=false;clearInterval(tmI);tmS=0;tmDraw()}
-tm.addEventListener("click",tmToggle);tm.addEventListener("dblclick",tmReset);
+(function(){var lp=null,largo=false;
+  tm.addEventListener("pointerdown",function(){largo=false;lp=setTimeout(function(){largo=true;tmReset();buzz()},700)});
+  ["pointerup","pointerleave","pointercancel"].forEach(function(ev){tm.addEventListener(ev,function(){clearTimeout(lp)})});
+  tm.addEventListener("click",function(){if(!largo)tmToggle()});
+})();
 
 /* ===== Preguntale al deck ===== */
 var SYN={
@@ -988,7 +1052,7 @@ if(!(window.claude&&window.claude.use)&&/^https?:$/.test(location.protocol)){
   try{fetch("/presentacion/sync/info").then(function(r){return r.json()}).then(function(j){if(j&&j.url){mandoUrl=j.url+"#mando."+ROOMKEY}}).catch(function(){})}catch(e){}
 }
 function toggleQp(){var p=$("#qp");p.classList.toggle("open");if(p.classList.contains("open")){makeQR($("#qq"),mandoUrl);$("#qu").textContent=mandoUrl}}
-$("#bm").addEventListener("click",toggleQp);$("#qc").addEventListener("click",toggleQp);
+$("#qc").addEventListener("click",toggleQp);
 $("#qp").addEventListener("click",function(e){if(e.target.id==="qp")toggleQp()});
 
 /* ===== Diagnóstico ===== */
@@ -1151,13 +1215,21 @@ $("#go").addEventListener("click",fireKill);
 
 /* ===== Pagos ===== */
 function pagosDraw(){
-  var pr=ST.pr,c=MODELO.com,mp=MODELO.mp,tu=100-c-mp;
+  var pr=ST.pr,c=ST.com,mp=MODELO.mp,tu=100-c-mp;
   $("#pr").value=pr;$("#po").textContent="$ "+fmt(pr);
+  $("#pos").textContent=pr===IDEAL.pr?"precio del modelo":(pr===9010?"equilibrio del escenario base":(pr<9010?"debajo del equilibrio":""));
+  $("#prw").classList.toggle("snap",pr===IDEAL.pr);
+  drawMk($("#prt"),prPts());
   $("#sbt").style.flexBasis=tu+"%";$("#sbm").style.flexBasis=mp+"%";$("#sbi").style.flexBasis=c+"%";
   $("#sbt").textContent="Tutor $ "+fmt(Math.round(pr*tu/100));
-  $("#sbi").textContent="$ "+fmt(Math.round(pr*c/100));
+  $("#sbi").textContent="Tinku $ "+fmt(Math.round(pr*c/100));
 }
-function setPr(v,quiet){ST.pr=Math.round(num(v,3000,40000,15000)/500)*500;pagosDraw();if(!quiet)commit();syncMando()}
+function setPr(v,quiet,noSnap){
+  var prev=ST.pr;v=num(v,6140,25000,IDEAL.pr);
+  if(noSnap)v=Math.round(v);
+  else{v=Math.round(v/100)*100;var s=snapTo(v,prPts());if(s){v=s.v;if(prev!==v)buzz()}}
+  ST.pr=Math.max(6140,v);pagosDraw();finSel();if(!quiet)commit();syncMando();
+}
 $("#pr").addEventListener("input",function(){setPr($("#pr").value)});
 
 /* ===== Vistas ===== */
@@ -1182,38 +1254,87 @@ function setMod(k,quiet){k=Math.round(num(k,-1,mods.length-1,-1));ST.mod=k;mods.
 mods.forEach(function(m,i){m.addEventListener("click",function(){setMod(ST.mod===i?-1:i)})});
 
 /* ===== Finanzas ===== */
-function finanzas(){
-  var m=MODELO;
-  $("#kvan").dataset.to=m.van;$("#ktir").dataset.to=m.tir;$("#ktir").dataset.dec=m.tir%1?"2":"0";$("#krep").dataset.to=m.repago;
-  $("#gcom").textContent=m.com;$("#gtk").textContent=m.ticketTxt;$("#rfl").textContent=fmt(m.piso);
+function finanzas(){$("#rfl").textContent=fmt(MODELO.piso)}
+/* ===== Finanzas: simulador sobre el modelo del cap. 5 =====
+   Flujo anual = sesiones × margen − costos fijos; inversión en el año 0; tasa del 15 %.
+   El slider fija el promedio anual de sesiones con el perfil del escenario base (como la
+   sensibilidad de la tesis: el VAN se anula en unas 5.858). En las marcas de cada escenario
+   usa su serie exacta, así que da el VAN, la TIR y el repago del pesimista, el base y el optimista. */
+var FIN={I:25730,r:.15,F:[3555,3675,3915,4155,4395],clases:36,ticket:7.42,
+  ser:{pes:[4680,3960,5760,5040,6840],base:[7200,9360,7560,10440,9000],opt:[10080,15120,12240,17280,14400]}};
+var IDEAL={ses:8712,pr:13392};
+function sesEsc(e){var s=FIN.ser[e]||FIN.ser.base;return s.reduce(function(a,b){return a+b},0)/s.length}
+function escOf(ses){return ses===sesEsc("pes")?"pes":ses===sesEsc("base")?"base":ses===sesEsc("opt")?"opt":""}
+function serSes(ses){var e=escOf(ses);if(e)return FIN.ser[e];return FIN.ser.base.map(function(v){return v*ses/IDEAL.ses})}
+function npv(fl,r){var v=0;for(var t=0;t<fl.length;t++)v+=fl[t]/Math.pow(1+r,t);return v}
+function flujos(ses,m){var s=serSes(ses),fl=[-FIN.I];for(var t=0;t<s.length;t++)fl.push(s[t]*m-FIN.F[t]);return fl}
+function finCalc(ses,com,pr){
+  var tk=FIN.ticket*pr/IDEAL.pr,m=tk*com/100,fl=flujos(ses,m),van=npv(fl,FIN.r),tir=null,t;
+  if(npv(fl,-.9)>0&&npv(fl,5)<0){var lo=-.9,hi=5;for(var i=0;i<80;i++){var mid=(lo+hi)/2;if(npv(fl,mid)>0)lo=mid;else hi=mid}tir=(lo+hi)/2}
+  var acc=fl[0],rep=null;for(t=1;t<fl.length;t++){if(fl[t]>0&&acc+fl[t]>=0){rep=t-1+(-acc)/fl[t];break}acc+=fl[t]}
+  /* con el perfil base el VAN es lineal en las sesiones: se despeja dónde se anula */
+  var A=0,B=FIN.I,bs=FIN.ser.base;for(t=0;t<bs.length;t++){A+=bs[t]/IDEAL.ses*m/Math.pow(1+FIN.r,t+1);B+=FIN.F[t]/Math.pow(1+FIN.r,t+1)}
+  return {van:van,tir:tir,rep:rep,ses:ses,al:ses/FIN.clases,tk:tk,ses0:A>0?B/A:Infinity}
 }
-function gsDraw(){
-  var m=MODELO,max=10000,s=ST.gs,ok=s>=m.piso;
-  $("#gs").value=s;$("#gf").style.width=(s/max*100)+"%";$("#gf").classList.toggle("ok",ok);
-  $("#gfl").style.left=(m.piso/max*100)+"%";$("#gfl").dataset.l="piso "+fmt(m.piso);
-  $("#gn").textContent=fmt(s);
-  var ing=s*m.com/100*m.ticketVal;
-  $("#gt").innerHTML="sesiones por año<br>≈ USD "+fmt(Math.round(ing))+" de comisión bruta<br>"+(ok?"Sobre el piso mínimo":"Debajo del piso mínimo");
+/* imán: cerca de un punto marcado, el valor se pega a él */
+function snapTo(v,pts){var b=null;pts.forEach(function(p){if(p.r&&Math.abs(v-p.v)<=p.r&&(!b||Math.abs(v-p.v)<Math.abs(v-b.v)))b=p});return b}
+function prPts(){return [{v:6140,l:"piso"},{v:9010,r:250,l:"equilibrio",c:"zero"},{v:IDEAL.pr,r:600,l:"modelo ★",c:"ideal"}]}
+function sesPts(){return [{v:sesEsc("pes"),r:180,l:"Pesimista"},{v:IDEAL.ses,r:450,l:"Base ★",c:"ideal"},{v:sesEsc("opt"),r:300,l:"Optimista"}]}
+function drawMk(box,pts){
+  if(!box)return;var inp=box.querySelector("input"),min=+inp.min,max=+inp.max;
+  $$(".mk",box).forEach(function(n){n.remove()});
+  pts.forEach(function(p){if(!isFinite(p.v)||p.v<min||p.v>max)return;var d=document.createElement("div");d.className="mk "+(p.c||"");d.style.left="calc(20px + (100% - 40px) * "+((p.v-min)/(max-min))+")";d.textContent=p.l;box.appendChild(d)});
+}
+function buzz(){if(MANDO&&navigator.vibrate){try{navigator.vibrate(12)}catch(e){}}}
+/* los KPI se deslizan del valor que muestran al nuevo */
+var kpiCur={van:0,tir:0,rep:0},kpiRaf=0;
+function kpiShow(r,desdeCero){
+  if(MANDO)return;
+  cancelAnimationFrame(kpiRaf);
+  var kv=$("#kvan"),kt=$("#ktir"),kr=$("#krep");
+  var to={van:r.van,tir:r.tir===null?null:r.tir*100,rep:r.rep},from=desdeCero?{van:0,tir:0,rep:0}:{van:kpiCur.van,tir:kpiCur.tir,rep:kpiCur.rep};
+  kv.closest(".kpi").classList.toggle("neg",r.van<0);
+  var dur=reduce||document.hidden?0:(desdeCero?1200:420),t0=performance.now();
+  (function tick(now){
+    var p=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-p,3);
+    kpiCur.van=from.van+(to.van-from.van)*e;kv.textContent=fmt(Math.round(kpiCur.van));
+    if(to.tir===null){kt.textContent="—";kpiCur.tir=0}else{kpiCur.tir=from.tir+(to.tir-from.tir)*e;kt.textContent=fmt(kpiCur.tir,2)}
+    if(to.rep===null){kr.textContent="> 5";kpiCur.rep=5}else{kpiCur.rep=from.rep+(to.rep-from.rep)*e;kr.textContent=fmt(kpiCur.rep,2)}
+    if(p<1)kpiRaf=requestAnimationFrame(tick);
+  })(t0);
 }
 var fesc=$$("#fesc button"),fcom=$$("#fcom button");
-function finSel(){
-  var m=MODELO,e=m.esc[ST.esc],z=m.sens[ST.com];
-  fesc.forEach(function(b){b.classList.toggle("on",b.dataset.e===ST.esc)});
+function finSel(desdeCero){
+  var r=finCalc(ST.ses,ST.com,ST.pr),e=escOf(ST.ses);ST.esc=e||ST.esc;
+  fesc.forEach(function(b){b.classList.toggle("on",b.dataset.e===e)});
   fcom.forEach(function(b){b.classList.toggle("on",+b.dataset.c===ST.com)});
-  $("#kvan").textContent=fmt(e.van);$("#ktir").textContent=fmt(e.tir,2);$("#krep").textContent=fmt(e.repago,2);
-  $("#kvan").dataset.to=e.van;$("#ktir").dataset.to=e.tir;$("#krep").dataset.to=e.repago;
-  $("#fcm").innerHTML="Con <b>"+ST.com+" %</b> de comisión: VAN base <b>USD "+fmt(z.base)+"</b> · pesimista <b>USD "+fmt(z.pes)+"</b> · el tutor recibe <b>"+fmt(100-ST.com-m.mp,2)+" %</b>. Equilibrio del escenario base: ≈ "+m.equilibrio+" %.";
+  kpiShow(r,desdeCero);
+  $("#al").value=ST.ses;$("#alv").textContent=fmt(ST.ses);
+  $("#als").textContent="≈ "+fmt(Math.round(r.al))+" alumnos activos"+(ST.ses===IDEAL.ses?" · ideal del proyecto":(e?" · escenario "+(e==="pes"?"pesimista":"optimista"):""));
+  $("#alw").classList.toggle("snap",ST.ses===IDEAL.ses);
+  drawMk($("#alt"),sesPts().concat([{v:Math.round(r.ses0),l:"VAN = 0",c:"zero"}]));
+  $("#fp").value=ST.pr;$("#fpv").textContent="$ "+fmt(ST.pr);
+  $("#fps").textContent="USD "+fmt(r.tk,2)+" por clase"+(ST.pr===IDEAL.pr?" · precio del modelo":"");
+  $("#fpw").classList.toggle("snap",ST.pr===IDEAL.pr);
+  drawMk($("#fpt"),prPts());
+  $("#fcm").innerHTML="<b>"+fmt(ST.ses)+"</b> sesiones al año en promedio · ticket <b>USD "+fmt(r.tk,2)+"</b> · el tutor recibe <b>"+fmt(100-ST.com-MODELO.mp,2)+" %</b> · el VAN se anula con <b>"+(isFinite(r.ses0)?fmt(Math.round(r.ses0)):"—")+"</b> sesiones al año.";
 }
-function setEsc(k,quiet){var prev=ST.esc;ST.esc=MODELO.esc[k]?k:"base";finSel();if(prev!==ST.esc&&slides[cur].dataset.id==="finanzas"&&!MANDO)runCounters(slides[cur]);if(!quiet)commit();syncMando()}
-function setCom(c,quiet){c=+c;ST.com=MODELO.sens[c]?c:27;finSel();if(!quiet)commit();syncMando()}
+function setEsc(k,quiet){ST.esc=FIN.ser[k]?k:"base";ST.ses=sesEsc(ST.esc);finSel();if(!quiet)commit();syncMando()}
+function setCom(c,quiet){c=+c;ST.com=[20,23,25,27,30].indexOf(c)>-1?c:27;finSel();pagosDraw();if(!quiet)commit();syncMando()}
+function setSes(v,quiet,noSnap){
+  var prev=ST.ses;v=num(v,2000,16000,IDEAL.ses);
+  if(noSnap)v=Math.round(v);
+  else{v=Math.round(v/50)*50;var s=snapTo(v,sesPts());if(s){v=s.v;if(prev!==v)buzz()}}
+  ST.ses=v;finSel();if(!quiet)commit();syncMando();
+}
 fesc.forEach(function(b){b.addEventListener("click",function(){setEsc(b.dataset.e)})});
 fcom.forEach(function(b){b.addEventListener("click",function(){setCom(b.dataset.c)})});
+$("#al").addEventListener("input",function(){setSes($("#al").value)});
+$("#fp").addEventListener("input",function(){setPr($("#fp").value)});
 /* encuesta */
 var ecs=$$(".ec");
 function setEn(a,quiet){a=(Array.isArray(a)?a:[0,0,0,0]).slice(0,4);while(a.length<4)a.push(0);a=a.map(function(x){return x?1:0});ST.en=a;ecs.forEach(function(c,k){c.classList.toggle("on",!!a[k])});if(!quiet)commit();syncMando()}
 ecs.forEach(function(c,k){c.addEventListener("click",function(){var a=ST.en.slice();a[k]=a[k]?0:1;setEn(a)})});
-function setGs(v,quiet){ST.gs=Math.round(num(v,0,10000,2000)/100)*100;gsDraw();if(!quiet)commit();syncMando()}
-$("#gs").addEventListener("input",function(){setGs($("#gs").value)});
 
 /* ===== Riesgos ===== */
 var fcs=$$(".fc");
@@ -1223,19 +1344,35 @@ fcs.forEach(function(c,k){c.addEventListener("click",function(){var a=ST.fl.slic
 /* ===== QR de cierre ===== */
 makeQR($("#qr"),"https://tinku.site");
 
-/* ===== Red de fondo ===== */
+/* ===== Fondo: geometría de tejido andino =====
+   Rombos escalonados concéntricos, como los de los aguayos y los telares del NOA, dibujados
+   celda por celda sobre una grilla. Muy tenues y con una deriva lenta: acompañan, no compiten. */
 if(!MANDO)(function(){
-  var c=$("#net"),g=c.getContext("2d"),pts=[],w=0,h=0,dpr=Math.min(2,devicePixelRatio||1);
-  function rs(){w=innerWidth;h=innerHeight;c.width=w*dpr;c.height=h*dpr;g.setTransform(dpr,0,0,dpr,0,0);var n=Math.round(w*h/26000);pts=[];for(var i=0;i<n;i++)pts.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25})}
-  addEventListener("resize",rs);rs();
-  function f(){
-    g.clearRect(0,0,w,h);
-    for(var i=0;i<pts.length;i++){var p=pts[i];if(!reduce){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1}
-      for(var j=i+1;j<pts.length;j++){var q=pts[j],d=Math.hypot(p.x-q.x,p.y-q.y);if(d<150){g.strokeStyle="rgba(79,209,161,"+(1-d/150)*.22+")";g.lineWidth=1;g.beginPath();g.moveTo(p.x,p.y);g.lineTo(q.x,q.y);g.stroke()}}
-      g.fillStyle="rgba(79,209,161,.5)";g.beginPath();g.arc(p.x,p.y,1.8,0,6.283);g.fill()}
-    if(!reduce)requestAnimationFrame(f)
+  var c=$("#net"),g=c.getContext("2d"),w=0,h=0,dpr=Math.min(2,devicePixelRatio||1),pat=null,t0=performance.now();
+  var CELL=12,N=24,M=N/2;
+  function tela(){
+    var t=document.createElement("canvas");t.width=t.height=CELL*N;var x=t.getContext("2d");
+    for(var i=0;i<N;i++)for(var j=0;j<N;j++){
+      var d=Math.abs(i-M)+Math.abs(j-M);
+      /* rombo central (0, 3, 7, 11) y, entre cuatro piezas, el rombo de las esquinas (19, 23) */
+      if([0,3,7,11,19,23].indexOf(d)<0)continue;
+      x.fillStyle=(d===0||d===23)?"rgba(255,178,62,.9)":(d===7?"rgba(79,209,161,.55)":"rgba(79,209,161,.9)");
+      x.fillRect(i*CELL+1,j*CELL+1,CELL-2,CELL-2);
+    }
+    return t;
   }
-  f();
+  function rs(){w=innerWidth;h=innerHeight;c.width=w*dpr;c.height=h*dpr;g.setTransform(dpr,0,0,dpr,0,0);pat=g.createPattern(tela(),"repeat");f(performance.now())}
+  function f(now){
+    var off=reduce?0:((now-t0)/1000*5)%(CELL*N);
+    g.clearRect(0,0,w,h);
+    g.save();g.globalAlpha=.12;g.translate(off,off*.5);g.fillStyle=pat;g.fillRect(-CELL*N,-CELL*N,w+CELL*N*2,h+CELL*N*2);g.restore();
+    /* más apagado al centro, donde va el contenido */
+    var v=g.createRadialGradient(w*.45,h*.5,Math.min(w,h)*.15,w*.45,h*.5,Math.max(w,h)*.75);
+    v.addColorStop(0,"rgba(6,19,15,.7)");v.addColorStop(1,"rgba(6,19,15,0)");
+    g.fillStyle=v;g.fillRect(0,0,w,h);
+    if(!reduce)requestAnimationFrame(f);
+  }
+  addEventListener("resize",rs);rs();
 })();
 
 /* ===== MANDO (celular) ===== */
@@ -1245,11 +1382,11 @@ var MC={
   flujo:{h:"Elegí el paso que se muestra.",html:function(){return '<div class="mrow">'+["1 · Buscar","2 · Perfil del tutor","3 · Día, duración y hora","4 · Confirmar","5 · Pagar"].map(function(t,i){return '<button type="button" class="mb" data-a="step" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   matching:{h:"Probá una consulta o escribí la tuya.",html:function(){return '<div class="mrow">'+PRE.map(function(p,i){return '<button type="button" class="mb" data-a="q" data-i="'+i+'">'+p.q+'</button>'}).join("")+'</div><form class="mq" id="mqf"><input id="mqi" type="text" maxlength="80" placeholder="Escribí qué querés aprender" autocomplete="off"><button type="submit">Buscar</button></form>'}},
   confianza:{h:"Elegí quién está en la clase y probá el corte.",html:function(){return '<div class="mrow mg2"><button type="button" class="mb" data-a="km" data-m="menor">Hay un menor</button><button type="button" class="mb" data-a="km" data-m="adultos">Dos adultos</button></div><div class="mrow" style="margin-top:14px"><button type="button" class="mb red" data-a="kill">Detectar contenido inapropiado</button></div>'}},
-  pagos:{h:"Cambiá el precio de la clase.",html:function(){return '<div class="mval" id="mpv"></div><div class="msub" id="mps"></div><input class="mrng" id="mpr" type="range" min="3000" max="40000" step="500" aria-label="Precio de la clase"><div class="mrow mg2"><button type="button" class="mb" data-a="pr" data-d="-1000">− $ 1.000</button><button type="button" class="mb" data-a="pr" data-d="1000">+ $ 1.000</button></div>'}},
+  pagos:{h:"Cambiá el precio por hora: se pega al precio del modelo.",html:function(){return '<div class="mval" id="mpv"></div><div class="msub" id="mps"></div><input class="mrng" id="mpr" type="range" min="6140" max="25000" step="1" aria-label="Precio por hora"><div class="mrow mg2"><button type="button" class="mb" data-a="pr" data-d="-1000">− $ 1.000</button><button type="button" class="mb" data-a="pr" data-d="1000">+ $ 1.000</button></div>'}},
   vistas:{h:"Elegí la vista.",html:function(){return '<div class="mrow mg2">'+["Familias","Tutores","Moderación","Finanzas"].map(function(t,i){return '<button type="button" class="mb" data-a="v" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   arquitectura:{h:"Tocá un módulo para resaltarlo.",html:function(){var n=["M1 Identidad","M2 Matching","M3 Aula","M4 Reservas","M5 Pagos","M6 Resumen","M7 Reputación","M8 Admin","M9 Seguridad","Servicio de matching"];return '<div class="mrow mg2">'+n.map(function(t,i){return '<button type="button" class="mb" data-a="mod" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   encuesta:{h:"Tocá un dato para ver qué se decidió.",html:function(){return '<div class="mrow">'+["77,3 % · clases virtuales","USD 4,56 por hora","34,1 % · transferencia","90,9 % · Buenos Aires"].map(function(t,i){return '<button type="button" class="mb" data-a="en" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
-  finanzas:{h:"Elegí escenario y comisión, o mové las sesiones.",html:function(){return '<div class="mrow" style="grid-template-columns:repeat(3,1fr)">'+[["pes","Pesimista"],["base","Base"],["opt","Optimista"]].map(function(x){return '<button type="button" class="mb" data-a="esc" data-e="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div><div class="mrow" style="grid-template-columns:repeat(5,1fr)">'+[20,23,25,27,30].map(function(c){return '<button type="button" class="mb" data-a="com" data-c="'+c+'">'+c+'%</button>'}).join("")+'</div><div class="mval" id="mgv"></div><div class="msub" id="mgs"></div><input class="mrng" id="mgr" type="range" min="0" max="10000" step="100" aria-label="Sesiones por año"><div class="mrow mg2"><button type="button" class="mb" data-a="gs" data-d="-500">− 500</button><button type="button" class="mb" data-a="gs" data-d="500">+ 500</button></div>'}},
+  finanzas:{h:"Mové las sesiones: el VAN cambia y se pega al escenario base.",html:function(){return '<div class="mval" id="mgv"></div><div class="msub" id="mgs"></div><input class="mrng" id="mgr" type="range" min="2000" max="16000" step="1" aria-label="Sesiones por año"><div class="mrow mg2"><button type="button" class="mb" data-a="ses" data-d="-500">− 500 sesiones</button><button type="button" class="mb" data-a="ses" data-d="500">+ 500 sesiones</button></div><div class="mrow" style="grid-template-columns:repeat(3,1fr)">'+[["pes","Pesimista"],["base","Base"],["opt","Optimista"]].map(function(x){return '<button type="button" class="mb" data-a="esc" data-e="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div><div class="mrow" style="grid-template-columns:repeat(5,1fr)">'+[20,23,25,27,30].map(function(c){return '<button type="button" class="mb" data-a="com" data-c="'+c+'">'+c+'%</button>'}).join("")+'</div>'}},
   riesgos:{h:"Tocá un riesgo para ver la mitigación.",html:function(){return '<div class="mrow">'+["Viabilidad comercial","Desintermediación","Adopción de tutores"].map(function(t,i){return '<button type="button" class="mb" data-a="fl" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}}
 };
 var mid="";
@@ -1258,8 +1395,14 @@ function renderMando(){
   var id=slides[cur].dataset.id,sl=slides[cur];
   $("#mcnt").textContent=("0"+(cur+1)).slice(-2)+" / "+N;
   $("#mtitle").textContent=sl.dataset.title;
+  var pv=nextI(-1),nx=nextI(1);
+  $("#mprev").disabled=pv<0;$("#mnext").disabled=nx>=N;
+  $("#mprevt").textContent=pv>=0?slides[pv].dataset.title:"";
+  $("#mnextt").textContent=nx<N?slides[nx].dataset.title:"Fin";
+  $("#mnt").textContent=sl.dataset.notes||"";$("#mnotes").style.display=sl.dataset.notes?"":"none";
   if(id!==mid){
     mid=id;var c=MC[id];
+    $("#mnotes").open=!c;
     $("#mhint").textContent=c?c.h:"";
     $("#mctl").innerHTML=c?c.html():"";
   }
@@ -1278,10 +1421,15 @@ function syncMando(){
   if(id==="riesgos")on('[data-a="fl"]',function(b){return ST.fl[+b.dataset.i]});
   if(id==="encuesta")on('[data-a="en"]',function(b){return ST.en[+b.dataset.i]});
   if(id==="finanzas"){on('[data-a="esc"]',function(b){return b.dataset.e===ST.esc});on('[data-a="com"]',function(b){return +b.dataset.c===ST.com})}
-  if(id==="pagos"){var r=$("#mpr");if(r){if(document.activeElement!==r)r.value=ST.pr;$("#mpv").textContent="$ "+fmt(ST.pr);$("#mps").textContent="Tutor $ "+fmt(Math.round(ST.pr*(100-MODELO.com-MODELO.mp)/100))+" · Tinku $ "+fmt(Math.round(ST.pr*MODELO.com/100))+" · MercadoPago $ "+fmt(Math.round(ST.pr*MODELO.mp/100))}}
-  if(id==="finanzas"){var g=$("#mgr");if(g){if(document.activeElement!==g)g.value=ST.gs;$("#mgv").textContent=fmt(ST.gs)+" sesiones/año";$("#mgs").textContent=(ST.gs>=MODELO.piso?"Sobre":"Debajo del")+" piso mínimo ("+fmt(MODELO.piso)+")"}}
+  if(id==="pagos"){var r=$("#mpr");if(r){if(document.activeElement!==r)r.value=ST.pr;$("#mpv").textContent="$ "+fmt(ST.pr)+" / h";$("#mpv").classList.toggle("msnap",ST.pr===IDEAL.pr);$("#mps").textContent="Tutor $ "+fmt(Math.round(ST.pr*(100-ST.com-MODELO.mp)/100))+" · Tinku $ "+fmt(Math.round(ST.pr*ST.com/100))+" · MercadoPago $ "+fmt(Math.round(ST.pr*MODELO.mp/100))}}
+  if(id==="finanzas"){var g=$("#mgr");if(g){var fr=finCalc(ST.ses,ST.com,ST.pr);if(document.activeElement!==g)g.value=ST.ses;$("#mgv").textContent=fmt(ST.ses)+" sesiones";$("#mgv").classList.toggle("msnap",ST.ses===IDEAL.ses);$("#mgs").textContent="VAN USD "+fmt(Math.round(fr.van))+" · TIR "+(fr.tir===null?"—":fmt(fr.tir*100,1)+" %")+(ST.ses===IDEAL.ses?" · ideal del proyecto":"")}}
 }
 if(MANDO){
+  /* la pantalla del celular no se apaga mientras se presenta */
+  var wake=function(){try{if(navigator.wakeLock&&document.visibilityState==="visible")navigator.wakeLock.request("screen").catch(function(){})}catch(e){}};
+  document.addEventListener("visibilitychange",wake);
+  $("#mnext").addEventListener("click",function(){wake();if(!tmOn&&tmS===0)tmToggle();next();buzz()});
+  $("#mprev").addEventListener("click",function(){wake();prev();buzz()});
   $("#mctl").addEventListener("click",function(e){
     var b=e.target.closest("[data-a]");if(!b)return;var a=b.dataset.a,i=parseInt(b.dataset.i,10);
     if(a==="diag"){var d=ST.diag.slice();d[i]=d[i]?0:1;setDiag(d)}
@@ -1292,13 +1440,13 @@ if(MANDO){
     else if(a==="v")setVista(i);
     else if(a==="mod")setMod(ST.mod===i?-1:i);
     else if(a==="fl"){var f=ST.fl.slice();f[i]=f[i]?0:1;setFlip(f)}
-    else if(a==="pr")setPr(ST.pr+parseInt(b.dataset.d,10));
+    else if(a==="pr"){var pp=ST.pr,tp=ST.pr+parseInt(b.dataset.d,10);setPr(tp);if(ST.pr===pp)setPr(tp,false,true)}
     else if(a==="en"){var en=ST.en.slice();en[i]=en[i]?0:1;setEn(en)}
     else if(a==="esc")setEsc(b.dataset.e);
     else if(a==="com")setCom(b.dataset.c);
-    else if(a==="gs")setGs(ST.gs+parseInt(b.dataset.d,10));
+    else if(a==="ses"){var pa=ST.ses,ta=ST.ses+parseInt(b.dataset.d,10);setSes(ta);if(ST.ses===pa)setSes(ta,false,true)}
   });
-  $("#mctl").addEventListener("input",function(e){var r=e.target;if(r.id==="mpr")setPr(r.value);else if(r.id==="mgr")setGs(r.value)});
+  $("#mctl").addEventListener("input",function(e){var r=e.target;if(r.id==="mpr")setPr(r.value);else if(r.id==="mgr")setSes(r.value)});
   $("#mctl").addEventListener("submit",function(e){e.preventDefault();var v=($("#mqi").value||"").trim();if(v)runQuery(-1,v)});
 }
 
@@ -1308,16 +1456,23 @@ function applyRemote(s){
   applying=true;
   try{
     setDiag(s.diag,true);setStep(s.step,true);
-    setKm(s.km,true);setPr(s.pr,true);setVista(s.v,true);setMod(s.mod,true);setGs(s.gs,true);setFlip(s.fl,true);setEsc(s.esc,true);setCom(s.com,true);setEn(s.en,true);
+    setKm(s.km,true);setVista(s.v,true);setMod(s.mod,true);setFlip(s.fl,true);setEn(s.en,true);
+    setEsc(s.esc,true);setCom(s.com,true);setPr(s.pr,true,true);setSes(s.ses,true,true);
     if(+s.q>=0||s.qt){runQuery(+s.q>=0?+s.q:-1,s.qt,true)}else{ST.q=-1;ST.qt=""}
     var kf=Math.round(num(s.kf,0,999,0));if(kf!==ST.kf){ST.kf=kf;if(slides[cur].dataset.id==="confianza")fireApply()}
     var sl=Math.round(num(s.slide,0,N-1,0));if(sl!==cur)go(sl);else renderMando();
   }catch(e){}finally{applying=false}
 }
+var lastOther=0,toastT=null;
+function toast(t,off){var el=$("#toast");$("#toastt").textContent=t;el.classList.toggle("off",!!off);el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove("show")},2600)}
 function status(peers){
   var other=peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.role===(MANDO?"deck":"mando")}).length;
-  if(MANDO){$("#mdot").classList.toggle("ok",other>0);$("#mst").textContent=other>0?"deck conectado":"esperando al deck…"}
-  else{$("#rs").classList.toggle("ok",other>0);$("#rst").textContent=other>0?"mando conectado":"mando: sin conectar"}
+  if(MANDO){$("#mdot").classList.toggle("ok",other>0);$("#mst").textContent=other>0?"pantalla conectada":"esperando la pantalla…"}
+  else{
+    if(other>0&&lastOther<=0){toast("Celular conectado");$("#qp").classList.remove("open")}
+    else if(other===0&&lastOther>0)toast("Celular desconectado",true);
+    lastOther=other;
+  }
 }
 /* Sincronización propia (sin Claude): servidor local por SSE. Solo si no existe window.claude */
 function ownRoom(){
@@ -1360,10 +1515,11 @@ function joinRoom(){
 }
 
 /* ===== arranque ===== */
-finanzas();finSel();pagosDraw();gsDraw();setVista(0,true);setDiag([0,0,0],true);setFlip([0,0,0],true);setEn([0,0,0,0],true);
+finanzas();finSel();pagosDraw();setVista(0,true);setDiag([0,0,0],true);setFlip([0,0,0],true);setEn([0,0,0,0],true);
 tmDraw();
 var hh=(location.hash||"").replace("#",""),start=0;if(!MANDO)slides.forEach(function(s,i){if(s.dataset.id===hh)start=i});
 go(start);
+if(!MANDO)addEventListener("hashchange",function(){var h=(location.hash||"").replace("#","");for(var i=0;i<N;i++)if(slides[i].dataset.id===h&&i!==cur){go(i);break}});
 joinRoom();
 /* utilidades para pruebas */
 window.__tinku={ST:ST,go:go,next:next,prev:prev};
