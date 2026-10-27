@@ -433,10 +433,9 @@ body[data-model="pptx"] span[data-only="pptx"],body[data-model="tesis"] span[dat
 .rs.ok i{background:var(--leaf);box-shadow:0 0 0 4px rgba(79,209,161,.2)}
 #qp{position:fixed;inset:0;z-index:60;background:rgba(3,10,8,.82);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px}
 #qp.open{display:flex}
-.qpb{background:var(--pine);border:1px solid var(--line);border-radius:26px;padding:30px;width:min(720px,100%);text-align:center}
-.qpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.qpg h4{font:700 20px var(--f-display);margin:0 0 4px}
-.qpg small{display:block;font:400 13px/1.4 var(--f-body);color:var(--mute);margin:0 0 12px}
+.qpb{background:var(--pine);border:1px solid var(--line);border-radius:26px;padding:30px;width:min(440px,100%);text-align:center}
+/* un solo QR a la vez: M abre el del presentador y J el del jurado */
+#qp[data-k="mando"] .qpj,#qp[data-k="jurado"] .qpm{display:none}
 .qpb h3{font:800 28px/1.1 var(--f-display);margin:0 0 6px}
 .qpb p{font:400 15px/1.45 var(--f-body);color:var(--mute);margin:0 0 18px}
 .qpb .qq{background:#fff;border-radius:18px;padding:16px;width:260px;height:260px;margin:0 auto 16px;display:grid;place-items:center}
@@ -902,7 +901,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
 
 <div id="toast" role="status" aria-live="polite"><i></i><span id="toastt"></span></div>
 <div id="notes" role="region" aria-label="Notas del orador"><h5>Notas del orador</h5><div id="nt"></div></div>
-<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><h3>Mandos en el celular</h3><p>Uno para quien presenta y otro para el jurado. El jurado maneja los controles de cada diapositiva, pero no puede pasar de diapositiva.</p><div class="qpg"><div><h4>Presentador</h4><small>Anterior y Siguiente, notas, tiempo y controles.</small><div class="qq" id="qq"></div><code id="qu"></code></div><div><h4>Jurado</h4><small>Solo los controles de cada diapositiva.</small><div class="qq" id="qqj"></div><code id="quj"></code></div></div><button id="qc" type="button">Cerrar</button></div></div>
+<div id="qp" role="dialog" aria-modal="true" aria-label="Mando en el celular"><div class="qpb"><div class="qpg"><div class="qpm"><h3>Mando de quien presenta</h3><p>Anterior y Siguiente, notas y tiempo.</p><div class="qq" id="qq"></div><code id="qu"></code></div><div class="qpj"><h3>Controles para el jurado</h3><p>Escaneen el código para manejar los controles de cada diapositiva.</p><div class="qq" id="qqj"></div><code id="quj"></code></div></div><button id="qc" type="button">Cerrar</button></div></div>
 <div id="mando" aria-label="Mando"><header><i class="mdot" id="mdot"></i><span id="mst">buscando la pantalla…</span><span class="sp"></span><button type="button" class="mtm" id="mtm" aria-label="Cronómetro: tocá para iniciar o pausar, mantené para reiniciar">0:00 / 15:00</button><span id="mcnt"></span></header><main><h1 id="mtitle"></h1><details id="mnotes"><summary>Notas</summary><p id="mnt"></p></details><p class="mhint" id="mhint"></p><div id="mctl"></div></main><nav id="mnav" aria-label="Navegación"><button type="button" id="mprev">Anterior<small id="mprevt"></small></button><button type="button" id="mnext">Siguiente<small id="mnextt"></small></button></nav></div>
 <div id="pal" role="dialog" aria-modal="true" aria-label="Preguntale al deck">
   <div class="pbox"><div class="hd">Preguntale al deck</div><input id="pi" type="text" placeholder="¿Cómo cuidan a los menores? ¿Cuánto cuesta? ¿Qué tecnología usa?" autocomplete="off" aria-label="Escribí una pregunta"><ul id="pl"></ul><div class="ft2">↑ ↓ para elegir · Enter para ir · Esc para cerrar. Busca por significado, como Tinku.</div></div>
@@ -1018,7 +1017,8 @@ addEventListener("keydown",function(e){
   else if(e.key==="/"||((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k")){e.preventDefault();openPal()}
   else if(e.key.toLowerCase()==="n"){$("#notes").classList.toggle("open")}
   else if(e.key.toLowerCase()==="f"){toggleFs()}
-  else if(e.key.toLowerCase()==="m"){toggleQp()}
+  else if(e.key.toLowerCase()==="m"){toggleQp("mando")}
+  else if(e.key.toLowerCase()==="j"){toggleQp("jurado")}
 });
 var tx=null;
 $("#vp").addEventListener("touchstart",function(e){tx=e.touches[0].clientX},{passive:true});
@@ -1098,9 +1098,12 @@ if(!(window.claude&&window.claude.use)&&/^https?:$/.test(location.protocol)){
   setBase(location.origin+location.pathname);
   try{fetch("/presentacion/sync/info").then(function(r){return r.json()}).then(function(j){if(j&&j.url)setBase(j.url)}).catch(function(){})}catch(e){}
 }
-function toggleQp(){var p=$("#qp");p.classList.toggle("open");if(p.classList.contains("open")){makeQR($("#qq"),mandoUrl);$("#qu").textContent=mandoUrl;makeQR($("#qqj"),juradoUrl);$("#quj").textContent=juradoUrl}}
-$("#qc").addEventListener("click",toggleQp);
-$("#qp").addEventListener("click",function(e){if(e.target.id==="qp")toggleQp()});
+function closeQp(){$("#qp").classList.remove("open")}
+function toggleQp(k){var p=$("#qp");if(p.classList.contains("open")&&p.dataset.k===k){closeQp();return}
+  p.dataset.k=k;p.classList.add("open");
+  if(k==="mando"){makeQR($("#qq"),mandoUrl);$("#qu").textContent=mandoUrl}else{makeQR($("#qqj"),juradoUrl);$("#quj").textContent=juradoUrl}}
+$("#qc").addEventListener("click",closeQp);
+$("#qp").addEventListener("click",function(e){if(e.target.id==="qp")closeQp()});
 
 /* ===== Diagnóstico ===== */
 /* Paso n (0 a 6): el panel k aparece en el paso 2k+1 y muestra su respuesta en el 2k+2. */
@@ -1523,8 +1526,9 @@ function status(peers){
     else if(m===0&&lastOther>0)toast("Celular desconectado",true);
     if(j>0&&lastJur<=0)toast("Jurado conectado");
     else if(j===0&&lastJur>0)toast("Jurado desconectado",true);
-    /* el diálogo de los QR se cierra solo cuando ya están los dos celulares */
-    if(m>0&&j>0&&(lastOther<=0||lastJur<=0))$("#qp").classList.remove("open");
+    /* cada QR se cierra solo cuando se conecta el celular que le corresponde */
+    var qk=$("#qp").dataset.k;
+    if((qk==="mando"&&m>0&&lastOther<=0)||(qk==="jurado"&&j>0&&lastJur<=0))closeQp();
     lastOther=m;lastJur=j;
   }
 }
