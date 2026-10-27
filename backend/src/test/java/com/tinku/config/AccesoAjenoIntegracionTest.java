@@ -99,6 +99,7 @@ class AccesoAjenoIntegracionTest extends IntegracionBase {
                 get("/api/sesiones/por-reserva/{id}", r),
                 post("/api/sesiones/{id}/token", s),
                 post("/api/sesiones/{id}/finalizar", s),
+                conJson(post("/api/sesiones/{id}/admitir", s), Map.of("usuarioId", juan.getId().toString())),
                 conJson(post("/api/sesiones/{id}/killswitch", s), Map.of("detectadoId", juan.getId().toString())),
                 get("/api/sesiones/{id}/killswitch", s),
                 conJson(post("/api/sesiones/{id}/clasificador", s), Map.of("evento", "CAIDA")),

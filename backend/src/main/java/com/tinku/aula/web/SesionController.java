@@ -87,7 +87,17 @@ public class SesionController {
         return ResponseEntity.ok(new TokenSesionResponse(
                 resultado[0], liveKitService.getBaseUrl(), resultado[1],
                 audioResumenService.debeGrabar(usuario, id), sesionService.pizarraHabilitada(id),
-                sesionService.hayMenor(id)));
+                sesionService.hayMenor(id), sesionService.yaAdmitido(usuario, id)));
+    }
+
+    /** Sala de espera — el Tutor deja pasar al alumno; si sale y vuelve, entra directo. */
+    @PostMapping("/{id}/admitir")
+    public ResponseEntity<Void> admitir(@PathVariable UUID id,
+                                        @Valid @RequestBody AdmitirRequest request,
+                                        Authentication authentication) {
+        Usuario usuario = usuarioActual.obtener(authentication);
+        sesionService.admitir(usuario, id, request.usuarioId());
+        return ResponseEntity.noContent().build();
     }
 
     /** US-8 — botón «Finalizar» de cualquiera de las partes. */

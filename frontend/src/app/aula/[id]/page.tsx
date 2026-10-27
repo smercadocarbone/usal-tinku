@@ -71,6 +71,8 @@ interface TokenResponse {
   pizarraHabilitada?: boolean;
   /** ADR-M3-07: hay un Menor en la clase (umbral del clasificador y fail-closed). */
   hayMenor?: boolean;
+  /** El Tutor ya dejó pasar a este alumno: al volver a entrar se saltea la sala de espera. */
+  admitido?: boolean;
 }
 
 type Estado =
@@ -766,6 +768,7 @@ export default function AulaPage() {
       });
 
       const enEsperaLocal = () => !esTutorRef.current && !admitidoRef.current;
+      const yaAdmitido = !esTutorRef.current && tokenResp.admitido === true;
 
       const publicarMedios = () => {
         room.localParticipant.setCameraEnabled(camActivaRef.current, { deviceId: camaraIdRef.current });
@@ -819,6 +822,11 @@ export default function AulaPage() {
         setHayOtro(room.remoteParticipants.size > 0);
         const yaEstaba = room.remoteParticipants.values().next().value;
         if (yaEstaba) setRemoteNombre(yaEstaba.name ?? "");
+        // Ya había entrado a la clase y salió (volvió atrás, recargó): no vuelve a esperar.
+        if (yaAdmitido) {
+          admitirme();
+          return;
+        }
         if (enEsperaLocal()) {
           setEstado("sala_espera");
           publicarSala(room, { op: "esperando" });
@@ -1139,6 +1147,8 @@ export default function AulaPage() {
   function admitirAlumno() {
     if (!enEspera || !roomRef.current) return;
     publicarSala(roomRef.current, { op: "admitir" }, enEspera.identity);
+    // Queda guardado: si el alumno sale y vuelve, entra directo aunque el Tutor haya recargado.
+    void api.post(`/api/sesiones/${sesionId}/admitir`, { usuarioId: enEspera.identity }).catch(() => {});
     admitidosRef.current.add(enEspera.identity);
     setOtroAdmitido(true);
     enEsperaIdRef.current = null;

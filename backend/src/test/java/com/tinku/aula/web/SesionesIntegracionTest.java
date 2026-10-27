@@ -859,6 +859,76 @@ class SesionesIntegracionTest {
         verify(liveKitService, never()).generarTokenParticipante(anyString(), anyString(), anyString());
     }
 
+    // ------------------------------------------------ sala de espera: admisión persistida
+
+    private boolean admitidoEnToken(UUID sesionId, String token) throws Exception {
+        MvcResult res = mockMvc.perform(post("/api/sesiones/{id}/token", sesionId)
+                        .param("clasificadorListo", "true")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString()).get("admitido").asBoolean();
+    }
+
+    private void admitir(UUID sesionId, String token, UUID usuarioId, int esperado) throws Exception {
+        mockMvc.perform(post("/api/sesiones/{id}/admitir", sesionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("usuarioId", usuarioId)))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().is(esperado));
+    }
+
+    /** El alumno que el Tutor ya dejó pasar, al salir y volver, entra sin sala de espera. */
+    @Test
+    void admitir_tutorDejaPasarAlAlumno_alVolverElTokenDiceAdmitido() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        sesion.setLivekitRoomId("sesion-" + sesion.getId());
+        sesionRepository.save(sesion);
+
+        assertThat(admitidoEnToken(sesion.getId(), e.tokenMenor())).isFalse();
+
+        admitir(sesion.getId(), e.tokenTutor(), e.menorId(), 204);
+        Instant primera = sesionRepository.findById(sesion.getId()).orElseThrow().getEstudianteAdmitidoAt();
+        assertThat(primera).isNotNull();
+
+        assertThat(admitidoEnToken(sesion.getId(), e.tokenMenor())).isTrue();
+        // El Tutor no "está admitido": entra directo siempre, el flag es solo del alumno.
+        assertThat(admitidoEnToken(sesion.getId(), e.tokenTutor())).isFalse();
+
+        // Idempotente: admitirlo de nuevo conserva la primera hora.
+        admitir(sesion.getId(), e.tokenTutor(), e.menorId(), 204);
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstudianteAdmitidoAt())
+                .isEqualTo(primera);
+    }
+
+    /** Solo el Tutor admite: ni el alumno a sí mismo ni el pagador. */
+    @Test
+    void admitir_quienNoEsElTutor_403YNoQuedaAdmitido() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+
+        admitir(sesion.getId(), e.tokenMenor(), e.menorId(), 403);
+        admitir(sesion.getId(), e.tokenAr(), e.menorId(), 403);
+
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstudianteAdmitidoAt()).isNull();
+    }
+
+    /** Admitir a alguien que no es el beneficiario (p. ej. el pagador) no deja admitido al alumno. */
+    @Test
+    void admitir_aOtroQueNoEsElBeneficiario_noGuardaNada() throws Exception {
+        Escenario e = escenarioBase();
+        Reserva reserva = reservaConfirmadaDirecta(e);
+        SesionAprendizaje sesion = programarYCargar(reserva);
+        UUID pagadorId = usuarioRepository.findByDni(e.dniAr()).orElseThrow().getId();
+
+        admitir(sesion.getId(), e.tokenTutor(), pagadorId, 204);
+
+        assertThat(sesionRepository.findById(sesion.getId()).orElseThrow().getEstudianteAdmitidoAt()).isNull();
+    }
+
     @Test
     void tM3Token_salonAunNoCreado_422() throws Exception {
         Escenario e = escenarioBase();

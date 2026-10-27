@@ -47,7 +47,7 @@ public class AulaExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }
 
-    @ExceptionHandler(SoloParticipanteException.class)
+    @ExceptionHandler({SoloParticipanteException.class, com.tinku.aula.SoloTutorException.class})
     public ResponseEntity<Map<String, String>> handleProhibido(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }

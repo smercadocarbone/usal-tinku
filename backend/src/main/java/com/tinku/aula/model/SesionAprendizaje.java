@@ -56,6 +56,13 @@ public class SesionAprendizaje {
     @Column(name = "tutor_joined_at")
     private Instant tutorJoinedAt;
 
+    /**
+     * Cuándo el Tutor dejó pasar al beneficiario de la sala de espera (V60). Si el alumno sale
+     * y vuelve, entra directo a la clase. {@code null} = todavía no lo admitió.
+     */
+    @Column(name = "estudiante_admitido_at")
+    private Instant estudianteAdmitidoAt;
+
     /** Si el tutor está conectado AHORA (V26, AUD-029/FASE2-05). */
     @Column(name = "tutor_conectado", nullable = false)
     private boolean tutorConectado;

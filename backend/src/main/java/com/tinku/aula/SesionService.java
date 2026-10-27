@@ -476,6 +476,38 @@ public class SesionService {
     }
 
     /**
+     * Sala de espera: el Tutor dejó pasar a {@code admitidoId}. Si es el beneficiario, queda
+     * guardado ({@code estudiante_admitido_at}) para que al salir y volver entre directo a la
+     * clase. Admitir a otro (p. ej. el pagador) no se guarda: sigue la admisión del navegador.
+     * Idempotente: una segunda admisión conserva la primera hora. Solo el Tutor (403).
+     */
+    @Transactional
+    public void admitir(Usuario usuario, UUID sesionId, UUID admitidoId) {
+        SesionAprendizaje sesion = sesionRepo.findById(sesionId)
+                .orElseThrow(SesionNoEncontradaException::new);
+        Reserva reserva = reservaRepo.findById(sesion.getReservaId())
+                .orElseThrow(ReservaNoEncontradaException::new);
+        if (!reserva.getTutor().getId().equals(usuario.getId())) {
+            throw new SoloTutorException("dejar pasar al alumno");
+        }
+        if (reserva.getBeneficiario().getId().equals(admitidoId)
+                && sesion.getEstudianteAdmitidoAt() == null) {
+            sesion.setEstudianteAdmitidoAt(Instant.now());
+            sesionRepo.save(sesion);
+        }
+    }
+
+    /** El usuario es el beneficiario y el Tutor ya lo admitió: vuelve a entrar sin sala de espera. */
+    @Transactional(readOnly = true)
+    public boolean yaAdmitido(Usuario usuario, UUID sesionId) {
+        return sesionRepo.findById(sesionId)
+                .filter(s -> s.getEstudianteAdmitidoAt() != null)
+                .flatMap(s -> reservaRepo.findById(s.getReservaId()))
+                .map(r -> r.getBeneficiario().getId().equals(usuario.getId()))
+                .orElse(false);
+    }
+
+    /**
      * Resuelve la Sesión a partir de su Reserva — el sentido inverso de
      * {@link #obtenerToken}, que necesita el frontend para poder armar un botón
      * "Entrar a la clase"/"Calificar" desde la pantalla de una Reserva sin ya
