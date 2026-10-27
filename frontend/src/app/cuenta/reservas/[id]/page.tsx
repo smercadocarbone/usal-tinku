@@ -183,7 +183,12 @@ export default function ReservaDetallePage() {
       : `Clase con ${r.tutorNombre ?? "tu tutor"}`;
   const puedePagar = r.puedePagar ?? r.estado === "pendiente_pago";
   const puedeCancelar = r.puedeCancelar ?? (r.estado === "pendiente_pago" || r.estado === "confirmada");
-  const puedeEntrar = sesion !== null && (sesion.estado === "no_iniciada" || sesion.estado === "en_curso");
+  // El aula abre a T-5 (Tabla_Tiempos): antes, el botón no aparece aunque la sesión ya exista.
+  const salaAbierta =
+    ahora > 0 && new Date(r.horario).getTime() - ahora <= TIEMPOS.salaAbreMinutosAntes * 60000;
+  const puedeEntrar =
+    sesion !== null &&
+    (sesion.estado === "en_curso" || (sesion.estado === "no_iniciada" && salaAbierta));
   // AUD-028: califica quien pagó; en la clase de un menor, su Adulto Responsable.
   const puedeCalificar = sesion !== null && sesion.estado === "finalizada" && !esMenor;
   // FR-RES-016: cambia el horario quien pagó. El Tutor no lo cambia: lo propone (FR-RES-029).
@@ -195,7 +200,6 @@ export default function ReservaDetallePage() {
   // v2.5 (ADR-M5-03): clase de un paquete del mes.
   const dePaquete = !!r.paqueteId;
   const puedeCancelarPaquete = dePaquete && r.puedeCancelarPaquete === true && payload?.sub === r.pagadorId;
-  const empiezaPronto = ahora > 0 && new Date(r.horario).getTime() - ahora < 60 * 60000;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -274,7 +278,7 @@ export default function ReservaDetallePage() {
             <Video className="size-5" aria-hidden /> Entrar a la clase
           </Link>
         )}
-        {r.estado === "confirmada" && !puedeEntrar && !empiezaPronto && (
+        {r.estado === "confirmada" && !puedeEntrar && (sesion === null || sesion.estado === "no_iniciada") && (
           <p className="flex items-center gap-2 text-sm text-tinta-suave">
             <CalendarClock className="size-4" aria-hidden /> El aula se abre {TIEMPOS.salaAbreMinutosAntes} minutos antes de la clase.
           </p>

@@ -23,7 +23,19 @@ import {
   Track,
   VideoQuality,
 } from "livekit-client";
-import { Mic, MicOff, MoreVertical, PenLine, ScreenShare, ScreenShareOff, Video, VideoOff } from "lucide-react";
+import {
+  LogOut,
+  Mic,
+  MicOff,
+  MoreVertical,
+  PenLine,
+  ScreenShare,
+  ScreenShareOff,
+  Settings,
+  UserPlus,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import {
   api,
   ApiError,
@@ -38,6 +50,9 @@ import { GrabadorAudioResumen } from "@/lib/grabadorAudioResumen";
 import Logo from "@/components/Logo";
 import AvisoProteccion, { type MotivoAvisoProteccion } from "@/components/aula/AvisoProteccion";
 import DialogoRamaAdultos from "@/components/aula/DialogoRamaAdultos";
+import DialogoAdmitir from "@/components/aula/DialogoAdmitir";
+import DialogoConfiguracion, { type Dispositivo } from "@/components/aula/DialogoConfiguracion";
+import { useSesion } from "@/lib/useSesion";
 import { BufferEvidencia } from "@/lib/killswitch/bufferEvidencia";
 import { ClasificadorKillswitch } from "@/lib/killswitch/clasificador";
 import { TOPIC_KILLSWITCH } from "@/lib/killswitch/config";
@@ -61,6 +76,7 @@ interface TokenResponse {
 type Estado =
   | "previa"
   | "conectando"
+  | "sala_espera"
   | "esperando"
   | "conectado"
   | "reconectando"
@@ -75,6 +91,7 @@ type TileId = "camara-local" | "camara-remota" | "pantalla-local" | "pantalla-re
 const MENSAJES_ESTADO: Record<Estado, string> = {
   previa: "Preparando cámara y micrófono",
   conectando: "Conectando…",
+  sala_espera: "En la sala de espera",
   esperando: "Esperando al otro participante",
   conectado: "En la sala",
   reconectando: "Reconectando…",
@@ -140,11 +157,6 @@ interface MensajeTexto {
   texto: string;
 }
 
-interface Dispositivo {
-  deviceId: string;
-  label: string;
-}
-
 function BotonControl({
   activo,
   onClick,
@@ -182,6 +194,35 @@ function BotonControl({
 /** Pizarra (ADR-M3-06): canal de datos confiable con `topic`, separado del modo texto. */
 function publicarPizarra(room: Room, m: MensajePizarra) {
   void room.localParticipant.publishData(codificar(m), { reliable: true, topic: "pizarra" });
+}
+
+/**
+ * Sala de espera: el alumno entra a la sala de LiveKit sin publicar ni suscribirse a nada, y
+ * avisa que espera. El Tutor lo deja entrar con un mensaje por este canal. El alumno sí cuenta
+ * como presente para el no-show (el webhook de LiveKit ve su ingreso).
+ */
+const TOPIC_SALA = "sala";
+type MensajeSala = { op: "esperando" } | { op: "adentro" } | { op: "quien" } | { op: "admitir" };
+
+function publicarSala(room: Room, m: MensajeSala, destino?: string) {
+  void room.localParticipant
+    .publishData(new TextEncoder().encode(JSON.stringify(m)), {
+      reliable: true,
+      topic: TOPIC_SALA,
+      destinationIdentities: destino ? [destino] : undefined,
+    })
+    .catch(() => {});
+}
+
+function decodificarSala(payload: Uint8Array): MensajeSala | null {
+  try {
+    const m = JSON.parse(new TextDecoder().decode(payload)) as { op?: unknown };
+    return m.op === "esperando" || m.op === "adentro" || m.op === "quien" || m.op === "admitir"
+      ? (m as MensajeSala)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 interface OpcionMenuLlamada {
@@ -252,12 +293,20 @@ export default function AulaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const sesionId = params.id;
+  // Quien da la clase entra directo; el resto pasa por la sala de espera.
+  const esTutor = useSesion()?.payload.tipo === "TUTOR";
+  const esTutorRef = useRef(esTutor);
+  useEffect(() => {
+    esTutorRef.current = esTutor;
+  }, [esTutor]);
 
   const roomRef = useRef<Room | null>(null);
   const roomConectadoRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  /** Como los videos: el <audio> se vuelve a crear al pasar de la sala de espera a la clase. */
+  const remoteAudioTrackRef = useRef<Track | null>(null);
   const localScreenVideoRef = useRef<HTMLVideoElement>(null);
   const remoteScreenVideoRef = useRef<HTMLVideoElement>(null);
   // La pista de cada tile. El <video> de un tile se crea DESPUÉS del evento que trae la pista
@@ -321,11 +370,31 @@ export default function AulaPage() {
   const [mensajesTexto, setMensajesTexto] = useState<MensajeTexto[]>([]);
   const [textoAEnviar, setTextoAEnviar] = useState("");
 
+  // ---- Sala de espera: el alumno, hasta que lo admiten; el Tutor, a quién tiene esperando ----
+  const admitidoRef = useRef(false);
+  const [admitido, setAdmitido] = useState(false);
+  const saliendoRef = useRef(false);
+  const [hayOtro, setHayOtro] = useState(false);
+  const [enEspera, setEnEspera] = useState<{ identity: string; nombre: string } | null>(null);
+  const [admisionPospuesta, setAdmisionPospuesta] = useState(false);
+  const [otroAdmitido, setOtroAdmitido] = useState(false);
+  /** El Tutor recuerda a quién ya dejó entrar: si se le corta y vuelve, entra sin esperar. */
+  const admitidosRef = useRef<Set<string>>(new Set());
+
   // ---- Pantalla previa (lobby): preview + elección de dispositivo ----
   const [camaras, setCamaras] = useState<Dispositivo[]>([]);
   const [microfonos, setMicrofonos] = useState<Dispositivo[]>([]);
+  const [parlantes, setParlantes] = useState<Dispositivo[]>([]);
   const [camaraId, setCamaraId] = useState<string | undefined>(undefined);
   const [microfonoId, setMicrofonoId] = useState<string | undefined>(undefined);
+  const [parlanteId, setParlanteId] = useState<string | undefined>(undefined);
+  const [configAbierta, setConfigAbierta] = useState(false);
+  const camaraIdRef = useRef(camaraId);
+  const microfonoIdRef = useRef(microfonoId);
+  useEffect(() => {
+    camaraIdRef.current = camaraId;
+    microfonoIdRef.current = microfonoId;
+  });
   const [errorCam, setErrorCam] = useState<string | null>(null);
   const [errorMic, setErrorMic] = useState<string | null>(null);
   const [previaLista, setPreviaLista] = useState(false);
@@ -659,15 +728,20 @@ export default function AulaPage() {
     return todoOcultoRef.current || (sid !== undefined && ocultosRef.current.has(sid));
   }
 
-  // ---- Conexión real a la sala (recién al confirmar desde la previa) ----
-  const conectar = useCallback(async () => {
-    // La cámara/mic de la previa quedan libres antes de que la Room adquiera
-    // los suyos — sostener dos handles del mismo dispositivo a la vez es lo
-    // que en algunos navegadores dispara NotReadableError.
+  /** La cámara/mic de la previa quedan libres antes de que la Room adquiera los suyos —
+   *  sostener dos handles del mismo dispositivo a la vez es lo que en algunos navegadores
+   *  dispara NotReadableError. */
+  function soltarPrevia() {
     previaVideoTrackRef.current?.stop();
     previaAudioTrackRef.current?.stop();
     previaVideoTrackRef.current = null;
     previaAudioTrackRef.current = null;
+  }
+
+  // ---- Conexión real a la sala (recién al confirmar desde la previa) ----
+  const conectar = useCallback(async () => {
+    // El alumno conserva la previa: es lo que ve de sí mismo en la sala de espera.
+    if (esTutorRef.current) soltarPrevia();
 
     setError(null);
     setEstado("conectando");
@@ -688,26 +762,87 @@ export default function AulaPage() {
         dynacast: true,
       });
 
+      const enEsperaLocal = () => !esTutorRef.current && !admitidoRef.current;
+
+      const publicarMedios = () => {
+        room.localParticipant.setCameraEnabled(camActivaRef.current, { deviceId: camaraIdRef.current });
+        room.localParticipant.setMicrophoneEnabled(micActivaRef.current, { deviceId: microfonoIdRef.current });
+      };
+
+      /** El Tutor dejó entrar al alumno: recién ahora publica y se suscribe a lo del otro. */
+      const admitirme = () => {
+        if (admitidoRef.current) return;
+        admitidoRef.current = true;
+        setAdmitido(true);
+        soltarPrevia();
+        publicarMedios();
+        for (const p of room.remoteParticipants.values()) {
+          for (const pub of p.trackPublications.values()) pub.setSubscribed(true);
+        }
+        if (pizarraHabilitadaRef.current) publicarPizarra(room, { op: "sync-pedido" });
+        publicarSala(room, { op: "adentro" });
+        setEstado(room.remoteParticipants.size > 0 ? "conectado" : "esperando");
+      };
+
+      const atenderSala = (m: MensajeSala, identity: string, nombre: string) => {
+        if (esTutorRef.current) {
+          if (m.op === "esperando") {
+            if (admitidosRef.current.has(identity)) {
+              publicarSala(room, { op: "admitir" }, identity);
+              return;
+            }
+            setEnEspera({ identity, nombre });
+            setAdmisionPospuesta(false);
+          } else if (m.op === "adentro") {
+            admitidosRef.current.add(identity);
+            setOtroAdmitido(true);
+            setEnEspera((actual) => (actual?.identity === identity ? null : actual));
+          }
+          return;
+        }
+        if (m.op === "admitir") admitirme();
+        else if (m.op === "quien") publicarSala(room, { op: admitidoRef.current ? "adentro" : "esperando" }, identity);
+      };
+
       room.on(RoomEvent.Connected, () => {
         roomConectadoRef.current = true;
+        setHayOtro(room.remoteParticipants.size > 0);
+        if (enEsperaLocal()) {
+          setEstado("sala_espera");
+          publicarSala(room, { op: "esperando" });
+          return;
+        }
         setEstado("conectado");
-        room.localParticipant.setCameraEnabled(camActivaRef.current, {
-          deviceId: camaraId,
-        });
-        room.localParticipant.setMicrophoneEnabled(micActivaRef.current, {
-          deviceId: microfonoId,
-        });
+        publicarMedios();
+        // Si el alumno ya estaba esperando antes de que entrara el Tutor, que avise.
+        if (esTutorRef.current) publicarSala(room, { op: "quien" });
       });
 
       room.on(RoomEvent.ParticipantConnected, (participante) => {
-        setEstado("conectado");
+        setHayOtro(true);
         setRemoteNombre(participante.name ?? "");
+        if (enEsperaLocal()) {
+          publicarSala(room, { op: "esperando" }, participante.identity);
+          return;
+        }
+        setEstado("conectado");
+        if (!esTutorRef.current) publicarSala(room, { op: "adentro" }, participante.identity);
       });
 
-      room.on(RoomEvent.ParticipantDisconnected, () => {
-        setEstado("esperando");
+      room.on(RoomEvent.ParticipantDisconnected, (participante) => {
+        setHayOtro(room.remoteParticipants.size > 0);
+        setEstado(enEsperaLocal() ? "sala_espera" : "esperando");
         setRemoteActivo(false);
         setRemoteNombre("");
+        setOtroAdmitido(false);
+        setAdmisionPospuesta(false);
+        setEnEspera((actual) => (actual?.identity === participante.identity ? null : actual));
+      });
+
+      // Con autoSubscribe apagado (alumno), lo que el otro publique después (p. ej. su pantalla)
+      // hay que pedirlo a mano, y solo una vez admitido.
+      room.on(RoomEvent.TrackPublished, (pub) => {
+        if (!esTutorRef.current && admitidoRef.current) pub.setSubscribed(true);
       });
 
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
@@ -760,8 +895,9 @@ export default function AulaPage() {
           if (remoteVideoRef.current && !remotoOculto("camara-remota")) track.attach(remoteVideoRef.current);
           setRemoteActivo(true);
           setRemoteNombre(participante.name ?? "");
-        } else if (track.kind === Track.Kind.Audio && remoteAudioRef.current) {
-          track.attach(remoteAudioRef.current);
+        } else if (track.kind === Track.Kind.Audio) {
+          remoteAudioTrackRef.current = track;
+          if (remoteAudioRef.current) track.attach(remoteAudioRef.current);
         }
         if (track.kind === Track.Kind.Audio) {
           grabadorRef.current?.agregarPista(pub.trackSid, track.mediaStreamTrack);
@@ -770,6 +906,7 @@ export default function AulaPage() {
 
       room.on(RoomEvent.TrackUnsubscribed, (track, pub) => {
         track.detach();
+        if (remoteAudioTrackRef.current === track) remoteAudioTrackRef.current = null;
         grabadorRef.current?.quitarPista(pub.trackSid);
         if (track.kind === Track.Kind.Video) {
           clasificadorRef.current?.dejarDeObservar(pub.trackSid);
@@ -798,7 +935,12 @@ export default function AulaPage() {
       // NO es un chat de la clase — solo existe mientras `modoTexto` está
       // activo (conexión `Lost` sostenida) y se ignora cualquier paquete que
       // no tenga el formato esperado (podría venir de otra parte del SDK).
-      room.on(RoomEvent.DataReceived, (payload, _participante, _tipo, topic) => {
+      room.on(RoomEvent.DataReceived, (payload, participante, _tipo, topic) => {
+        if (topic === TOPIC_SALA) {
+          const m = decodificarSala(payload);
+          if (m && participante) atenderSala(m, participante.identity, participante.name ?? "");
+          return;
+        }
         if (topic === TOPIC_KILLSWITCH) {
           // Solo informa a la UI: el estado de verdad está en el backend.
           const aviso = decodificarAviso(payload);
@@ -807,7 +949,7 @@ export default function AulaPage() {
         }
         if (topic === "pizarra") {
           // FR-AULA-012: sin habilitación (hay un Menor) todo paquete de pizarra se descarta.
-          if (!pizarraHabilitadaRef.current) return;
+          if (!pizarraHabilitadaRef.current || enEsperaLocal()) return;
           const m = decodificar(payload);
           if (!m) return;
           if (m.op === "sync-pedido") {
@@ -837,7 +979,7 @@ export default function AulaPage() {
       });
 
       room.on(RoomEvent.Reconnected, () => {
-        setEstado(roomConectadoRef.current ? "conectado" : "esperando");
+        setEstado(enEsperaLocal() ? "sala_espera" : roomConectadoRef.current ? "conectado" : "esperando");
       });
 
       room.on(RoomEvent.Disconnected, () => {
@@ -846,6 +988,7 @@ export default function AulaPage() {
         if (estadoRef.current !== "finalizada") void cerrarGrabacion();
         setRemoteActivo(false);
         destruirProteccion();
+        if (saliendoRef.current) return;
         // Si el orquestador ya mostró un cierre (o llegó el aviso de corte), la página no muestra el suyo.
         if (orquestadorRef.current?.alDesconectar()) return;
         if (estadoRef.current === "finalizada") return;
@@ -876,9 +1019,10 @@ export default function AulaPage() {
         grabadorRef.current = GrabadorAudioResumen.crear();
         setGrabandoResumen(grabadorRef.current !== null);
       }
-      await room.connect(tokenResp.livekitUrl, tokenResp.token);
+      // El alumno no recibe nada del otro hasta que el Tutor lo deja entrar.
+      await room.connect(tokenResp.livekitUrl, tokenResp.token, { autoSubscribe: esTutorRef.current });
       // Si el otro ya estaba dibujando, que nos mande lo que hay en la pizarra.
-      if (pizarraHabilitadaRef.current) publicarPizarra(room, { op: "sync-pedido" });
+      if (pizarraHabilitadaRef.current && !enEsperaLocal()) publicarPizarra(room, { op: "sync-pedido" });
       const micPub = room.localParticipant?.getTrackPublication(Track.Source.Microphone);
       if (micPub?.track) grabadorRef.current?.agregarPista("local", micPub.track.mediaStreamTrack);
 
@@ -892,7 +1036,7 @@ export default function AulaPage() {
         }
       }
 
-      setEstado("conectado");
+      if (!enEsperaLocal()) setEstado("conectado");
     } catch (err) {
       if (err instanceof ApiError && err.codigo === "CLASIFICADOR_NO_LISTO") {
         setCierreKillswitch("no-disponible");
@@ -918,7 +1062,8 @@ export default function AulaPage() {
       // estadoRef, que todavía no se había actualizado, y la sala terminaba en "error".
       if (!(err instanceof ApiError && err.status === 422)) setEstado("error");
     }
-  }, [sesionId, camaraId, microfonoId, evaluarDegradacion, cerrarGrabacion, destruirProteccion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesionId, evaluarDegradacion, cerrarGrabacion, destruirProteccion]);
 
   useEffect(() => {
     return () => {
@@ -967,6 +1112,61 @@ export default function AulaPage() {
     const nueva = !micActiva;
     setMicActiva(nueva);
     roomRef.current?.localParticipant.setMicrophoneEnabled(nueva);
+  }
+
+  /** El Tutor deja entrar a quien está en la sala de espera. */
+  function admitirAlumno() {
+    if (!enEspera || !roomRef.current) return;
+    publicarSala(roomRef.current, { op: "admitir" }, enEspera.identity);
+    admitidosRef.current.add(enEspera.identity);
+    setOtroAdmitido(true);
+    setEnEspera(null);
+  }
+
+  /** Salir de la llamada sin terminar la clase: se puede volver a entrar mientras dure. */
+  function salir() {
+    saliendoRef.current = true;
+    roomRef.current?.disconnect();
+    roomRef.current = null;
+    router.push("/cuenta/reservas");
+  }
+
+  async function abrirConfiguracion() {
+    setConfigAbierta(true);
+    const lista = (ds: MediaDeviceInfo[], nombre: string) =>
+      ds.map((d) => ({ deviceId: d.deviceId, label: d.label || nombre }));
+    try {
+      const [cams, mics, salidas] = await Promise.all([
+        Room.getLocalDevices("videoinput"),
+        Room.getLocalDevices("audioinput"),
+        Room.getLocalDevices("audiooutput").catch(() => []),
+      ]);
+      setCamaras(lista(cams, "Cámara"));
+      setMicrofonos(lista(mics, "Micrófono"));
+      setParlantes(lista(salidas, "Parlante"));
+    } catch {
+      // Sin la lista, el modal avisa que no encontró dispositivos.
+    }
+  }
+
+  /** En la sala de espera se cambia la previa; ya en la clase, la pista publicada. */
+  async function elegirDispositivo(tipo: MediaDeviceKind, deviceId: string) {
+    const room = roomRef.current;
+    const publicando = room !== null && (esTutor || admitido);
+    try {
+      if (tipo === "audiooutput") {
+        setParlanteId(deviceId);
+        if (room) await room.switchActiveDevice("audiooutput", deviceId);
+      } else if (!publicando) {
+        await (tipo === "videoinput" ? cambiarCamara(deviceId) : cambiarMicrofono(deviceId));
+      } else {
+        if (tipo === "videoinput") setCamaraId(deviceId);
+        else setMicrofonoId(deviceId);
+        await room.switchActiveDevice(tipo, deviceId);
+      }
+    } catch {
+      setError("No pudimos cambiar a ese dispositivo.");
+    }
   }
 
   async function alternarCompartirPantalla() {
@@ -1135,12 +1335,106 @@ export default function AulaPage() {
               ? "Revisá los permisos para continuar"
               : activandoProteccion
                 ? "Activando la protección del aula…"
-                : "Unirme a la clase"}
+                : esTutor
+                  ? "Entrar a la clase"
+                  : "Entrar a la sala de espera"}
           </button>
           <p className="mt-4 text-center text-[13px] text-gray-400">
             La clase se hace dentro de Tinku. No compartas teléfonos, emails ni redes.
           </p>
         </div>
+      </main>
+    );
+  }
+
+  const dialogoConfiguracion = (
+    <DialogoConfiguracion
+      abierto={configAbierta}
+      onCerrar={() => setConfigAbierta(false)}
+      camaras={camaras}
+      microfonos={microfonos}
+      parlantes={parlantes}
+      camaraId={camaraId}
+      microfonoId={microfonoId}
+      parlanteId={parlanteId}
+      onCambiarCamara={(id) => void elegirDispositivo("videoinput", id)}
+      onCambiarMicrofono={(id) => void elegirDispositivo("audioinput", id)}
+      onCambiarParlante={(id) => void elegirDispositivo("audiooutput", id)}
+    />
+  );
+  const opcionConfiguracion: OpcionMenuLlamada = {
+    id: "configuracion",
+    label: "Configuración",
+    Icono: Settings,
+    onClick: () => void abrirConfiguracion(),
+  };
+  const botonSalir = (
+    <button
+      type="button"
+      className="flex cursor-pointer items-center gap-2 rounded-full border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-100 hover:border-gray-400"
+      onClick={salir}
+    >
+      <LogOut className="h-4 w-4" aria-hidden />
+      Salir
+    </button>
+  );
+
+  // ---------------------------------------------------------------- Sala de espera (alumno)
+  if (estado === "sala_espera") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 px-4 py-8 text-gray-50">
+        <div className="w-full max-w-md">
+          <h1 className="mb-1 text-center text-2xl font-extrabold text-gray-50">Estás en la sala de espera</h1>
+          <p className="mb-6 text-center text-sm text-gray-400" role="status">
+            {hayOtro
+              ? `${remoteNombre || "Tu tutor"} ya está en la clase. En un momento te deja entrar.`
+              : "Tu tutor todavía no entró. Cuando llegue, te deja pasar."}
+          </p>
+          <div className="relative aspect-video overflow-hidden rounded-xl border-2 border-gray-700 bg-black">
+            <video
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el && previaVideoTrackRef.current) previaVideoTrackRef.current.attach(el);
+              }}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full -scale-x-100 object-cover"
+            />
+            {!camActiva && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-sm text-gray-400">
+                Cámara apagada
+              </div>
+            )}
+          </div>
+          {error && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700" role="alert">
+              {error}
+            </div>
+          )}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <BotonControl
+              activo={camActiva}
+              onClick={alternarCamPrevia}
+              etiquetaOn="Cámara on"
+              etiquetaOff="Cámara off"
+              IconoOn={Video}
+              IconoOff={VideoOff}
+            />
+            <BotonControl
+              activo={micActiva}
+              onClick={alternarMicPrevia}
+              etiquetaOn="Micro on"
+              etiquetaOff="Micro off"
+              IconoOn={Mic}
+              IconoOff={MicOff}
+            />
+            <MenuOpcionesLlamada opciones={[opcionConfiguracion]} />
+            <span className="mx-1 h-6 w-px bg-gray-700" />
+            {botonSalir}
+          </div>
+        </div>
+        {dialogoConfiguracion}
       </main>
     );
   }
@@ -1162,9 +1456,11 @@ export default function AulaPage() {
       videoRef: remoteVideoRef,
       contenidoVacio: !remoteActivo ? (
         <span className="px-4 text-center text-sm text-gray-500">
-          {estado === "conectado" || estado === "esperando" || estado === "reconectando"
-            ? "Esperando al otro participante"
-            : MENSAJES_ESTADO[estado]}
+          {enEspera
+            ? `${enEspera.nombre || "Tu alumno"} está en la sala de espera`
+            : estado === "conectado" || estado === "esperando" || estado === "reconectando"
+              ? "Esperando al otro participante"
+              : MENSAJES_ESTADO[estado]}
         </span>
       ) : undefined,
     },
@@ -1191,6 +1487,7 @@ export default function AulaPage() {
       videoRef: remoteScreenVideoRef,
     });
   }
+  const puedeColaborar = hayOtro && (esTutor ? otroAdmitido : admitido);
   // Con la pizarra abierta, la pizarra ocupa el escenario y todos los videos pasan a miniatura.
   const tileDestacadaActual = pizarraAbierta ? null : (tiles.find((t) => t.id === tileDestacada) ?? tiles[0]);
   const miniaturas = tiles.filter((t) => t.id !== tileDestacadaActual?.id);
@@ -1294,7 +1591,13 @@ export default function AulaPage() {
           {pizarraAbierta && pizarraHabilitada && (
             <Pizarra trazos={trazos} onMensaje={accionPizarra} onCerrar={() => setPizarraAbierta(false)} />
           )}
-          <audio ref={remoteAudioRef} autoPlay />
+          <audio
+            ref={(el) => {
+              remoteAudioRef.current = el;
+              if (el && remoteAudioTrackRef.current) remoteAudioTrackRef.current.attach(el);
+            }}
+            autoPlay
+          />
 
           {modoTexto && (
             <div
@@ -1344,6 +1647,13 @@ export default function AulaPage() {
             {avisoKillswitch}
           </div>
         )}
+        <DialogoAdmitir
+          abierto={enEspera !== null && !admisionPospuesta && pregunta === null}
+          nombre={enEspera?.nombre ?? ""}
+          onAdmitir={admitirAlumno}
+          onPosponer={() => setAdmisionPospuesta(true)}
+        />
+        {dialogoConfiguracion}
         <DialogoRamaAdultos
           abierto={pregunta !== null}
           nombre={remoteNombre}
@@ -1382,13 +1692,18 @@ export default function AulaPage() {
               />
               <MenuOpcionesLlamada
                 opciones={[
-                  {
-                    id: "compartir-pantalla",
-                    label: compartiendoPantalla ? "Dejar de compartir" : "Compartir pantalla",
-                    Icono: compartiendoPantalla ? ScreenShareOff : ScreenShare,
-                    onClick: alternarCompartirPantalla,
-                  },
-                  ...(pizarraHabilitada
+                  // Pantalla y pizarra, solo con los dos adentro de la clase (no en la espera).
+                  ...(puedeColaborar || compartiendoPantalla
+                    ? [
+                        {
+                          id: "compartir-pantalla",
+                          label: compartiendoPantalla ? "Dejar de compartir" : "Compartir pantalla",
+                          Icono: compartiendoPantalla ? ScreenShareOff : ScreenShare,
+                          onClick: alternarCompartirPantalla,
+                        },
+                      ]
+                    : []),
+                  ...(pizarraHabilitada && (puedeColaborar || pizarraAbierta)
                     ? [
                         {
                           id: "pizarra",
@@ -1398,10 +1713,22 @@ export default function AulaPage() {
                         },
                       ]
                     : []),
+                  opcionConfiguracion,
                 ]}
               />
               <span className="mx-1 h-6 w-px bg-gray-700" />
             </div>
+          )}
+
+          {enEspera && admisionPospuesta && (
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-2 rounded-full bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-800"
+              onClick={admitirAlumno}
+            >
+              <UserPlus className="h-4 w-4" aria-hidden />
+              Dejar entrar a {enEspera.nombre || "tu alumno"}
+            </button>
           )}
 
           {estado === "sala_no_disponible" && (
@@ -1427,6 +1754,7 @@ export default function AulaPage() {
               {finalizando ? "Finalizando…" : "Finalizar clase"}
             </button>
           )}
+          {estado !== "finalizada" && botonSalir}
           <ModalConfirmacion
             abierto={confirmarFin}
             onCerrar={() => setConfirmarFin(false)}

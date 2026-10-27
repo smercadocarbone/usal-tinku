@@ -224,6 +224,14 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
     }
   }
 
+  /** Lo ya publicado para la fecha elegida, para poder quitarlo desde la misma vista. */
+  const puntualesDelDia =
+    modo === "puntual" && fechaPuntual
+      ? franjas
+          .filter((f) => f.activa && f.fechaEspecifica === fechaPuntual)
+          .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+      : [];
+
   return (
     <section aria-label="Mis horarios">
       <h2 className="text-lg font-bold text-slate-800">Mis horarios</h2>
@@ -285,6 +293,35 @@ export default function TabHorarios({ tutorId }: { tutorId: string }) {
         <p className="mt-2 text-sm text-slate-500">
           Elegí una fecha para ver y cargar tu horario puntual.
         </p>
+      )}
+
+      {modo === "puntual" && fechaPuntual && (
+        <div className="mt-4">
+          <h3 className="text-sm font-bold text-slate-800">
+            Publicado para el {formatearFechaCorta(fechaPuntual)}
+          </h3>
+          {puntualesDelDia.length === 0 ? (
+            <p className="mt-1 text-sm text-slate-500">Todavía no publicaste horarios puntuales para esta fecha.</p>
+          ) : (
+            <ul className="mt-1 list-none p-0">
+              {puntualesDelDia.map((f) => (
+                <li key={f.id} className="flex items-center justify-between gap-4 border-b border-slate-200 py-1.5 text-sm">
+                  <span className="tabular-nums">
+                    {f.horaInicio.slice(0, 5)}–{f.horaFin.slice(0, 5)}
+                  </span>
+                  <Boton
+                    variante="secundario"
+                    tamano="sm"
+                    aria-label={`Quitar ${formatearFechaCorta(fechaPuntual)} ${f.horaInicio.slice(0, 5)}–${f.horaFin.slice(0, 5)}`}
+                    onClick={() => setAQuitar(f)}
+                  >
+                    Quitar
+                  </Boton>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {error && (
