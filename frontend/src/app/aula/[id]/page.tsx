@@ -380,6 +380,9 @@ export default function AulaPage() {
   const [otroAdmitido, setOtroAdmitido] = useState(false);
   /** El Tutor recuerda a quién ya dejó entrar: si se le corta y vuelve, entra sin esperar. */
   const admitidosRef = useRef<Set<string>>(new Set());
+  const enEsperaIdRef = useRef<string | null>(null);
+  /** Mientras espera, el alumno repite el aviso: uno solo se puede perder (p. ej. al reconectar). */
+  const avisoEsperaRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // ---- Pantalla previa (lobby): preview + elección de dispositivo ----
   const [camaras, setCamaras] = useState<Dispositivo[]>([]);
@@ -773,6 +776,7 @@ export default function AulaPage() {
       const admitirme = () => {
         if (admitidoRef.current) return;
         admitidoRef.current = true;
+        clearInterval(avisoEsperaRef.current);
         setAdmitido(true);
         soltarPrevia();
         publicarMedios();
@@ -791,12 +795,18 @@ export default function AulaPage() {
               publicarSala(room, { op: "admitir" }, identity);
               return;
             }
+            // El aviso se repite: solo uno nuevo vuelve a abrir el modal si el Tutor lo pospuso.
+            if (enEsperaIdRef.current === identity) return;
+            enEsperaIdRef.current = identity;
             setEnEspera({ identity, nombre });
             setAdmisionPospuesta(false);
           } else if (m.op === "adentro") {
             admitidosRef.current.add(identity);
             setOtroAdmitido(true);
-            setEnEspera((actual) => (actual?.identity === identity ? null : actual));
+            if (enEsperaIdRef.current === identity) {
+              enEsperaIdRef.current = null;
+              setEnEspera(null);
+            }
           }
           return;
         }
@@ -807,9 +817,15 @@ export default function AulaPage() {
       room.on(RoomEvent.Connected, () => {
         roomConectadoRef.current = true;
         setHayOtro(room.remoteParticipants.size > 0);
+        const yaEstaba = room.remoteParticipants.values().next().value;
+        if (yaEstaba) setRemoteNombre(yaEstaba.name ?? "");
         if (enEsperaLocal()) {
           setEstado("sala_espera");
           publicarSala(room, { op: "esperando" });
+          clearInterval(avisoEsperaRef.current);
+          avisoEsperaRef.current = setInterval(() => {
+            if (enEsperaLocal() && room.remoteParticipants.size > 0) publicarSala(room, { op: "esperando" });
+          }, 3000);
           return;
         }
         setEstado("conectado");
@@ -836,7 +852,10 @@ export default function AulaPage() {
         setRemoteNombre("");
         setOtroAdmitido(false);
         setAdmisionPospuesta(false);
-        setEnEspera((actual) => (actual?.identity === participante.identity ? null : actual));
+        if (enEsperaIdRef.current === participante.identity) {
+          enEsperaIdRef.current = null;
+          setEnEspera(null);
+        }
       });
 
       // Con autoSubscribe apagado (alumno), lo que el otro publique después (p. ej. su pantalla)
@@ -984,6 +1003,7 @@ export default function AulaPage() {
 
       room.on(RoomEvent.Disconnected, () => {
         roomConectadoRef.current = false;
+        clearInterval(avisoEsperaRef.current);
         // Corte automático de la clase (T-fin+5): se sube lo grabado igual.
         if (estadoRef.current !== "finalizada") void cerrarGrabacion();
         setRemoteActivo(false);
@@ -1068,6 +1088,7 @@ export default function AulaPage() {
   useEffect(() => {
     return () => {
       roomConectadoRef.current = false;
+      clearInterval(avisoEsperaRef.current);
       roomRef.current?.disconnect();
       roomRef.current = null;
       destruirProteccion();
@@ -1120,6 +1141,7 @@ export default function AulaPage() {
     publicarSala(roomRef.current, { op: "admitir" }, enEspera.identity);
     admitidosRef.current.add(enEspera.identity);
     setOtroAdmitido(true);
+    enEsperaIdRef.current = null;
     setEnEspera(null);
   }
 

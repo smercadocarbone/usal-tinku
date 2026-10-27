@@ -51,7 +51,7 @@ test.describe("Kill-switch — entrada al aula", () => {
 
   test("con un menor y el clasificador listo se entra y el token declara clasificadorListo=true", { tag: ["@aula", "@e2e", "@KS-051"] }, async ({ page, baseURL }) => {
     const pedidos = await preparar(page, baseURL!, true, "ok");
-    const boton = page.getByRole("button", { name: "Unirme a la clase" });
+    const boton = page.getByRole("button", { name: /^Entrar a la (clase|sala de espera)$/ });
     await expect(boton).toBeEnabled({ timeout: 20_000 });
     await boton.click();
     await expect.poll(() => pedidos.filter((p) => p.url.includes("/token")).length).toBe(1);
@@ -60,7 +60,7 @@ test.describe("Kill-switch — entrada al aula", () => {
 
   test("entre adultos con el clasificador caído se puede entrar y se avisa NO_CARGA", { tag: ["@aula", "@e2e", "@KS-052"] }, async ({ page, baseURL }) => {
     const pedidos = await preparar(page, baseURL!, false, "caido");
-    const boton = page.getByRole("button", { name: "Unirme a la clase" });
+    const boton = page.getByRole("button", { name: /^Entrar a la (clase|sala de espera)$/ });
     await expect(boton).toBeEnabled({ timeout: 20_000 });
     await expect.poll(() => pedidos.filter((p) => p.url.includes("/clasificador")).length).toBe(1);
     expect(pedidos.find((p) => p.url.includes("/clasificador"))!.cuerpo).toContain("NO_CARGA");

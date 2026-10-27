@@ -53,6 +53,24 @@ test.describe("Detalle de reserva — entrar a la clase y calificar", () => {
   );
 
   test(
+    "antes de que abra el aula (T-5) no se ofrece entrar a la clase",
+    { tag: ["@e2e", "@aula", "@RESERVA-DETALLE-E2E-003"] },
+    async ({ page }) => {
+      const enDosHoras = new Date(Date.now() + 2 * 3600_000).toISOString();
+      await mockApi(page, {
+        [`GET /api/reservas/${RESERVA_ID}`]: jsonRoute(200, { ...reserva("confirmada"), horario: enDosHoras }),
+        [`GET /api/sesiones/por-reserva/${RESERVA_ID}`]: jsonRoute(200, sesion("no_iniciada")),
+      });
+
+      const detalle = new ReservaDetallePage(page);
+      await detalle.goto(RESERVA_ID);
+
+      await expect(page.getByText("El aula se abre 5 minutos antes de la clase.")).toBeVisible();
+      await expect(detalle.botonEntrarClase).toHaveCount(0);
+    }
+  );
+
+  test(
     "una sesión finalizada ofrece calificar, y enviar la calificación confirma",
     { tag: ["@critical", "@e2e", "@RESERVA-DETALLE-E2E-002"] },
     async ({ page }) => {

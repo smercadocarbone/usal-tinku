@@ -216,7 +216,8 @@ async function contextoCon(browser: Browser, jwt: string, conModelo = true): Pro
 
 async function entrar(page: Page, sesionId: string) {
   await page.goto(`/aula/${sesionId}`);
-  const boton = page.getByRole("button", { name: "Unirme a la clase" });
+  // El Tutor entra directo a la clase; el resto, a la sala de espera.
+  const boton = page.getByRole("button", { name: /^Entrar a la (clase|sala de espera)$/ });
   await expect(boton).toBeEnabled({ timeout: 40_000 });
   await boton.click();
 }
@@ -227,6 +228,9 @@ async function dosParticipantes(browser: Browser, jwtA: string, jwtB: string, se
   const b = await (await contextoCon(browser, jwtB)).newPage();
   await entrar(a, sesionId);
   await entrar(b, sesionId);
+  // `b` es siempre quien da la clase: deja pasar a `a`, que espera en la sala.
+  await expect(a.getByText("Estás en la sala de espera")).toBeVisible({ timeout: 60_000 });
+  await b.getByRole("dialog").getByRole("button", { name: "Dejar entrar" }).click({ timeout: 60_000 });
   // "En la sala" = conectado y con el otro presente; además, el video remoto tiene que tener frames.
   for (const p of [a, b]) {
     await expect(p.getByText("En la sala", { exact: true })).toBeVisible({ timeout: 60_000 });
@@ -299,8 +303,60 @@ test("E2E-KS-09: entre adultos, si el modelo no carga se entra igual y el backen
   const reporte = page.waitForResponse((r) => r.url().includes(`/api/sesiones/${sesionId}/clasificador`), { timeout: 40_000 });
   await entrar(page, sesionId);
   expect((await reporte).status()).toBe(204);
-  await expect(page.getByText("Esperando al otro participante").first()).toBeVisible({ timeout: 30_000 });
+  // Entra solo: queda en la sala de espera hasta que llegue el Tutor.
+  await expect(page.getByText("Estás en la sala de espera")).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => logBackend()).toMatch(new RegExp(`evento=NO_CARGA sesion=${sesionId}`));
+});
+
+test("E2E-AULA-SALA: el alumno espera, el Tutor lo deja entrar, y Salir no termina la clase", { tag: ["@aula", "@e2e-real", "@E2E-AULA-SALA"] }, async ({ browser }) => {
+  const sesionId = await claseEntreAdultos();
+  await abrirSala(sesionId);
+  const estudiante = await (await contextoCon(browser, jwt(ESTUDIANTE))).newPage();
+  const tutor = await (await contextoCon(browser, jwt(TUTOR_ADULTOS))).newPage();
+  const opciones = async (p: Page) => {
+    await p.getByRole("button", { name: "Más opciones" }).click();
+    const items = await p.getByRole("menuitem").allTextContents();
+    await p.keyboard.press("Escape");
+    await p.mouse.click(5, 5);
+    return items;
+  };
+
+  // Sala de espera: sin pantalla ni pizarra, con Configuración.
+  await entrar(estudiante, sesionId);
+  await expect(estudiante.getByText("Estás en la sala de espera")).toBeVisible({ timeout: 30_000 });
+  await expect(estudiante.getByText("Tu tutor todavía no entró")).toBeVisible();
+  expect(await opciones(estudiante)).toEqual(["Configuración"]);
+  await estudiante.getByRole("button", { name: "Más opciones" }).click();
+  await estudiante.getByRole("menuitem", { name: "Configuración" }).click();
+  const config = estudiante.getByRole("dialog", { name: "Configuración de audio y video" });
+  await expect(config.getByLabel("Cámara")).toBeVisible();
+  await config.getByRole("button", { name: "Listo" }).click();
+  await expect(config).toBeHidden();
+
+  // El Tutor entra directo y lo deja pasar (primero pospone, después usa el botón de la barra).
+  await entrar(tutor, sesionId);
+  const aviso = tutor.getByRole("dialog", { name: /está en la sala de espera/ });
+  await expect(aviso).toBeVisible({ timeout: 30_000 });
+  await expect(estudiante.getByText(/ya está en la clase/)).toBeVisible({ timeout: 30_000 });
+  // Con el aviso abierto el resto de la página está inerte: el menú se mira después de posponer.
+  await aviso.getByRole("button", { name: "Ahora no" }).click();
+  expect(await opciones(tutor)).toEqual(["Configuración"]);
+  await tutor.getByRole("button", { name: /^Dejar entrar a / }).click();
+  for (const p of [estudiante, tutor]) {
+    await expect(p.getByText("En la sala", { exact: true })).toBeVisible({ timeout: 60_000 });
+    await expect
+      .poll(() => p.evaluate(() => [...document.querySelectorAll("video")].filter((v) => v.readyState >= 2).length), { timeout: 60_000 })
+      .toBeGreaterThanOrEqual(2);
+  }
+  expect(await opciones(tutor)).toEqual(["Compartir pantalla", "Abrir pizarra", "Configuración"]);
+
+  // Salir deja la llamada pero no termina la clase; al volver, entra sin esperar.
+  await estudiante.getByRole("button", { name: "Salir" }).click();
+  await expect(estudiante).toHaveURL(/\/cuenta\/reservas/);
+  expect(sql(`SELECT estado FROM aula.sesiones_aprendizaje WHERE id = '${uuid(sesionId)}'`)).toBe("en_curso");
+  await entrar(estudiante, sesionId);
+  await expect(estudiante.getByText("En la sala", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(tutor.getByRole("dialog", { name: /está en la sala de espera/ })).toBeHidden();
 });
 
 test("E2E-KS-03: US-7, el Estudiante responde «No» y la clase sigue", { tag: ["@aula", "@e2e-real", "@E2E-KS-03"] }, async ({ browser }) => {
