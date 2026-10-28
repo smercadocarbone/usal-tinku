@@ -291,3 +291,4 @@ _Plan, decisiones de producto y trazabilidad de cada hallazgo: `docs/operacion/P
 
 - [x] **Chunk PRES-DEFENSA** — Presentación: kill-switch con cámara en vivo, escenarios financieros, aula con videos reales (T-PRES-01) — _branch `chunk/presentacion-defensa` (PR #99). Solo `frontend/public/presentacion`._
 - [x] **Chunk PRES-CELULARES** — Videos verticales en celulares, cámara del kill-switch en su recuadro, escenarios por sesiones y matching real de la presentación (T-PRES-02, FR-MATCH-015) — _branch `chunk/presentacion-celulares`. Backend: endpoint público `POST /api/presentacion/temas`; sin migraciones._
+- [x] **Chunk KS-MODO-SALUD** — Materia en la reserva y modo salud del kill-switch para Medicina y Anatomía entre adultos (T-KS-SALUD, FR-RES-038, FR-AULA-014, ADR-M3-07 §4bis) — _branch `chunk/killswitch-modo-salud`. Migración V61 (`reservas.trayecto_id`, `matching.trayectos.contenido_anatomico`)._

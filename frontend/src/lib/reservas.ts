@@ -174,6 +174,7 @@ export function crearPaquete(body: {
   horario: string;
   duracionMinutos: number;
   beneficiarioId?: string;
+  trayectoId?: string;
 }): Promise<Paquete> {
   return api.post<Paquete>("/api/reservas/paquete", body);
 }

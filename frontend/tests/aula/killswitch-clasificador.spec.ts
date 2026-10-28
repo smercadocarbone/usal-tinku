@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ContadorDetecciones, puntaje, type Prediccion } from "../../src/lib/killswitch/regla";
+import { ContadorDetecciones, puntaje, umbralDe, type Prediccion } from "../../src/lib/killswitch/regla";
 
 /**
  * M3C-03 (T-M3-06c, ADR-M3-07): regla de detección (pura, Node) y ciclo del clasificador en el
@@ -19,6 +19,22 @@ test.describe("Kill-switch — regla de detección", () => {
     expect(puntaje(p({ Sexy: 0.9 }), false)).toBe(0);
     expect(puntaje(p({ Sexy: 0.9 }), true)).toBeCloseTo(0.9, 6);
     expect(puntaje(p({ Porn: 0.5, Hentai: 0.4 }), false)).toBeCloseTo(0.9, 6);
+  });
+
+  test("modo salud: solo cuenta Porn y con umbral 0,95", { tag: ["@aula", "@KS-SALUD-001"] }, () => {
+    // Una lámina anatómica dibujada cae en Hentai: en modo salud no suma.
+    expect(puntaje(p({ Hentai: 0.9, Porn: 0.05 }), false, true)).toBeCloseTo(0.05, 6);
+    expect(puntaje(p({ Porn: 0.96, Sexy: 0.04 }), false, true)).toBeCloseTo(0.96, 6);
+    expect(umbralDe(false, true)).toBe(0.95);
+    expect(umbralDe(false, false)).toBe(0.85);
+    const c = new ContadorDetecciones();
+    expect([0.9, 0.9, 0.9].map((v) => c.registrar("A", v, umbralDe(false, true)))).toEqual([false, false, false]);
+    expect([0.95, 0.95, 0.95].map((v) => c.registrar("A", v, umbralDe(false, true)))).toEqual([false, false, true]);
+  });
+
+  test("con un menor el modo salud no cuenta", { tag: ["@aula", "@seguridad-menor", "@KS-SALUD-002"] }, () => {
+    expect(umbralDe(true, true)).toBe(0.85);
+    expect(puntaje(p({ Hentai: 0.3, Sexy: 0.6 }), true, true)).toBeCloseTo(0.9, 6);
   });
 
   test("dos sobre el umbral, una debajo y dos sobre: nunca confirma", { tag: ["@aula", "@KS-003"] }, () => {

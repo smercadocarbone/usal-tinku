@@ -60,7 +60,7 @@ import { crearOrquestador, decodificarAviso } from "@/lib/killswitch/orquestador
 import Pizarra from "@/components/aula/Pizarra";
 import { aplicar, codificar, decodificar, mensajesDeSync, type MensajePizarra, type Trazo } from "@/lib/pizarra";
 import { filtrarMensaje } from "@/lib/chat/filtro";
-import { ModalConfirmacion } from "@/components/ui";
+import { Boton, Modal, ModalConfirmacion } from "@/components/ui";
 
 interface TokenResponse {
   token: string;
@@ -74,6 +74,8 @@ interface TokenResponse {
   hayMenor?: boolean;
   /** El Tutor ya dejó pasar a este alumno: al volver a entrar se saltea la sala de espera. */
   admitido?: boolean;
+  /** ADR-M3-07 §4bis: clase de Medicina o Anatomía entre adultos (modo salud del clasificador). */
+  contenidoAnatomico?: boolean;
 }
 
 type Estado =
@@ -325,6 +327,10 @@ export default function AulaPage() {
   // ADR-M3-07: kill-switch del cliente. Ante la duda, hay un menor (AGENTS §3).
   const [hayMenor, setHayMenor] = useState<boolean | null>(null);
   const hayMenorRef = useRef(true);
+  // ADR-M3-07 §4bis: modo salud. Ante la duda, no (queda el umbral de siempre).
+  const [contenidoAnatomico, setContenidoAnatomico] = useState(false);
+  const contenidoAnatomicoRef = useRef(false);
+  const [avisoSaludVisto, setAvisoSaludVisto] = useState(false);
   const [proteccion, setProteccion] = useState<"cargando" | "lista" | "no-disponible">("cargando");
   const proteccionRef = useRef<"cargando" | "lista" | "no-disponible">("cargando");
   const clasificadorRef = useRef<ClasificadorKillswitch | null>(null);
@@ -580,17 +586,23 @@ export default function AulaPage() {
 
     (async () => {
       let menor = true;
+      let anatomico = false;
       try {
-        menor = (await getEstadoKillswitch(sesionId)).hayMenor;
+        const e = await getEstadoKillswitch(sesionId);
+        menor = e.hayMenor;
+        anatomico = e.contenidoAnatomico === true && !menor;
       } catch {
-        // Ante la duda, hay un menor.
+        // Ante la duda, hay un menor (y no hay modo salud).
       }
       if (cancelado) return;
       hayMenorRef.current = menor;
       setHayMenor(menor);
+      contenidoAnatomicoRef.current = anatomico;
+      setContenidoAnatomico(anatomico);
       try {
         const k = await ClasificadorKillswitch.crear({
           hayMenor: menor,
+          contenidoAnatomico: anatomico,
           alDetectar: (d) => void orquestadorRef.current?.alDetectar(d),
           alDemorar: () => orquestadorRef.current?.alDemorar(),
           alNormalizar: () => orquestadorRef.current?.alNormalizar(),
@@ -762,6 +774,12 @@ export default function AulaPage() {
         hayMenorRef.current = tokenResp.hayMenor;
         setHayMenor(tokenResp.hayMenor);
         clasificadorRef.current?.actualizarHayMenor(tokenResp.hayMenor);
+      }
+      const anatomico = tokenResp.contenidoAnatomico === true && tokenResp.hayMenor === false;
+      if (anatomico !== contenidoAnatomicoRef.current) {
+        contenidoAnatomicoRef.current = anatomico;
+        setContenidoAnatomico(anatomico);
+        clasificadorRef.current?.actualizarContenidoAnatomico(anatomico);
       }
 
       const room = new Room({
@@ -1279,6 +1297,14 @@ export default function AulaPage() {
           <div className="mb-6 flex justify-center">
             <Logo href="/cuenta/reservas" claro />
           </div>
+          <Modal
+            abierto={contenidoAnatomico && !avisoSaludVisto}
+            onCerrar={() => setAvisoSaludVisto(true)}
+            titulo="Clase de Medicina o Anatomía"
+            descripcion="En esta clase la protección del aula se flexibiliza, porque el contenido puede incluir el cuerpo humano."
+            ancho="sm"
+            pie={<Boton onClick={() => setAvisoSaludVisto(true)}>Entendido</Boton>}
+          />
           <h1 className="mb-1 text-center text-2xl font-extrabold text-gray-50">Tu clase está por empezar</h1>
           <p className="mb-6 text-center text-sm text-gray-400">Revisá tu cámara y tu micrófono antes de entrar.</p>
 

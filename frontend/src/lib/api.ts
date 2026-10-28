@@ -171,6 +171,21 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   URL.revokeObjectURL(url);
 }
 
+/* ---- ADR-M3-07 §4bis: materia de la clase al reservar ---- */
+
+/** Una materia que da el Tutor; las de contenido anatómico activan el modo salud del aula. */
+export interface MateriaClase {
+  trayectoId: string;
+  nivel: string;
+  carrera: string;
+  materia: string;
+  contenidoAnatomico: boolean;
+}
+
+export function getMateriasTutor(tutorId: string): Promise<MateriaClase[]> {
+  return api.get<MateriaClase[]>(`/api/tutores/${tutorId}/materias`);
+}
+
 /* ---- Contrato 2b (M2): catálogo de temas + búsqueda ---- */
 
 /** Árbol nivel → curso/carrera → materia → tema (contrato 2b, claves ya
@@ -1065,6 +1080,8 @@ export interface EstadoKillswitch {
   sesionCerrada?: boolean;
   /** R-C C-1: hubo un corte por seguridad. Nada más de la alerta (BR-KS-03). */
   cortePorSeguridad?: boolean;
+  /** ADR-M3-07 §4bis: clase de Medicina o Anatomía entre adultos (modo salud). */
+  contenidoAnatomico?: boolean;
 }
 export type EventoClasificador = "NO_CARGA" | "CAIDA" | "REACTIVADO" | "CORTE_SIN_REACTIVAR";
 export interface SesionKillswitch {

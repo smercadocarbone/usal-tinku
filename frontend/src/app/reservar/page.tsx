@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarX2, Check, ChevronLeft, Clock, Copy, Send, ShieldCheck, UserRound, UsersRound } from "lucide-react";
-import { api, ApiError, getAdicionalResumen, getMenores, mensajeDeError, type AdicionalResumen, type Menor } from "@/lib/api";
+import { api, ApiError, getAdicionalResumen, getMateriasTutor, getMenores, mensajeDeError, type AdicionalResumen, type MateriaClase, type Menor } from "@/lib/api";
 import { registrarAceptacion } from "@/lib/evaluacion";
 import { useSesion } from "@/lib/useSesion";
 import { useAhora } from "@/lib/useAhora";
@@ -15,7 +15,7 @@ import { getTutor, nombreCorto, useFotoTutor, type TutorPerfil } from "@/lib/tut
 import { DURACIONES_CLASE, horaDesdeMinutos, iniciosEnFranja, inicioISO, minutos, precioClase, proximosDias, unirContiguas, type Franja } from "@/lib/agenda";
 import { cn } from "@/lib/cn";
 import AppShell from "@/components/shell/AppShell";
-import { Alerta, AreaTexto, Avatar, Boton, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
+import { Alerta, AreaTexto, Avatar, Boton, CampoSelect, EstadoVacio, Pasos, Precio, Skeleton, SkeletonPerfil, Tarjeta, clasesBoton } from "@/components/ui";
 import { crearPaquete, fechasDelPaquete, getOfertaPaquete, guardarPedido, type OfertaPaquete } from "@/lib/reservas";
 
 interface Horario {
@@ -69,6 +69,9 @@ function ReservarFlujo() {
   // v2.5 (FR-RES-032): paquete del mes, si el tutor lo ofrece.
   const [oferta, setOferta] = useState<OfertaPaquete | null>(null);
   const [modalidad, setModalidad] = useState<"clase" | "paquete">("clase");
+  // ADR-M3-07 §4bis: materia de la clase, entre las que da el tutor (con una sola, ya elegida).
+  const [materias, setMaterias] = useState<MateriaClase[]>([]);
+  const [materiaId, setMateriaId] = useState("");
 
   // B9: sin tutor no hay nada que reservar — a buscar.
   useEffect(() => {
@@ -87,6 +90,12 @@ function ReservarFlujo() {
       .get<Franja[]>(`/api/tutores/${tutorId}/franjas`)
       .then(setFranjas)
       .catch(() => setFranjas([]));
+    getMateriasTutor(tutorId)
+      .then((m) => {
+        setMaterias(m);
+        if (m.length === 1) setMateriaId(m[0].trayectoId);
+      })
+      .catch(() => setMaterias([]));
     if (!esMenor) {
       getOfertaPaquete(tutorId)
         .then(setOferta)
@@ -202,6 +211,7 @@ function ReservarFlujo() {
           horario: elegido.inicio,
           duracionMinutos: elegido.duracion,
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
+          ...(materiaId ? { trayectoId: materiaId } : {}),
         });
         registrarAceptacion(tutorId, "RESERVA");
         if (pedidoTexto.trim()) {
@@ -215,6 +225,7 @@ function ReservarFlujo() {
           duracionMinutos: elegido.duracion,
           ...(beneficiario ? { beneficiarioId: beneficiario.id } : {}),
           ...(resumenElegido ? { resumenContratado: true } : {}),
+          ...(materiaId ? { trayectoId: materiaId } : {}),
         });
         registrarAceptacion(tutorId, "RESERVA");
         if (pedidoTexto.trim()) {
@@ -487,6 +498,28 @@ function ReservarFlujo() {
                   />
                 </Dato>
               </dl>
+              {!esMenor && materias.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <CampoSelect
+                    id="materia-reserva"
+                    etiqueta="Materia de la clase"
+                    value={materiaId}
+                    onChange={(e) => setMateriaId(e.target.value)}
+                  >
+                    {materias.length > 1 && <option value="">Elegí la materia</option>}
+                    {materias.map((m) => (
+                      <option key={m.trayectoId} value={m.trayectoId}>
+                        {m.materia} · {m.carrera}
+                      </option>
+                    ))}
+                  </CampoSelect>
+                  {!beneficiario && materias.find((m) => m.trayectoId === materiaId)?.contenidoAnatomico && (
+                    <p className="text-sm text-tinta-suave">
+                      Materia de Medicina o Anatomía: en estas clases la protección del aula se flexibiliza.
+                    </p>
+                  )}
+                </div>
+              )}
               {ofrecerPaquete && oferta && (
                 <div role="radiogroup" aria-label="Cómo querés reservar" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <OpcionModalidad
@@ -578,6 +611,7 @@ function ReservarFlujo() {
                 tamano="lg"
                 className="flex-1"
                 cargando={enviando}
+                disabled={!esMenor && materias.length > 1 && !materiaId}
                 textoCargando={esMenor ? "Enviando…" : "Reservando…"}
                 onClick={confirmar}
               >

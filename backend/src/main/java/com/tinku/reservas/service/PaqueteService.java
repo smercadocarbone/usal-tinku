@@ -81,8 +81,15 @@ public class PaqueteService {
      */
     @Transactional
     public Paquete crear(Usuario pagador, UUID tutorId, UUID beneficiarioId, Instant horario, Integer duracionMinutos) {
+        return crear(pagador, tutorId, beneficiarioId, horario, duracionMinutos, null);
+    }
+
+    @Transactional
+    public Paquete crear(Usuario pagador, UUID tutorId, UUID beneficiarioId, Instant horario, Integer duracionMinutos,
+                         UUID trayectoId) {
         Usuario tutor = usuarioRepo.findById(tutorId).orElseThrow(TutorNoEncontradoException::new);
         Usuario beneficiario = reservaService.beneficiarioDe(pagador, tutorId, beneficiarioId);
+        reservaService.exigirMateriaDelTutor(tutorId, trayectoId);
         int descuento = tarifas.descuentoPaquete(tutorId)
                 .orElseThrow(() -> new PaqueteNoDisponibleException("Este tutor no ofrece el paquete del mes."));
         if (duracionMinutos == null) {
@@ -121,7 +128,9 @@ public class PaqueteService {
 
         List<Reserva> clases = new ArrayList<>();
         for (Instant fecha : fechas) {
-            clases.add(ReservaService.nuevaClase(pagador, beneficiario, tutor, fecha, duracionMinutos, precioClase, paquete));
+            Reserva clase = ReservaService.nuevaClase(pagador, beneficiario, tutor, fecha, duracionMinutos, precioClase, paquete);
+            clase.setTrayectoId(trayectoId);
+            clases.add(clase);
         }
         // saveAndFlush: si otra reserva ganó un horario en carrera, la EXCLUDE da 409 acá.
         clases = reservaRepo.saveAllAndFlush(clases);

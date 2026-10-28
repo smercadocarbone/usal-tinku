@@ -17,6 +17,7 @@ import com.tinku.reservas.model.Paquete;
 import com.tinku.reservas.model.PoliticaCancelacion;
 import com.tinku.reservas.model.Reserva;
 import com.tinku.reservas.model.SolicitudSesion;
+import com.tinku.reservas.port.MateriasTutorProveedor;
 import com.tinku.reservas.port.ReputacionBloqueoProveedor;
 import com.tinku.reservas.port.TarifaProveedor;
 import com.tinku.reservas.port.VerificadorCobroTutor;
@@ -100,6 +101,7 @@ public class ReservaService {
     private final Notificador notificador;
     private final AdicionalResumen adicionalResumen;
     private final VerificadorCobroTutor verificadorCobro;
+    private final MateriasTutorProveedor materias;
 
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager em;
@@ -127,7 +129,8 @@ public class ReservaService {
                           PoliticaSesionesMenores politicaMenores,
                           Notificador notificador,
                           AdicionalResumen adicionalResumen,
-                          VerificadorCobroTutor verificadorCobro) {
+                          VerificadorCobroTutor verificadorCobro,
+                          MateriasTutorProveedor materias) {
         this.solicitudRepo = solicitudRepo;
         this.usuarioRepo = usuarioRepo;
         this.autorizacionRepo = autorizacionRepo;
@@ -141,6 +144,7 @@ public class ReservaService {
         this.notificador = notificador;
         this.adicionalResumen = adicionalResumen;
         this.verificadorCobro = verificadorCobro;
+        this.materias = materias;
     }
 
     /**
@@ -168,7 +172,7 @@ public class ReservaService {
         }
 
         Reserva reserva = crearReserva(adultoResponsable, menor, solicitud.getTutor(),
-                solicitud.getHorarioPropuesto(), solicitud.getDuracionMinutos(), false);
+                solicitud.getHorarioPropuesto(), solicitud.getDuracionMinutos(), false, null);
 
         solicitud.setEstado(EstadoSolicitud.CONVERTIDA);
         solicitudRepo.save(solicitud);
@@ -188,8 +192,9 @@ public class ReservaService {
         Usuario tutor = usuarioRepo.findById(request.tutorId())
                 .orElseThrow(TutorNoEncontradoException::new);
         Usuario beneficiario = beneficiarioDe(pagador, request.tutorId(), request.beneficiarioId());
+        exigirMateriaDelTutor(tutor.getId(), request.trayectoId());
         return crearReserva(pagador, beneficiario, tutor, request.horario(), request.duracionMinutos(),
-                request.conResumen());
+                request.conResumen(), request.trayectoId());
     }
 
     /**
@@ -566,7 +571,8 @@ public class ReservaService {
     }
 
     private Reserva crearReserva(Usuario pagador, Usuario beneficiario, Usuario tutor,
-                                 Instant horario, Integer duracionMinutos, boolean conResumen) {
+                                 Instant horario, Integer duracionMinutos, boolean conResumen,
+                                 UUID trayectoId) {
         validarNuevaClase(pagador, beneficiario, tutor, horario, duracionMinutos);
 
         // T09: el adicional de resumen se valida en el backend (Art. II: nunca con un menor).
@@ -578,6 +584,7 @@ public class ReservaService {
         // D6 regla 5: precio = tarifa por hora × minutos / 60.
         Reserva reserva = nuevaClase(pagador, beneficiario, tutor, horario, duracionMinutos,
                 precioDe(tutor.getId(), duracionMinutos, 0), null);
+        reserva.setTrayectoId(trayectoId);
         if (conResumen) {
             reserva.setResumenContratado(true);
             reserva.setPrecioAdicionalResumen(adicionalResumen.precio(duracionMinutos)); // congelado como el precio
@@ -585,6 +592,13 @@ public class ReservaService {
         Reserva guardada = reservaRepo.save(reserva);
         programarTimeoutPago(guardada);
         return guardada;
+    }
+
+    /** ADR-M3-07 §4bis: la materia es opcional, pero si viene tiene que ser una que el Tutor dicta. */
+    void exigirMateriaDelTutor(UUID tutorId, UUID trayectoId) {
+        if (trayectoId != null && !materias.dicta(tutorId, trayectoId)) {
+            throw new MateriaNoDictadaException();
+        }
     }
 
     /** Precio de una clase: tarifa por hora × minutos / 60, menos el descuento (paquete, ADR-M5-03). */

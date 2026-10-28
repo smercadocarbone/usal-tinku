@@ -1,5 +1,6 @@
 package com.tinku.matching.web;
 
+import com.tinku.matching.repository.PerfilTutorTemasRepository;
 import com.tinku.matching.service.CatalogoService;
 import com.tinku.matching.service.PerfilTutorTemasService;
 import com.tinku.matching.service.SugerenciaTemasService;
@@ -11,6 +12,7 @@ import com.tinku.shared.UsuarioActual;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +30,8 @@ import java.util.UUID;
  *  - PUT /api/tutores/me/temas: SOLO TUTOR (403 si no); valida 404/422 contra
  *    el catálogo vigente (FR-MATCH-006) y persiste solo los ids (sin tocar
  *    embedding: lo repuebla el recompute de 2c).
+ *  - GET /api/tutores/{id}/materias: materias que se pueden elegir al reservar con ese Tutor
+ *    (ADR-M3-07 §4bis: las de contenido anatómico activan el modo salud del kill-switch).
  */
 @RestController
 @RequestMapping("/api")
@@ -37,11 +41,14 @@ public class CatalogoTemasController {
     private final PerfilTutorTemasService temasService;
     private final UsuarioActual usuarioActual;
     private final SugerenciaTemasService sugerencias;
+    private final PerfilTutorTemasRepository temasRepo;
 
     public CatalogoTemasController(CatalogoService catalogoService,
                                    PerfilTutorTemasService temasService,
                                    UsuarioActual usuarioActual,
-                                   SugerenciaTemasService sugerencias) {
+                                   SugerenciaTemasService sugerencias,
+                                   PerfilTutorTemasRepository temasRepo) {
+        this.temasRepo = temasRepo;
         this.sugerencias = sugerencias;
         this.catalogoService = catalogoService;
         this.temasService = temasService;
@@ -54,6 +61,11 @@ public class CatalogoTemasController {
             @RequestParam(required = false) String curso,
             @RequestParam(required = false) String materia) {
         return catalogoService.arbol(trimToNull(nivel), trimToNull(curso), trimToNull(materia));
+    }
+
+    @GetMapping("/tutores/{id}/materias")
+    public List<PerfilTutorTemasRepository.MateriaClase> materiasDelTutor(@PathVariable UUID id) {
+        return temasRepo.materiasDelTutor(id);
     }
 
     @GetMapping("/tutores/me/temas")

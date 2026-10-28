@@ -87,7 +87,8 @@ public class SesionController {
         return ResponseEntity.ok(new TokenSesionResponse(
                 resultado[0], liveKitService.getBaseUrl(), resultado[1],
                 audioResumenService.debeGrabar(usuario, id), sesionService.pizarraHabilitada(id),
-                sesionService.hayMenor(id), sesionService.yaAdmitido(usuario, id)));
+                sesionService.hayMenor(id), sesionService.yaAdmitido(usuario, id),
+                sesionService.contenidoAnatomico(id)));
     }
 
     /** Sala de espera — el Tutor deja pasar al alumno; si sale y vuelve, entra directo. */
