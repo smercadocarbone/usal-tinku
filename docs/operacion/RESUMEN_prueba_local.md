@@ -5,8 +5,8 @@ Para probarlo en local sin pagar se puede apuntar el mismo código a **Groq**, q
 compatible con la de OpenAI (`/v1/audio/transcriptions` y `/v1/chat/completions`) y un plan
 gratuito con límites por minuto y por día, sin tarjeta.
 
-Es solo para una demo o una prueba: el resumen lo escribe **Llama 3.3 70B**, no GPT-4o, y la
-transcripción **Whisper large v3 turbo**. El pipeline, el prompt, el anonimizador y el borrado
+Es solo para una demo o una prueba: el resumen lo escribe **gpt-oss-120b** (el modelo abierto de OpenAI), no GPT-4o, y la
+transcripción **Whisper large v3** (la versión turbo entiende peor el español: «11, 2» por «once doceavos»). El pipeline, el prompt, el anonimizador y el borrado
 del audio son los mismos que en producción. No usarlo con clases reales ni con menores (el audio
 de una clase con un Menor no se graba nunca, de todos modos).
 
@@ -19,8 +19,8 @@ de una clase con un Menor no se graba nunca, de todos modos).
    LLM_PROVEEDOR=gpt-4o
    LLM_API_KEY=gsk_...
    LLM_BASE_URL=https://api.groq.com/openai
-   LLM_MODELO=llama-3.3-70b-versatile
-   LLM_MODELO_TRANSCRIPCION=whisper-large-v3-turbo
+   LLM_MODELO=openai/gpt-oss-120b
+   LLM_MODELO_TRANSCRIPCION=whisper-large-v3
    ```
 
    `LLM_PROVEEDOR=gpt-4o` es la llave que habilita el proveedor (fail-closed sin ella); los
