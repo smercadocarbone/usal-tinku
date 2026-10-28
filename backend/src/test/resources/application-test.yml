@@ -14,6 +14,15 @@ spring:
             # a dormir 23-30 s: los tests que esperan un job real se quedaban sin tiempo
             # (LiberacionDenunciaPausaIntegracionTest, run 36070120076). 1 s acota esa espera.
             idleWaitTime: 1000
+            # Cada contexto de Spring que cachea la suite deja vivo su scheduler, y todos usan las
+            # mismas tablas QRTZ_* del contenedor compartido. Sin clúster, cada uno se bloquea con un
+            # semáforo en memoria propio: mientras un contexto nuevo reemplaza un trigger (borra e
+            # inserta), otro lo dispara y lo vuelve a insertar -> clave duplicada en qrtz_triggers y
+            # el contexto no arranca (EscrowCarrerasIntegracionTest, runs del 2026-10-27/28). En
+            # clúster se coordinan con bloqueos en QRTZ_LOCKS. Producción tiene una sola instancia.
+            instanceId: AUTO
+          jobStore:
+            isClustered: true
 
 tinku:
   # ADR-M1-06: especialidades apagadas hasta tener el texto legal de la cláusula de consentimiento.
