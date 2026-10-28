@@ -1266,7 +1266,8 @@ var TP=[["álgebra","mate",-.06,.03],["funciones","mate",.07,-.06],["trigonometr
 ["comprensión lectora","len",-.07,.03],["redacción","len",.07,-.05],["literatura","len",.01,.08]]
 .map(function(t){return {l:t[0],c:t[1],x:CL[t[1]][0]+t[2],y:CL[t[1]][1]+t[3]}});
 function tpos(l){return TP.filter(function(t){return t.l===l})[0]}
-var PRE=[{q:"me cuesta despejar la x"},{q:"preparar una entrevista laboral en inglés"},{q:"mi programa se cuelga y no sé por qué"},{q:"por qué cae más rápido lo pesado"},{q:"quiero aprender a tocar la guitarra"}];
+/* Ejemplos probados contra producción (2026-10-28): 0,68 · 0,70 · 0,61 · 0,51 y guitarra 0,37 (fuera, umbral 0,46). */
+var PRE=[{q:"no sé resolver ecuaciones"},{q:"preparar una entrevista laboral en inglés"},{q:"cómo hacen las plantas para alimentarse"},{q:"por qué cae más rápido lo pesado"},{q:"quiero aprender a tocar la guitarra"}];
 var KWC={mate:["ecuac","funci","deriv","integr","algebra","matem","numero","calcul","x"],cien:["fisic","fuerza","movim","velocid","cae","pelota","energ","quimic","reacc","atomo","molec","compuesto"],ing:["ingles","english","entrevista","idioma","hablar"],prog:["program","codigo","python","java","web","compu","app"],len:["lengua","leer","escrib","texto","redac","literat"]};
 var Q=null,t0m=0,raf=0,matchOn=false,qseed=0.5;
 /* FR-MATCH-015: el matching real (pgvector, mismo modelo y umbral que la búsqueda de tutores).
