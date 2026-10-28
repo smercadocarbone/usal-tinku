@@ -59,6 +59,7 @@ import { TOPIC_KILLSWITCH } from "@/lib/killswitch/config";
 import { crearOrquestador, decodificarAviso } from "@/lib/killswitch/orquestador";
 import Pizarra from "@/components/aula/Pizarra";
 import { aplicar, codificar, decodificar, mensajesDeSync, type MensajePizarra, type Trazo } from "@/lib/pizarra";
+import { filtrarMensaje } from "@/lib/chat/filtro";
 import { ModalConfirmacion } from "@/components/ui";
 
 interface TokenResponse {
@@ -371,6 +372,7 @@ export default function AulaPage() {
   const [modoTexto, setModoTexto] = useState(false);
   const [mensajesTexto, setMensajesTexto] = useState<MensajeTexto[]>([]);
   const [textoAEnviar, setTextoAEnviar] = useState("");
+  const [avisoFiltro, setAvisoFiltro] = useState<string | null>(null);
 
   // ---- Sala de espera: el alumno, hasta que lo admiten; el Tutor, a quién tiene esperando ----
   const admitidoRef = useRef(false);
@@ -994,7 +996,9 @@ export default function AulaPage() {
             texto?: string;
           };
           if (data.tipo === "mensaje" && typeof data.texto === "string") {
-            setMensajesTexto((prev) => [...prev.slice(-9), { propio: false, texto: data.texto! }]);
+            // Se vuelve a filtrar al recibir: no se confía en el filtro del otro navegador.
+            const texto = filtrarMensaje(data.texto).texto;
+            setMensajesTexto((prev) => [...prev.slice(-9), { propio: false, texto }]);
           }
         } catch {
           // Paquete que no es del formato esperado — se ignora.
@@ -1241,12 +1245,20 @@ export default function AulaPage() {
 
   function enviarMensajeTexto(e: React.FormEvent) {
     e.preventDefault();
-    const texto = textoAEnviar.trim();
-    if (!texto || !roomRef.current) return;
+    const original = textoAEnviar.trim();
+    if (!original || !roomRef.current) return;
+    const { texto, contactoOculto, insultoOculto } = filtrarMensaje(original);
     const payload = new TextEncoder().encode(JSON.stringify({ tipo: "mensaje", texto }));
     roomRef.current.localParticipant.publishData(payload, { reliable: true });
     setMensajesTexto((prev) => [...prev.slice(-9), { propio: true, texto }]);
     setTextoAEnviar("");
+    setAvisoFiltro(
+      contactoOculto
+        ? "Los datos de contacto no se comparten en Tinku: se ocultaron del mensaje."
+        : insultoOculto
+          ? "Se ocultaron palabras ofensivas del mensaje."
+          : null,
+    );
   }
 
   // ---------------------------------------------------------------- Bloqueos de protección
@@ -1649,6 +1661,11 @@ export default function AulaPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {avisoFiltro && (
+                <p className="text-xs text-amber-300" data-testid="aviso-filtro-chat">
+                  {avisoFiltro}
+                </p>
               )}
               <form onSubmit={enviarMensajeTexto} className="flex gap-2">
                 <input

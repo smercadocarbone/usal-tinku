@@ -270,3 +270,7 @@ sub-ítem 7 de AUD-036 (lock de la carga lazy del embedder). Detalle y tests de 
 - [x] **Chunk REM-H** — Datos del seed (`R-H-seed.md`) — _depende de REM-D._
 
 _Plan, decisiones de producto y trazabilidad de cada hallazgo: `docs/operacion/PLAN_remediacion_hallazgos.md`. Specs: `docs/superpowers/specs/remediacion-pruebas/`._
+
+## Aula — filtro del canal de texto (2026-10-27)
+
+- [x] **Chunk M3-FILTRO-CHAT** — Contacto e insultos en el canal de texto (T-M3-CHAT-FILTRO, FR-AULA-011) — _branch `chunk/m3-filtro-chat`. Solo frontend; sin migraciones ni cambios de backend._
