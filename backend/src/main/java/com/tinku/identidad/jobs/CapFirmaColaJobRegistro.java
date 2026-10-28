@@ -1,7 +1,9 @@
 package com.tinku.identidad.jobs;
 
 import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
 import org.quartz.JobKey;
+import org.quartz.JobPersistenceException;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
@@ -12,6 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 /**
  * Registra el paso periódico de la cola de firmas del CAP (ADR-M1-10) en el job store
@@ -43,12 +47,14 @@ public class CapFirmaColaJobRegistro implements ApplicationRunner {
                 .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(intervaloSegundos)
                         .withMisfireHandlingInstructionNextWithRemainingCount())
                 .build();
-        if (scheduler.checkExists(JOB)) {
-            scheduler.rescheduleJob(TRIGGER, trigger);
-            return;
+        JobDetail job = JobBuilder.newJob(CapFirmaColaJob.class).withIdentity(JOB).storeDurably().build();
+        // Alta o reemplazo en una sola operación del job store (rescheduleJob borra e inserta:
+        // dos schedulers sobre la misma base chocaban en qrtz_triggers_pkey). Si otro scheduler
+        // lo insertó entre medio, el segundo intento ya lo encuentra y lo actualiza.
+        try {
+            scheduler.scheduleJob(job, Set.of(trigger), true);
+        } catch (JobPersistenceException carrera) {
+            scheduler.scheduleJob(job, Set.of(trigger), true);
         }
-        scheduler.scheduleJob(
-                JobBuilder.newJob(CapFirmaColaJob.class).withIdentity(JOB).storeDurably().build(),
-                trigger);
     }
 }

@@ -3,6 +3,7 @@ package com.tinku.admin.notificacion;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
+import org.quartz.ObjectAlreadyExistsException;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
@@ -48,6 +49,10 @@ public class EnvioEmailsJobRegistro implements ApplicationRunner {
                 .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(intervaloSegundos)
                         .withMisfireHandlingInstructionNextWithRemainingCount())
                 .build();
-        scheduler.scheduleJob(detail, trigger);
+        try {
+            scheduler.scheduleJob(detail, trigger);
+        } catch (ObjectAlreadyExistsException yaRegistrado) {
+            // Otro scheduler sobre la misma base lo registró entre el checkExists y el alta.
+        }
     }
 }

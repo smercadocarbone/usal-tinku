@@ -2,6 +2,7 @@ package com.tinku.pagos.jobs;
 
 import org.quartz.JobBuilder;
 import org.quartz.JobKey;
+import org.quartz.ObjectAlreadyExistsException;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
@@ -31,12 +32,16 @@ public class ConciliacionPagosJobRegistro implements ApplicationRunner {
         if (scheduler.checkExists(JOB)) {
             return;
         }
-        scheduler.scheduleJob(
-                JobBuilder.newJob(ConciliacionPagosJob.class).withIdentity(JOB).storeDurably().build(),
-                TriggerBuilder.newTrigger()
-                        .withIdentity("conciliacionPagosTrigger", JOB.getGroup())
-                        .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(CADA_MINUTOS)
-                                .withMisfireHandlingInstructionNextWithRemainingCount())
-                        .build());
+        try {
+            scheduler.scheduleJob(
+                    JobBuilder.newJob(ConciliacionPagosJob.class).withIdentity(JOB).storeDurably().build(),
+                    TriggerBuilder.newTrigger()
+                            .withIdentity("conciliacionPagosTrigger", JOB.getGroup())
+                            .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(CADA_MINUTOS)
+                                    .withMisfireHandlingInstructionNextWithRemainingCount())
+                            .build());
+        } catch (ObjectAlreadyExistsException yaRegistrado) {
+            // Otro scheduler sobre la misma base lo registró entre el checkExists y el alta.
+        }
     }
 }
