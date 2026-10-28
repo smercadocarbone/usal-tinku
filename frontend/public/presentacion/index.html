@@ -342,7 +342,17 @@ h2 em{font-style:normal;color:var(--amber)}
 .fcm{font:400 30px/1.4 var(--f-body);color:var(--mute);margin:0}
 .fcm b{color:var(--paper)}
 /* encuesta */
-.enc{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:40px}
+.enc{display:grid;grid-template-columns:1.5fr 1fr;gap:28px;margin-top:40px}
+.ec.ec1{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto auto 1fr auto;column-gap:44px;align-items:start}
+.ec1 .ring{grid-row:1/5;align-self:center;width:300px;height:300px}
+.ec1 .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ec1 .ring circle{fill:none;stroke-width:14}
+.ec1 .ring .rb{stroke:rgba(255,255,255,.08)}
+.ec1 .ring .rf{stroke:var(--amber);stroke-linecap:round;stroke-dasharray:0 100;transition:stroke-dasharray 1.4s cubic-bezier(.2,.7,.2,1) .4s}
+.slide.on .ec1 .ring .rf{stroke-dasharray:77.3 100}
+.ec1.on .ring .rf{stroke:#fff}
+.ec1 .k{font-size:128px}
+.ec1 .h,.ec1 .a{grid-column:2}
 .ec{all:unset;box-sizing:border-box;cursor:pointer;border-radius:30px;background:var(--pine);border:1px solid var(--line);padding:36px 32px;min-height:440px;display:flex;flex-direction:column;transition:background .3s,border-color .3s}
 .ec:focus-visible{outline:3px solid var(--amber);outline-offset:6px}
 .ec .k{font:800 96px/1 var(--f-display);letter-spacing:-.04em;color:var(--amber)}
@@ -796,14 +806,12 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   </div>
 </section>
 <!-- ENCUESTA -->
-<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Invitar al jurado a abrir cada tarjeta desde su celular para ver qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; la mediana de disposición a pagar es USD 4,56 por hora; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación; 90,9 % de las respuestas viene de Buenos Aires, por eso la hipótesis geográfica sigue pendiente.">
+<section class="slide survey" data-id="encuesta" data-title="Lo que dijo la encuesta" data-kw="encuesta relevamiento validacion datos respuestas virtual precio disposicion a pagar transferencia buenos aires interior sesgo muestra 88" data-notes="Encuesta propia, 88 respuestas válidas (apéndice A de la tesis). Invitar al jurado a abrir cada tarjeta desde su celular para ver qué decisión salió de ese dato. 77,3 % tomaría clases virtuales con un buen profesor; 34,1 % prefiere pagar por transferencia, que es el riesgo de desintermediación. El 90,9 % de las respuestas viene de Buenos Aires: por eso la hipótesis geográfica sigue pendiente (Conclusiones). La disposición a pagar (mediana USD 4,56 por hora) se cuenta en Riesgos.">
   <h2 class="r" style="--i:1">Lo que dijo<br><em>la encuesta.</em></h2>
-  <p class="r" style="--i:2;font:500 22px var(--f-mono);color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 0">88 respuestas válidas · qué se decidió con cada dato</p>
+  <p class="r" style="--i:2;font:500 22px var(--f-mono);color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 0">88 respuestas válidas · 90,9 % de Buenos Aires</p>
   <div class="enc">
-    <button class="ec r" style="--i:3" data-n="0"><span class="k">77,3<small>%</small></span><span class="q">tomaría clases virtuales si el profesor es bueno.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Aula en el navegador, sin instalar nada. La modalidad virtual queda validada.</span></button>
-    <button class="ec r" style="--i:4" data-n="1"><span class="k">4,56<small>USD/h</small></span><span class="q">es la mediana de lo que pagarían por una hora.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>El tutor fija su precio, con un piso de USD 4/h. El VAN base recién se anula a USD 3,53/h.</span></button>
-    <button class="ec r" style="--i:5" data-n="2"><span class="k">34,1<small>%</small></span><span class="q">prefiere pagar por transferencia antes que en una plataforma.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Riesgo de desintermediación: se responde en Riesgos.</span></button>
-    <button class="ec r" style="--i:6" data-n="3"><span class="k">90,9<small>%</small></span><span class="q">de las respuestas viene de Buenos Aires (provincia y CABA).</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Se entrevistó a familias del interior: dan los primeros casos, pero hay que medirlo con usuarios reales.</span></button>
+    <button class="ec ec1 r" style="--i:3" data-n="0"><span class="ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="rb"/><circle cx="60" cy="60" r="50" class="rf" pathLength="100"/></svg></span><span class="k">77,3<small>%</small></span><span class="q">tomaría clases virtuales si el profesor es bueno.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>La modalidad virtual queda validada.</span></button>
+    <button class="ec r" style="--i:4" data-n="1"><span class="k">34,1<small>%</small></span><span class="q">prefiere pagar por transferencia antes que en una plataforma.</span><span class="h">tocar →</span><span class="a"><b>Decisión</b>Riesgo de desintermediación.</span></button>
   </div>
 </section>
 <!-- 4 PRODUCTO -->
@@ -946,7 +954,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   <p class="fcm r" style="--i:6" id="fcm"></p>
 </section>
 <!-- 13 RIESGOS -->
-<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con la seguridad, que solo existe dentro de la plataforma (identidad y antecedentes verificados, pago retenido 24 hs, kill-switch en el aula). Arranca vacía: cada Siguiente muestra un riesgo y el siguiente lo da vuelta para ver su mitigación (seis pasos). Anterior deshace el último paso. En desintermediación, sumar que el 34,1 % sale de la encuesta (n = 88) y que una de tres familias del interior pagaría directo al tutor; en adopción, que cuatro de los cinco tutores en actividad aceptan la comisión, y que la que no la acepta es la que nunca tuvo problemas para cobrar.">
+<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Tres riesgos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con la seguridad, que solo existe dentro de la plataforma (identidad y antecedentes verificados, pago retenido 24 hs, kill-switch en el aula). Arranca vacía: cada Siguiente muestra un riesgo y el siguiente lo da vuelta para ver su mitigación (seis pasos). Anterior deshace el último paso. En desintermediación, sumar que el 34,1 % sale de la encuesta (n = 88) y que una de tres familias del interior pagaría directo al tutor; en precio, que el modelo usa el promedio publicado en Superprof ($13.392 por hora, USD 7,42 por sesión de 51 minutos) y que la mediana de la encuesta, USD 4,56, todavía deja el VAN base positivo: se anula recién a USD 3,53 por hora.">
   <h2 class="r" style="--i:1">Lo que puede<br><em>salir mal.</em></h2>
   <div class="cards">
     <div class="fc r" style="--i:2">
@@ -963,8 +971,8 @@ body.mando:not(.jurado) #mctl:empty{display:none}
     </div>
     <div class="fc r" style="--i:4">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo</p><b>Adopción de tutores</b><p>Con la agenda llena, no necesitan intermediación.</p><span class="more">3 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Al que tiene horas libres y quiere más alumnos.</p><span class="more">3 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Precio efectivo</b><p>Pagarían una mediana de <b style="color:var(--paper)">USD 4,56</b> la hora, por debajo del precio del modelo.</p><span class="more">3 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Margen en el precio</b><p>El VAN base recién se anula a USD 3,53/h.</p><span class="more">3 / 3</span></div>
       </div>
     </div>
   </div>
@@ -1654,7 +1662,7 @@ var MC={
   aula:{h:"Tocá una función para ver su video.",html:function(){return '<div class="mrow">'+["Videollamada nativa","Pizarra en tiempo real","Resumen con IA"].map(function(t,i){return '<button type="button" class="mb" data-a="au" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   vistas:{h:"Elegí la vista.",html:function(){return '<div class="mrow mg2">'+["Familias","Tutores","Moderación","Finanzas"].map(function(t,i){return '<button type="button" class="mb" data-a="v" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   arquitectura:{h:"Tocá un módulo para resaltarlo.",html:function(){var n=["M1 Identidad","M2 Matching","M3 Aula","M4 Reservas","M5 Pagos","M6 Resumen","M7 Reputación","M8 Admin","M9 Seguridad","Servicio de matching"];return '<div class="mrow mg2">'+n.map(function(t,i){return '<button type="button" class="mb" data-a="mod" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
-  encuesta:{h:"Tocá un dato para ver qué se decidió.",html:function(){return '<div class="mrow">'+["77,3 % · clases virtuales","USD 4,56 por hora","34,1 % · transferencia","90,9 % · Buenos Aires"].map(function(t,i){return '<button type="button" class="mb" data-a="en" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
+  encuesta:{h:"Tocá un dato para ver qué se decidió.",html:function(){return '<div class="mrow">'+["77,3 % · clases virtuales","34,1 % · transferencia"].map(function(t,i){return '<button type="button" class="mb" data-a="en" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   finanzas:{h:"Elegí un escenario: los números cambian en la pantalla grande.",html:function(){return '<div class="mval" id="mgv"></div><div class="msub" id="mgs"></div><div class="mrow">'+[["pes","Pesimista"],["base","Base"],["opt","Optimista"]].map(function(x){return '<button type="button" class="mb" data-a="esc" data-e="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>'}},
 };
 var mid="";
