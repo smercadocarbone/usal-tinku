@@ -533,8 +533,10 @@ body.mando .stage,body.mando .ui,body.mando .navb,body.mando #net,body.mando .pb
 #mando button:focus-visible{outline:4px solid #fff;outline-offset:3px}
 /* riesgos: 3 tarjetas */
 .cards{grid-template-columns:repeat(3,1fr)!important;gap:26px!important}
-.fa b,.fb b{font-size:48px!important;margin-bottom:20px!important}
-.fa p,.fb p{font-size:24px!important}
+.fa b,.fb b{font-size:52px!important;margin-bottom:22px!important}
+.fa p,.fb p{font-size:30px!important;line-height:1.35!important}
+.fb p{font-size:36px!important;color:#fff}
+.fa p b,.fb p b{display:inline!important;font:inherit!important;font-weight:700!important;letter-spacing:0;margin:0!important;color:var(--paper)}
 .fa,.fb{padding:36px 38px!important}
 @media (prefers-reduced-motion:reduce){.r,.cv-a,.cv-b,.wordmark .dot,.live::before{animation:none!important}.slide{transition:opacity .2s}.tl::after{animation:none;width:90%}.slide.on .tn i{animation:none;border-color:var(--amber);color:var(--amber)}}
 @media print{.ui,.navb,.pbar{display:none}}
@@ -905,7 +907,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   </div>
 </section>
 <!-- 11 ARQUITECTURA -->
-<section class="slide arch" data-id="arquitectura" data-title="Arquitectura y calidad" data-kw="arquitectura tecnologia stack java spring boot postgresql nextjs react python fastapi monolito modular modulos tests calidad quartz livekit un desarrollador presupuesto infraestructura" data-notes="Decisión central: monolito modular con nueve módulos y un único proceso aparte, el de matching en Python. Se justifica contra el contexto real: un desarrollador y entre 0 y 100 dólares de infraestructura por mes. Sin message broker. Todo timeout de negocio con plata o seguridad es un job Quartz persistido en PostgreSQL. 739 tests del backend sin fallas al 15 de octubre de 2026, más 222 pruebas de punta a punta del frontend.">
+<section class="slide arch" data-id="arquitectura" data-title="Arquitectura y calidad" data-kw="arquitectura tecnologia stack java spring boot postgresql nextjs react python fastapi monolito modular modulos tests calidad quartz livekit un desarrollador presupuesto infraestructura" data-notes="Decisión central: monolito modular con nueve módulos y un único proceso aparte, el de matching en Python. Se justifica contra el contexto real: un desarrollador y entre 0 y 100 dólares de infraestructura por mes. Sin message broker. Todo timeout de negocio con plata o seguridad es un job Quartz persistido en PostgreSQL. 859 tests del backend sin fallas al 18 de octubre de 2026 (cobertura de líneas del 89,6 %), más 252 pruebas de punta a punta del frontend y 44 del matching-service.">
   <div>
     <h2 class="r" style="--i:1">Un monolito<br><em>a propósito.</em></h2>
     <div class="mods">
@@ -922,7 +924,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
     </div>
   </div>
   <div class="stats">
-    <div class="stat r" style="--i:3"><div class="n cnt" data-to="739">0</div><p>tests automáticos, 0 fallas</p></div>
+    <div class="stat r" style="--i:3"><div class="n cnt" data-to="859">0</div><p>tests automáticos, 0 fallas</p></div>
     <div class="stat r" style="--i:4"><div class="n cnt" data-to="9">0</div><p>módulos de dominio</p></div>
     <div class="stat r" style="--i:5"><div class="n cnt" data-to="1">0</div><p>desarrollador</p></div>
     <div class="stat r" style="--i:6"><div class="n"><span class="cnt" data-to="100" data-pre="≤ ">0</span><small>USD/mes</small></div><p>de infraestructura</p></div>
@@ -945,34 +947,34 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   <p class="fcm r" style="--i:6" id="fcm"></p>
 </section>
 <!-- 13 RIESGOS -->
-<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con la seguridad, que solo existe dentro de la plataforma (identidad y antecedentes verificados, pago retenido 24 hs, kill-switch en el aula). Arranca vacía: cada Siguiente muestra un riesgo y el siguiente lo da vuelta para ver su mitigación (seis pasos). Anterior deshace el último paso. En desintermediación, sumar que una de tres familias pagaría directo al tutor; en adopción, que cuatro de los cinco tutores en actividad aceptan la comisión, y que la que no la acepta es la que nunca tuvo problemas para cobrar.">
+<section class="slide risk" data-id="riesgos" data-title="Riesgos y mitigación" data-kw="riesgos riesgo mitigacion viabilidad comercial volumen critico desintermediacion pago por transferencia sesiones minimo contingencias" data-notes="Dos riesgos críticos. Viabilidad comercial: hace falta un volumen mínimo de sesiones y por eso se opera sin soporte rentado. Desintermediación: que tutor y familia pacten por fuera tras el primer contacto; se mitiga con la seguridad, que solo existe dentro de la plataforma (identidad y antecedentes verificados, pago retenido 24 hs, kill-switch en el aula). Arranca vacía: cada Siguiente muestra un riesgo y el siguiente lo da vuelta para ver su mitigación (seis pasos). Anterior deshace el último paso. En desintermediación, sumar que el 34,1 % sale de la encuesta (n = 88) y que una de tres familias del interior pagaría directo al tutor; en adopción, que cuatro de los cinco tutores en actividad aceptan la comisión, y que la que no la acepta es la que nunca tuvo problemas para cobrar.">
   <h2 class="r" style="--i:1">Lo que puede<br><em>salir mal.</em></h2>
   <div class="cards">
     <div class="fc r" style="--i:2">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo</p><b>Viabilidad comercial</b><p>Con menos de <b style="color:var(--paper)"><span id="rfl">3.521</span> sesiones anuales</b> en promedio, el VAN se vuelve negativo.</p><p>Escenario pesimista: VAN USD 11.041, todavía positivo.</p><span class="more">1 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Operar liviano</b><p>Los costos fijos se cubren con menos de 2.200 sesiones al año.</p><p>Piso de tarifa: USD 4 por hora.</p><span class="more">1 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Viabilidad comercial</b><p>Bajo <b style="color:var(--paper)"><span id="rfl">3.521</span> sesiones al año</b>, el VAN es negativo.</p><p>Pesimista: VAN de USD 11.041.</p><span class="more">1 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Operar liviano</b><p>Costos fijos cubiertos con 2.200 sesiones al año.</p><span class="more">1 / 3</span></div>
       </div>
     </div>
     <div class="fc r" style="--i:3">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo</p><b>Desintermediación</b><p>Tutor y familia acuerdan por fuera de la plataforma después del primer contacto.</p><p><b style="color:var(--paper)">34,1 %</b> prefiere la transferencia (encuesta, n = 88), y una de tres familias del interior le pagaría directo al tutor.</p><span class="more">2 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Seguridad que no se lleva</b><p>Por fuera se pierde la protección: tutores verificados, pago retenido hasta después de la clase y aula vigilada.</p><p>Pagando directo, eso no existe.</p><span class="more">2 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Desintermediación</b><p>Tutor y familia arreglan por fuera tras el primer contacto.</p><p><b style="color:var(--paper)">34,1 %</b> prefiere la transferencia.</p><span class="more">2 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Seguridad que no se lleva</b><p>Por fuera no hay tutor verificado, pago protegido ni aula vigilada.</p><span class="more">2 / 3</span></div>
       </div>
     </div>
     <div class="fc r" style="--i:4">
       <div class="fi">
-        <div class="fa"><p class="tg">Riesgo</p><b>Adopción de tutores</b><p>Los tutores con la agenda completa no necesitan intermediación.</p><p>Una tutora consolidada, con más de veinte alumnos, dijo que no lo usaría.</p><span class="more">3 / 3</span></div>
-        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>El que tiene horas libres.</p><p>4 de 5 aceptan el 27 % a cambio de alumnos y cobro en 24 hs.</p><span class="more">3 / 3</span></div>
+        <div class="fa"><p class="tg">Riesgo</p><b>Adopción de tutores</b><p>Con la agenda llena, no necesitan intermediación.</p><p>Una tutora con 20 alumnos no lo usaría.</p><span class="more">3 / 3</span></div>
+        <div class="fb"><p class="tg">Mitigación</p><b>Apuntar al tutor correcto</b><p>Al que tiene horas libres: 4 de 5 aceptan el 27 %.</p><span class="more">3 / 3</span></div>
       </div>
     </div>
   </div>
 </section>
 <!-- CONCLUSIONES -->
-<section class="slide concl" data-id="conclusiones" data-title="Conclusiones y estado" data-kw="conclusiones estado del proyecto demanda validada hipotesis geografica pendiente construccion sostenible desarrollo unipersonal asistido por ia aceptacion modalidad virtual usuarios interior" data-notes="Ser claro con lo que está probado y lo que no. Probado: se puede construir y sostener un sistema completo con una sola persona asistida por IA (739 tests). Demanda: validación de la modalidad virtual. Pendiente: la hipótesis geográfica. Las familias de Maciá y Jacobacci aportan los primeros casos concretos, pero falta medirla con usuarios reales del interior. Eso es lo que sigue.">
+<section class="slide concl" data-id="conclusiones" data-title="Conclusiones y estado" data-kw="conclusiones estado del proyecto demanda validada hipotesis geografica pendiente construccion sostenible desarrollo unipersonal asistido por ia aceptacion modalidad virtual usuarios interior" data-notes="Ser claro con lo que está probado y lo que no. Probado: se puede construir y sostener un sistema completo con una sola persona asistida por IA (859 tests). Demanda: validación de la modalidad virtual. Pendiente: la hipótesis geográfica. Las familias de Maciá y Jacobacci aportan los primeros casos concretos, pero falta medirla con usuarios reales del interior. Eso es lo que sigue.">
   <h2 class="r" style="--i:1">Lo probado.<br><em>Y lo que falta.</em></h2>
   <div class="cl">
-    <div class="cc done r" style="--i:2"><span class="st2">Comprobado</span><b>Construcción sostenible</b><p>Un desarrollador, asistido por IA, entregó 9 módulos en producción.</p><div class="big"><span class="cnt" data-to="739">0</span></div></div>
+    <div class="cc done r" style="--i:2"><span class="st2">Comprobado</span><b>Construcción sostenible</b><p>Un desarrollador, asistido por IA, entregó 9 módulos en producción.</p><div class="big"><span class="cnt" data-to="859">0</span></div></div>
     <div class="cc done r" style="--i:3"><span class="st2">Comprobado</span><b>Demanda por lo virtual</b><p>Aceptación de la modalidad virtual entre las personas encuestadas.</p><div class="big"><span class="cnt" data-to="77" data-suf="%">0</span></div></div>
     <div class="cc pend r" style="--i:4"><span class="st2">Pendiente</span><b>Hipótesis geográfica</b><p>Primeros casos reales: en Maciá y en Jacobacci no hubo profesor. Falta verla en acción con usuarios del interior.</p></div>
   </div>
