@@ -20,10 +20,17 @@ public record NuevaReservaDirectaRequest(
         /** D6: 30 a 180 minutos, en bloques de 30 (lo valida el servicio → 422). */
         @NotNull Integer duracionMinutos,
         /** T09: adicional pago de resumen (opcional; null = no). Nunca con un menor → 422. */
-        Boolean resumenContratado) {
+        Boolean resumenContratado,
+        /** ADR-M3-07 §4bis: materia de la clase (trayecto que dicta el Tutor); opcional. */
+        UUID trayectoId) {
 
     public NuevaReservaDirectaRequest(UUID tutorId, UUID beneficiarioId, Instant horario, Integer duracionMinutos) {
-        this(tutorId, beneficiarioId, horario, duracionMinutos, null);
+        this(tutorId, beneficiarioId, horario, duracionMinutos, null, null);
+    }
+
+    public NuevaReservaDirectaRequest(UUID tutorId, UUID beneficiarioId, Instant horario, Integer duracionMinutos,
+                                      Boolean resumenContratado) {
+        this(tutorId, beneficiarioId, horario, duracionMinutos, resumenContratado, null);
     }
 
     public boolean conResumen() {

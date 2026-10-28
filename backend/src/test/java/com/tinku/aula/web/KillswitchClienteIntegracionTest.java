@@ -85,6 +85,7 @@ class KillswitchClienteIntegracionTest {
     @Autowired SesionService sesionService;
     @Autowired JwtUtil jwtUtil;
     @Autowired Scheduler scheduler;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoBean LiveKitService liveKitService;
 
     private static final AtomicInteger CONTADOR_DNIS = new AtomicInteger();
@@ -200,6 +201,59 @@ class KillswitchClienteIntegracionTest {
                         .header("Authorization", "Bearer " + tokenDe(e.tutor())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hayMenor").value(false));
+    }
+
+    // ------------------------------------------------ modo salud (ADR-M3-07 §4bis)
+
+    private UUID trayecto(String carrera, String materia) {
+        return jdbc.queryForObject("SELECT id FROM matching.trayectos WHERE anio_o_carrera = ? AND materia = ?",
+                UUID.class, carrera, materia);
+    }
+
+    private void conMateria(Escenario e, UUID trayectoId) {
+        Reserva r = reservaRepository.findById(e.sesion().getReservaId()).orElseThrow();
+        r.setTrayectoId(trayectoId);
+        reservaRepository.save(r);
+    }
+
+    @Test
+    void token_anatomiaEntreAdultos_contenidoAnatomicoTrue() throws Exception {
+        Escenario e = entreAdultos();
+        conMateria(e, trayecto("Medicina", "Anatomía"));
+        mockMvc.perform(post("/api/sesiones/{id}/token", e.sesion().getId())
+                        .header("Authorization", "Bearer " + tokenDe(e.tutor())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hayMenor").value(false))
+                .andExpect(jsonPath("$.contenidoAnatomico").value(true));
+        mockMvc.perform(get("/api/sesiones/{id}/killswitch", e.sesion().getId())
+                        .header("Authorization", "Bearer " + tokenDe(e.ar())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenidoAnatomico").value(true));
+    }
+
+    @Test
+    void token_materiaSinContenidoAnatomico_false() throws Exception {
+        Escenario e = entreAdultos();
+        conMateria(e, trayecto("Odontología", "Bioquímica General"));
+        mockMvc.perform(post("/api/sesiones/{id}/token", e.sesion().getId())
+                        .header("Authorization", "Bearer " + tokenDe(e.tutor())))
+                .andExpect(jsonPath("$.contenidoAnatomico").value(false));
+    }
+
+    @Test
+    void token_sinMateria_false() throws Exception {
+        Escenario e = entreAdultos();
+        mockMvc.perform(post("/api/sesiones/{id}/token", e.sesion().getId())
+                        .header("Authorization", "Bearer " + tokenDe(e.tutor())))
+                .andExpect(jsonPath("$.contenidoAnatomico").value(false));
+    }
+
+    @Test
+    void anatomiaConMenor_nuncaModoSalud() {
+        Escenario e = conMenor();
+        conMateria(e, trayecto("Medicina", "Anatomía"));
+        assertThat(sesionService.contenidoAnatomico(e.sesion().getId())).isFalse();
+        assertThat(sesionService.hayMenor(e.sesion().getId())).isTrue();
     }
 
     @Test

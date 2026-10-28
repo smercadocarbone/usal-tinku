@@ -1,5 +1,6 @@
 package com.tinku.aula;
 
+import com.tinku.aula.port.ContenidoAnatomicoProveedor;
 import com.tinku.aula.evento.SesionEvento;
 import com.tinku.aula.evento.SesionFinalizadaEvent;
 import com.tinku.aula.evento.SesionInterrumpidaEvent;
@@ -100,6 +101,7 @@ public class SesionService {
     private final Notificador notificador;
     private final VerificadorHabilitacionMenores habilitacionMenores;
     private final CancelacionReservasConMenores cancelacionConMenores;
+    private final ContenidoAnatomicoProveedor contenidoAnatomico;
 
     private static final Logger log = LoggerFactory.getLogger(SesionService.class);
 
@@ -114,7 +116,8 @@ public class SesionService {
                          ApplicationEventPublisher events,
                          Notificador notificador,
                          VerificadorHabilitacionMenores habilitacionMenores,
-                         CancelacionReservasConMenores cancelacionConMenores) {
+                         CancelacionReservasConMenores cancelacionConMenores,
+                         ContenidoAnatomicoProveedor contenidoAnatomico) {
         this.sesionRepo = sesionRepo;
         this.reservaRepo = reservaRepo;
         this.usuarioRepo = usuarioRepo;
@@ -127,6 +130,7 @@ public class SesionService {
         this.notificador = notificador;
         this.habilitacionMenores = habilitacionMenores;
         this.cancelacionConMenores = cancelacionConMenores;
+        this.contenidoAnatomico = contenidoAnatomico;
     }
 
     // ------------------------------------------------ creación y agenda (T-M3-03)
@@ -416,6 +420,25 @@ public class SesionService {
                 .orElse(true);
     }
 
+    /**
+     * ADR-M3-07 §4bis: modo salud del kill-switch. Solo entre adultos y con una materia de contenido
+     * anatómico (Medicina, Anatomía) elegida al reservar. Con un Menor, sin materia o ante la duda,
+     * false: queda el umbral de siempre (AGENTS §3).
+     */
+    @Transactional(readOnly = true)
+    public boolean contenidoAnatomico(UUID sesionId) {
+        return sesionRepo.findById(sesionId)
+                .flatMap(s -> reservaRepo.findById(s.getReservaId()))
+                .map(this::contenidoAnatomico)
+                .orElse(false);
+    }
+
+    private boolean contenidoAnatomico(Reserva r) {
+        return r.getBeneficiario().getTipo() != TipoUsuario.MENOR
+                && r.getTrayectoId() != null
+                && contenidoAnatomico.esContenidoAnatomico(r.getTrayectoId());
+    }
+
     /** ADR-M3-07 §6: solo registro. No corta nada: el corte lo produce el cliente al salir de la sala. */
     @Transactional(readOnly = true)
     public void registrarEventoClasificador(Usuario usuario, UUID sesionId, EventoClasificador evento) {
@@ -438,7 +461,8 @@ public class SesionService {
      */
     public record EstadoKillswitch(boolean hayMenor, boolean confirmacionPendiente,
                                    UUID detectadoId, Instant venceAt,
-                                   boolean sesionCerrada, boolean cortePorSeguridad) {
+                                   boolean sesionCerrada, boolean cortePorSeguridad,
+                                   boolean contenidoAnatomico) {
     }
 
     @Transactional(readOnly = true)
@@ -455,10 +479,11 @@ public class SesionService {
                 || SesionAprendizaje.ESTADO_FINALIZADA_ANTICIPADA.equals(sesion.getEstado())
                 || SesionAprendizaje.ESTADO_INTERRUMPIDA.equals(sesion.getEstado());
         boolean corte = alertaRepo.findBySesionId(sesionId).isPresent();
+        boolean anatomico = contenidoAnatomico(reserva);
         return confirmacionRepo.findBySesionId(sesionId)
                 .filter(c -> c.getRespondidoId() == null && !c.isVencida())
-                .map(c -> new EstadoKillswitch(hayMenor, true, c.getDetectadoId(), c.getVenceAt(), cerrada, corte))
-                .orElseGet(() -> new EstadoKillswitch(hayMenor, false, null, null, cerrada, corte));
+                .map(c -> new EstadoKillswitch(hayMenor, true, c.getDetectadoId(), c.getVenceAt(), cerrada, corte, anatomico))
+                .orElseGet(() -> new EstadoKillswitch(hayMenor, false, null, null, cerrada, corte, anatomico));
     }
 
     /**

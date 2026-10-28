@@ -220,3 +220,4 @@ vivo, *para* resolver ejercicios juntos.
 | FR-AULA-011 | Pizarra sobre `<canvas>` sincronizada por el canal de datos de LiveKit (`topic: "pizarra"`, confiable), coordenadas normalizadas, sincronización al entrar. |
 | FR-AULA-012 | El token de la sala informa `pizarraHabilitada` = ningún participante es Menor. Sin habilitación, el cliente no la muestra y descarta los mensajes. Se habilita con Menores recién con T-M3-06. |
 | FR-AULA-013 | Nada de la pizarra se persiste en Tinku ni en LiveKit. |
+| FR-AULA-014 | Modo salud del kill-switch (ADR-M3-07 §4bis). Si la materia de la Reserva tiene contenido anatómico (Medicina o Anatomía) y no hay un Menor, el token y el estado del kill-switch informan `contenidoAnatomico`. El cliente puntúa solo `Porn` con umbral 0,95, y la previa avisa en un modal que la protección se flexibiliza. Con un Menor no aplica nunca. |

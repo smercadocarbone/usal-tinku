@@ -7,13 +7,15 @@ import {
   TAMANO_ENTRADA,
 } from "./config";
 import { cargarModelo, ClasificadorNoDisponible, type Modelo } from "./modelo";
-import { ContadorDetecciones, puntaje } from "./regla";
+import { ContadorDetecciones, puntaje, umbralDe } from "./regla";
 
 /** Qué le avisa el cliente al backend sobre su clasificador (POST /clasificador, ADR-M3-07 §6). */
 export type { EventoClasificador } from "../api";
 
 export interface OpcionesClasificador {
   hayMenor: boolean;
+  /** ADR-M3-07 §4bis: clase de Medicina o Anatomía (modo salud; con un menor no cuenta). */
+  contenidoAnatomico?: boolean;
   /** Detección confirmada. duenoId = participant.identity (UUID del usuario en Tinku). */
   alDetectar: (d: { trackId: string; duenoId: string }) => void;
   /** Una clasificación lleva más de DEMORA_OCULTAR_MS: con menor, la UI oculta el video remoto. */
@@ -46,6 +48,7 @@ const MAX_MUESTRAS = 200;
 export class ClasificadorKillswitch {
   private modelo: Modelo;
   private hayMenor: boolean;
+  private contenidoAnatomico: boolean;
   private readonly op: OpcionesClasificador;
   private readonly cargar: () => Promise<Modelo>;
   private readonly contador = new ContadorDetecciones();
@@ -67,6 +70,7 @@ export class ClasificadorKillswitch {
     this.modelo = modelo;
     this.op = op;
     this.hayMenor = op.hayMenor;
+    this.contenidoAnatomico = op.contenidoAnatomico ?? false;
     this.cargar = op.cargar ?? (() => cargarModelo());
     this.canvas = document.createElement("canvas");
     this.canvas.width = this.canvas.height = TAMANO_ENTRADA;
@@ -127,6 +131,13 @@ export class ClasificadorKillswitch {
   actualizarHayMenor(hayMenor: boolean): void {
     if (hayMenor === this.hayMenor) return;
     this.hayMenor = hayMenor;
+    this.contador.reiniciarTodo();
+  }
+
+  /** Cambia al modo salud (o lo deja) si el backend dice otra cosa. Reinicia los contadores. */
+  actualizarContenidoAnatomico(contenidoAnatomico: boolean): void {
+    if (contenidoAnatomico === this.contenidoAnatomico) return;
+    this.contenidoAnatomico = contenidoAnatomico;
     this.contador.reiniciarTodo();
   }
 
@@ -214,7 +225,11 @@ export class ClasificadorKillswitch {
       this.enCurso = false;
       this.medir(performance.now() - inicio);
       if (demorado) this.op.alNormalizar();
-      if (this.observados.get(trackId) === o && !o.pausado && this.contador.registrar(trackId, puntaje(pred, this.hayMenor))) {
+      if (this.observados.get(trackId) === o && !o.pausado && this.contador.registrar(
+          trackId,
+          puntaje(pred, this.hayMenor, this.contenidoAnatomico),
+          umbralDe(this.hayMenor, this.contenidoAnatomico),
+        )) {
         this.pausar(trackId);
         this.op.alDetectar({ trackId, duenoId: o.duenoId });
       }

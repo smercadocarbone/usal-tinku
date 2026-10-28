@@ -224,4 +224,5 @@ reservar y pagar el mes de una vez.
 | FR-RES-034 | Cancelar el paquete entero: solo hasta 24 hs antes de la primera clase y con todas `confirmada`; devolución total. |
 | FR-RES-035 | Mover una clase de un paquete: hasta 24 hs antes y dentro de la vigencia del paquete. |
 | FR-RES-036 | Una clase de paquete cancelada por el pagador no se devuelve: se libera al Tutor. |
+| FR-RES-038 | Al reservar (clase suelta o paquete), quien paga elige la materia de la clase entre las que dicta el Tutor (`GET /api/tutores/{id}/materias`). Queda en `reservas.trayecto_id`. Es opcional en la API; si el Tutor dicta varias, la pantalla la exige. Una materia que el Tutor no dicta da 422. La usa el modo salud del kill-switch (FR-AULA-014). |
 | FR-RES-037 | Una clase de paquete que se cancela por el Tutor (o un pedido de reprogramación rechazado o vencido) se devuelve por su precio (ADR-M5-03). |

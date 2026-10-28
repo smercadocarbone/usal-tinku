@@ -126,11 +126,40 @@ Si nadie responde dentro del `plazo de respuesta de la rama adultos`, se resuelv
 
 El vencimiento lo ejecuta un job de Quartz persistido (AGENTS §1.3).
 
+### 4bis. Modo salud: clases de Medicina o Anatomía entre adultos (2026-10-28)
+
+En Medicina y Anatomía mostrar el cuerpo humano es parte de la clase. Con la regla de adultos, una
+lámina de *Gray's Anatomy* llega a 0,93 (`Hentai` 0,78) y corta la clase sin motivo.
+
+| Clase | Puntaje del frame | Umbral |
+|---|---|---|
+| **Medicina o Anatomía, entre adultos** (modo salud) | `Porn` | ≥ 0,95 |
+
+- **Quién lo decide:** el backend (`contenidoAnatomico` en el token y en el estado del kill-switch),
+  nunca el usuario.
+  - Vale `true` solo si no hay un menor y la materia elegida al reservar está marcada
+    `contenido_anatomico` en el catálogo. Están marcadas Medicina, las materias de Anatomía y
+    «Estructura y Función del Cuerpo Humano» (V61).
+  - Sin materia, o ante la duda, queda la regla de siempre.
+- **Con un menor no aplica nunca** (Artículo II): una lámina puede sumar 0,98 con `Sexy`.
+- **Se avisa al entrar:** la previa del aula muestra un modal que dice que en esa clase la
+  protección se flexibiliza.
+- **Lo demás no cambia:** 3 muestras consecutivas, la rama de adultos y el clip de evidencia.
+- **Base y límites:** la medición sobre 30 láminas está en
+  `docs/operacion/EVALUACION_modo_salud_killswitch.md`.
+  - Ninguna lámina corta en modo salud: el `Porn` más alto fue 0,244.
+  - El 0,95 es una decisión de diseño sin calibrar del lado del contenido explícito. Se revisa con
+    el mismo disparador que BR-KS-04.
+
 ## Riesgos aceptados
 
 - **Un cliente modificado puede no clasificar nunca.** Es el mismo límite que ADR-M3-02 acepta para
   el disparo falso, y el motivo por el que el clasificador que importa corre del lado del menor.
 - **Falsos positivos con menor** por contar `Sexy` (punto 4).
+- **Modo salud más permisivo** (punto 4bis). Un adulto podría elegir una materia de Medicina para
+  mostrar algo explícito en forma de dibujo, porque `Hentai` no cuenta. Se acepta entre adultos:
+  sigue contando `Porn`, el otro participante puede terminar la clase y la materia tiene que ser una
+  que el Tutor dicta.
 - **Latencia en gama media.** Medición aproximada del 2026-10-14 (anexo de ADR-M3-01): con el backend
   `wasm` y la CPU frenada a 4× (perfil de gama media de Lighthouse), una inferencia tarda unos 370 ms
   (p50) y 510 ms (p95). Sin GPU, el intervalo efectivo por track queda en 0,5–1 s y la confirmación

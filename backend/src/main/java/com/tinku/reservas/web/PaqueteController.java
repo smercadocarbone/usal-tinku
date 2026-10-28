@@ -39,7 +39,9 @@ public class PaqueteController {
     }
 
     public record NuevoPaqueteRequest(@NotNull UUID tutorId, UUID beneficiarioId, @NotNull Instant horario,
-                                      @NotNull Integer duracionMinutos) {
+                                      @NotNull Integer duracionMinutos,
+                                      /** ADR-M3-07 §4bis: materia de las 4 clases; opcional. */
+                                      UUID trayectoId) {
     }
 
     public record PaqueteResponse(UUID id, UUID reservaAnclaId, int cantidadClases, int duracionMinutos,
@@ -63,7 +65,7 @@ public class PaqueteController {
                                                  Authentication authentication) {
         Usuario yo = usuarioActual.obtener(authentication);
         Paquete paquete = paquetes.crear(yo, request.tutorId(), request.beneficiarioId(), request.horario(),
-                request.duracionMinutos());
+                request.duracionMinutos(), request.trayectoId());
         return ResponseEntity.status(HttpStatus.CREATED).body(PaqueteResponse.from(paquete));
     }
 

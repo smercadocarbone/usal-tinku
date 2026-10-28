@@ -84,6 +84,14 @@ public class Reserva {
     @Column(name = "precio_adicional_resumen", precision = 10, scale = 2)
     private BigDecimal precioAdicionalResumen;
 
+    /**
+     * Materia de la clase (trayecto del catálogo de M2), elegida al reservar entre las que dicta el
+     * Tutor. Opcional: con una de contenido anatómico, entre adultos, el kill-switch usa el modo
+     * salud (ADR-M3-07 §4bis).
+     */
+    @Column(name = "trayecto_id")
+    private UUID trayectoId;
+
     @Convert(converter = EstadoReservaConverter.class)
     @Column(nullable = false, length = 20)
     private EstadoReserva estado = EstadoReserva.PENDIENTE_PAGO;

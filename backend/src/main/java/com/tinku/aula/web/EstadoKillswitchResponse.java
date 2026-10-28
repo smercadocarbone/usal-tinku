@@ -8,14 +8,15 @@ import java.util.UUID;
 /**
  * Estado del kill-switch para el cliente (ADR-M3-07): sirve para elegir el umbral y para que
  * quien recarga la página a mitad de la pregunta de la rama adultos la retome. Nada de la Alerta
- * (BR-KS-03 la deja en M9).
+ * (BR-KS-03 la deja en M9). {@code contenidoAnatomico}: modo salud (§4bis), nunca con un Menor.
  */
 public record EstadoKillswitchResponse(boolean hayMenor, boolean confirmacionPendiente,
                                        UUID detectadoId, Instant venceAt,
-                                       boolean sesionCerrada, boolean cortePorSeguridad) {
+                                       boolean sesionCerrada, boolean cortePorSeguridad,
+                                       boolean contenidoAnatomico) {
 
     public static EstadoKillswitchResponse from(SesionService.EstadoKillswitch e) {
         return new EstadoKillswitchResponse(e.hayMenor(), e.confirmacionPendiente(), e.detectadoId(), e.venceAt(),
-                e.sesionCerrada(), e.cortePorSeguridad());
+                e.sesionCerrada(), e.cortePorSeguridad(), e.contenidoAnatomico());
     }
 }

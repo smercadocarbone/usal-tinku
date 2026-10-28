@@ -196,4 +196,34 @@ public class PerfilTutorTemasRepository {
                 (rs, rowNum) -> new String[]{rs.getString("nivel"), rs.getString("materia")},
                 tutorId);
     }
+
+    /** Materia que se puede elegir al reservar: un trayecto donde el Tutor tiene algún tema. */
+    public record MateriaClase(UUID trayectoId, String nivel, String carrera, String materia,
+                               boolean contenidoAnatomico) {
+    }
+
+    /** Trayectos de los temas del Tutor, en el orden en que los eligió (ADR-M3-07 §4bis). */
+    public List<MateriaClase> materiasDelTutor(UUID tutorId) {
+        return jdbc.query("""
+                SELECT tr.id, tr.nivel, tr.anio_o_carrera, tr.materia, tr.contenido_anatomico,
+                       MIN(array_position(p.tema_ids, t.id)) AS pos
+                  FROM matching.perfiles_tutor_matching p
+                  JOIN matching.temas t ON t.id = ANY(p.tema_ids)
+                  JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+                 WHERE p.tutor_id = ?
+                 GROUP BY tr.id, tr.nivel, tr.anio_o_carrera, tr.materia, tr.contenido_anatomico
+                 ORDER BY pos
+                """,
+                (rs, rowNum) -> new MateriaClase(rs.getObject("id", UUID.class), rs.getString("nivel"),
+                        rs.getString("anio_o_carrera"), rs.getString("materia"),
+                        rs.getBoolean("contenido_anatomico")),
+                tutorId);
+    }
+
+    /** ADR-M3-07 §4bis: la materia muestra el cuerpo humano como parte de la clase. Sin fila → false. */
+    public boolean esContenidoAnatomico(UUID trayectoId) {
+        return Boolean.TRUE.equals(jdbc.query(
+                "SELECT contenido_anatomico FROM matching.trayectos WHERE id = ?",
+                rs -> rs.next() ? rs.getBoolean(1) : Boolean.FALSE, trayectoId));
+    }
 }

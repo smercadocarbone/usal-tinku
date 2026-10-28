@@ -19,6 +19,11 @@ export const REINTENTOS_REACTIVAR = 5;
 export const ESPERA_ENTRE_REINTENTOS_MS = 5_000;
 /** ADR-M3-07 §4. */
 export const UMBRAL_DETECCION = 0.85;
+/**
+ * ADR-M3-07 §4bis (modo salud): clase de Medicina o Anatomía entre adultos. Más permisivo porque el
+ * cuerpo humano es parte de la clase; nunca se usa con un menor.
+ */
+export const UMBRAL_DETECCION_SALUD = 0.95;
 export const TAMANO_ENTRADA = 224;
 export const URL_MODELO = "/modelos/nsfw/model.json";
 export const URL_WASM = "/modelos/tfjs-wasm/";

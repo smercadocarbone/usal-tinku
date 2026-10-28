@@ -237,7 +237,7 @@ h2 em{font-style:normal;color:var(--amber)}
 .ksv .bar{position:relative;height:22px;border-radius:6px;background:rgba(0,0,0,.4);overflow:hidden}
 .ksv .bar i{position:absolute;inset:0 auto 0 0;background:var(--brand);transition:width .2s}
 .ksv .r1.c .bar i{background:var(--alert)}
-.ksv .bar::after{content:"";position:absolute;top:0;bottom:0;left:85%;width:3px;background:var(--amber)}
+.ksv .bar::after{content:"";position:absolute;top:0;bottom:0;left:var(--umbral,85%);width:3px;background:var(--amber)}
 .ksv .tot{font:600 26px var(--f-body);color:var(--paper);margin-top:6px}
 .ksv .tot b{color:var(--amber)}
 .ksb{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -851,7 +851,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   </div>
 </section>
 <!-- 8 CONFIANZA -->
-<section class="slide trust" data-id="confianza" data-title="Confianza y protección de menores" data-kw="confianza seguridad menores chicos protección kill switch corte dni ocr verificacion identidad titulo antecedentes cap adulto responsable denuncia contenido inapropiado niños" data-notes="Es la restricción que gobierna todo el proyecto: hay menores como usuarios. El menor tiene cuenta propia pero no paga, no autoriza tutores ni denuncia: lo hace su adulto responsable. Demostrar el kill-switch en vivo: encender la cámara (o desde el celular, «Cámara en vivo»), mostrar que las barras se mueven y después una foto de catálogo de ropa de baño: con «Hay un menor» también cuenta «Sugestivo» y, a la tercera lectura seguida sobre 85 %, corta directo sin preguntarle nada al menor. Entre dos adultos se pregunta y se puede continuar. Si la cámara falla: «Simular detección». Ser transparente: las clases con menores están detrás de una llave que se enciende solo con el checklist de habilitación cumplido (kill-switch en el cliente, certificado de antecedentes, admin entrenado); apagada, el sistema las rechaza.">
+<section class="slide trust" data-id="confianza" data-title="Confianza y protección de menores" data-kw="confianza seguridad menores chicos protección kill switch corte dni ocr verificacion identidad titulo antecedentes cap adulto responsable denuncia contenido inapropiado niños" data-notes="Es la restricción que gobierna todo el proyecto: hay menores como usuarios. El menor tiene cuenta propia pero no paga, no autoriza tutores ni denuncia: lo hace su adulto responsable. Demostrar el kill-switch en vivo: encender la cámara (o desde el celular, «Cámara en vivo»), mostrar que las barras se mueven y después una foto de catálogo de ropa de baño: con «Hay un menor» también cuenta «Sugestivo» y, a la tercera lectura seguida sobre 85 %, corta directo sin preguntarle nada al menor. Entre dos adultos se pregunta y se puede continuar. «Medicina»: clase de Medicina o Anatomía entre adultos (la materia se elige al reservar y el aula lo avisa en un modal): solo cuenta «Pornografía» y el umbral sube a 95 %, porque las láminas anatómicas caen en «Dibujo explícito» y la piel expuesta en «Sugestivo», los falsos positivos conocidos de estos clasificadores. Con un menor nunca aplica. Si la cámara falla: «Simular detección». Ser transparente: las clases con menores están detrás de una llave que se enciende solo con el checklist de habilitación cumplido (kill-switch en el cliente, certificado de antecedentes, admin entrenado); apagada, el sistema las rechaza.">
   <div>
     <h2 class="r" style="--i:1">Primero,<br><em>los chicos.</em></h2>
     <div class="steps">
@@ -863,7 +863,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   </div>
   <div class="ks r" style="--i:3">
     <p class="ks-l">Kill-switch · cámara en vivo</p>
-    <div class="tg" role="group" aria-label="Quién está en la clase"><button class="on" data-m="menor">Hay un menor</button><button data-m="adultos">Dos adultos</button></div>
+    <div class="tg" role="group" aria-label="Quién está en la clase"><button class="on" data-m="menor">Hay un menor</button><button data-m="adultos">Dos adultos</button><button data-m="salud">Medicina</button></div>
     <div class="room" id="room">
       <div class="tile cam"><video id="kscam" muted playsinline></video><span>Tutor/a · cámara en vivo</span></div><div class="tile" id="t2">Alumno/a (menor)</div>
       <div class="flashr"></div>
@@ -1415,10 +1415,11 @@ aufs.forEach(function(f){f.addEventListener("click",function(){setAu(parseInt(f.
 /* ===== Kill-switch ===== */
 var room$=$("#room");
 function setKm(m,quiet){
-  m=m==="adultos"?"adultos":"menor";ST.km=m;
+  m=m==="adultos"||m==="salud"?m:"menor";ST.km=m;
   $$(".ks .tg button").forEach(function(x){x.classList.toggle("on",x.dataset.m===m)});
-  $("#t2").textContent=m==="menor"?"Alumno/a (menor)":"Alumno/a (adulto)";
-  room$.classList.remove("fire");$("#out").innerHTML="La clase transcurre con normalidad.";
+  $("#t2").textContent=m==="menor"?"Alumno/a (menor)":m==="salud"?"Alumno/a de Medicina":"Alumno/a (adulto)";
+  room$.classList.remove("fire");
+  $("#out").innerHTML=m==="salud"?"<b>Clase de Anatomía:</b> solo cuenta pornografía y el umbral sube a 95 %. Las láminas y la piel no cortan.":"La clase transcurre con normalidad.";
   if(typeof ksc!=="undefined"){ksc.armado=true;ksc.racha=0}
   if(!quiet)commit();syncMando();
 }
@@ -1430,23 +1431,26 @@ function fireApply(){
     $("#out").innerHTML="<b>Con un menor presente:</b> el corte es inmediato. Nunca se le pide confirmar nada.";
   }else{
     $("#cutT").textContent="¿Seguimos?";$("#cutS").textContent="Se consulta a los dos adultos. Si ambos confirman, la clase continúa.";
-    $("#out").innerHTML="<b>Entre dos adultos:</b> se pregunta a ambos y la clase puede continuar.";
+    $("#out").innerHTML=m==="salud"?"<b>Contenido sexual explícito</b> (más de 95 %): corta igual, aunque sea una clase de Medicina.":"<b>Entre dos adultos:</b> se pregunta a ambos y la clase puede continuar.";
   }
 }
 function fireKill(){ST.kf=(ST.kf+1)%1000;fireApply();commit()}
 /* ===== Kill-switch en vivo: la cámara del proyector hace de video del tutor =====
    Mismo modelo y misma regla que el aula (ADR-M3-07): NSFWJS cada 250 ms; con un menor cuentan
    Porn + Hentai + Sexy, entre adultos Porn + Hentai; 3 lecturas seguidas sobre 0,85 disparan.
+   §4bis (modo salud, Medicina o Anatomía entre adultos): solo Porn y umbral 0,95.
    El modelo se carga recién al encender la cámara. */
 var KS={umbral:.85,lecturas:3,ms:250,clases:[["Porn","Pornografía"],["Hentai","Dibujo explícito"],["Sexy","Sugestivo"],["Neutral","Neutral"],["Drawing","Dibujo"]]};
 var ksc={modelo:null,stream:null,timer:0,ocupado:false,racha:0,armado:true,cargando:false};
 var ksCam=$("#kscam");
-function ksCuenta(c){return c==="Porn"||c==="Hentai"||(ST.km==="menor"&&c==="Sexy")}
+function ksCuenta(c){return c==="Porn"||(ST.km!=="salud"&&c==="Hentai")||(ST.km==="menor"&&c==="Sexy")}
+function ksUmbral(){return ST.km==="salud"?.95:KS.umbral}
 function ksPintar(pred){
   var p={};(pred||[]).forEach(function(x){p[x.className]=x.probability});
   var tot=0;KS.clases.forEach(function(c){if(ksCuenta(c[0]))tot+=p[c[0]]||0});
+  $("#ksv").style.setProperty("--umbral",(ksUmbral()*100)+"%");
   $("#ksv").innerHTML=KS.clases.map(function(c){var v=p[c[0]]||0;return '<div class="r1'+(ksCuenta(c[0])?" c":"")+'"><span>'+c[1]+'</span><div class="bar"><i style="width:'+(v*100).toFixed(1)+'%"></i></div><span>'+fmt(v*100,0)+' %</span></div>'}).join("")+
-    '<div class="tot">Puntaje: <b>'+fmt(tot*100,0)+' %</b> · umbral 85 % · lecturas seguidas: <b>'+ksc.racha+' / '+KS.lecturas+'</b></div>';
+    '<div class="tot">Puntaje: <b>'+fmt(tot*100,0)+' %</b> · umbral '+fmt(ksUmbral()*100,0)+' % · lecturas seguidas: <b>'+ksc.racha+' / '+KS.lecturas+'</b></div>';
   return tot;
 }
 function ksScript(){return new Promise(function(ok,mal){if(window.nsfwjs)return ok();var t=document.createElement("script");t.src="/presentacion/media/vendor/nsfwjs-4.3.0.min.js";t.onload=ok;t.onerror=mal;document.head.appendChild(t)})}
@@ -1459,7 +1463,7 @@ function ksTick(){
   ksc.ocupado=true;
   ksc.modelo.classify(ksCam).then(function(pred){
     var tot=ksPintar(pred);
-    ksc.racha=tot>=KS.umbral?ksc.racha+1:0;
+    ksc.racha=tot>=ksUmbral()?ksc.racha+1:0;
     if(ksc.armado&&ksc.racha>=KS.lecturas){ksc.armado=false;fireKill()}
   }).catch(function(){}).then(function(){ksc.ocupado=false});
 }
@@ -1626,7 +1630,7 @@ var MC={
   riesgos:{soloMando:true,h:"Siguiente muestra un riesgo y, después, lo da vuelta para ver la mitigación.",html:function(){return '<div class="mval" id="mdg"></div><div class="msub" id="mdgs"></div>'}},
   flujo:{h:"Elegí el paso que se muestra.",html:function(){return '<div class="mrow">'+["1 · Buscar","2 · Perfil del tutor","3 · Día, duración y hora","4 · Confirmar","5 · Pagar"].map(function(t,i){return '<button type="button" class="mb" data-a="step" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   matching:{h:"Probá una consulta o escribí la tuya.",html:function(){return '<div class="mrow">'+PRE.map(function(p,i){return '<button type="button" class="mb" data-a="q" data-i="'+i+'">'+p.q+'</button>'}).join("")+'</div><form class="mq" id="mqf"><input id="mqi" type="text" maxlength="80" placeholder="Escribí qué querés aprender" autocomplete="off"><button type="submit">Buscar</button></form>'}},
-  confianza:{h:"Elegí quién está en la clase y probá el corte.",html:function(){return '<div class="mrow mg2"><button type="button" class="mb" data-a="km" data-m="menor">Hay un menor</button><button type="button" class="mb" data-a="km" data-m="adultos">Dos adultos</button></div><div class="mrow mg2" style="margin-top:14px"><button type="button" class="mb" data-a="cam">Cámara en vivo</button><button type="button" class="mb red" data-a="kill">Simular detección</button></div>'}},
+  confianza:{h:"Elegí quién está en la clase y probá el corte.",html:function(){return '<div class="mrow mg3"><button type="button" class="mb" data-a="km" data-m="menor">Hay un menor</button><button type="button" class="mb" data-a="km" data-m="adultos">Dos adultos</button><button type="button" class="mb" data-a="km" data-m="salud">Medicina</button></div><div class="mrow mg2" style="margin-top:14px"><button type="button" class="mb" data-a="cam">Cámara en vivo</button><button type="button" class="mb red" data-a="kill">Simular detección</button></div>'}},
   pagos:{h:"Cambiá el precio por hora: se pega al precio del modelo.",html:function(){return '<div class="mval" id="mpv"></div><div class="msub" id="mps"></div><input class="mrng" id="mpr" type="range" min="6140" max="25000" step="1" aria-label="Precio por hora"><div class="mrow mg2"><button type="button" class="mb" data-a="pr" data-d="-1000">− $ 1.000</button><button type="button" class="mb" data-a="pr" data-d="1000">+ $ 1.000</button></div>'}},
   aula:{h:"Tocá una función para ver su video.",html:function(){return '<div class="mrow">'+["Videollamada nativa","Pizarra en tiempo real","Resumen con IA"].map(function(t,i){return '<button type="button" class="mb" data-a="au" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
   vistas:{h:"Elegí la vista.",html:function(){return '<div class="mrow mg2">'+["Familias","Tutores","Moderación","Finanzas"].map(function(t,i){return '<button type="button" class="mb" data-a="v" data-i="'+i+'">'+t+'</button>'}).join("")+'</div>'}},
