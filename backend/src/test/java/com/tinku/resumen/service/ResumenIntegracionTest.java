@@ -307,6 +307,42 @@ class ResumenIntegracionTest {
     }
 
     @Test
+    void falloDelProveedorReintentaConElTranscriptGuardadoSinVolverATranscribir() throws Exception {
+        Escena e = escena(1200);
+        filaPendiente(e.sesionId());
+        // Como en producción: el audio se borra al obtener el transcript (PT6), así que un
+        // segundo pedido de transcripción ya no tiene audio y devuelve null.
+        when(transcript.transcript(any(UUID.class))).thenReturn(TRANSCRIPT_CON_DATOS).thenReturn(null);
+        when(proveedor.generarResumen(any()))
+                .thenThrow(new RuntimeException("LLM caído"))
+                .thenReturn(new ResumenProveedor.ResumenResultado("Resumen tras el reintento."));
+
+        resumenService.ejecutarGenerar(e.sesionId());
+        resumenService.ejecutarGenerar(e.sesionId());
+
+        ResumenSesion fila = resumenRepo.findBySesionId(e.sesionId()).orElseThrow();
+        assertThat(fila.getEstado()).isEqualTo(ResumenSesion.ESTADO_GENERADO);
+        assertThat(fila.getResumenFinal()).isEqualTo("Resumen tras el reintento.");
+        verify(transcript, times(1)).transcript(e.sesionId());
+        verify(reembolsoAdicional, never()).reembolsarAdicional(any());
+    }
+
+    @Test
+    void laSalidaDelProveedorTambienSeAnonimiza() throws Exception {
+        Escena e = escena(1200);
+        filaPendiente(e.sesionId());
+        when(proveedor.generarResumen(any())).thenReturn(new ResumenProveedor.ResumenResultado(
+                "Pablo repasó fracciones; dudas a pablo.perez@gmail.com o al 011 15 5555-1234."));
+
+        resumenService.ejecutarGenerar(e.sesionId());
+
+        // FR-SUM-005: la anonimización corre antes del envío al modelo y en la salida.
+        String resumen = resumenRepo.findBySesionId(e.sesionId()).orElseThrow().getResumenFinal();
+        assertThat(resumen).doesNotContain("Pablo", "gmail", "5555")
+                .contains("[nombre]", "[email]", "[telefono]", "fracciones");
+    }
+
+    @Test
     void trasLos3ReintentosQuedaSinResumenYLoSesionNoFalla() throws Exception {
         Escena e = escena(1200);
         filaPendiente(e.sesionId());
