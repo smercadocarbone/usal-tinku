@@ -79,6 +79,7 @@ Este módulo conecta a un Estudiante (o un Usuario con capacidad Adulto Responsa
 
 | FR-MATCH-011 _(agregado 2026-09-26)_ | Sin Tutor directo para un texto libre, recomendación de Tutores del área reconocida (materia y nivel del tema del catálogo más parecido; si no hay de ese nivel, la misma materia), marcada como recomendación por área. Los filtros de autorización, suspensión y menores aplican igual (se recomienda solo entre los candidatos ya acotados). ADR-M2-04. |
 | FR-MATCH-012 _(agregado 2026-09-26)_ | Registro agregado de los temas buscados sin Tutor directo: un contador por texto normalizado (sin tildes, números largos enmascarados), con el área reconocida; sin usuario ni fila por búsqueda; sin búsquedas de menores; tope de 500 temas. ADR-M2-04. |
+| FR-MATCH-015 _(agregado 2026-10-28)_ | Matching de la presentación de la tesis: `POST /api/presentacion/temas` (público, rate limit propio de 20/min por IP) compara un texto libre con el catálogo de temas por `/temas-cercanos` (pgvector, mismo modelo) y devuelve los temas con similitud ≥ `tinku.matching.score-minimo` (nombre, materia, nivel, puntaje). Si ninguno llega, `temas` vacío y solo el mejor puntaje: la consulta está fuera del espacio del catálogo. No expone tutores ni datos personales. |
 
 ## 4. Reglas de Negocio Aplicables
 

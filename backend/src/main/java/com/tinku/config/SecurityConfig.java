@@ -137,6 +137,9 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/pagos/mp/callback").permitAll()
                 // T-TES-10: si las clases con menores están habilitadas (solo un booleano, sin datos).
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reservas/clases-con-menores").permitAll()
+                // FR-MATCH-015: matching de la presentación de la tesis, solo contra el catálogo
+                // público de temas (sin tutores ni datos personales); con rate limit propio.
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/presentacion/temas").permitAll()
                 // Healthcheck del contenedor (sin detalles, ver application.yml).
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Defensa en profundidad (auditoría 2026-09-18): antes solo

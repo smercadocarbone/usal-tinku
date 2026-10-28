@@ -278,3 +278,16 @@ _Plan, decisiones de producto y trazabilidad de cada hallazgo: `docs/operacion/P
 ## Resumen — reintento y anonimización de la salida (2026-10-28)
 
 - [x] **Chunk M6-RESUMEN-REINTENTO** — Reintento sin volver a transcribir y salida anonimizada (T-M6-REINTENTO, FR-SUM-005/007) — _branch `chunk/m6-resumen-reintento`. Sin migraciones._
+
+## Resumen — modelo configurable y prompt en texto plano (2026-10-28)
+
+- [x] **Chunk M6-RESUMEN-MODELO** — Modelo y URL del proveedor configurables para probar en local con Groq; prompt en texto plano (T-M6-MODELO, FR-SUM-003) — _branch `chunk/resumen-modelo-configurable` (PR #100). Sin migraciones._
+
+## Quartz — registro de jobs idempotente (2026-10-28)
+
+- [x] **Chunk QUARTZ-REGISTRO** — Registro de jobs idempotente entre schedulers sobre la misma base (T-QUARTZ-REGISTRO) — _branch `chunk/quartz-registro-idempotente` (PR #101). Sin migraciones._
+
+## Presentación de la defensa (2026-10-28)
+
+- [x] **Chunk PRES-DEFENSA** — Presentación: kill-switch con cámara en vivo, escenarios financieros, aula con videos reales (T-PRES-01) — _branch `chunk/presentacion-defensa` (PR #99). Solo `frontend/public/presentacion`._
+- [x] **Chunk PRES-CELULARES** — Videos verticales en celulares, cámara del kill-switch en su recuadro, escenarios por sesiones y matching real de la presentación (T-PRES-02, FR-MATCH-015) — _branch `chunk/presentacion-celulares`. Backend: endpoint público `POST /api/presentacion/temas`; sin migraciones._
