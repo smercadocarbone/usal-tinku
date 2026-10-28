@@ -20,7 +20,15 @@ public final class PromptResumen {
             + "Reglas: NO evalues a ninguna persona, NO uses tono moralizante y NO hagas "
             + "predicciones de desempeno. El texto esta anonimizado: no reconstruyas "
             + "identidades ni datos personales; referite a los participantes como "
-            + "\"el tutor\" y \"el estudiante\".\n";
+            + "\"el tutor\" y \"el estudiante\".\n"
+            + "\n"
+            + "Formato: texto plano, para leer en el celular. Sin Markdown (nada de #, **, "
+            + "tablas ni lineas ---) y sin LaTeX: escribi las fracciones y cuentas como 3/4 o "
+            + "1/2 + 1/3 = 5/6. Cada punto con su titulo numerado en una linea y debajo items "
+            + "que empiecen con \"- \". No menciones la transcripcion ni posibles errores de "
+            + "ella: si algo no se entiende, omitilo. Antes de escribir una cuenta, verificala: si "
+            + "un enunciado o un resultado no se entiende o no cierra, no lo copies; nombra el "
+            + "ejercicio sin el resultado.\n";
 
     private PromptResumen() {
     }

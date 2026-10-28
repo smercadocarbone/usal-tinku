@@ -26,8 +26,17 @@ public class ResumenProveedorOpenAi implements ResumenProveedor {
 
     private final RestClient restClient;
     private final String apiKey;
+    private final String modelo;
 
     public ResumenProveedorOpenAi(String baseUrl, String apiKey) {
+        this(baseUrl, apiKey, MODELO);
+    }
+
+    /**
+     * {@code modelo} distinto de GPT-4o solo para probar en local contra una API compatible con la
+     * de OpenAI (p. ej. Groq); en produccion queda el default.
+     */
+    public ResumenProveedorOpenAi(String baseUrl, String apiKey, String modelo) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -38,6 +47,7 @@ public class ResumenProveedorOpenAi implements ResumenProveedor {
                 .requestFactory(factory)
                 .build();
         this.apiKey = apiKey;
+        this.modelo = modelo == null || modelo.isBlank() ? MODELO : modelo;
     }
 
     @Override
@@ -46,7 +56,7 @@ public class ResumenProveedorOpenAi implements ResumenProveedor {
             throw new ResumenProveedorNoConfiguradoException();
         }
         Map<String, Object> cuerpo = Map.of(
-                "model", MODELO,
+                "model", modelo,
                 "temperature", 0.3,
                 "messages", List.of(
                         Map.of("role", "system", "content", PromptResumen.INSTRUCCIONES),

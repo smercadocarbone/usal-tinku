@@ -89,4 +89,23 @@ class ResumenProveedorOpenAiTest {
             server.stop(0);
         }
     }
+
+    @Test
+    void conModeloConfiguradoLoMandaEnLugarDeGpt4o() throws Exception {
+        AtomicReference<String> cuerpo = new AtomicReference<>();
+        HttpServer server = stub(200, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}",
+                cuerpo, new AtomicReference<>());
+        ResumenProveedor.ResumenRequest req = new ResumenProveedor.ResumenRequest(
+                UUID.randomUUID(), "texto", null, null, null, null);
+        try {
+            new ResumenProveedorOpenAi(url(server), "gsk-test", "llama-3.3-70b-versatile").generarResumen(req);
+            assertThat(objectMapper.readTree(cuerpo.get()).get("model").asText())
+                    .isEqualTo("llama-3.3-70b-versatile");
+
+            new ResumenProveedorOpenAi(url(server), "sk-test", " ").generarResumen(req);
+            assertThat(objectMapper.readTree(cuerpo.get()).get("model").asText()).isEqualTo("gpt-4o");
+        } finally {
+            server.stop(0);
+        }
+    }
 }

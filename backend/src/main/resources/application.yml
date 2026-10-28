@@ -245,6 +245,11 @@ tinku:
     llm:
       proveedor: ${LLM_PROVEEDOR:}   # gpt-4o — vacio = fail-closed
       api-key: ${LLM_API_KEY:}       # API key de OpenAI
+      # Solo para probar en local sin costo contra una API compatible (Groq): ver
+      # docs/operacion/RESUMEN_prueba_local.md. Vacios = GPT-4o y gpt-4o-mini-transcribe.
+      base-url: ${LLM_BASE_URL:https://api.openai.com}
+      modelo: ${LLM_MODELO:}
+      modelo-transcripcion: ${LLM_MODELO_TRANSCRIPCION:}
   matching:
     # ADR-M2-02: la reputación (M7) solo desempata: suma como mucho este valor al score semántico.
     peso-reputacion: ${MATCHING_PESO_REPUTACION:0.05}

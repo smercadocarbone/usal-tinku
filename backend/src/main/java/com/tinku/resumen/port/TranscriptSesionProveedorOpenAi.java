@@ -28,14 +28,22 @@ public class TranscriptSesionProveedorOpenAi implements TranscriptSesionProveedo
     private final RestClient restClient;
     private final String apiKey;
     private final AudioResumenService audio;
+    private final String modelo;
 
     public TranscriptSesionProveedorOpenAi(String baseUrl, String apiKey, AudioResumenService audio) {
+        this(baseUrl, apiKey, audio, MODELO);
+    }
+
+    /** {@code modelo} distinto solo para probar en local con una API compatible (p. ej. Groq). */
+    public TranscriptSesionProveedorOpenAi(String baseUrl, String apiKey, AudioResumenService audio,
+                                           String modelo) {
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofMinutes(5));
         this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
         this.apiKey = apiKey;
         this.audio = audio;
+        this.modelo = modelo == null || modelo.isBlank() ? MODELO : modelo;
     }
 
     @Override
@@ -48,7 +56,7 @@ public class TranscriptSesionProveedorOpenAi implements TranscriptSesionProveedo
             throw new ResumenProveedorNoConfiguradoException();
         }
         MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-        form.add("model", MODELO);
+        form.add("model", modelo);
         form.add("language", "es");
         form.add("response_format", "json");
         form.add("file", new ByteArrayResource(bytes) {

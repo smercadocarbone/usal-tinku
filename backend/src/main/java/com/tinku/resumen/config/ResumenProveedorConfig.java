@@ -28,12 +28,17 @@ public class ResumenProveedorConfig {
     ResumenProveedor resumenProveedor(
             @Value("${tinku.resumen.llm.proveedor:}") String proveedor,
             @Value("${tinku.resumen.llm.api-key:}") String apiKey,
-            @Value("${tinku.resumen.llm.base-url:https://api.openai.com}") String baseUrl) {
+            @Value("${tinku.resumen.llm.base-url:https://api.openai.com}") String baseUrl,
+            @Value("${tinku.resumen.llm.modelo:}") String modelo) {
         if ("gpt-4o".equals(proveedor)) {
             if (apiKey.isBlank()) {
                 log.warn("LLM_PROVEEDOR=gpt-4o sin LLM_API_KEY: el resumen falla cerrado.");
             }
-            return new ResumenProveedorOpenAi(baseUrl, apiKey);
+            if (!modelo.isBlank()) {
+                log.warn("Resumen con modelo '{}' en {} (prueba local, no el GPT-4o de ADR-M6-03).",
+                        modelo, baseUrl);
+            }
+            return new ResumenProveedorOpenAi(baseUrl, apiKey, modelo);
         }
         if (!proveedor.isBlank()) {
             log.warn("LLM_PROVEEDOR='{}' no es un proveedor decidido (ADR-M6-03 solo admite "
@@ -48,9 +53,10 @@ public class ResumenProveedorConfig {
             @Value("${tinku.resumen.llm.proveedor:}") String proveedor,
             @Value("${tinku.resumen.llm.api-key:}") String apiKey,
             @Value("${tinku.resumen.llm.base-url:https://api.openai.com}") String baseUrl,
+            @Value("${tinku.resumen.llm.modelo-transcripcion:}") String modeloTranscripcion,
             AudioResumenService audio) {
         if ("gpt-4o".equals(proveedor)) {
-            return new TranscriptSesionProveedorOpenAi(baseUrl, apiKey, audio);
+            return new TranscriptSesionProveedorOpenAi(baseUrl, apiKey, audio, modeloTranscripcion);
         }
         return new TranscriptSesionProveedorNoDisponible();
     }

@@ -67,6 +67,13 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_REMITENTE: ${EMAIL_REMITENTE:-}
       APP_URL_PUBLICA: ${APP_URL_PUBLICA:-http://localhost:3000}
+      # M6: resumen con IA. Vacíos = fail-closed. Prueba local sin costo con Groq:
+      # docs/operacion/RESUMEN_prueba_local.md.
+      LLM_PROVEEDOR: ${LLM_PROVEEDOR:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com}
+      LLM_MODELO: ${LLM_MODELO:-}
+      LLM_MODELO_TRANSCRIPCION: ${LLM_MODELO_TRANSCRIPCION:-}
     ports:
       - "8080:8080"
     depends_on:
