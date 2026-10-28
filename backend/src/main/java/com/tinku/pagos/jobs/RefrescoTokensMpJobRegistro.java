@@ -3,6 +3,7 @@ package com.tinku.pagos.jobs;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobKey;
+import org.quartz.ObjectAlreadyExistsException;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.TriggerBuilder;
@@ -33,14 +34,18 @@ public class RefrescoTokensMpJobRegistro implements ApplicationRunner {
         if (scheduler.checkExists(JOB)) {
             return;
         }
-        scheduler.scheduleJob(
-                JobBuilder.newJob(RefrescoTokensMpJob.class).withIdentity(JOB).storeDurably()
-                        .requestRecovery().build(),
-                TriggerBuilder.newTrigger()
-                        .withIdentity("refrescoTokensMpTrigger", JOB.getGroup())
-                        .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(4, 0)
-                                .inTimeZone(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
-                                .withMisfireHandlingInstructionFireAndProceed())
-                        .build());
+        try {
+            scheduler.scheduleJob(
+                    JobBuilder.newJob(RefrescoTokensMpJob.class).withIdentity(JOB).storeDurably()
+                            .requestRecovery().build(),
+                    TriggerBuilder.newTrigger()
+                            .withIdentity("refrescoTokensMpTrigger", JOB.getGroup())
+                            .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(4, 0)
+                                    .inTimeZone(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
+                                    .withMisfireHandlingInstructionFireAndProceed())
+                            .build());
+        } catch (ObjectAlreadyExistsException yaRegistrado) {
+            // Otro scheduler sobre la misma base lo registró entre el checkExists y el alta.
+        }
     }
 }
