@@ -286,39 +286,46 @@ public class ResumenService {
                     sesionId);
             return;
         }
-        String crudo;
-        try {
-            crudo = transcriptProveedor.transcript(sesionId);
-        } catch (ResumenProveedorNoConfiguradoException e) {
-            agotarSinProveedor(fila);
-            return;
-        } catch (RuntimeException e) {
-            reintentarOAgotar(fila); // el audio queda hasta el próximo intento o el tope de 24 hs
-            return;
-        }
-        if (crudo == null || crudo.trim().length() < MIN_LONGITUD_TRANSCRIPT) {
-            fila.setEstado(ResumenSesion.ESTADO_FALLIDO);
-            resumenRepo.save(fila);
-            reembolsarAdicional(sesionId);
+        // Un intento anterior que ya transcribió dejó el texto anonimizado y borró el audio: el
+        // reintento de un fallo del proveedor parte de ahí. Volver a transcribir devolvería null
+        // (sin audio) y la fila quedaría fallida en el primer reintento.
+        String anonimizado = fila.getTranscriptAnonimizado();
+        if (anonimizado == null) {
+            String crudo;
+            try {
+                crudo = transcriptProveedor.transcript(sesionId);
+            } catch (ResumenProveedorNoConfiguradoException e) {
+                agotarSinProveedor(fila);
+                return;
+            } catch (RuntimeException e) {
+                reintentarOAgotar(fila); // el audio queda hasta el próximo intento o el tope de 24 hs
+                return;
+            }
+            if (crudo == null || crudo.trim().length() < MIN_LONGITUD_TRANSCRIPT) {
+                fila.setEstado(ResumenSesion.ESTADO_FALLIDO);
+                resumenRepo.save(fila);
+                reembolsarAdicional(sesionId);
+                audioResumen.borrar(sesionId);
+                cancelarReintento(sesionId);
+                log.warn("RESUMEN_SIN_CONTENIDO sesionId={} — transcript no util; no se genera "
+                        + "resumen ni se inventa contenido (caso borde #2).", sesionId);
+                return;
+            }
+            // PT6 (ADR-M3-04): con el transcript en mano, el audio ya no hace falta.
             audioResumen.borrar(sesionId);
-            cancelarReintento(sesionId);
-            log.warn("RESUMEN_SIN_CONTENIDO sesionId={} — transcript no util; no se genera "
-                    + "resumen ni se inventa contenido (caso borde #2).", sesionId);
-            return;
+            // FR-SUM-005: la anonimizacion corre SIEMPRE y antes de toda llamada saliente.
+            anonimizado = anonimizador.anonimizar(crudo);
+            fila.setTranscriptAnonimizado(anonimizado);
+            fila.setPromptAnonimizado(armarPrompt(anonimizado));
+            resumenRepo.save(fila);
         }
-        // PT6 (ADR-M3-04): con el transcript en mano, el audio ya no hace falta.
-        audioResumen.borrar(sesionId);
-        // FR-SUM-005: la anonimizacion corre SIEMPRE y antes de toda llamada saliente.
-        String anonimizado = anonimizador.anonimizar(crudo);
-        fila.setTranscriptAnonimizado(anonimizado);
-        fila.setPromptAnonimizado(armarPrompt(anonimizado));
-        resumenRepo.save(fila);
 
         // El request al proveedor lleva UNICAMENTE el transcript ya anonimizado.
         ResumenProveedor.ResumenRequest request =
                 new ResumenProveedor.ResumenRequest(sesionId, anonimizado, null, null, null, null);
         try {
-            String texto = proveedor.generarResumen(request).texto();
+            // FR-SUM-005: también en la salida, por si el modelo reconstruye o inventa un dato.
+            String texto = anonimizador.anonimizar(proveedor.generarResumen(request).texto());
             fila.setEstado(ResumenSesion.ESTADO_GENERADO);
             fila.setResumenFinal(texto);
             fila.setProximoReintentoAt(null);

@@ -274,3 +274,7 @@ _Plan, decisiones de producto y trazabilidad de cada hallazgo: `docs/operacion/P
 ## Aula — filtro del canal de texto (2026-10-27)
 
 - [x] **Chunk M3-FILTRO-CHAT** — Contacto e insultos en el canal de texto (T-M3-CHAT-FILTRO, FR-AULA-011) — _branch `chunk/m3-filtro-chat`. Solo frontend; sin migraciones ni cambios de backend._
+
+## Resumen — reintento y anonimización de la salida (2026-10-28)
+
+- [x] **Chunk M6-RESUMEN-REINTENTO** — Reintento sin volver a transcribir y salida anonimizada (T-M6-REINTENTO, FR-SUM-005/007) — _branch `chunk/m6-resumen-reintento`. Sin migraciones._
