@@ -154,6 +154,10 @@ h2 em{font-style:normal;color:var(--amber)}
 .res .row em{font:500 22px var(--f-mono);font-style:normal;color:var(--leaf)}
 .res .bar{grid-column:1/-1;height:7px;border-radius:7px;background:var(--line);overflow:hidden}
 .res .bar i{display:block;height:100%;background:var(--leaf);transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.res .row .sub{grid-column:1/-1;font:400 19px var(--f-body);color:var(--mute);margin-top:-2px}
+.res .fuera{padding:18px 22px;border-radius:16px;border:2px dashed var(--line);background:rgba(0,0,0,.25)}
+.res .fuera b{display:block;font:700 30px var(--f-display);color:var(--amber);margin-bottom:8px}
+.res .fuera span{font:400 22px/1.4 var(--f-body);color:var(--paper)}
 .kw{margin-top:16px;font:400 19px/1.45 var(--f-mono);color:var(--mute)}
 .kw b{color:var(--alert);font-weight:500}
 .kw b.ok{color:var(--leaf)}
@@ -812,7 +816,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   <p class="note-src">Video grabado sobre el frontend real del repositorio, con datos de ejemplo.</p>
 </section>
 <!-- 6 MATCHING -->
-<section class="slide match" data-id="matching" data-title="Matching semántico con IA" data-kw="matching ia inteligencia artificial semantico embeddings vectores pgvector busqueda recomendacion palabras clave sentence transformers nlp tutores recomendados modelo 384 dimensiones" data-notes="Probar en vivo: elegir una consulta o escribir una propia. Remarcar el contraste: la búsqueda por palabra exacta devuelve 0 coincidencias y la semántica encuentra al tutor correcto. Datos técnicos reales: paraphrase-multilingual-MiniLM-L12-v2, 384 dimensiones, índice en pgvector dentro de la misma base. Aclarar que el mapa es una proyección ilustrativa en 2D.">
+<section class="slide match" data-id="matching" data-title="Matching semántico con IA" data-kw="matching ia inteligencia artificial semantico embeddings vectores pgvector busqueda recomendacion palabras clave sentence transformers nlp tutores recomendados modelo 384 dimensiones" data-notes="Probar en vivo: elegir una consulta o escribir una propia. Es el matching real de producción (mismo modelo, pgvector y umbral que la búsqueda de tutores) contra el catálogo de temas: devuelve los temas que superan el umbral y, si ninguno llega (por ejemplo, guitarra), dice que la consulta está fuera de este espacio y no recomienda a nadie. Sin conexión cae a una simulación y lo avisa. Datos técnicos reales: paraphrase-multilingual-MiniLM-L12-v2, 384 dimensiones, índice en pgvector dentro de la misma base. Aclarar que el mapa es una proyección ilustrativa en 2D.">
   <div class="cv r" style="--i:2"><canvas id="mcv" width="1060" height="780"></canvas></div>
   <div>
     <h2 class="r" style="--i:1">Entiende lo<br>que querés <em>decir.</em></h2>
@@ -821,7 +825,7 @@ body.mando:not(.jurado) #mctl:empty{display:none}
     <div class="res" id="res"></div>
     <p class="kw" id="kw"></p>
   </div>
-  <p class="note-src">Proyección ilustrativa en 2D de un espacio de 384 dimensiones · paraphrase-multilingual-MiniLM-L12-v2 · pgvector</p>
+  <p class="note-src">Puntajes reales (coseno, pgvector) · posiciones ilustrativas en 2D de un espacio de 384 dimensiones · paraphrase-multilingual-MiniLM-L12-v2</p>
 </section>
 <!-- 7 AULA -->
 <section class="slide aula" data-id="aula" data-title="Aula virtual y pizarra" data-kw="aula virtual videollamada webrtc livekit pizarra compartida resumen automatico ia transcripcion audio consentimiento clase en vivo navegador sin instalar privacidad" data-notes="La clase se da dentro de la plataforma, sin instalar nada. Invitar al jurado a tocar cada función desde su celular para ver su video. Videollamada: WebRTC sobre LiveKit, desde el navegador. Pizarra: los trazos viajan entre tutor y alumno al instante. Resumen con IA: adicional opcional al reservar, con precio según la duración; si no se puede generar se devuelve el monto. Si preguntan por privacidad: no se guarda video; el audio del resumen solo entre adultos, con consentimiento de ambos, y se borra al transcribir.">
@@ -1249,50 +1253,86 @@ vf.addEventListener("timeupdate",function(){
 
 /* ===== Matching semántico ===== */
 var cvs=$("#mcv"),cx=cvs.getContext("2d"),W=1060,H=780;
-var CL={mate:[.29,.30],fis:[.52,.18],qui:[.80,.30],ing:[.20,.74],prog:[.52,.80],len:[.82,.72]};
-var COL={mate:"#ffb23e",fis:"#4fd1a1",qui:"#7fb7ff",ing:"#ff8fb1",prog:"#c4a6ff",len:"#e6e16a"};
-var TP=[["álgebra","mate",-.04,.02],["funciones","mate",.07,-.06],["trigonometría","mate",-.1,-.07],["derivadas","mate",.1,.07],["integrales","mate",.04,.14],["ecuaciones cuadráticas","mate",-.12,.06],
-["cinemática","fis",-.07,.05],["leyes de Newton","fis",.06,.06],["óptica","fis",.1,-.05],["termodinámica","fis",-.06,-.07],
-["estequiometría","qui",-.08,.04],["tabla periódica","qui",.07,-.05],["enlaces","qui",.08,.08],["química orgánica","qui",-.03,-.09],
-["job interview","ing",-.06,-.05],["speaking","ing",.08,.02],["grammar","ing",-.02,.09],["First Certificate","ing",.1,-.06],
-["python","prog",-.08,.0],["algoritmos","prog",.04,-.07],["bases de datos","prog",.09,.06],["javascript","prog",-.03,.08],
-["comprensión lectora","len",-.07,.03],["redacción","len",.07,-.05],["literatura argentina","len",.01,.09]]
+var CL={mate:[.24,.27],cien:[.60,.20],soc:[.86,.44],ing:[.18,.73],prog:[.50,.78],len:[.80,.80]};
+var COL={mate:"#ffb23e",cien:"#4fd1a1",soc:"#7fb7ff",ing:"#ff8fb1",prog:"#c4a6ff",len:"#e6e16a"};
+var AREA_N={mate:"Matemática",cien:"Ciencias",soc:"Sociales",ing:"Inglés",prog:"Tecnología",len:"Lengua"};
+var TP=[["álgebra","mate",-.06,.03],["funciones","mate",.07,-.06],["trigonometría","mate",-.1,-.06],["derivadas","mate",.09,.07],["fracciones","mate",-.02,.11],
+["cinemática","cien",-.09,.05],["leyes de Newton","cien",.04,.08],["estequiometría","cien",.1,-.04],["célula","cien",-.03,-.08],
+["historia argentina","soc",-.05,-.08],["geografía","soc",.04,.06],["economía","soc",-.08,.09],
+["job interview","ing",-.06,-.05],["speaking","ing",.08,.02],["grammar","ing",-.02,.09],
+["python","prog",-.08,.0],["algoritmos","prog",.04,-.07],["bases de datos","prog",.09,.06],
+["comprensión lectora","len",-.07,.03],["redacción","len",.07,-.05],["literatura","len",.01,.08]]
 .map(function(t){return {l:t[0],c:t[1],x:CL[t[1]][0]+t[2],y:CL[t[1]][1]+t[3]}});
 function tpos(l){return TP.filter(function(t){return t.l===l})[0]}
-var PRE=[
- {q:"me cuesta despejar la x",pt:function(){var a=tpos("álgebra");return [a.x+.02,a.y-.01]}},
- {q:"preparar una entrevista laboral en inglés",pt:function(){var a=tpos("job interview"),b=tpos("speaking");return [(a.x+b.x)/2,(a.y+b.y)/2]}},
- {q:"mi programa se cuelga y no sé por qué",pt:function(){var a=tpos("algoritmos");return [a.x,a.y+.03]}},
- {q:"por qué cae más rápido lo pesado",pt:function(){var a=tpos("cinemática"),b=tpos("leyes de Newton");return [(a.x+b.x)/2,(a.y+b.y)/2]}},
- {q:"cómo balancear reacciones",pt:function(){var a=tpos("estequiometría");return [a.x+.01,a.y]}}
-];
-var KWC={mate:["ecuac","funci","deriv","integr","algebra","matem","numero","calcul","x"],fis:["fisic","fuerza","movim","velocid","cae","pelota","energ"],qui:["quimic","reacc","atomo","molec","compuesto"],ing:["ingles","english","entrevista","idioma","hablar"],prog:["program","codigo","python","java","web","compu","app"],len:["lengua","leer","escrib","texto","redac","literat"]};
+var PRE=[{q:"me cuesta despejar la x"},{q:"preparar una entrevista laboral en inglés"},{q:"mi programa se cuelga y no sé por qué"},{q:"por qué cae más rápido lo pesado"},{q:"quiero aprender a tocar la guitarra"}];
+var KWC={mate:["ecuac","funci","deriv","integr","algebra","matem","numero","calcul","x"],cien:["fisic","fuerza","movim","velocid","cae","pelota","energ","quimic","reacc","atomo","molec","compuesto"],ing:["ingles","english","entrevista","idioma","hablar"],prog:["program","codigo","python","java","web","compu","app"],len:["lengua","leer","escrib","texto","redac","literat"]};
 var Q=null,t0m=0,raf=0,matchOn=false,qseed=0.5;
+/* FR-MATCH-015: el matching real (pgvector, mismo modelo y umbral que la búsqueda de tutores).
+   Sin conexión, la simulación por palabras de antes, avisada como tal. */
+var API_MATCH=/(^|\.)tinku\.site$/.test(location.hostname)?"https://api.tinku.site":(location.hostname==="localhost"||location.hostname==="127.0.0.1")?"http://localhost:8080":"";
+var nq=0;
+function areaDe(materia){
+  var n=norm(materia||"");
+  var reglas=[["prog",["algoritm","datos","computad","program","informat","sistemas","software"]],["ing",["ingles","english"]],
+    ["len",["lengua","literat","comunicac","lectur"]],["mate",["matem","algebra","analisis","geometr","estadist","logica","discreta","calculo","aritmet"]],
+    ["soc",["educacion fisica","historia","geograf","derech","econom","filosof","social","politic","ciudadan","etica","antropolog","administr","gestion","psicolog","metodolog","artistic","cultura"]],
+    ["cien",["fisic","quimic","biolog","natural","anatom","fisiolog","histolog","bioquim","microbio","tierra","cuerpo","enfermer","salud"]]];
+  for(var k=0;k<reglas.length;k++)if(reglas[k][1].some(function(r){return n.indexOf(r)>-1}))return reglas[k][0];
+  return "soc";
+}
+function hashTxt(t){var h=0;t=norm(t);for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%100000;return h}
+function cerca(c,h,r){var a=CL[c];return [a[0]+((h%97)/97-.5)*r,a[1]+(((h*7)%89)/89-.5)*r]}
+function pct(x){return Math.round(x*100)+"\u00a0%"}
+function pintarRes(filas){
+  $("#res").innerHTML=filas.map(function(r){return '<div class="row"><b>'+esc(r.l)+'</b><em>'+pct(r.s)+'</em>'+(r.sub?'<span class="sub">'+esc(r.sub)+'</span>':'')+'<div class="bar"><i style="width:0"></i></div></div>'}).join("");
+  setTimeout(function(){$$("#res .bar i").forEach(function(b,k){if(filas[k])b.style.width=Math.round(filas[k].s*100)+"%"})},40);
+}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function mostrarReal(text,r){
+  if(!r.temas.length){
+    Q={text:text,x:.5,y:.5,top:[],fuera:true};t0m=performance.now();
+    $("#res").innerHTML='<div class="fuera"><b>Fuera de este espacio</b><span>Ningún tema del catálogo se parece lo suficiente: el más cercano llega a '+pct(r.mejorScore)+', debajo del umbral de '+pct(r.umbral)+'. No se recomienda a nadie.</span></div>';
+    $("#kw").innerHTML='Matching real · '+fmt(r.temasEnCatalogo)+' temas del catálogo · umbral '+pct(r.umbral)+'<br><b>0 temas</b> sobre el umbral';
+    return;
+  }
+  var pts=r.temas.slice(0,3).map(function(t,k){var c=areaDe(t.materia),p=cerca(c,hashTxt(t.nombre),.16);return {t:{l:t.nombre,c:c,x:p[0],y:p[1],real:true},s:t.score,sub:t.materia+" · "+t.nivel}});
+  var b=pts[0].t;Q={text:text,x:Math.min(.9,b.x+.12),y:Math.max(.08,b.y-.09),top:pts,real:true};t0m=performance.now();
+  pintarRes(pts.map(function(p){return {l:p.t.l,s:p.s,sub:p.sub}}));
+  $("#kw").innerHTML='Matching real · '+fmt(r.temasEnCatalogo)+' temas del catálogo · umbral '+pct(r.umbral)+'<br><b class="ok">'+r.temas.length+(r.temas.length===1?' tema':' temas')+'</b> sobre el umbral · área: '+AREA_N[areaDe(r.temas[0].materia)];
+}
 function setQuery(text,pt){
   var jit=function(k){return (((qseed*(k+3)*9301+49297)%233280)/233280-.5)*.012};
   Q={text:text,x:pt[0]+jit(1),y:pt[1]+jit(2)};
   var sc=TP.map(function(t){var d=Math.hypot(t.x-Q.x,t.y-Q.y);return {t:t,s:Math.max(.05,Math.min(.99,1-d*2.6))}}).sort(function(a,b){return b.s-a.s});
   Q.top=sc.slice(0,3);t0m=performance.now();
-  $("#res").innerHTML=Q.top.map(function(r){return '<div class="row"><b>'+r.t.l+'</b><em>'+Math.round(r.s*100)+'%</em><div class="bar"><i style="width:0"></i></div></div>'}).join("");
-  setTimeout(function(){$$("#res .bar i").forEach(function(b,k){if(Q&&Q.top[k])b.style.width=Math.round(Q.top[k].s*100)+"%"})},40);
-  var toks=tok(text).filter(function(w){return w.length>3});
-  var lit=TP.filter(function(t){var n=norm(t.l);return toks.some(function(w){return n.indexOf(w)>-1})}).length;
-  $("#kw").innerHTML='Búsqueda por palabra exacta: <b class="'+(lit?"ok":"")+'">'+lit+' coincidencias</b><br>Búsqueda semántica: <b class="ok">'+Q.top.length+' tutores recomendados</b>';
+  pintarRes(Q.top.map(function(r){return {l:r.t.l,s:r.s}}));
+  $("#kw").innerHTML='<b>Sin conexión con el matching:</b> simulación por palabras, no el modelo.';
 }
 function freeText(text){
   var n=norm(text),best=null,bs=0;
   Object.keys(KWC).forEach(function(c){var s=0;KWC[c].forEach(function(k){if(k.length===1?(" "+n+" ").indexOf(" "+k+" ")>-1:n.indexOf(k)>-1)s++});if(s>bs){bs=s;best=c}});
-  var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%1000;
+  var h=hashTxt(text);
   var pt=best?[CL[best][0]+((h%100)/100-.5)*.1,CL[best][1]+(((h*7)%100)/100-.5)*.1]:[.5,.5];
   setQuery(text,pt);
+}
+function consultar(text){
+  var id=++nq;
+  $("#kw").innerHTML="Buscando en el catálogo…";
+  if(!API_MATCH){freeText(text);return}
+  var ctl=typeof AbortController!=="undefined"?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort()},8000);
+  fetch(API_MATCH+"/api/presentacion/temas",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texto:text}),signal:ctl?ctl.signal:undefined})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+    .then(function(r){if(id===nq)mostrarReal(text,r)})
+    .catch(function(){if(id===nq)freeText(text)})
+    .then(function(){clearTimeout(to)});
 }
 /* i>=0: consulta de ejemplo; i=-1 con texto: consulta libre */
 function runQuery(i,text,quiet){
   i=Math.round(num(i,-1,PRE.length-1,-1));text=String(text||"").slice(0,80);
   ST.q=i;ST.qt=i>=0?"":text;
   $$("#qs button").forEach(function(b,k){b.classList.toggle("on",k===i)});
-  if(i>=0){$("#qi").value=PRE[i].q;qseed=(i+1)/7;setQuery(PRE[i].q,PRE[i].pt())}
-  else if(text){$("#qi").value=text;freeText(text)}
+  var q=i>=0?PRE[i].q:text;
+  if(q){$("#qi").value=q;qseed=(i+1)/7;if(!MANDO)consultar(q)}
   if(!quiet)commit();syncMando();
 }
 var qsEl=$("#qs");
@@ -1303,12 +1343,15 @@ function drawMatch(now){
   cx.strokeStyle="rgba(238,246,241,.05)";cx.lineWidth=1;
   for(var gx=0;gx<=W;gx+=66){cx.beginPath();cx.moveTo(gx,0);cx.lineTo(gx,H);cx.stroke()}
   for(var gy=0;gy<=H;gy+=66){cx.beginPath();cx.moveTo(0,gy);cx.lineTo(W,gy);cx.stroke()}
+  Object.keys(CL).forEach(function(c){cx.font="600 19px 'Instrument Sans',sans-serif";cx.textAlign="center";cx.fillStyle=COL[c];cx.globalAlpha=.55;cx.fillText(AREA_N[c].toUpperCase(),CL[c][0]*W,CL[c][1]*H-118);cx.globalAlpha=1});
   var topSet=Q?Q.top.map(function(r){return r.t.l}):[];
+  var reales=Q&&Q.real?Q.top.map(function(r){return r.t}):[];
   TP.forEach(function(t){
     var x=t.x*W,y=t.y*H,hit=topSet.indexOf(t.l)>-1;
     cx.beginPath();cx.arc(x,y,hit?11:7,0,6.283);cx.fillStyle=COL[t.c];cx.globalAlpha=hit?1:(Q?.4:.85);cx.fill();cx.globalAlpha=1;
     cx.font=(hit?"500 21px":"400 17px")+" 'IBM Plex Mono',monospace";cx.fillStyle=hit?"#eef6f1":"rgba(238,246,241,.55)";cx.textAlign="center";cx.fillText(t.l,x,y+(hit?-20:-14));
   });
+  reales.forEach(function(t){var x=t.x*W,y=t.y*H;cx.beginPath();cx.arc(x,y,12,0,6.283);cx.fillStyle=COL[t.c];cx.fill();cx.strokeStyle="#eef6f1";cx.lineWidth=3;cx.stroke();cx.font="600 21px 'IBM Plex Mono',monospace";cx.fillStyle="#eef6f1";cx.textAlign="center";var l=t.l.length>30?t.l.slice(0,29)+"…":t.l;cx.fillText(l,x,y-22)});
   if(Q){
     var p=Math.min(1,(now-t0m)/700),e=1-Math.pow(1-p,3),qx=Q.x*W,qy=Q.y*H;
     Q.top.forEach(function(r,k){

@@ -44,6 +44,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLICOS = Set.of(
             "/api/usuarios/registro", "/api/usuarios/login", "/api/tutores/registro",
             "/api/usuarios/recuperar-password", "/api/usuarios/resetear-password");
+    /** Demo de la presentación de la tesis: mismo límite que los públicos, contado aparte
+     *  para que probar el matching no bloquee el login desde la misma IP. */
+    private static final Set<String> PRESENTACION = Set.of("/api/presentacion/temas");
     private static final Set<String> WEBHOOKS = Set.of(
             "/api/webhooks/livekit", "/api/webhooks/mercadopago");
 
@@ -120,6 +123,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (VERIFICAR_DNI.contains(path)) return "verificar-dni";
         if (PUBLICOS.contains(path)) return "publicos";
         if (WEBHOOKS.contains(path)) return "webhooks";
+        if (PRESENTACION.contains(path)) return "presentacion";
         return null;
     }
 

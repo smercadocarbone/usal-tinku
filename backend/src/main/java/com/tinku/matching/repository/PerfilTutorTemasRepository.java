@@ -109,6 +109,33 @@ public class PerfilTutorTemasRepository {
         }, (rs, rowNum) -> rs.getObject("tutor_id", UUID.class));
     }
 
+    /** FR-MATCH-015: nombre, materia y nivel de temas del catálogo, en cualquier orden. */
+    public List<TemaCatalogo> temasDelCatalogo(List<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.query(con -> {
+            PreparedStatement ps = con.prepareStatement("""
+                    SELECT t.id, t.nombre, tr.materia, tr.nivel
+                      FROM matching.temas t
+                      JOIN matching.trayectos tr ON tr.id = t.trayecto_id
+                     WHERE t.id = ANY(?)
+                    """);
+            ps.setArray(1, con.createArrayOf("uuid", ids.toArray()));
+            return ps;
+        }, (rs, rowNum) -> new TemaCatalogo(rs.getObject("id", UUID.class), rs.getString("nombre"),
+                rs.getString("materia"), rs.getString("nivel")));
+    }
+
+    /** FR-MATCH-015: cuántos temas del catálogo ya tienen embedding (los que el matching ve). */
+    public int contarTemasConEmbedding() {
+        Integer n = jdbc.queryForObject("SELECT count(*) FROM matching.temas WHERE embedding IS NOT NULL", Integer.class);
+        return n == null ? 0 : n;
+    }
+
+    public record TemaCatalogo(UUID id, String nombre, String materia, String nivel) {
+    }
+
     /** Nivel y materia del trayecto de un tema del catálogo (FR-MATCH-011). */
     public java.util.Optional<AreaTema> areaDeTema(UUID temaId) {
         return jdbc.query("""
