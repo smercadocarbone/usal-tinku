@@ -141,6 +141,8 @@ h2 em{font-style:normal;color:var(--amber)}
 .cv{position:relative;width:1060px;height:780px;align-self:start;border-radius:28px;background:radial-gradient(1200px 700px at 30% 20%,var(--pine2),var(--pine));border:1px solid var(--line);overflow:hidden}
 .cv canvas{width:100%;height:100%;display:block}
 .qs{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+#qi.tipeando{border-color:var(--amber);caret-color:var(--amber)}
+.res .espera{font:500 26px/1.4 var(--f-body);color:var(--mute);padding:22px 0}
 .qs button{all:unset;cursor:pointer;font:500 20px/1.2 var(--f-body);padding:11px 16px;border-radius:14px;border:1px solid var(--line);color:var(--paper);background:rgba(255,255,255,.04);transition:all .25s}
 .qs button:hover,.qs button.on{border-color:var(--amber);color:var(--amber)}
 .qs button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
@@ -818,11 +820,10 @@ body.mando:not(.jurado) #mctl:empty{display:none}
   <p class="note-src">Video grabado sobre el frontend real del repositorio, con datos de ejemplo.</p>
 </section>
 <!-- 6 MATCHING -->
-<section class="slide match" data-id="matching" data-title="Matching semántico con IA" data-kw="matching ia inteligencia artificial semantico embeddings vectores pgvector busqueda recomendacion palabras clave sentence transformers nlp tutores recomendados modelo 384 dimensiones" data-notes="Probar en vivo: elegir una consulta o escribir una propia. Es el matching real de producción (mismo modelo, pgvector y umbral que la búsqueda de tutores) contra el catálogo de temas: devuelve los temas que superan el umbral y, si ninguno llega (por ejemplo, guitarra), dice que la consulta está fuera de este espacio y no recomienda a nadie. Sin conexión cae a una simulación y lo avisa. Datos técnicos reales: paraphrase-multilingual-MiniLM-L12-v2, 384 dimensiones, índice en pgvector dentro de la misma base. Aclarar que el mapa es una proyección ilustrativa en 2D.">
+<section class="slide match" data-id="matching" data-title="Matching semántico con IA" data-kw="matching ia inteligencia artificial semantico embeddings vectores pgvector busqueda recomendacion palabras clave sentence transformers nlp tutores recomendados modelo 384 dimensiones" data-notes="Probar en vivo: el jurado elige una consulta desde su celular (o escribe una propia) y la barra se completa sola y busca; también se puede escribir acá. Es el matching real de producción (mismo modelo, pgvector y umbral que la búsqueda de tutores) contra el catálogo de temas: devuelve los temas que superan el umbral y, si ninguno llega (por ejemplo, guitarra), dice que la consulta está fuera de este espacio y no recomienda a nadie. Sin conexión cae a una simulación y lo avisa. Datos técnicos reales: paraphrase-multilingual-MiniLM-L12-v2, 384 dimensiones, índice en pgvector dentro de la misma base. Aclarar que el mapa es una proyección ilustrativa en 2D.">
   <div class="cv r" style="--i:2"><canvas id="mcv" width="1060" height="780"></canvas></div>
   <div>
     <h2 class="r" style="--i:1">Entiende lo<br>que querés <em>decir.</em></h2>
-    <div class="qs r" style="--i:3" id="qs"></div>
     <form class="qin r" style="--i:4" id="qf"><input id="qi" type="text" placeholder="Probá con tus palabras…" aria-label="Escribí qué querés aprender" autocomplete="off"><button type="submit">Buscar</button></form>
     <div class="res" id="res"></div>
     <p class="kw" id="kw"></p>
@@ -1051,7 +1052,7 @@ var num=function(v,a,b,d){v=Number(v);if(!isFinite(v))return d;return Math.max(a
 function idxOf(id){for(var i=0;i<N;i++)if(slides[i].dataset.id===id)return i;return 0}
 
 /* ===== estado compartido entre el deck y el mando ===== */
-var ST={slide:0,diag:0,step:0,q:-1,qt:"",km:"menor",kf:0,cam:0,pr:13392,v:0,mod:-1,au:0,fl:0,esc:"base",com:27,en:[0,0,0,0]};
+var ST={slide:0,diag:0,step:0,q:-1,qt:"",qn:0,km:"menor",kf:0,cam:0,pr:13392,v:0,mod:-1,au:0,fl:0,esc:"base",com:27,en:[0,0,0,0]};
 var room=null,seq=0,applying=false,lastSeen={};
 function commit(){
   if(applying||!room)return;
@@ -1329,17 +1330,32 @@ function consultar(text){
     .catch(function(){if(id===nq)freeText(text)})
     .then(function(){clearTimeout(to)});
 }
-/* i>=0: consulta de ejemplo; i=-1 con texto: consulta libre */
-function runQuery(i,text,quiet){
+/* Escribe la consulta en la barra letra por letra (la eligió el jurado desde su celular) y recién
+   ahí busca. Una consulta nueva corta la que se estaba escribiendo. */
+var tipeo=0;
+function tipear(q,listo){
+  var id=++tipeo,qi=$("#qi"),n=0,paso=Math.max(18,Math.min(45,900/q.length));
+  qi.value="";qi.classList.add("tipeando");
+  (function sig(){
+    if(id!==tipeo)return;
+    qi.value=q.slice(0,++n);
+    if(n<q.length){setTimeout(sig,paso);return}
+    qi.classList.remove("tipeando");setTimeout(function(){if(id===tipeo)listo()},220);
+  })();
+}
+/* i>=0: consulta de ejemplo; i=-1 con texto: consulta libre. animar: se tipea en la barra antes de buscar. */
+function runQuery(i,text,quiet,animar){
   i=Math.round(num(i,-1,PRE.length-1,-1));text=String(text||"").slice(0,80);
-  ST.q=i;ST.qt=i>=0?"":text;
-  $$("#qs button").forEach(function(b,k){b.classList.toggle("on",k===i)});
+  ST.q=i;ST.qt=i>=0?"":text;if(!quiet)ST.qn=(ST.qn+1)%1000;
   var q=i>=0?PRE[i].q:text;
-  if(q){$("#qi").value=q;qseed=(i+1)/7;if(!MANDO)consultar(q)}
+  if(q){
+    qseed=(i+1)/7;
+    if(MANDO)$("#qi").value=q;
+    else if(animar)tipear(q,function(){consultar(q)});
+    else{tipeo++;$("#qi").classList.remove("tipeando");$("#qi").value=q;consultar(q)}
+  }
   if(!quiet)commit();syncMando();
 }
-var qsEl=$("#qs");
-PRE.forEach(function(p,k){var b=document.createElement("button");b.type="button";b.textContent=p.q;b.addEventListener("click",function(){runQuery(k,"")});qsEl.appendChild(b)});
 $("#qf").addEventListener("submit",function(e){e.preventDefault();var v=$("#qi").value.trim();if(!v)return;runQuery(-1,v)});
 function drawMatch(now){
   cx.clearRect(0,0,W,H);
@@ -1368,8 +1384,13 @@ function drawMatch(now){
   }
 }
 function loop(now){if(!matchOn)return;drawMatch(now);raf=requestAnimationFrame(loop)}
+/* Sin consulta todavía: el mapa del catálogo y una invitación a elegir desde el celular. */
+function esperaConsulta(){
+  $("#res").innerHTML='<div class="espera">Elegí una consulta desde el celular del jurado o escribí la tuya.</div>';
+  $("#kw").innerHTML="Matching real · catálogo de temas de Tinku";
+}
 function startMatch(){
-  if(!Q){if(ST.q>=0||ST.qt)runQuery(ST.q,ST.qt,true);else runQuery(0,"",true)}
+  if(!Q){if(ST.q>=0||ST.qt)runQuery(ST.q,ST.qt,true);else esperaConsulta()}
   if(!matchOn){matchOn=true;raf=requestAnimationFrame(loop)}
 }
 
@@ -1708,7 +1729,9 @@ function applyRemote(s,from){
     if(!jur)setDiag(s.diag,true);setStep(s.step,true);
     setKm(s.km,true);setVista(s.v,true);setMod(s.mod,true);if(!jur)setFlip(s.fl,true);setEn(s.en,true);
     setEsc(s.esc,true);setPr(s.pr,true,true);setAu(s.au,true);setCam(s.cam,true);
-    if(+s.q>=0||s.qt){runQuery(+s.q>=0?+s.q:-1,s.qt,true)}else{ST.q=-1;ST.qt=""}
+    /* Cada consulta nueva (qn) se tipea y se busca una vez; repetir un ejemplo también cuenta. */
+    var qn=Math.round(num(s.qn,0,999,0));
+    if((+s.q>=0||s.qt)&&qn!==ST.qn){ST.qn=qn;runQuery(+s.q>=0?+s.q:-1,s.qt,true,true)}
     var kf=Math.round(num(s.kf,0,999,0));if(kf!==ST.kf){ST.kf=kf;if(slides[cur].dataset.id==="confianza")fireApply()}
     var sl=Math.round(num(s.slide,0,N-1,0));if(!jur&&sl!==cur)go(sl);else renderMando();
   }catch(e){}finally{applying=false}
