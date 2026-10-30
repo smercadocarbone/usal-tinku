@@ -163,7 +163,7 @@
                 <!-- ADR-000-05 (T-TES-14): se mide la cobertura, sin umbral que corte el build. -->
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.15</version>
+                <version>0.8.16</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
