@@ -15,6 +15,12 @@ Contexto del equipo: 1 desarrollador, presupuesto de infraestructura
 USD 0-100/mes durante desarrollo. Cada decisión técnica se justifica contra ese
 contexto, no contra "buenas prácticas" de otra escala (Artículo VII).
 
+En producción: [tinku.site](https://tinku.site).
+
+| Landing | Buscar un Tutor y reservar |
+|---------|----------------------------|
+| ![Landing de Tinku](docs/img/landing.gif) | ![Flujo de búsqueda y reserva](docs/img/flujo.gif) |
+
 ---
 
 ## Antes de tocar código
@@ -337,3 +343,17 @@ no se borran sin cerrar el finding.
   pendiente. Existe un Modo Bypass (ADR-M5-01) para operar sin cobro real.
 - **Almacenamiento de archivos en filesystem local** (ADR-M1-03), sin storage
   externo.
+
+---
+
+## Autor
+
+Santiago Mercado Carbone — [s.mercadocarbone@usal.edu.ar](mailto:s.mercadocarbone@usal.edu.ar)
+
+Proyecto Final de Ingeniería Informática, Facultad de Ingeniería, Universidad
+del Salvador, 2026. Documento de la tesis:
+[`usal-tinku-docs`](https://github.com/smercadocarbone/usal-tinku-docs).
+
+## Licencia
+
+[MIT](LICENSE).
