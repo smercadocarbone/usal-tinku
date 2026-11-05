@@ -15,6 +15,12 @@ Contexto del equipo: 1 desarrollador, presupuesto de infraestructura
 USD 0-100/mes durante desarrollo. Cada decisión técnica se justifica contra ese
 contexto, no contra "buenas prácticas" de otra escala (Artículo VII).
 
+En producción: [tinku.site](https://tinku.site).
+
+| Landing | Buscar un Tutor y reservar |
+|---------|----------------------------|
+| ![Landing de Tinku](docs/img/landing.gif) | ![Flujo de búsqueda y reserva](docs/img/flujo.gif) |
+
 ---
 
 ## Antes de tocar código
@@ -295,11 +301,10 @@ coinciden, manda el ADR más reciente y lo que efectivamente está en el código
 
 ## Estado actual y auditoría
 
-Los nueve módulos tienen código de producción y tests de integración. Hay, sin
-embargo, una **auditoría técnica independiente abierta (2026-09-21) con
-hallazgos de severidad crítica** que se están remediando por fases, empezando
-por los de seguridad. Tinku **no está listo para uso real con menores** hasta
-cerrar esos hallazgos.
+Los nueve módulos tienen código de producción y tests de integración. La
+**auditoría técnica independiente (2026-09-21)** tiene hoy **todos sus
+hallazgos cerrados**, cada uno con su commit y su test de regresión. Aun así, las clases con menores siguen apagadas por defecto
+(ver Limitaciones conocidas).
 
 - Estado vigente, finding por finding:
   [`docs/auditoria/REGISTRO_FINDINGS.md`](docs/auditoria/REGISTRO_FINDINGS.md)
@@ -315,25 +320,34 @@ no se borran sin cerrar el finding.
 
 ### Limitaciones conocidas (verificadas en el código)
 
-- **El clasificador on-device del kill-switch no está integrado en el cliente**
-  (T-M3-06 abierta). ADR-M3-01 eligió NSFWJS + TensorFlow.js, pero el frontend
-  no tiene esa dependencia: el backend del kill-switch existe, la mitad que
-  corre en el navegador y dispara el corte no.
-- **No hay canal real de notificaciones** (AUD-014). La única implementación
-  (`NotificadorResetPasswordLog`) ya no loguea el token ni el DNI (AUD-008),
-  así que **"olvidé mi contraseña" hoy no funciona**: es fail-closed a
-  propósito hasta que exista un canal real. Elegir proveedor de email/SMS
-  requiere ADR. Tampoco se avisa al Adulto Responsable de un kill-switch.
+- **Clases con menores deshabilitadas por defecto:** la flag
+  `tinku.menores.sesiones-habilitadas` (`TINKU_MENORES_SESIONES_HABILITADAS`)
+  vale `false` y el corte es fail-closed al reservar o pedir una clase. Se
+  enciende solo con la lista de
+  `docs/superpowers/specs/m3c/M3C-09-habilitar-menores.md` cumplida.
 - **El kill-switch corta al instante, pero la plata espera** (ADR-M3-02): el
-  escrow queda en pausa hasta que un Admin resuelve la Alerta, y recién ahí se
-  reembolsa al Estudiante.
-- **M6 no genera resúmenes reales:** el proveedor de LLM (GPT-4o vs. Gemini
-  2.0 Flash) sigue pendiente de ADR y el puerto `ResumenProveedor` es
-  fail-closed.
-- **Reserva con picker de horarios sin integrar en `/reservar`**
-  (T-M4-13 a T-M4-15): el endpoint de horarios existe, la UI todavía usa el
-  selector anterior.
-- **MercadoPago en sandbox**; el paso a productivo depende de infraestructura
-  pendiente. Existe un Modo Bypass (ADR-M5-01) para operar sin cobro real.
-- **Almacenamiento de archivos en filesystem local** (ADR-M1-03), sin storage
-  externo.
+  escrow queda en `pausado_alerta` hasta que un Admin resuelve la Alerta, y
+  recién ahí se reembolsa al Estudiante.
+- **MercadoPago en modo prueba:** producción usa credenciales `TEST-` y se paga
+  con compradores y tarjetas de prueba. El Modo Bypass (ADR-M5-01) existe para
+  desarrollo y está bloqueado en `prod` (FASE2-07).
+- **Servicios externos opcionales, fail-closed:** sin `RESEND_API_KEY` no salen
+  emails (los avisos quedan en la bandeja in-app y el reset de contraseña no
+  llega); sin `LLM_API_KEY` no se generan resúmenes (ADR-M6-03); sin LiveKit
+  no hay aula.
+- **Almacenamiento de archivos en filesystem local** (`AlmacenamientoLocal`,
+  ADR-M1-03), sin storage externo.
+
+---
+
+## Autor
+
+Santiago Mercado Carbone — [s.mercadocarbone@usal.edu.ar](mailto:s.mercadocarbone@usal.edu.ar)
+
+Proyecto Final de Ingeniería Informática, Facultad de Ingeniería, Universidad
+del Salvador, 2026. Documento de la tesis:
+[`usal-tinku-docs`](https://github.com/smercadocarbone/usal-tinku-docs).
+
+## Licencia
+
+[MIT](LICENSE).
