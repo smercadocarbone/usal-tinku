@@ -34,3 +34,6 @@ application-local.yml
 # CodeGraph (índice local de cada máquina, se regenera con `codegraph init`)
 .codegraph/
 frontend/next-env.d.ts
+
+# Certificados locales (autofirmados, nunca al repo)
+*.pem
