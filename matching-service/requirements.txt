@@ -13,6 +13,6 @@ psycopg[binary]>=3.3.6
 pgvector>=0.5.1
 
 # Dev/test
-pytest>=9.1.1
+pytest>=9.2.0
 httpx>=0.28.1
 ruff>=0.17.3
